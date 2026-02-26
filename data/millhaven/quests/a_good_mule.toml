@@ -1,0 +1,22 @@
+# data/millhaven/quests/a_good_mule.toml
+# "A Good Mule" — Dust the pack mule companion quest.
+#
+# Sera the Leatherworker mentions that Bron the innkeeper keeps a stable
+# out back. The innkeeper will rent you Dust — an old pack mule with an
+# impressive carry frame — for 50 gold. Good value if you're heading deep
+# into the mire with lots of loot to bring back.
+
+id      = "a_good_mule"
+title   = "A Good Mule"
+giver   = "innkeeper"
+summary = "Bron the innkeeper is willing to rent you Dust the mule for 50 gold — a sturdy pack animal who can carry considerably more than you can."
+
+[[step]]
+index     = 1
+objective = "Speak to Bron at the Rusty Flagon about hiring a mule."
+hint      = "Ask Bron about the stable or pack animals. He'll mention Dust."
+
+[[step]]
+index     = 2
+objective = "Pay 50 gold and take Dust with you."
+hint      = "Dust adds +15 carry capacity. She can't enter tight caves or narrow passages."

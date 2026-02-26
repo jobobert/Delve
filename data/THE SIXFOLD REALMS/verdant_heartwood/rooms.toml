@@ -1,0 +1,203 @@
+# Zone id: verdant_heartwood
+#
+
+[[room]]
+id          = "heartwood_gate"
+name        = "Heartwood Gate"
+description = "A towering arch of intertwined branches that parts gently as travelers approach."
+coord       = []
+exits       = {north = "briarforge_workshop", east = "rootbound_path"}
+items       = []
+flags       = []
+spawns      = ["npc_aranel"]
+
+[[room]]
+id          = "briarforge_workshop"
+name        = "Briarforge Workshop"
+description = "A workshop built into a hollowed tree, filled with living tools and vine-bound devices."
+coord       = []
+exits       = {south = "heartwood_gate", north = "the_verdant_plaza"}
+items       = ["item_vine_resin"]
+flags       = []
+spawns      = ["npc_mira"]
+
+[[room]]
+id          = "rootbound_path"
+name        = "Rootbound Path"
+description = "Thick roots twist across the ground, forming natural steps and barriers."
+coord       = []
+exits       = {west = "heartwood_gate", north = "whisperleaf_trail"}
+items       = []
+flags       = []
+spawns      = ["enemy_rootling"]
+
+[[room]]
+id          = "the_verdant_plaza"
+name        = "The Verdant Plaza"
+description = "A clearing where the canopy opens to reveal shafts of warm sunlight."
+coord       = []
+exits       = {south = "briarforge_workshop", east = "grove_of_renewal", north = "heartwood_stream"}
+items       = []
+flags       = []
+spawns      = ["npc_aranel"]
+
+[[room]]
+id          = "whisperleaf_trail"
+name        = "Whisperleaf Trail"
+description = "Leaves rustle with faint whispers, though no wind blows."
+coord       = []
+exits       = {south = "rootbound_path", north = "the_tangled_rise"}
+items       = []
+flags       = []
+spawns      = ["enemy_whispervine"]
+
+[[room]]
+id          = "grove_of_renewal"
+name        = "Grove of Renewal"
+description = "A grove where plants regrow instantly after being disturbed."
+coord       = []
+exits       = {west = "the_verdant_plaza", north = "bloomwatch_perch"}
+items       = ["item_regrowth_sample"]
+flags       = []
+spawns      = ["enemy_regrowth_beast"]
+
+[[room]]
+id          = "heartwood_stream"
+name        = "Heartwood Stream"
+description = "A crystal-clear stream that flows uphill, defying gravity."
+coord       = []
+exits       = {south = "the_verdant_plaza", north = "the_elder_roots"}
+items       = ["item_stream_glass"]
+flags       = []
+spawns      = []
+
+[[room]]
+id          = "the_tangled_rise"
+name        = "The Tangled Rise"
+description = "A steep incline covered in shifting vines that move when stepped on."
+coord       = []
+exits       = {south = "whisperleaf_trail", north = "hollowshade_den"}
+items       = []
+flags       = []
+spawns      = ["enemy_vinebound_stalker"]
+
+[[room]]
+id          = "bloomwatch_perch"
+name        = "Bloomwatch Perch"
+description = "A high vantage point overlooking the forest’s rapid growth."
+coord       = []
+exits       = {south = "grove_of_renewal", east = "the_living_archway"}
+items       = ["item_bloom_pollen"]
+flags       = []
+spawns      = []
+
+[[room]]
+id          = "the_elder_roots"
+name        = "The Elder Roots"
+description = "Massive roots form a natural cathedral beneath the forest floor."
+coord       = []
+exits       = {south = "heartwood_stream", north = "heartwood_nursery"}
+items       = []
+flags       = []
+spawns      = ["npc_aranel"]
+
+[[room]]
+id          = "hollowshade_den"
+name        = "Hollowshade Den"
+description = "A dim hollow where the forest’s shadows seem to move independently."
+coord       = []
+exits       = {south = "the_tangled_rise", north = "the_verdant_spiral"}
+items       = []
+flags       = []
+spawns      = ["enemy_shadow_bloom"]
+
+[[room]]
+id          = "the_living_archway"
+name        = "The Living Archway"
+description = "A massive arch of vines that shifts shape as you approach."
+coord       = []
+exits       = {west = "bloomwatch_perch", north = "canopy_ascent"}
+items       = []
+flags       = []
+spawns      = ["enemy_vinebound_stalker"]
+
+[[room]]
+id          = "heartwood_nursery"
+name        = "Heartwood Nursery"
+description = "A grove of young trees that grow inches as you watch."
+coord       = []
+exits       = {south = "the_elder_roots", north = "the_heartwood_pulse"}
+items       = ["item_regrowth_sample"]
+flags       = []
+spawns      = ["enemy_regrowth_beast"]
+
+[[room]]
+id          = "the_verdant_spiral"
+name        = "The Verdant Spiral"
+description = "A spiral path of flowers that bloom in sequence as you walk."
+coord       = []
+exits       = {south = "hollowshade_den", north = "bloomtide_crossing"}
+items       = []
+flags       = []
+spawns      = ["enemy_whispervine"]
+
+[[room]]
+id          = "canopy_ascent"
+name        = "Canopy Ascent"
+description = "A natural staircase of branches leading high into the canopy."
+coord       = []
+exits       = {south = "the_living_archway", north = "the_upper_canopy"}
+items       = ["item_canopy_leaf"]
+flags       = []
+spawns      = []
+
+[[room]]
+id          = "the_heartwood_pulse"
+name        = "The Heartwood Pulse"
+description = "A clearing where the ground pulses faintly, as if the forest has a heartbeat."
+coord       = []
+exits       = {south = "heartwood_nursery", north = "the_verdant_crown"}
+items       = []
+flags       = []
+spawns      = ["npc_aranel", "enemy_rootling"]
+
+[[room]]
+id          = "bloomtide_crossing"
+name        = "Bloomtide Crossing"
+description = "A bridge of flowering vines that sway gently even without wind."
+coord       = []
+exits       = {south = "the_verdant_spiral", north = "the_rootspire"}
+items       = []
+flags       = []
+spawns      = ["enemy_shadow_bloom"]
+
+[[room]]
+id          = "the_upper_canopy"
+name        = "The Upper Canopy"
+description = "Sunlight filters through leaves the size of sails."
+coord       = []
+exits       = {south = "canopy_ascent"}
+items       = ["item_canopy_leaf"]
+flags       = []
+spawns      = ["enemy_vinebound_stalker"]
+
+[[room]]
+id          = "the_verdant_crown"
+name        = "The Verdant Crown"
+description = "The highest point in the Heartwood, where the forest’s energy is strongest."
+coord       = []
+exits       = {south = "the_heartwood_pulse"}
+items       = ["item_bloom_pollen"]
+flags       = []
+spawns      = ["npc_aranel", "enemy_regrowth_beast"]
+
+[[room]]
+id          = "the_rootspire"
+name        = "The Rootspire"
+description = "A towering spire of intertwined roots reaching toward the sky."
+coord       = []
+exits       = {south = "bloomtide_crossing"}
+items       = []
+flags       = []
+spawns      = ["enemy_shadow_bloom"]
+

@@ -1,0 +1,49 @@
+# data/ashwood/quests/ashwood_contract.toml
+# The Ashwood Contract — tutorial quest
+
+id      = "ashwood_contract"
+title   = "The Ashwood Contract"
+giver   = "elder_mira"
+summary = "Investigate the corruption in the Ashwood Forest and slay the Ashwood Drake."
+
+[[step]]
+index     = 1
+objective = "Speak with Sergeant Vorn in the Millhaven Barracks."
+hint      = "Go up from the Town Square to reach the Barracks."
+
+[[step]]
+index     = 2
+objective = "Travel to the Ashwood Gate and enter the forest."
+hint      = "Head south then east — the gate is beyond the deep forest."
+
+[[step]]
+index     = 3
+objective = "Learn a fighting style to prepare for the Drake."
+hint      = "Sergeant Vorn can teach you Swordplay before you leave."
+
+[[step]]
+index     = 4
+objective = "Reach the Ashwood Shrine and solve the ancient seal."
+hint      = "The shrine is deep in the Ashwood. A riddle guards the descent."
+
+[[step]]
+index     = 5
+objective = "Descend to the Drake's Lair and slay the Ashwood Drake."
+hint      = "Bring the best weapons you can find. The Drake is heavily armored."
+
+[[step]]
+index     = 6
+objective = "Return to Elder Mira with the Drake's fang as proof."
+hint      = "Go back to town and speak with Elder Mira in the Council Hall."
+
+[[reward]]
+type   = "gold"
+amount = 150
+
+[[reward]]
+type   = "xp"
+amount = 400
+
+[[reward]]
+type   = "item"
+item_id = "millhaven_commendation"

@@ -1,0 +1,107 @@
+# data/dialogues/ranger_wren.toml
+
+[[node]]
+id = "root"
+lines = [
+  "You picked a bad week to go east.",
+  "The road gets worse the further you go. Fair warning.",
+  "I've been sitting here two days hoping someone with the look of a fighter would come through."
+]
+
+[[response]]
+node = "root"
+  condition = { not_flag = "wren_warned" }
+  text  = "What can you tell me about what's ahead?"
+  next  = "briefing"
+
+[[response]]
+node = "root"
+  condition = { flag = "wren_warned" }
+  text  = "Remind me what's out there?"
+  next  = "reminder"
+
+[[response]]
+node = "root"
+  condition = { flag = "vorn_briefed" }
+  text  = "Sergeant Vorn sent me — I'm here about the Drake."
+  next  = "vorn_connection"
+
+[[response]]
+node = "root"
+  text  = "I'll be careful. Thanks."
+  next  = ""
+
+[[node]]
+id   = "briefing"
+line = "The road east leads to the old garrison ruins. Corrupted wolves patrol it — they're faster than normal wolves and they don't back down. Past the ruins is the Ashwood Shrine where the Drake nests. You'll need a key to reach the garrison armory — the garrison soldiers hid it inside, accessible only if you already got in. Round-trip problem."
+script = [{ op = "set_flag", flag = "wren_warned" }]
+
+[[response]]
+node = "briefing"
+  text  = "How do I get into the armory?"
+  next  = "armory_hint"
+
+[[response]]
+node = "briefing"
+  text  = "Where is the key to the shrine?"
+  next  = "shrine_key_hint"
+
+[[response]]
+node = "briefing"
+  text  = "Thanks. I'll manage."
+  next  = ""
+
+[[node]]
+id   = "armory_hint"
+line = "The ghost of one of the garrison soldiers still walks those ruins. Marsh, I think his name was. He knows where the key is — or what's left of him does. Talk to him."
+
+[[response]]
+node = "armory_hint"
+  text  = "A ghost? Really?"
+  next  = "ghost_confirm"
+
+[[response]]
+node = "armory_hint"
+  text  = "Useful. What about the shrine?"
+  next  = "shrine_key_hint"
+
+[[node]]
+id   = "ghost_confirm"
+line = "I know. But I've seen stranger things in this forest lately. Don't fight it, just talk to it."
+
+[[response]]
+node = "ghost_confirm"
+  text  = "Noted."
+  next  = ""
+
+[[node]]
+id   = "shrine_key_hint"
+line = "The shrine descent key is in the garrison armory. That's why you need to get in there. Get the garrison key from the ghost, get into the armory, get the shrine key, and then you can open the descent."
+
+[[response]]
+node = "shrine_key_hint"
+  text  = "Straightforward enough."
+  next  = ""
+
+[[node]]
+id   = "vorn_connection"
+line = "Vorn's a good officer. If he sent you, you're probably capable enough. The Drakebone weapons in the armory were made specifically for Drake hunting — don't go into that lair without them."
+
+[[response]]
+node = "vorn_connection"
+  text  = "Where's the armory?"
+  next  = "armory_hint"
+
+[[response]]
+node = "vorn_connection"
+  text  = "I'll find them."
+  next  = ""
+
+[[node]]
+id   = "reminder"
+line = "Corrupted wolves on the road, ruins to the east, ghost in the ruins, armory behind a locked door. Shrine beyond the clearing, Drake in the lair below. Get the garrison key from the ghost, shrine key from the armory."
+
+[[response]]
+node = "reminder"
+  text  = "Got it. Thanks."
+  next  = ""

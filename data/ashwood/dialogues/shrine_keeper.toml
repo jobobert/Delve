@@ -1,0 +1,98 @@
+# data/dialogues/shrine_keeper.toml
+
+[[node]]
+id = "root"
+lines = [
+  "The Drake is below. You will need the key from the garrison armory to open the descent.",
+  "I have tended this shrine for forty years. The Drake is below. It must be stopped.",
+  "The flames have burned cold since the Drake woke. That is not natural. Neither is what I feel from below."
+]
+
+[[response]]
+node = "root"
+  condition = { not_flag = "puzzle_solved" }
+  text  = "How do I open the descent?"
+  next  = "key_needed"
+
+[[response]]
+node = "root"
+  condition = { flag = "puzzle_solved" }
+  text  = "The seal is open. I'm going down."
+  next  = "go_down"
+
+[[response]]
+node = "root"
+  text  = "What can you tell me about the Drake?"
+  next  = "about_drake"
+
+[[response]]
+node = "root"
+  text  = "Farewell."
+  next  = ""
+
+[[node]]
+id   = "key_needed"
+line = "The descent requires the stone disc — the Shrine Key. It was placed in the garrison armory long ago, when this shrine was first built. The armory is east in the ruins. The garrison garrison key — which opens the armory — was held by the garrison soldiers."
+
+[[response]]
+node = "key_needed"
+  text  = "The ghost in the ruins has it."
+  next  = "ghost_confirm"
+
+[[response]]
+node = "key_needed"
+  text  = "I'll find it."
+  next  = ""
+
+[[node]]
+id   = "ghost_confirm"
+line = "Private Marsh, yes. He remained when the others fell. He has been waiting for someone who could finish the task."
+
+[[response]]
+node = "ghost_confirm"
+  text  = "I'll speak with him."
+  next  = ""
+
+[[node]]
+id   = "go_down"
+line = "Then go carefully. The Drake is old and intelligent. It knows you are here. The stairway will take you to the antechamber — clear it first, then face the Drake. Do not rush. Good fortune, adventurer."
+
+[[response]]
+node = "go_down"
+  text  = "I'm ready."
+  next  = ""
+
+[[node]]
+id   = "about_drake"
+lines = [
+  "An Ashwood Drake is not simply a large predator. It is ancient, it thinks, and it has waited through dormancies measured in decades. When it wakes it is hungry in ways that go beyond food — it wants dominance over everything within its territory. The corruption you see is its presence asserting itself.",
+  "Drake hide turns most blades. You need Drakebone-forged weapons — they were specifically made to penetrate it. Fighting it with ordinary iron would be like fighting stone with straw."
+]
+
+[[response]]
+node = "about_drake"
+  text  = "I have Drakebone weapons."
+  next  = "prepared"
+
+[[response]]
+node = "about_drake"
+  text  = "I'll find the Drakebone weapons first."
+  next  = "find_weapons"
+
+[[node]]
+id   = "prepared"
+line = "Then you have as good a chance as anyone who has walked into that lair. Take the stone disc to the lock. Go."
+
+[[response]]
+node = "prepared"
+  text  = "I will."
+  next  = ""
+
+[[node]]
+id   = "find_weapons"
+line = "The garrison armory, east in the ruins. The Drakebone Sword and the Drakebone Plate are there. Retrieve them before you descend."
+
+[[response]]
+node = "find_weapons"
+  text  = "Understood."
+  next  = ""

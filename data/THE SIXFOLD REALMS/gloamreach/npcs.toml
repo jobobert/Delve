@@ -1,0 +1,186 @@
+# Zone id: gloamreach
+#        
+[[npc]]
+admin_comment = ""
+id          = "enemy_gloam_rat"
+name        = "Gloam Rat"
+desc_short  = ""
+desc_long   = ""
+hostile     = false
+tags        = []
+style       = ""
+style_prof  = 0
+hp          = 25
+max_hp      = 25
+attack      = 8
+defense     = 6
+xp_reward   = 0
+gold_reward = 0
+dialogue    = ""
+shop        = []
+give_accepts = []
+rest_cost   = 0
+kill_script = []
+respawn_time= 0
+        
+[[npc]]
+admin_comment = ""
+id          = "enemy_shadowling"
+name        = "Shadowling"
+desc_short  = ""
+desc_long   = ""
+hostile     = false
+tags        = []
+style       = ""
+style_prof  = 0
+hp          = 30
+max_hp      = 30
+attack      = 10
+defense     = 8
+xp_reward   = 0
+gold_reward = 0
+dialogue    = ""
+shop        = []
+give_accepts = []
+rest_cost   = 0
+kill_script = []
+respawn_time= 0
+        
+[[npc]]
+admin_comment = ""
+id          = "enemy_gloam_beast"
+name        = "Gloam Beast"
+desc_short  = ""
+desc_long   = ""
+hostile     = false
+tags        = []
+style       = ""
+style_prof  = 0
+hp          = 60
+max_hp      = 60
+attack      = 15
+defense     = 12
+xp_reward   = 0
+gold_reward = 0
+dialogue    = ""
+shop        = []
+give_accepts = []
+rest_cost   = 0
+kill_script = []
+respawn_time= 0
+        
+[[npc]]
+admin_comment = ""
+id          = "enemy_prism_specter"
+name        = "Prism Specter"
+desc_short  = ""
+desc_long   = ""
+hostile     = false
+tags        = []
+style       = ""
+style_prof  = 0
+hp          = 45
+max_hp      = 45
+attack      = 14
+defense     = 10
+xp_reward   = 0
+gold_reward = 0
+dialogue    = ""
+shop        = []
+give_accepts = []
+rest_cost   = 0
+kill_script = []
+respawn_time= 0
+        
+[[npc]]
+admin_comment = ""
+id          = "enemy_gloam_shade"
+name        = "Gloam Shade"
+desc_short  = ""
+desc_long   = ""
+hostile     = false
+tags        = []
+style       = ""
+style_prof  = 0
+hp          = 40
+max_hp      = 40
+attack      = 12
+defense     = 10
+xp_reward   = 0
+gold_reward = 0
+dialogue    = ""
+shop        = []
+give_accepts = []
+rest_cost   = 0
+kill_script = []
+respawn_time= 0
+        
+[[npc]]
+admin_comment = ""
+id          = "enemy_gloam_titan"
+name        = "Gloam Titan"
+desc_short  = ""
+desc_long   = ""
+hostile     = false
+tags        = []
+style       = ""
+style_prof  = 0
+hp          = 120
+max_hp      = 120
+attack      = 22
+defense     = 18
+xp_reward   = 0
+gold_reward = 0
+dialogue    = ""
+shop        = []
+give_accepts = []
+rest_cost   = 0
+kill_script = []
+respawn_time= 0
+        
+[[npc]]
+admin_comment = ""
+id          = "npc_lysa"
+name        = "Lysa the Lanternkeeper"
+desc_short  = ""
+desc_long   = ""
+hostile     = false
+tags        = []
+style       = ""
+style_prof  = 0
+hp          = 100
+max_hp      = 100
+attack      = 100
+defense     = 100
+xp_reward   = 0
+gold_reward = 0
+dialogue    = ""
+shop        = []
+give_accepts = []
+rest_cost   = 0
+kill_script = []
+respawn_time= 0
+        
+[[npc]]
+admin_comment = ""
+id          = "npc_eldric"
+name        = "Eldric the Lensmaster"
+desc_short  = ""
+desc_long   = ""
+hostile     = false
+tags        = []
+style       = ""
+style_prof  = 0
+hp          = 100
+max_hp      = 100
+attack      = 100
+defense     = 100
+xp_reward   = 0
+gold_reward = 0
+dialogue    = ""
+shop        = []
+give_accepts = []
+rest_cost   = 0
+kill_script = []
+respawn_time= 0
+

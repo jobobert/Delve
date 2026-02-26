@@ -1,0 +1,34 @@
+# data/millbrook/zone.toml
+# Millbrook — a farming village in the green hills above the river plain.
+# A working place. The kind of place people come back to.
+#
+# Zone layout (rough compass):
+#
+#   [Hilltop Meadow]
+#          |
+#   [Millbrook Road] ── [Village Green] ── [Millbrook Mill]
+#          |                  |                  |
+#   [East Field]       [The Cloverleaf]    [River Bend]
+#          |
+#   [Thornwood Copse] ── [Old Mine Entrance]
+#                               |
+#                        [Mine Passage]
+#                               |
+#                        [Thorngrub Nest] (Queen chamber)
+#
+#   [Village Green] ── [Aldric's Farm] ── [Barn & Paddock]
+#   [Village Green] ── [Millbrook Well] ── [Brewhouse]
+#
+# Entrances:
+#   west from millhaven_south_gate → millbrook_road (future link)
+#   north from millbrook_road → millhaven direction
+
+id          = "millbrook"
+name        = "Millbrook"
+description = """
+A farming village three hours east of Millhaven, tucked into a fold of green hills
+where the Millwater river narrows before the plain. Known for good grain, decent ale,
+and the kind of stubbornness that keeps small places alive when larger ones have
+forgotten them.
+"""
+recommended_level = 3

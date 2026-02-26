@@ -1,0 +1,68 @@
+# data/blackfen/quests/grandfathers_emerald.toml
+# "Grandfather's Emerald" — main quest for the Blackfen Mire zone.
+#
+# Adapted from "The Dragon's Demise" by J.C. Connors.
+#
+# Quest flow:
+#   Step 1: Speak to Aonn Tesk in Millhaven (he gives the map and the story)
+#   Step 2: Reach Blackfen Gate and decide whether to hire Grimwick as guide
+#   Step 3: Reach the Dragon's Clearing and see the dead serpent
+#   Step 4: Recover the Celestial Emerald from the dragon's belly
+#   Step 5: Return the Emerald to Aonn Tesk in Millhaven
+#
+# Optional flags that modify outcomes:
+#   has_grimwick        — hired Grimwick as guide (bonus XP, easier checks)
+#   lost_grimwick       — Grimwick died to the swamp lion (-XP at end)
+#   saved_grimwick      — rescued Grimwick from the swamp lion (+XP bonus)
+#   thornbury_friendly  — befriended Maren Thornbury (can rest at cottage)
+#   fanghelm_defeated   — defeated Durath Ironteeth (bonus XP + loot)
+#   anurus_defeated     — defeated Anurus (bonus XP + staff)
+#   emerald_recovered   — the emerald is in inventory
+
+id      = "grandfathers_emerald"
+title   = "Grandfather's Emerald"
+giver   = "aonn_tesk"
+summary = """
+Aonn Tesk, your grandfather's oldest friend, has told you what happened in
+the Murk Fens. Your grandfather was devoured by a dead serpent dragon along
+with the Celestial Emerald he had recovered from a sunken temple. The dragon
+is dead now — killed by the wizard Riversturm — but it hangs in the swamp
+canopy with the emerald still inside it.
+"""
+
+[[step]]
+index     = 1
+objective = "Reach the Murk Fens — the Blackfen Mire south of Millhaven."
+hint      = "Ask Warden Holt at the Fengate for guidance, or hire Grimwick the guide at the swamp's edge."
+
+[[step]]
+index     = 2
+objective = "Find a way through the mire to the dragon's resting place."
+hint      = "Grimwick knows the paths. Maren Thornbury at the lakeside cottage may also help."
+
+[[step]]
+index     = 3
+objective = "Reach the clearing where the dead serpent dragon fell."
+hint      = "Follow the bone-littered trail south of Blacklake. The Path of Bones leads there."
+
+[[step]]
+index     = 4
+objective = "Recover the Celestial Emerald from inside the dragon."
+hint      = "The dragon must be brought down from the canopy. Then open its belly."
+
+[[step]]
+index     = 5
+objective = "Return the Celestial Emerald to Aonn Tesk in Millhaven."
+hint      = "Aonn Tesk waits at the Rusty Flagon Inn. He will want to see the emerald."
+
+[[reward]]
+type   = "xp"
+amount = 400
+
+[[reward]]
+type   = "gold"
+amount = 150
+
+[[reward]]
+type = "message"
+text = "Aonn raises his glass to your grandfather. You do the same."

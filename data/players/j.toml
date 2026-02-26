@@ -1,0 +1,33 @@
+name = "j"
+room_id = "blackfen_gate"
+hp = 64
+max_hp = 100
+attack = 6
+defense = 5
+level = 1
+xp = 15
+xp_next = 100
+gold = 0
+inventory = []
+equipped = {weapon = {}, head = {}, chest = {}, legs = {}, arms = {}, armor = {}, pack = {}, ring = {}, shield = {}, cape = {}}
+active_style = "brawling"
+known_styles = ["brawling"]
+style_prof = {brawling = 12.0}
+looted_items = []
+visited_rooms = ["blackfen_gate", "forest_path", "south_gate", "town_square"]
+flags = []
+active_quests = {}
+completed_quests = []
+npc_dialogue_index = {}
+bind_room = "blackfen_gate"
+xp_debt = 0
+bank = []
+bank_slots = 10
+banked_gold = 0
+prestige = 0
+prestige_affinities = []
+aliases = {ne = "northeast", nw = "northwest", se = "southeast", sw = "southwest", cl = "climb", dn = "descend", ent = "enter", ex = "leave", jp = "jump"}
+skills = {stealth = 0.0, survival = 0.0, perception = 0.0, athletics = 0.0, social = 0.0, arcana = 0.0, mining = 0.0}
+status_effects = {}
+commissions = []
+companion = {}

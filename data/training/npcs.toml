@@ -1,0 +1,69 @@
+# data/training/npcs.toml — NPCs native to the Training zone.
+
+[[npc]]
+id          = "drill_sergeant"
+name        = "Drill Sergeant Vorn"
+tags        = ["humanoid", "armored", "slow"]
+style       = "swordplay"
+style_prof  = 70
+desc_short  = "A scarred veteran who looks at you like you're already failing."
+desc_long   = "Vorn has the kind of face that comes from thirty years of hard campaigns — flat nose broken at least twice, a jaw like a shovel, eyes that have seen too much and lost any trace of softness. He wears his chain shirt like a second skin. He's watching you move and already cataloguing your flaws."
+hp          = 80
+max_hp      = 80
+attack      = 14
+defense     = 10
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "Sloppy footwork. Again. Learn a style worth knowing and come back."
+
+[[npc]]
+id          = "training_dummy"
+name        = "Training Dummy"
+tags        = ["slow", "humanoid"]
+style       = "brawling"
+style_prof  = 0
+desc_short  = "A straw-stuffed burlap sack shaped vaguely like a person."
+desc_long   = "It hangs from a wooden frame on a rope, swaying slightly. Someone has painted a face on it in red — a crude, frowning face. It doesn't fight back, but it's good for learning where to hit. A sign pinned to its chest reads: 'Do not name it.'"
+hp          = 20
+max_hp      = 20
+attack      = 1
+defense     = 0
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "..."
+
+[[npc]]
+id          = "sparring_recruit"
+name        = "Sparring Recruit"
+tags        = ["humanoid", "slow", "small"]
+style       = "brawling"
+style_prof  = 5
+desc_short  = "A nervous young soldier in padded training armor."
+desc_long   = "He can't be more than seventeen. The padded armor is two sizes too big and cinched with extra belt. He has the look of someone who volunteered for something before fully thinking it through. He'll fight — the Sergeant is watching — but he's clearly hoping you'll go easy."
+hp          = 30
+max_hp      = 30
+attack      = 4
+defense     = 2
+xp_reward   = 5
+gold_reward = 0
+hostile     = false
+dialogue    = "I'll try not to hit your face. No promises."
+
+[[npc]]
+id          = "barracks_quartermaster"
+name        = "Quartermaster"
+tags        = ["humanoid", "slow", "banker"]
+style       = "brawling"
+style_prof  = 10
+desc_short  = "A grey-haired soldier managing the barracks storehouse and accounts."
+desc_long   = "The Quartermaster has been in the barracks longer than anyone can remember — possibly including himself. He manages equipment, pay, and now apparently banking, with equal indifference. His ledger is immaculate. His opinion of adventurers is visible on his face."
+hp          = 40
+max_hp      = 40
+attack      = 6
+defense     = 5
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "I keep accounts for the barracks and for travellers who ask nicely. Your funds are safe across all branches."

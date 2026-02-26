@@ -1,0 +1,6 @@
+[[region]]
+id                 = "verdant_heartwood"
+name               = "Verdant Heartwood"
+description        = "A lush, ancient forest where the malfunctioning device piece has accelerated regrowth beyond natural limits. Vines move on their own, roots shift underfoot, and the forest behaves like a single living organism."
+recommended_level  = 7
+admin_comment      = "Piece Effect: Accelerates plant growth and grants limited sentience to flora.  Notes: Regenerating enemies and terrain hazards require strategy."

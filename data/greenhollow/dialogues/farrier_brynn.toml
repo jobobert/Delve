@@ -1,0 +1,158 @@
+# data/greenhollow/dialogues/farrier_brynn.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "What do you need made? Or are you here about something else?",
+  "I'm between jobs if you need something.",
+  "The mine keeps me busy — or it did before all this groundhog business.",
+]
+
+[[response]]
+node = "root"
+text = "I need equipment."
+next = "shop_node"
+
+[[response]]
+node = "root"
+text = "Can you teach me to mine?"
+next = "teach_mining"
+
+[[response]]
+node = "root"
+text = "I've heard you practice an unusual fighting style."
+next = "style_inquiry"
+
+[[response]]
+node = "root"
+text = "What do you know about the mine situation?"
+next = "mine_info"
+
+[[response]]
+node = "root"
+text = "Nothing, thanks."
+next = ""
+
+[[node]]
+id   = "shop_node"
+line = "I keep basic tools and ironwork in stock. Pickaxes are ready-made — I've been making extras for the mine. What do you need?"
+
+[[response]]
+node = "shop_node"
+text = "Let me see what you have."
+next = ""
+
+[[node]]
+id   = "teach_mining"
+line = "Mining's a skill, not a tool. The pick is just what you're holding — the technique is what matters. Reading the grain of the rock, striking at the angle that frees ore instead of wasting it. I can show you the basics. Once you know them, you learn by doing."
+script = [
+  { op = "skill_grow", skill = "mining" },
+  { op = "message",    tag = "reward_xp", text = "  Brynn walks you through ore identification and pick angles. Mining skill started." },
+]
+
+[[response]]
+node = "teach_mining"
+text = "That's useful. Thank you."
+next = ""
+
+[[response]]
+node = "teach_mining"
+text = "What about the deep ore?"
+next = "teach_deep_ore"
+
+[[node]]
+id   = "teach_deep_ore"
+line = "The deep seam is different from the iron on level one. Denser, darker — possibly a composite ore or a richer iron variety. You'll need real technique to get it out cleanly. Practice on the upper seam first. When your skill is solid, the deep ore will make sense."
+
+[[response]]
+node = "teach_deep_ore"
+text = "Understood."
+next = ""
+
+[[node]]
+id   = "style_inquiry"
+line = "Flowing Water. A monk taught it to me ten years ago in exchange for ironwork. He said he'd been looking for someone patient enough to learn it. I've been looking for someone patient enough to teach ever since."
+
+[[response]]
+node = "style_inquiry"
+condition = { not_flag = "brynn_style_context" }
+text = "What does it do?"
+next = "style_explain"
+
+[[response]]
+node = "style_inquiry"
+condition = { flag = "brynn_offered_teach" }
+text = "I'd like to learn it."
+next = "style_learn"
+
+[[response]]
+node = "style_inquiry"
+text = "Not my kind of thing."
+next = ""
+
+[[node]]
+id   = "style_explain"
+line = "Most fighting styles are about doing something to the enemy. Flowing Water is about doing nothing — moving the right way, at the right moment, until their attack goes somewhere you're not. Their momentum becomes yours. A fast opponent doesn't frighten me. The faster they come, the harder they fall."
+script = [
+  { op = "set_flag", flag = "brynn_style_context" },
+]
+
+[[response]]
+node = "style_explain"
+condition = { not_flag = "brynn_offered_teach" }
+text = "Can you teach me?"
+next = "style_offer"
+
+[[response]]
+node = "style_explain"
+text = "I can see why the monk liked you."
+next = ""
+
+[[node]]
+id   = "style_offer"
+line = "I could. But it requires something. Not gold — skill. You need to have fought enough to know your own reactions before Flowing Water will mean anything to you. Come back when you've proven yourself out in the world. I'll know when you're ready."
+script = [
+  { op = "set_flag", flag = "brynn_offered_teach" },
+]
+
+[[response]]
+node = "style_offer"
+text = "Fair enough. I'll be back."
+next = ""
+
+[[node]]
+id   = "style_learn"
+line = "Good. Watch. Then do exactly what I do — slowly, first."
+script = [
+  { op = "teach_style", style_id = "flowing_water" },
+  { op = "prestige",    amount = 1, reason = "learned Flowing Water from Brynn Farrier" },
+  { op = "message",     tag = "reward_xp", text = "  Brynn spends an hour taking you through the first forms. Flowing Water learned." },
+]
+
+[[response]]
+node = "style_learn"
+text = "Thank you."
+next = ""
+
+[[node]]
+id   = "mine_info"
+line = "Osric's been foreman there twenty years. He knows every tunnel. Whatever moved in, it knows how to dig — the burrows are clean work. The thing at the bottom, the big one — Osric heard it once. Said it sounded like a mill grinding stone. Just louder. And underground."
+
+[[response]]
+node = "mine_info"
+text = "How do I get to the deep chamber?"
+next = "mine_route"
+
+[[response]]
+node = "mine_info"
+text = "Good to know. I'll be careful."
+next = ""
+
+[[node]]
+id   = "mine_route"
+line = "Main shaft goes straight down to level one. From there, the secondary shaft — look for the cart tracks that branch left — goes to the natural chamber. That's level two. That's where it lives. Take a lantern and watch the floor. The groundhogs have undermined some of the planking."
+
+[[response]]
+node = "mine_route"
+text = "Understood."
+next = ""

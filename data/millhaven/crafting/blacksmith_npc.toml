@@ -1,0 +1,102 @@
+# data/millhaven/crafting/blacksmith_npc.toml
+# Commission definitions for Dorin the Blacksmith.
+# Materials sold at the merchant stall (Market Street) and found as loot.
+
+# ── WEAPONS ───────────────────────────────────────────────────────────────────
+
+[[commission]]
+id             = "hunting_knife"
+npc_id         = "blacksmith_npc"
+label          = "Hunting Knife"
+desc           = "A short, curved blade built for fieldwork — light, quick, and easy to conceal."
+slot           = "weapon"
+weapon_tags    = ["blade", "light", "one_handed"]
+materials      = ["iron_ingot", "leather_strip"]
+turns_required = 20
+gold_cost      = 5
+xp_reward      = 30
+weight         = 1
+qualities = [
+  { tier = "poor",        weight = 20, attack_bonus = 3, equip_msg = "The edge is a bit rough, but it'll do." },
+  { tier = "standard",    weight = 55, attack_bonus = 5, equip_msg = "A clean blade. Dorin keeps a steady hand." },
+  { tier = "exceptional", weight = 20, attack_bonus = 7, special = "sharp",  name_prefix = "Fine ",        equip_msg = "The edge is razor-keen. You could shave with this." },
+  { tier = "masterwork",  weight = 5,  attack_bonus = 9, special = "sharp",  name_prefix = "Masterwork ", equip_msg = "Balanced perfectly. This weapon wants to be used.", craft_message = "Not a mark on it. That's as good as iron gets." },
+]
+
+[[commission]]
+id             = "war_sword"
+npc_id         = "blacksmith_npc"
+label          = "War Sword"
+desc           = "A full-length fighting sword, heavy enough to punish armored foes."
+slot           = "weapon"
+weapon_tags    = ["sword", "heavy", "one_handed"]
+materials      = ["iron_ingot", "iron_ingot", "coal_chunk"]
+turns_required = 35
+gold_cost      = 10
+xp_reward      = 60
+weight         = 4
+qualities = [
+  { tier = "poor",        weight = 20, attack_bonus = 6,  equip_msg = "It's heavy and serviceable. Don't expect elegance." },
+  { tier = "standard",    weight = 55, attack_bonus = 10, equip_msg = "Solid work. This'll hold an edge through a fight." },
+  { tier = "exceptional", weight = 20, attack_bonus = 13, special = "heavy_blow", name_prefix = "Fine ",        equip_msg = "The weight distribution is excellent. Each swing carries real authority." },
+  { tier = "masterwork",  weight = 5,  attack_bonus = 17, special = "heavy_blow", name_prefix = "Masterwork ", equip_msg = "This sword has a presence. Other weapons feel lesser.", craft_message = "I've made a hundred swords. That's one of maybe three I'm proud of." },
+]
+
+[[commission]]
+id             = "beast_spear"
+npc_id         = "blacksmith_npc"
+label          = "Beast Spear"
+desc           = "A broad-headed spear designed to punch through thick hide and scales."
+slot           = "weapon"
+weapon_tags    = ["spear", "two_handed", "reach"]
+materials      = ["iron_ingot", "hard_wood", "leather_strip"]
+turns_required = 30
+gold_cost      = 8
+xp_reward      = 50
+weight         = 3
+qualities = [
+  { tier = "poor",        weight = 20, attack_bonus = 5,  equip_msg = "A bit unbalanced, but the point is sharp enough." },
+  { tier = "standard",    weight = 55, attack_bonus = 8,  special = "pierce", equip_msg = "Well-weighted. The broad head finds gaps in tough hide." },
+  { tier = "exceptional", weight = 20, attack_bonus = 11, special = "pierce", name_prefix = "Fine ",        equip_msg = "The head is barbed subtly — it won't pull free easily." },
+  { tier = "masterwork",  weight = 5,  attack_bonus = 15, special = "pierce", name_prefix = "Masterwork ", equip_msg = "The balance is uncanny for a two-handed weapon.", craft_message = "The barb geometry took me four tries to get right. Worth it." },
+]
+
+# ── ARMOR ─────────────────────────────────────────────────────────────────────
+
+[[commission]]
+id             = "iron_helm"
+npc_id         = "blacksmith_npc"
+label          = "Iron Helm"
+desc           = "A full iron helmet with cheek guards. Heavy, but reassuring."
+slot           = "armor"
+armor_tags     = ["iron", "heavy", "head"]
+materials      = ["iron_ingot", "leather_strip"]
+turns_required = 25
+gold_cost      = 8
+xp_reward      = 40
+weight         = 3
+qualities = [
+  { tier = "poor",        weight = 20, defense_bonus = 3,  equip_msg = "Functional. The fit is a bit loose." },
+  { tier = "standard",    weight = 55, defense_bonus = 5,  equip_msg = "A solid helm. Sits well and doesn't pinch." },
+  { tier = "exceptional", weight = 20, defense_bonus = 7,  special = "reinforced", name_prefix = "Fine ",        equip_msg = "The cheek guards are exceptionally well-fitted. This'll turn a blade." },
+  { tier = "masterwork",  weight = 5,  defense_bonus = 10, special = "reinforced", name_prefix = "Masterwork ", equip_msg = "Dorin's engraving on the brow-guard is almost invisible but deliberate.", craft_message = "The curve on the crown is what makes it. Deflects rather than absorbs." },
+]
+
+[[commission]]
+id             = "plate_breastplate"
+npc_id         = "blacksmith_npc"
+label          = "Iron Breastplate"
+desc           = "A shaped iron breastplate. Serious protection for serious danger."
+slot           = "armor"
+armor_tags     = ["iron", "heavy", "chest"]
+materials      = ["iron_ingot", "iron_ingot", "iron_ingot", "coal_chunk"]
+turns_required = 50
+gold_cost      = 20
+xp_reward      = 100
+weight         = 8
+qualities = [
+  { tier = "poor",        weight = 20, defense_bonus = 7,  equip_msg = "Heavy and adequate. The hammering marks are visible." },
+  { tier = "standard",    weight = 55, defense_bonus = 12, equip_msg = "Good work. The shaping has followed your contours well." },
+  { tier = "exceptional", weight = 20, defense_bonus = 16, special = "reinforced", name_prefix = "Fine ",        equip_msg = "The edge-work is clean. This will shed glancing blows entirely." },
+  { tier = "masterwork",  weight = 5,  defense_bonus = 21, special = "reinforced", name_prefix = "Masterwork ", equip_msg = "You feel genuinely safer in it.", craft_message = "Four days. I turned down two other jobs to finish it. Don't die in it — I'll be annoyed." },
+]

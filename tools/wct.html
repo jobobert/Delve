@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delve — World Creation Tool</title>
+<style>
+:root {
+  --bg:        #0d0f12;
+  --surface:   #13161b;
+  --panel:     #181c23;
+  --border:    #252b36;
+  --accent:    #c8a96e;
+  --accent2:   #5b8fb9;
+  --dim:       #4a5568;
+  --text:      #cdd6e4;
+  --text-dim:  #6b7a90;
+  --green:     #4caf7d;
+  --red:       #e05252;
+  --yellow:    #d4a843;
+  --purple:    #9b7fd4;
+  --room-col:  #c8a96e;
+  --npc-col:   #e07e5a;
+  --item-col:  #6fbbcf;
+  --quest-col: #9b7fd4;
+  --dlg-col:   #5ba87a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Consolas','JetBrains Mono','Fira Mono',monospace;
+  font-size: 13px; line-height: 1.5;
+  display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 16px; height: 44px; display: flex; align-items: center;
+  gap: 24px; flex-shrink: 0; z-index: 100;
+}
+.logo { font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: .12em; }
+.logo span { color: var(--dim); font-weight: 400; }
+.hbtn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: inherit;
+  font-size: 12px; transition: all .15s;
+}
+.hbtn:hover { border-color: var(--accent); color: var(--accent); }
+.hbtn.primary { border-color: var(--accent); color: var(--accent); }
+.hbtn.danger  { border-color: var(--red); color: var(--red); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-left: auto; }
+.status-dot.err { background: var(--red); }
+#status-text { font-size: 11px; color: var(--text-dim); }
+
+/* ── Layout ─────────────────────────────────────────────────────── */
+.workspace { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Left: content tree ─────────────────────────────────────────── */
+#tree-panel {
+  width: 240px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); overflow-y: auto; display: flex;
+  flex-direction: column;
+}
+.tree-search {
+  padding: 8px; border-bottom: 1px solid var(--border);
+}
+.tree-search input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); padding: 5px 8px; border-radius: 4px;
+  font-family: inherit; font-size: 12px; outline: none;
+}
+.tree-search input:focus { border-color: var(--accent2); }
+.tree-zone { border-bottom: 1px solid var(--border); }
+.tree-zone-hd {
+  display: flex; align-items: center; gap: 6px; padding: 7px 10px;
+  cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent);
+  letter-spacing: .08em; user-select: none;
+  background: rgba(200,169,110,.04);
+}
+.tree-zone-hd:hover { background: rgba(200,169,110,.08); }
+.tree-zone-hd .chevron { font-size: 10px; transition: transform .15s; }
+.tree-zone-hd.open .chevron { transform: rotate(90deg); }
+.tree-zone-body { display: none; }
+.tree-zone-hd.open + .tree-zone-body { display: block; }
+.tree-section { padding: 2px 0; }
+.tree-section-hd {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--dim); padding: 4px 10px 2px 20px; user-select: none;
+}
+.tree-item {
+  padding: 3px 10px 3px 28px; cursor: pointer; font-size: 12px;
+  color: var(--text-dim); display: flex; align-items: center; gap: 6px;
+  border-left: 2px solid transparent; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tree-item:hover { color: var(--text); background: rgba(255,255,255,.03); }
+.tree-item.active { border-left-color: var(--accent); color: var(--text); background: rgba(200,169,110,.07); }
+.tree-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Middle: main editor ─────────────────────────────────────────── */
+#editor-panel {
+  flex: 1; overflow-y: auto; padding: 24px 28px;
+  background: var(--bg);
+}
+.editor-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: var(--dim); gap: 12px;
+}
+.editor-empty .icon { font-size: 48px; opacity: .3; }
+.editor-empty p { font-size: 13px; }
+
+.editor-header {
+  display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px;
+  border-bottom: 1px solid var(--border); padding-bottom: 16px;
+}
+.editor-header-info { flex: 1; }
+.editor-type-badge {
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 3px; margin-bottom: 6px; display: inline-block;
+}
+.badge-room  { background: rgba(200,169,110,.15); color: var(--room-col); border: 1px solid rgba(200,169,110,.3); }
+.badge-npc   { background: rgba(224,126,90,.15);  color: var(--npc-col);  border: 1px solid rgba(224,126,90,.3); }
+.badge-item  { background: rgba(111,187,207,.15); color: var(--item-col); border: 1px solid rgba(111,187,207,.3); }
+.badge-quest { background: rgba(155,127,212,.15); color: var(--quest-col);border: 1px solid rgba(155,127,212,.3); }
+.badge-dlg   { background: rgba(91,168,122,.15);  color: var(--dlg-col);  border: 1px solid rgba(91,168,122,.3); }
+
+.editor-title { font-size: 20px; font-weight: 700; color: var(--text); }
+.editor-id    { font-size: 11px; color: var(--dim); margin-top: 2px; }
+.editor-file  { font-size: 10px; color: var(--dim); margin-top: 2px; font-style: italic; }
+
+.section {
+  margin-bottom: 28px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden;
+}
+.section-hd {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--dim); display: flex; align-items: center; gap: 8px;
+}
+.section-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field-row { display: flex; gap: 12px; }
+.field-row .field { flex: 1; }
+label { font-size: 11px; color: var(--text-dim); letter-spacing: .05em; }
+input[type=text], textarea, select {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  padding: 7px 10px; border-radius: 4px; font-family: inherit; font-size: 13px;
+  width: 100%; outline: none; transition: border-color .15s;
+}
+input[type=text]:focus, textarea:focus, select:focus { border-color: var(--accent2); }
+textarea { resize: vertical; min-height: 80px; }
+.hint { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
+.flag-grid {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.flag-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 4px; cursor: pointer;
+  font-size: 11px; color: var(--text-dim); user-select: none;
+  transition: all .12s;
+}
+.flag-chip.active { border-color: var(--accent2); color: var(--accent2); background: rgba(91,143,185,.1); }
+.flag-chip input { display: none; }
+
+.exit-grid { display: flex; flex-direction: column; gap: 6px; }
+.exit-row {
+  display: grid; grid-template-columns: 100px 1fr 90px; gap: 8px; align-items: center;
+}
+.exit-dir { font-size: 11px; color: var(--text-dim); font-weight: 700; letter-spacing: .05em; }
+
+/* ── Dialogue node graph ─────────────────────────────────────────── */
+#dlg-graph {
+  position: relative; overflow: hidden; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px;
+  min-height: 400px; cursor: grab; user-select: none;
+}
+#dlg-graph.dragging { cursor: grabbing; }
+#dlg-canvas { position: absolute; top: 0; left: 0; }
+.dlg-node {
+  position: absolute; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 6px; padding: 10px 12px; min-width: 180px; max-width: 240px;
+  cursor: pointer; transition: border-color .15s; box-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+.dlg-node:hover, .dlg-node.selected { border-color: var(--accent2); }
+.dlg-node.root-node { border-color: var(--accent); }
+.dlg-node-id { font-size: 10px; color: var(--dim); margin-bottom: 4px; letter-spacing: .08em; }
+.dlg-node-text { font-size: 12px; color: var(--text); line-height: 1.4; word-break: break-word; }
+.dlg-node-responses { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.dlg-resp-chip {
+  font-size: 10px; color: var(--text-dim); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dlg-resp-chip .resp-arrow { color: var(--accent2); margin-right: 4px; }
+svg.dlg-connections { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+/* ── Right panel: contextual detail ─────────────────────────────── */
+#detail-panel {
+  width: 280px; flex-shrink: 0; background: var(--surface);
+  border-left: 1px solid var(--border); overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.detail-hd {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim);
+}
+.detail-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.detail-empty { padding: 24px 16px; color: var(--dim); font-size: 12px; text-align: center; }
+.detail-actions { display: flex; flex-direction: column; gap: 8px; }
+.btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  padding: 7px 14px; border-radius: 4px; cursor: pointer; font-family: inherit;
+  font-size: 12px; transition: all .15s; text-align: left;
+}
+.btn:hover { border-color: var(--text-dim); color: var(--text); }
+.btn.accent { border-color: var(--accent); color: var(--accent); }
+.btn.accent:hover { background: rgba(200,169,110,.1); }
+.btn.blue  { border-color: var(--accent2); color: var(--accent2); }
+.btn.blue:hover  { background: rgba(91,143,185,.1); }
+.btn.green { border-color: var(--green); color: var(--green); }
+.btn.green:hover { background: rgba(76,175,125,.1); }
+.btn.red   { border-color: var(--red); color: var(--red); }
+.btn.red:hover   { background: rgba(224,82,82,.1); }
+
+/* ── Map mini panel (inside detail) ─────────────────────────────── */
+#mini-map { width: 100%; aspect-ratio: 1; position: relative; overflow: hidden;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 4px; margin-top: 8px; }
+#mini-map svg { width: 100%; height: 100%; }
+
+/* ── Toast ──────────────────────────────────────────────────────── */
+#toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  padding: 10px 16px; border-radius: 6px; font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.5); animation: slideIn .2s ease;
+  max-width: 320px;
+}
+.toast.ok  { border-color: var(--green); }
+.toast.err { border-color: var(--red); color: var(--red); }
+@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Validate modal ─────────────────────────────────────────────── */
+#modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  z-index: 500; align-items: center; justify-content: center;
+}
+#modal-overlay.open { display: flex; }
+#modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; width: 700px; max-height: 80vh; display: flex;
+  flex-direction: column; overflow: hidden;
+}
+.modal-hd {
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.modal-hd h2 { font-size: 14px; color: var(--text); flex: 1; }
+.modal-close { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 18px; }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+pre.validate-out {
+  font-family: inherit; font-size: 12px; white-space: pre-wrap;
+  color: var(--text); line-height: 1.6;
+}
+pre.validate-out .ok-line  { color: var(--green); }
+pre.validate-out .err-line { color: var(--red); }
+pre.validate-out .warn-line{ color: var(--yellow); }
+
+/* ── New-item modal ─────────────────────────────────────────────── */
+#new-modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; width: 480px; display: flex; flex-direction: column;
+}
+.new-modal-section { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.new-modal-footer {
+  padding: 12px 20px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">DELVE <span>//</span> WCT</div>
+  <button class="hbtn primary" onclick="showNewMenu()">＋ New</button>
+  <button class="hbtn" onclick="saveAll()">Save</button>
+  <button class="hbtn" onclick="runValidate()">Validate</button>
+  <button class="hbtn" onclick="reloadWorld()">↺ Reload</button>
+  <div class="status-dot" id="status-dot"></div>
+  <span id="status-text">Loading…</span>
+</header>
+
+<div class="workspace">
+  <!-- Left tree -->
+  <div id="tree-panel">
+    <div class="tree-search"><input id="tree-search" placeholder="Search…" oninput="filterTree(this.value)"></div>
+    <div id="tree-body"></div>
+  </div>
+
+  <!-- Middle editor -->
+  <div id="editor-panel">
+    <div class="editor-empty" id="editor-empty">
+      <div class="icon">⬡</div>
+      <p>Select an object from the tree to edit it.</p>
+    </div>
+    <div id="editor-content" style="display:none"></div>
+  </div>
+
+  <!-- Right detail -->
+  <div id="detail-panel">
+    <div class="detail-hd">Context</div>
+    <div class="detail-body" id="detail-body">
+      <div class="detail-empty">Select an object to see actions and connections.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Validate modal -->
+<div id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div id="modal">
+    <div class="modal-hd">
+      <h2>Validator Output</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body"><pre class="validate-out" id="validate-out">Running…</pre></div>
+  </div>
+</div>
+
+<!-- New item modal (shares overlay) -->
+<div id="new-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center" onclick="if(event.target===this)closeNew()">
+  <div id="new-modal">
+    <div class="modal-hd">
+      <h2 id="new-modal-title">New Object</h2>
+      <button class="modal-close" onclick="closeNew()">✕</button>
+    </div>
+    <div class="new-modal-section" id="new-modal-body"></div>
+    <div class="new-modal-footer">
+      <button class="btn" onclick="closeNew()">Cancel</button>
+      <button class="btn accent" id="new-modal-confirm" onclick="confirmNew()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let WORLD       = null;  // full world data from server
+let selected    = null;  // {type, zone, data, file}
+let pendingSave = {};    // {file_rel: changed_data}
+let newCtx      = {};    // context for new-item modal
+
+const ROOM_FLAGS = [
+  "no_combat","safe_combat","town","no_rest","no_recall","healing",
+  "hazard","no_large_companion","dark","underwater",
+];
+const DIRECTIONS = ["north","south","east","west","up","down",
+                    "northeast","northwest","southeast","southwest",
+                    "climb","descend","enter","leave","jump","cross",
+                    "inside","outside","portal","gate"];
+const ALL_SLOTS  = ["weapon","head","chest","legs","arms","armor","pack","ring","shield","cape"];
+const ZONE_COLORS= { millhaven:"#4a9eff", training:"#c47aff", ashwood:"#ffaa44",
+                     blackfen:"#7ec87e", default:"#888" };
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function reloadWorld() {
+  setStatus("Loading…", false);
+  try {
+    const r = await fetch("/api/world");
+    WORLD    = await r.json();
+    renderTree();
+    setStatus(`${countAll()} objects loaded`, false);
+  } catch(e) {
+    setStatus("Error loading world", true);
+    toast("Could not connect to WCT server", "err");
+  }
+}
+
+function countAll() {
+  let n = 0;
+  Object.values(WORLD.zones).forEach(z => {
+    n += z.rooms.length + z.items.length + z.npcs.length +
+         z.quests.length + z.dialogues.length + z.companions.length;
+  });
+  return n;
+}
+
+function setStatus(msg, err) {
+  document.getElementById("status-text").textContent = msg;
+  document.getElementById("status-dot").className = "status-dot" + (err ? " err" : "");
+}
+
+// ── Tree ──────────────────────────────────────────────────────────────────────
+function typeColor(type) {
+  return {room:"var(--room-col)",npc:"var(--npc-col)",item:"var(--item-col)",
+          quest:"var(--quest-col)",dialogue:"var(--dlg-col)",companion:"var(--purple)"}[type] || "var(--dim)";
+}
+
+function renderTree(filter="") {
+  const body   = document.getElementById("tree-body");
+  const fl     = filter.toLowerCase();
+  body.innerHTML = "";
+
+  Object.entries(WORLD.zones).forEach(([zid, zone]) => {
+    const sections = [
+      {key:"rooms",      label:"Rooms",      data:zone.rooms,      type:"room"},
+      {key:"npcs",       label:"NPCs",        data:zone.npcs,       type:"npc"},
+      {key:"items",      label:"Items",       data:zone.items,      type:"item"},
+      {key:"quests",     label:"Quests",      data:zone.quests,     type:"quest"},
+      {key:"dialogues",  label:"Dialogues",   data:zone.dialogues,  type:"dialogue"},
+      {key:"companions", label:"Companions",  data:zone.companions, type:"companion"},
+    ];
+
+    // Filter: hide zone if nothing matches
+    const visible = sections.flatMap(s => s.data).filter(d => {
+      if (!fl) return true;
+      return JSON.stringify(d).toLowerCase().includes(fl);
+    });
+    if (fl && visible.length === 0) return;
+
+    const zoneEl = document.createElement("div");
+    zoneEl.className = "tree-zone";
+
+    const hd = document.createElement("div");
+    hd.className = "tree-zone-hd" + (fl ? " open" : "");
+    hd.innerHTML = `<span class="chevron">▶</span> ${zid.toUpperCase()}
+      <span style="color:var(--dim);font-size:10px;margin-left:auto">${visible.length}</span>`;
+    hd.onclick = () => { hd.classList.toggle("open"); };
+    zoneEl.appendChild(hd);
+
+    const body2 = document.createElement("div");
+    body2.className = "tree-zone-body";
+
+    sections.forEach(sec => {
+      const items = fl
+        ? sec.data.filter(d => JSON.stringify(d).toLowerCase().includes(fl))
+        : sec.data;
+      if (items.length === 0) return;
+
+      const secEl = document.createElement("div");
+      secEl.className = "tree-section";
+      secEl.innerHTML = `<div class="tree-section-hd">${sec.label}</div>`;
+      items.forEach(d => {
+        const id    = d.id || d._id || d._npc_id || "?";
+        const name  = d.name || id;
+        const item  = document.createElement("div");
+        item.className = "tree-item";
+        item.dataset.id = id;
+        item.innerHTML = `<span class="tree-dot" style="background:${typeColor(sec.type)}"></span>
+          <span style="overflow:hidden;text-overflow:ellipsis" title="${name}">${name}</span>`;
+        item.onclick = () => selectObject(sec.type, zid, d);
+        secEl.appendChild(item);
+      });
+      body2.appendChild(secEl);
+    });
+
+    zoneEl.appendChild(body2);
+    body.appendChild(zoneEl);
+  });
+}
+
+function filterTree(v) { if (WORLD) renderTree(v); }
+
+// ── Selection ─────────────────────────────────────────────────────────────────
+function selectObject(type, zone, data) {
+  selected = {type, zone, data};
+
+  // Highlight tree
+  document.querySelectorAll(".tree-item").forEach(el => el.classList.remove("active"));
+  const id = data.id || data._id || data._npc_id;
+  document.querySelectorAll(`.tree-item[data-id="${id}"]`).forEach(el => el.classList.add("active"));
+
+  document.getElementById("editor-empty").style.display = "none";
+  const ec = document.getElementById("editor-content");
+  ec.style.display = "block";
+
+  if (type === "room")      renderRoom(data, zone);
+  else if (type === "npc")  renderNPC(data, zone);
+  else if (type === "item") renderItem(data, zone);
+  else if (type === "quest")renderQuest(data, zone);
+  else if (type === "dialogue") renderDialogue(data, zone);
+  else if (type === "companion") renderCompanion(data, zone);
+
+  renderDetailPanel(type, zone, data);
+}
+
+// ── Shared rendering helpers ──────────────────────────────────────────────────
+function field(label, id, value, type="text", hint="") {
+  return `<div class="field">
+    <label>${label}</label>
+    <input type="${type}" id="f_${id}" value="${esc(value)}"
+      oninput="fieldChanged('${id}',this.value)">
+    ${hint ? `<span class="hint">${hint}</span>` : ""}
+  </div>`;
+}
+function textarea(label, id, value, hint="") {
+  return `<div class="field">
+    <label>${label}</label>
+    <textarea id="f_${id}" oninput="fieldChanged('${id}',this.value)">${esc(value)}</textarea>
+    ${hint ? `<span class="hint">${hint}</span>` : ""}
+  </div>`;
+}
+function esc(v) {
+  return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function section(title, ...content) {
+  return `<div class="section">
+    <div class="section-hd">${title}</div>
+    <div class="section-body">${content.join("")}</div>
+  </div>`;
+}
+function editorHeader(type, name, id, file) {
+  const badgeCls = {room:"badge-room",npc:"badge-npc",item:"badge-item",
+                    quest:"badge-quest",dialogue:"badge-dlg",companion:"badge-dlg"}[type] || "badge-room";
+  return `<div class="editor-header">
+    <div class="editor-header-info">
+      <div class="editor-type-badge ${badgeCls}">${type}</div>
+      <div class="editor-title">${esc(name || id)}</div>
+      <div class="editor-id">${esc(id)}</div>
+      ${file ? `<div class="editor-file">${esc(file)}</div>` : ""}
+    </div>
+  </div>`;
+}
+
+// ── Room editor ───────────────────────────────────────────────────────────────
+function renderRoom(r, zone) {
+  const exits  = r.exits || {};
+  const flags  = r.flags  || [];
+  const spawns = (r.spawns || []).join(", ");
+  const items  = (r.items  || []).map(i => typeof i==="string"?i:(i.id||"")).join(", ");
+
+  const flagChips = ROOM_FLAGS.map(f =>
+    `<div class="flag-chip ${flags.includes(f)?"active":""}" onclick="toggleFlag('${f}',this)">
+      <input type="checkbox" ${flags.includes(f)?"checked":""}> ${f}
+    </div>`
+  ).join("");
+
+  const exitRows = DIRECTIONS.slice(0,10).map(dir => {
+    const val = exits[dir] || "";
+    return `<div class="exit-row">
+      <span class="exit-dir">${dir}</span>
+      <input type="text" value="${esc(val)}" placeholder="room_id"
+        oninput="exitChanged('${dir}',this.value)" style="font-size:12px">
+    </div>`;
+  }).join("");
+
+  // Diagonal and named exits
+  const extraExitRows = DIRECTIONS.slice(10).filter(dir => exits[dir]).map(dir => {
+    const val = exits[dir] || "";
+    return `<div class="exit-row">
+      <span class="exit-dir">${dir}</span>
+      <input type="text" value="${esc(val)}" placeholder="room_id"
+        oninput="exitChanged('${dir}',this.value)" style="font-size:12px">
+    </div>`;
+  }).join("");
+
+  // Custom exits
+  const customExits = Object.entries(exits)
+    .filter(([k]) => !DIRECTIONS.includes(k)).map(([dir, val]) =>
+    `<div class="exit-row">
+      <span class="exit-dir" style="color:var(--yellow)">${dir}</span>
+      <input type="text" value="${esc(typeof val==="string"?val:JSON.stringify(val))}"
+        oninput="exitChanged('${dir}',this.value)" style="font-size:12px">
+    </div>`
+  ).join("");
+
+  document.getElementById("editor-content").innerHTML =
+    editorHeader("room", r.name, r.id, r._file) +
+    section("Identity",
+      `<div class="field-row">${field("ID", "id", r.id)} ${field("Name", "name", r.name)}</div>`,
+      `<div class="field-row">
+        ${field("Coord X", "coord_x", (r.coord||[0,0])[0], "number")}
+        ${field("Coord Y", "coord_y", (r.coord||[0,0])[1], "number")}
+        ${field("", "start", "", "text", "")}
+      </div>`,
+    ) +
+    section("Description",
+      textarea("Short description (desc_short)", "desc_short", r.desc_short||""),
+      textarea("Full description", "description", r.description||""),
+    ) +
+    section("Flags", `<div class="flag-grid">${flagChips}</div>`) +
+    section("Exits",
+      `<div class="exit-grid">${exitRows}${extraExitRows}${customExits}</div>`,
+      `<div style="margin-top:8px">
+        <span style="font-size:11px;color:var(--dim)">Add custom exit direction: </span>
+        <input type="text" id="custom_exit_dir" placeholder="e.g. swim" style="width:120px;font-size:12px">
+        <button class="btn blue" style="padding:4px 10px;font-size:11px" onclick="addCustomExit()">Add</button>
+      </div>`,
+    ) +
+    section("Contents",
+      field("Spawns (NPC ids, comma-separated)", "spawns", spawns,
+            "text", "e.g. corrupted_wolf, town_guard"),
+      field("Items (item ids, comma-separated)", "items_list", items,
+            "text", "e.g. old_key, health_potion"),
+    ) +
+    section("Admin",
+      textarea("Admin note (not shown in game)", "admin_comment", r.admin_comment||""),
+    );
+}
+
+function toggleFlag(flag, el) {
+  el.classList.toggle("active");
+  const r = selected.data;
+  r.flags = r.flags || [];
+  if (r.flags.includes(flag)) r.flags = r.flags.filter(f => f!==flag);
+  else r.flags.push(flag);
+  markChanged();
+}
+
+function exitChanged(dir, val) {
+  selected.data.exits = selected.data.exits || {};
+  if (val) selected.data.exits[dir] = val;
+  else delete selected.data.exits[dir];
+  markChanged();
+}
+
+function addCustomExit() {
+  const dir = document.getElementById("custom_exit_dir").value.trim().toLowerCase();
+  if (!dir) return;
+  selected.data.exits = selected.data.exits || {};
+  selected.data.exits[dir] = "";
+  selectObject(selected.type, selected.zone, selected.data);
+  markChanged();
+}
+
+// ── NPC editor ────────────────────────────────────────────────────────────────
+function renderNPC(n, zone) {
+  document.getElementById("editor-content").innerHTML =
+    editorHeader("npc", n.name, n.id, n._file) +
+    section("Identity",
+      `<div class="field-row">${field("ID", "id", n.id)} ${field("Name", "name", n.name)}</div>`,
+      field("Short description", "desc_short", n.desc_short||""),
+      textarea("Long description", "desc_long", n.desc_long||""),
+    ) +
+    section("Combat",
+      `<div class="field-row">
+        ${field("HP", "hp", n.hp||10, "number")}
+        ${field("Max HP", "max_hp", n.max_hp||10, "number")}
+        ${field("Attack", "attack", n.attack||5, "number")}
+        ${field("Defense", "defense", n.defense||0, "number")}
+      </div>`,
+      `<div class="field-row">
+        ${field("XP Reward", "xp_reward", n.xp_reward||0, "number")}
+        ${field("Gold Reward", "gold_reward", n.gold_reward||0, "number")}
+      </div>`,
+      `<div class="field-row">
+        ${field("Style", "style", n.style||"brawling")}
+        ${field("Style Prof", "style_prof", n.style_prof||0, "number")}
+      </div>`,
+      `<div class="field">
+        <label>Hostile?</label>
+        <select id="f_hostile" onchange="fieldChanged('hostile',this.value==='true')">
+          <option value="false" ${!n.hostile?"selected":""}>No</option>
+          <option value="true"  ${n.hostile?"selected":""}>Yes</option>
+        </select>
+      </div>`,
+    ) +
+    section("Tags & Dialogue",
+      field("Tags (comma-separated)", "tags", (n.tags||[]).join(", "),
+            "text", "e.g. humanoid, slow, large"),
+      textarea("Fallback dialogue string", "dialogue", n.dialogue||"",
+               "Shown if no dialogue TOML file exists for this NPC"),
+    ) +
+    section("Admin",
+      textarea("Admin note (not shown in game)", "admin_comment", n.admin_comment||""),
+    );
+}
+
+// ── Item editor ───────────────────────────────────────────────────────────────
+function renderItem(it, zone) {
+  const slotOpts = ALL_SLOTS.map(s =>
+    `<option value="${s}" ${it.slot===s?"selected":""}>${s}</option>`
+  ).join("");
+
+  document.getElementById("editor-content").innerHTML =
+    editorHeader("item", it.name, it.id, it._file) +
+    section("Identity",
+      `<div class="field-row">${field("ID","id",it.id)} ${field("Name","name",it.name)}</div>`,
+      field("Short description","desc_short",it.desc_short||""),
+      textarea("Long description","desc_long",it.desc_long||""),
+    ) +
+    section("Equipment",
+      `<div class="field-row">
+        <div class="field"><label>Slot</label>
+          <select id="f_slot" onchange="fieldChanged('slot',this.value)">
+            <option value="">— none —</option>${slotOpts}
+          </select>
+        </div>
+        ${field("Weight (stones)","weight",it.weight||1,"number")}
+      </div>`,
+      `<div class="field-row">
+        ${field("Value (gold)","value",it.value||0,"number")}
+        <div class="field"><label>No-drop?</label>
+          <select id="f_no_drop" onchange="fieldChanged('no_drop',this.value==='true')">
+            <option value="false" ${!it.no_drop?"selected":""}>No</option>
+            <option value="true"  ${it.no_drop?"selected":""}>Yes</option>
+          </select>
+        </div>
+      </div>`,
+    ) +
+    section("Admin",
+      textarea("Admin note","admin_comment",it.admin_comment||""),
+    );
+}
+
+// ── Quest editor ──────────────────────────────────────────────────────────────
+function renderQuest(q, zone) {
+  const steps = q.step || [];
+  const stepsHtml = steps.map((s,i) =>
+    `<div class="section" style="margin-bottom:12px">
+      <div class="section-hd">Step ${i}</div>
+      <div class="section-body">
+        ${field("Description", `step_${i}_desc`, s.description||"")}
+        ${field("Completion flag", `step_${i}_flag`, s.completion_flag||"")}
+      </div>
+    </div>`
+  ).join("");
+
+  document.getElementById("editor-content").innerHTML =
+    editorHeader("quest", q.title||q._id, q._id, q._file) +
+    section("Identity",
+      `<div class="field-row">
+        ${field("ID","quest_id",q.id||q._id||"")}
+        ${field("Quest giver NPC id","giver",q.giver||"")}
+      </div>`,
+      field("Title","title",q.title||""),
+      textarea("Description","description",q.description||""),
+    ) +
+    `<div class="section"><div class="section-hd">Steps</div>
+      <div class="section-body">${stepsHtml}
+        <button class="btn blue" onclick="addQuestStep()">＋ Add step</button>
+      </div>
+    </div>`;
+}
+
+// ── Dialogue editor (visual node graph) ──────────────────────────────────────
+let dlgData     = null;
+let dlgOffset   = {x:80, y:60};
+let dlgScale    = 1;
+let dlgPan      = {dragging:false,startX:0,startY:0,origX:0,origY:0};
+let dlgSelected = null;
+let nodePositions= {};
+
+function renderDialogue(d, zone) {
+  dlgData      = d;
+  dlgSelected  = null;
+
+  // Build node list from flat [[response]] format
+  const nodes    = d.node || [];
+  const responses= d.response || [];
+  // Attach responses to nodes
+  const nodeMap  = {};
+  nodes.forEach(n => { nodeMap[n.id] = {...n, responses:[]}; });
+  responses.forEach(r => {
+    if (nodeMap[r.node]) nodeMap[r.node].responses.push(r);
+  });
+
+  // Auto-layout if no positions saved
+  const visited  = new Set();
+  function layout(id, x, y) {
+    if (visited.has(id) || !nodeMap[id]) return;
+    visited.add(id);
+    nodePositions[id] = nodePositions[id] || {x, y};
+    const resps = nodeMap[id].responses;
+    resps.forEach((r, i) => {
+      if (r.next) layout(r.next, x + 280, y + i * 140);
+    });
+  }
+  layout("root", 60, 60);
+
+  document.getElementById("editor-content").innerHTML =
+    editorHeader("dialogue", "Dialogue: " + d._npc_id, d._npc_id, d._file) +
+    `<div id="dlg-graph" onmousedown="dlgPanStart(event)" onmousemove="dlgPanMove(event)"
+          onmouseup="dlgPanEnd()" onwheel="dlgWheel(event)">
+      <svg class="dlg-connections" id="dlg-svg"></svg>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px">
+      <button class="btn blue" onclick="addDlgNode()">＋ Add node</button>
+      <button class="btn accent" onclick="saveDlgFile()">Save dialogue</button>
+      <span style="font-size:11px;color:var(--dim);margin-left:auto">
+        Drag to pan · Scroll to zoom · Click node to edit</span>
+    </div>
+    <div id="dlg-node-editor" style="margin-top:16px"></div>`;
+
+  renderDlgGraph(nodeMap);
+}
+
+function renderDlgGraph(nodeMap) {
+  const graph = document.getElementById("dlg-graph");
+  if (!graph) return;
+  // Clear existing nodes (keep svg)
+  Array.from(graph.children).forEach(el => {
+    if (!el.classList?.contains("dlg-connections")) el.remove();
+  });
+  const svg = document.getElementById("dlg-svg");
+  svg.innerHTML = "";
+  const gw = graph.clientWidth  || 800;
+  const gh = graph.clientHeight || 400;
+  svg.setAttribute("width",  gw);
+  svg.setAttribute("height", gh);
+
+  Object.values(nodeMap).forEach(node => {
+    const pos   = nodePositions[node.id] || {x:60, y:60};
+    const px    = pos.x * dlgScale + dlgOffset.x;
+    const py    = pos.y * dlgScale + dlgOffset.y;
+
+    const el    = document.createElement("div");
+    el.className= "dlg-node" + (node.id==="root"?" root-node":"") +
+                  (dlgSelected===node.id?" selected":"");
+    el.style.left   = px + "px";
+    el.style.top    = py + "px";
+    el.style.transform = `scale(${dlgScale})`;
+    el.style.transformOrigin = "top left";
+    el.innerHTML =
+      `<div class="dlg-node-id">${esc(node.id)}</div>
+       <div class="dlg-node-text">${esc((node.line||node.lines?.[0]||"…").slice(0,80))}</div>
+       <div class="dlg-node-responses">
+         ${(node.responses||[]).map(r =>
+           `<div class="dlg-resp-chip">
+              <span class="resp-arrow">→</span>${esc(r.next||"[end]")}
+              <span style="color:var(--dim)"> · ${esc(r.text?.slice(0,30)||"…")}</span>
+            </div>`
+         ).join("")}
+       </div>`;
+    el.onclick = (e) => { e.stopPropagation(); editDlgNode(node.id, nodeMap, el); };
+    el.onmousedown = (e) => { e.stopPropagation(); nodeDragStart(e, node.id); };
+    graph.appendChild(el);
+
+    // Draw connection lines
+    (node.responses||[]).forEach(r => {
+      if (!r.next || !nodeMap[r.next]) return;
+      const dest  = nodePositions[r.next] || {x:60,y:60};
+      const dx    = dest.x * dlgScale + dlgOffset.x + 90;
+      const dy    = dest.y * dlgScale + dlgOffset.y + 20;
+      const line  = document.createElementNS("http://www.w3.org/2000/svg","line");
+      line.setAttribute("x1", px + 180 * dlgScale);
+      line.setAttribute("y1", py + 20  * dlgScale);
+      line.setAttribute("x2", dx);
+      line.setAttribute("y2", dy);
+      line.setAttribute("stroke","#3a4555");
+      line.setAttribute("stroke-width","1.5");
+      svg.appendChild(line);
+    });
+  });
+}
+
+function editDlgNode(nodeId, nodeMap, el) {
+  dlgSelected = nodeId;
+  document.querySelectorAll(".dlg-node").forEach(n => n.classList.remove("selected"));
+  el.classList.add("selected");
+  const node = nodeMap[nodeId];
+  const container = document.getElementById("dlg-node-editor");
+  const lineVal = node.line || (node.lines||[])[0] || "";
+  const respsHtml = (node.responses||[]).map((r,i) =>
+    `<div class="field-row" style="margin-bottom:6px;align-items:center">
+      <input type="text" value="${esc(r.text||"")}" placeholder="Response text"
+        oninput="updateResp(${i},'text',this.value)" style="flex:2">
+      <input type="text" value="${esc(r.next||"")}" placeholder="next node"
+        oninput="updateResp(${i},'next',this.value)" style="flex:1">
+      <button class="btn red" style="padding:4px 8px;font-size:11px"
+        onclick="removeResp(${i})">✕</button>
+    </div>`
+  ).join("");
+
+  container.innerHTML = section(`Editing node: ${nodeId}`,
+    `<div class="field-row">
+      ${field("Node ID","dlg_node_id",nodeId)}
+    </div>`,
+    textarea("Line","dlg_line",lineVal),
+    `<div class="field"><label>Responses</label>
+      <div id="resp-list">${respsHtml}</div>
+      <button class="btn blue" style="margin-top:8px" onclick="addResp('${nodeId}')">＋ Response</button>
+    </div>`,
+  );
+  // Store reference for update helpers
+  container._nodeId = nodeId;
+  container._nodeMap = nodeMap;
+}
+
+let _nodeDrag = null;
+function nodeDragStart(e, nodeId) {
+  e.preventDefault();
+  _nodeDrag = {id:nodeId, startX:e.clientX, startY:e.clientY,
+               origX:nodePositions[nodeId]?.x||0,
+               origY:nodePositions[nodeId]?.y||0};
+  window.onmousemove = (ev) => {
+    if (!_nodeDrag) return;
+    const dx = (ev.clientX - _nodeDrag.startX) / dlgScale;
+    const dy = (ev.clientY - _nodeDrag.startY) / dlgScale;
+    nodePositions[_nodeDrag.id] = {x:_nodeDrag.origX+dx, y:_nodeDrag.origY+dy};
+    const nodeEl = document.querySelector(`.dlg-node[data-id="${_nodeDrag.id}"]`);
+    if (!nodeEl) {
+      // re-render
+      const nm = buildNodeMap();
+      if (nm) renderDlgGraph(nm);
+    } else {
+      const pos = nodePositions[_nodeDrag.id];
+      nodeEl.style.left = (pos.x*dlgScale+dlgOffset.x)+"px";
+      nodeEl.style.top  = (pos.y*dlgScale+dlgOffset.y)+"px";
+    }
+  };
+  window.onmouseup = () => { _nodeDrag = null; window.onmousemove = null; window.onmouseup = null;
+    const nm = buildNodeMap(); if (nm) renderDlgGraph(nm); };
+}
+
+function buildNodeMap() {
+  if (!dlgData) return null;
+  const nodes = dlgData.node || [];
+  const responses = dlgData.response || [];
+  const nm = {};
+  nodes.forEach(n => { nm[n.id] = {...n, responses:[]}; });
+  responses.forEach(r => { if (nm[r.node]) nm[r.node].responses.push(r); });
+  return nm;
+}
+
+function dlgPanStart(e) {
+  if (e.target.classList.contains("dlg-node") || e.target.closest(".dlg-node")) return;
+  dlgPan.dragging = true;
+  dlgPan.startX = e.clientX; dlgPan.startY = e.clientY;
+  dlgPan.origX  = dlgOffset.x; dlgPan.origY = dlgOffset.y;
+  document.getElementById("dlg-graph").classList.add("dragging");
+}
+function dlgPanMove(e) {
+  if (!dlgPan.dragging) return;
+  dlgOffset.x = dlgPan.origX + (e.clientX - dlgPan.startX);
+  dlgOffset.y = dlgPan.origY + (e.clientY - dlgPan.startY);
+  const nm = buildNodeMap(); if (nm) renderDlgGraph(nm);
+}
+function dlgPanEnd() {
+  dlgPan.dragging = false;
+  document.getElementById("dlg-graph")?.classList.remove("dragging");
+}
+function dlgWheel(e) {
+  e.preventDefault();
+  dlgScale = Math.max(0.4, Math.min(2, dlgScale * (e.deltaY < 0 ? 1.1 : 0.9)));
+  const nm = buildNodeMap(); if (nm) renderDlgGraph(nm);
+}
+
+function addDlgNode() {
+  const id = prompt("New node ID:");
+  if (!id) return;
+  dlgData.node = dlgData.node || [];
+  dlgData.node.push({id, line:""});
+  nodePositions[id] = {x: 60 + Math.random()*400, y: 60 + Math.random()*200};
+  const nm = buildNodeMap(); if (nm) renderDlgGraph(nm);
+}
+function addResp(nodeId) {
+  dlgData.response = dlgData.response || [];
+  dlgData.response.push({node:nodeId, text:"", next:""});
+  const nm = buildNodeMap();
+  if (nm) { renderDlgGraph(nm); editDlgNode(nodeId, nm, document.querySelector(".dlg-node.selected")||document.querySelector(".dlg-node")); }
+}
+function updateResp(idx, field, val) {
+  const nodeId = document.getElementById("dlg-node-editor")._nodeId;
+  let i = 0;
+  for (let r of dlgData.response || []) {
+    if (r.node === nodeId) {
+      if (i === idx) { r[field] = val; return; }
+      i++;
+    }
+  }
+}
+function removeResp(idx) {
+  const nodeId = document.getElementById("dlg-node-editor")._nodeId;
+  let i = 0, toRemove = -1;
+  (dlgData.response || []).forEach((r, ri) => {
+    if (r.node === nodeId) { if (i === idx) toRemove = ri; i++; }
+  });
+  if (toRemove >= 0) dlgData.response.splice(toRemove, 1);
+  const nm = buildNodeMap();
+  if (nm) { renderDlgGraph(nm); }
+}
+
+async function saveDlgFile() {
+  if (!dlgData) return;
+  // Reconstruct file data: node array + flat response array
+  const fileData = {
+    node:     dlgData.node || [],
+    response: dlgData.response || [],
+  };
+  const r = await fetch("/api/write_file", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({file: dlgData._file, data: fileData}),
+  });
+  const res = await r.json();
+  if (res.ok) toast("Dialogue saved ✓", "ok");
+  else toast("Error: " + res.error, "err");
+}
+
+// ── Quest helpers ─────────────────────────────────────────────────────────────
+function addQuestStep() {
+  selected.data.step = selected.data.step || [];
+  selected.data.step.push({description:"", completion_flag:""});
+  renderQuest(selected.data, selected.zone);
+}
+
+// ── Companion editor ──────────────────────────────────────────────────────────
+function renderCompanion(c, zone) {
+  document.getElementById("editor-content").innerHTML =
+    editorHeader("companion", c.name, c.id, c._file) +
+    section("Identity",
+      `<div class="field-row">${field("ID","id",c.id)} ${field("Name","name",c.name)}</div>`,
+      field("Short description","desc_short",c.desc_short||""),
+      `<div class="field-row">
+        <div class="field"><label>Type</label>
+          <select id="f_type" onchange="fieldChanged('type',this.value)">
+            ${["narrative","utility","combat"].map(t =>
+              `<option ${c.type===t?"selected":""}>${t}</option>`).join("")}
+          </select>
+        </div>
+        ${field("Carry bonus","carry_bonus",c.carry_bonus||0,"number")}
+      </div>`,
+    ) +
+    section("Combat (combat-type only)",
+      `<div class="field-row">
+        ${field("HP","hp",c.hp||0,"number")}
+        ${field("Max HP","max_hp",c.max_hp||0,"number")}
+        ${field("Attack","attack",c.attack||0,"number")}
+        ${field("Defense","defense",c.defense||0,"number")}
+      </div>`,
+    ) +
+    section("Flavour",
+      field("Join message","join_message",c.join_message||""),
+      field("Wait message","wait_message",c.wait_message||""),
+      field("Rejoin message","rejoin_message",c.rejoin_message||""),
+    );
+}
+
+// ── Field changes & save ──────────────────────────────────────────────────────
+function fieldChanged(field, value) {
+  if (selected) {
+    selected.data[field] = value;
+    markChanged();
+  }
+}
+
+function markChanged() {
+  if (!selected || !selected.data._file) return;
+  setStatus("Unsaved changes", true);
+  // Accumulate pending changes (simplified: track whole zone data)
+  pendingSave[selected.data._file] = true;
+}
+
+async function saveAll() {
+  if (!selected || !selected.data._file) { toast("Nothing to save", "err"); return; }
+  // Collect the zone data and write whole-file for simplicity
+  const zone = WORLD.zones[selected.zone];
+  const fileRel = selected.data._file;
+
+  // Find all records in the same file
+  const data = {};
+  const allRecords = [...zone.rooms,...zone.items,...zone.npcs];
+  allRecords.forEach(r => {
+    if (r._file !== fileRel) return;
+    // Guess type
+    if (zone.rooms.includes(r))     (data.room  = data.room  || []).push(r);
+    else if (zone.items.includes(r))(data.item  = data.item  || []).push(r);
+    else if (zone.npcs.includes(r)) (data.npc   = data.npc   || []).push(r);
+  });
+
+  const r = await fetch("/api/write_file", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({file: fileRel, data}),
+  });
+  const res = await r.json();
+  if (res.ok) { toast("Saved ✓", "ok"); setStatus("Saved", false); pendingSave = {}; }
+  else toast("Save error: " + res.error, "err");
+}
+
+// ── Detail panel ──────────────────────────────────────────────────────────────
+function renderDetailPanel(type, zone, data) {
+  const db = document.getElementById("detail-body");
+
+  if (type === "room") {
+    const exits = data.exits || {};
+    const exitList = Object.entries(exits).map(([dir, dest]) => {
+      const destName = dest && typeof dest === "string"
+        ? (findRoomName(dest) || dest) : JSON.stringify(dest);
+      return `<div style="font-size:11px;color:var(--text-dim);padding:2px 0">
+        <span style="color:var(--dim);width:70px;display:inline-block">${dir}</span>
+        <span class="exit-link" onclick="navigateTo('${typeof dest==="string"?dest:dest.to||""}')"
+          style="color:var(--accent2);cursor:pointer">${esc(destName)}</span>
+      </div>`;
+    }).join("");
+
+    const spawnLinks = (data.spawns||[]).map(id =>
+      `<div style="font-size:11px;color:var(--npc-col);padding:2px 0;cursor:pointer"
+        onclick="navigateToNPC('${id}')">${id}</div>`
+    ).join("");
+
+    db.innerHTML = `
+      <div class="detail-actions">
+        <button class="btn green" onclick="saveAll()">Save changes</button>
+        <button class="btn blue"  onclick="showNewMenu('npc',{zone:'${zone}'})">＋ New NPC here</button>
+        <button class="btn blue"  onclick="showNewMenu('item',{zone:'${zone}'})">＋ New item here</button>
+      </div>
+      ${exitList ? `<div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;margin-top:12px">EXITS</div>${exitList}</div>` : ""}
+      ${spawnLinks ? `<div><div style="font-size:11px;color:var(--dim);margin-bottom:6px;margin-top:12px">SPAWNS</div>${spawnLinks}</div>` : ""}
+      ${renderMiniMap(zone, data.id)}
+    `;
+  } else if (type === "npc") {
+    db.innerHTML = `
+      <div class="detail-actions">
+        <button class="btn green" onclick="saveAll()">Save changes</button>
+        <button class="btn blue"  onclick="openDialogue('${zone}','${data.id}')">Edit dialogue</button>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text-dim)">
+        <div>HP: ${data.hp||"?"} / ${data.max_hp||"?"}</div>
+        <div>ATK: ${data.attack||"?"}  DEF: ${data.defense||"?"}</div>
+        <div style="margin-top:4px">Style: ${data.style||"brawling"}</div>
+        <div>Hostile: ${data.hostile?"Yes":"No"}</div>
+      </div>
+    `;
+  } else {
+    db.innerHTML = `
+      <div class="detail-actions">
+        <button class="btn green" onclick="saveAll()">Save changes</button>
+      </div>`;
+  }
+}
+
+function findRoomName(id) {
+  if (!WORLD) return null;
+  for (const zone of Object.values(WORLD.zones)) {
+    const r = zone.rooms.find(r => r.id === id);
+    if (r) return r.name;
+  }
+  return null;
+}
+
+function navigateTo(roomId) {
+  if (!roomId || !WORLD) return;
+  for (const [zid, zone] of Object.entries(WORLD.zones)) {
+    const r = zone.rooms.find(r => r.id === roomId);
+    if (r) { selectObject("room", zid, r); return; }
+  }
+  toast(`Room '${roomId}' not found`, "err");
+}
+
+function navigateToNPC(npcId) {
+  if (!npcId || !WORLD) return;
+  for (const [zid, zone] of Object.entries(WORLD.zones)) {
+    const n = zone.npcs.find(n => n.id === npcId);
+    if (n) { selectObject("npc", zid, n); return; }
+  }
+}
+
+function openDialogue(zone, npcId) {
+  if (!WORLD) return;
+  const z = WORLD.zones[zone];
+  if (!z) return;
+  const dlg = z.dialogues.find(d => d._npc_id === npcId);
+  if (dlg) selectObject("dialogue", zone, dlg);
+  else toast(`No dialogue file for '${npcId}'`, "err");
+}
+
+// ── Mini-map ──────────────────────────────────────────────────────────────────
+function renderMiniMap(zone, currentRoomId) {
+  if (!WORLD) return "";
+  const z = WORLD.zones[zone];
+  if (!z) return "";
+  const rooms = z.rooms.filter(r => r.coord);
+  if (rooms.length === 0) return "";
+
+  const xs  = rooms.map(r => r.coord[0]);
+  const ys  = rooms.map(r => r.coord[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const W = 240, H = 200, pad = 20;
+  const stepX = maxX > minX ? (W-pad*2)/(maxX-minX) : 1;
+  const stepY = maxY > minY ? (H-pad*2)/(maxY-minY) : 1;
+
+  const px = (cx) => pad + (cx-minX)*stepX;
+  const py = (cy) => H - pad - (cy-minY)*stepY;
+
+  const lines = [], circles = [];
+  const drawn = new Set();
+  rooms.forEach(r => {
+    const rx = px(r.coord[0]), ry = py(r.coord[1]);
+    // Connections
+    Object.entries(r.exits||{}).forEach(([dir, dest]) => {
+      const destId = typeof dest==="string" ? dest : dest.to;
+      const key = [r.id,destId].sort().join("|");
+      if (drawn.has(key)) return;
+      drawn.add(key);
+      const d2 = rooms.find(x => x.id===destId);
+      if (!d2) return;
+      lines.push(`<line x1="${rx}" y1="${ry}" x2="${px(d2.coord[0])}" y2="${py(d2.coord[1])}"
+        stroke="#252b36" stroke-width="1.5"/>`);
+    });
+    const isCurrent = r.id === currentRoomId;
+    circles.push(`<circle cx="${rx}" cy="${ry}" r="${isCurrent?6:4}"
+      fill="${isCurrent?"var(--accent)":"var(--border)"}"
+      stroke="${isCurrent?"var(--accent)":"var(--dim)"}" stroke-width="1"
+      style="cursor:pointer" onclick="navigateTo('${r.id}')"
+      title="${esc(r.name)}"/>`);
+  });
+
+  return `<div style="margin-top:12px">
+    <div style="font-size:11px;color:var(--dim);margin-bottom:6px">ZONE MAP</div>
+    <div id="mini-map">
+      <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+        ${lines.join("")}${circles.join("")}
+      </svg>
+    </div>
+  </div>`;
+}
+
+// ── New item modal ────────────────────────────────────────────────────────────
+function showNewMenu(type, ctx) {
+  newCtx = ctx || {};
+  const overlay = document.getElementById("new-overlay");
+  const title   = document.getElementById("new-modal-title");
+  const body    = document.getElementById("new-modal-body");
+
+  if (!type) {
+    title.textContent = "Create New";
+    body.innerHTML = `
+      <div class="field"><label>What do you want to create?</label></div>
+      <div class="detail-actions">
+        <button class="btn blue"  onclick="showNewMenu('zone')">Zone</button>
+        <button class="btn accent" onclick="showNewMenu('room')">Room</button>
+        <button class="btn accent" onclick="showNewMenu('npc')">NPC</button>
+        <button class="btn accent" onclick="showNewMenu('item')">Item</button>
+      </div>`;
+    overlay.style.display = "flex";
+    return;
+  }
+
+  if (type === "zone") {
+    title.textContent = "New Zone";
+    const zoneOptions = Object.keys(WORLD?.zones||{}).map(z =>
+      `<option value="${z}">${z}</option>`).join("");
+    body.innerHTML = `
+      ${field("Zone ID (no spaces, lowercase)","new_zone_id","","text")}
+      <span class="hint">e.g. stoneback_hills</span>`;
+    newCtx._type = "zone";
+  } else if (type === "room") {
+    title.textContent = "New Room";
+    const zoneOptions = Object.keys(WORLD?.zones||{}).map(z =>
+      `<option value="${z}" ${z===(newCtx.zone||"")?"selected":""}>${z}</option>`).join("");
+    body.innerHTML = `
+      <div class="field-row">
+        ${field("Room ID","new_room_id","","text")}
+        ${field("Name","new_room_name","","text")}
+      </div>
+      <div class="field"><label>Zone</label>
+        <select id="f_new_zone">${zoneOptions}</select>
+      </div>`;
+    newCtx._type = "room";
+  } else if (type === "npc") {
+    title.textContent = "New NPC";
+    const zoneOptions = Object.keys(WORLD?.zones||{}).map(z =>
+      `<option value="${z}" ${z===(newCtx.zone||"")?"selected":""}>${z}</option>`).join("");
+    body.innerHTML = `
+      <div class="field-row">
+        ${field("NPC ID","new_npc_id","","text")}
+        ${field("Name","new_npc_name","","text")}
+      </div>
+      <div class="field"><label>Zone</label>
+        <select id="f_new_zone">${zoneOptions}</select>
+      </div>`;
+    newCtx._type = "npc";
+  } else if (type === "item") {
+    title.textContent = "New Item";
+    const zoneOptions = Object.keys(WORLD?.zones||{}).map(z =>
+      `<option value="${z}" ${z===(newCtx.zone||"")?"selected":""}>${z}</option>`).join("");
+    body.innerHTML = `
+      <div class="field-row">
+        ${field("Item ID","new_item_id","","text")}
+        ${field("Name","new_item_name","","text")}
+      </div>
+      <div class="field"><label>Zone</label>
+        <select id="f_new_zone">${zoneOptions}</select>
+      </div>`;
+    newCtx._type = "item";
+  }
+
+  overlay.style.display = "flex";
+}
+
+function closeNew() {
+  document.getElementById("new-overlay").style.display = "none";
+}
+
+async function confirmNew() {
+  const type = newCtx._type;
+  if (!type) return;
+
+  if (type === "zone") {
+    const id = document.getElementById("f_new_zone_id")?.value.trim();
+    if (!id) { toast("Zone ID required", "err"); return; }
+    const r = await fetch("/api/create_zone", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({zone_id: id}),
+    });
+    const res = await r.json();
+    if (res.ok) { toast(`Zone '${id}' created ✓`, "ok"); closeNew(); await reloadWorld(); }
+    else toast("Error: " + res.error, "err");
+
+  } else if (type === "room") {
+    const id   = document.getElementById("f_new_room_id")?.value.trim();
+    const name = document.getElementById("f_new_room_name")?.value.trim();
+    const zone = document.getElementById("f_new_zone")?.value;
+    if (!id || !name || !zone) { toast("ID, name, and zone required", "err"); return; }
+    const r = await fetch("/api/create_room", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({zone_id: zone, room:{id, name, description:"", exits:{}, items:[], spawns:[], flags:[]}}),
+    });
+    const res = await r.json();
+    if (res.ok) { toast(`Room '${id}' created ✓`, "ok"); closeNew(); await reloadWorld(); }
+    else toast("Error: " + res.error, "err");
+
+  } else if (type === "npc") {
+    const id   = document.getElementById("f_new_npc_id")?.value.trim();
+    const name = document.getElementById("f_new_npc_name")?.value.trim();
+    const zone = document.getElementById("f_new_zone")?.value;
+    if (!id || !name || !zone) { toast("ID, name, and zone required", "err"); return; }
+    const r = await fetch("/api/create_npc", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({zone_id: zone, npc:{id, name, desc_short:"", hp:10, max_hp:10,
+        attack:5, defense:0, xp_reward:0, gold_reward:0, hostile:false,
+        style:"brawling", style_prof:0, tags:[]}}),
+    });
+    const res = await r.json();
+    if (res.ok) { toast(`NPC '${id}' created ✓`, "ok"); closeNew(); await reloadWorld(); }
+    else toast("Error: " + res.error, "err");
+
+  } else if (type === "item") {
+    const id   = document.getElementById("f_new_item_id")?.value.trim();
+    const name = document.getElementById("f_new_item_name")?.value.trim();
+    const zone = document.getElementById("f_new_zone")?.value;
+    if (!id || !name || !zone) { toast("ID, name, and zone required", "err"); return; }
+    const r = await fetch("/api/create_item", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({zone_id: zone, item:{id, name, desc_short:"", desc_long:"",
+        weight:1, value:0, no_drop:false, effects:[]}}),
+    });
+    const res = await r.json();
+    if (res.ok) { toast(`Item '${id}' created ✓`, "ok"); closeNew(); await reloadWorld(); }
+    else toast("Error: " + res.error, "err");
+  }
+}
+
+// ── Validate ──────────────────────────────────────────────────────────────────
+async function runValidate() {
+  document.getElementById("modal-overlay").classList.add("open");
+  document.getElementById("validate-out").textContent = "Running validator…";
+  try {
+    const r   = await fetch("/api/validate");
+    const res = await r.json();
+    const raw = (res.stdout || "") + (res.stderr ? "\nSTDERR:\n" + res.stderr : "");
+    // Colorize output
+    const html = raw.split("\n").map(line => {
+      if (line.includes("✗") || line.includes("ERR"))  return `<span class="err-line">${esc(line)}</span>`;
+      if (line.includes("⚠"))                           return `<span class="warn-line">${esc(line)}</span>`;
+      if (line.includes("✓") || line.includes("PASS"))  return `<span class="ok-line">${esc(line)}</span>`;
+      return esc(line);
+    }).join("\n");
+    document.getElementById("validate-out").innerHTML = html;
+  } catch(e) {
+    document.getElementById("validate-out").textContent = "Error running validator: " + e;
+  }
+}
+
+function closeModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type="ok") {
+  const el = document.createElement("div");
+  el.className = "toast " + type;
+  el.textContent = msg;
+  document.getElementById("toast-container").appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+reloadWorld();
+</script>
+</body>
+</html>

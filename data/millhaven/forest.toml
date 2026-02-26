@@ -1,0 +1,38 @@
+# data/millhaven/forest.toml — The forest south of Millhaven.
+# Zone id: millhaven
+#
+# The path leading from town toward the Ashwood Gate.
+# deep_forest connects east to ashwood_gate (ashwood zone).
+
+[[room]]
+id          = "south_gate"
+name        = "South Gate"
+description = "A pair of iron-banded wooden gates stand open. Beyond them the road winds toward the dark forest. A nervous-looking guard watches the tree line."
+coord       = [0, -1]
+exits       = { north = "town_square", south = "forest_path" }
+items       = []
+spawns      = []
+
+[[room]]
+id          = "forest_path"
+name        = "Forest Path"
+description = "Tall oaks press in on both sides of a muddy trail. Something rustles in the undergrowth. The town gate is visible to the north."
+coord       = [0, -2]
+exits       = { north = "south_gate", south = "deep_forest", southwest = "blackfen_gate" }
+items       = []
+spawns      = ["wolf"]
+
+[[room]]
+id          = "deep_forest"
+name        = "Deep Forest"
+description = """
+Sunlight barely filters through the dense canopy. Strange sounds echo from
+the darkness between the trees. An old stone road leads east toward two
+carved pillars — the Ashwood Gate. To the south, the trees thin and the
+ground grows darker and wetter. A weathered stone arch marks the boundary
+of Blackfen Mire.
+"""
+coord       = [0, -3]
+exits       = { north = "forest_path", east = "ashwood_gate", south = "blackfen_gate" }
+items       = ["iron_sword", "wolf_fang_dagger"]
+spawns      = ["goblin", "wolf"]

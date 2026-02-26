@@ -1,0 +1,139 @@
+# data/greenhollow/dialogues/elder_torva.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "Greenhollow's been standing since before your grandfather was born. What do you need?",
+  "I've got too much to do to stand here. Ask what you came to ask.",
+  "Something on your mind? Spit it out.",
+]
+
+[[response]]
+node = "root"
+text = "What's the problem with the fields?"
+next = "fields_problem"
+
+[[response]]
+node = "root"
+condition = { not_flag = "groundhog_quest_started" }
+text = "Is there work here for someone capable?"
+next = "quest_offer"
+
+[[response]]
+node = "root"
+condition = { flag = "groundhog_quest_started", not_flag = "groundhog_king_killed" }
+text = "I'm working on the groundhog problem."
+next = "quest_in_progress"
+
+[[response]]
+node = "root"
+condition = { flag = "groundhog_king_killed", not_flag = "groundhog_quest_complete" }
+text = "The Groundhog King is dead. I have proof."
+next = "quest_deliver"
+
+[[response]]
+node = "root"
+condition = { flag = "groundhog_quest_complete" }
+text = "How are the fields doing now?"
+next = "quest_done"
+
+[[response]]
+node = "root"
+text = "Just passing through."
+next = ""
+
+[[node]]
+id   = "fields_problem"
+line = "Giant groundhogs. I know how it sounds. But these are not normal animals — they're the size of a large dog and they've been undermining the fields for two months. The mine's worse. Osric can barely get his people in. Something has set up in the deep chamber and it's the reason the rest of them keep coming."
+
+[[response]]
+node = "fields_problem"
+text = "Why not just block the burrows?"
+next = "fields_why_not_block"
+
+[[response]]
+node = "fields_problem"
+text = "And no one's dealt with it?"
+next = "fields_no_one"
+
+[[response]]
+node = "fields_problem"
+text = "Understood. I'll look into it."
+next = ""
+
+[[node]]
+id   = "fields_why_not_block"
+line = "We blocked them. Twice. They dug new ones. These things don't give up territory. The only answer is removing the reason they're here — and the reason is whatever is in that deep chamber. Kill that, and the rest should disperse."
+
+[[response]]
+node = "fields_why_not_block"
+text = "Makes sense. I'll handle it."
+next = ""
+
+[[node]]
+id   = "fields_no_one"
+line = """My farmers aren't fighters. Osric knows mining, not combat. And the boys who think they're fighters — she glances toward the south lane — are fifteen and would get themselves killed. So no. No one capable has been through."""
+
+[[response]]
+node = "fields_no_one"
+text = "Until now, maybe."
+next = "quest_offer"
+
+[[response]]
+node = "fields_no_one"
+text = "Fair enough."
+next = ""
+
+[[node]]
+id   = "quest_offer"
+line = "There's a groundhog the size of a bear at the bottom of our mine. I want it dead and the infestation cleared. I'm offering eighty gold and whatever's in the reward purse I've been saving for exactly this situation. Bring me something from it — a tooth, a claw — and I'll pay on sight."
+script = [
+  { op = "set_flag",      flag = "groundhog_quest_started" },
+  { op = "advance_quest", quest_id = "the_groundhog_king", step = 1 },
+]
+
+[[response]]
+node = "quest_offer"
+text = "I'll do it."
+next = ""
+
+[[response]]
+node = "quest_offer"
+text = "Eighty gold? That's generous."
+next = "quest_offer_generous"
+
+[[node]]
+id   = "quest_offer_generous"
+line = "Thirty years of harvests keep this village running. Whatever's in that mine is threatening thirty years of work. Yes. It's generous."
+
+[[response]]
+node = "quest_offer_generous"
+text = "Understood. I'm on it."
+next = ""
+
+[[node]]
+id   = "quest_in_progress"
+line = "Good. The mine entrance is to the west of the fields. The deep chamber is two levels down. Take a light and watch the floor — the burrows have undermined the planking in places."
+
+[[response]]
+node = "quest_in_progress"
+text = "Understood."
+next = ""
+
+[[node]]
+id   = "quest_deliver"
+line = "..."
+
+[[response]]
+node = "quest_deliver"
+text = "The tooth."
+next = ""
+
+[[node]]
+id   = "quest_done"
+line = "Better. The burrows are already collapsing without the King to maintain them. It'll take a month before the fields are back to normal, but the worst is over. You did good work."
+
+[[response]]
+node = "quest_done"
+text = "Glad to hear it."
+next = ""

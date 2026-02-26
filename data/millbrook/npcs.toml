@@ -1,0 +1,339 @@
+# data/millbrook/npcs.toml
+
+[[npc]]
+id          = "marta_villager"
+name        = "Marta"
+desc_short  = "A woman of forty, sharp eyes, hanging washing with practiced speed."
+desc_long   = "Marta Wren has lived in Millbrook her whole life and has the particular authority of someone who has earned the right to have opinions about everything. She's not unfriendly — she's simply operating on a level of efficiency that treats pleasantries as optional. Her hands are never still. Even talking to you she's folding something."
+tags        = ["humanoid", "slow", "prestige_neutral"]
+style       = "brawling"
+style_prof  = 5
+hp          = 25
+max_hp      = 25
+attack      = 4
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "The Thorngrubs are the least of what needs doing. But they're the most urgent."
+
+[[npc]]
+id          = "elder_tomlin"
+name        = "Elder Tomlin"
+desc_short  = "A small, still old man sitting on the well-wall like he grew there."
+desc_long   = "Tomlin is eighty if he's a day, and has the quality of very old wood — denser, harder, and less willing to move than when it was young. He was a soldier once, then a wanderer, then a teacher, and now he sits on the well-wall and watches the village operate with the expression of someone who has seen most variations of most things. His hands are folded in his lap. He has not moved in some time. He is not asleep."
+tags        = ["humanoid", "slow", "elder", "trainer"]
+style       = "flowing_water"
+style_prof  = 100
+hp          = 40
+max_hp      = 40
+attack      = 10
+defense     = 12
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "I wondered when someone like you would come through."
+
+[[npc]]
+id          = "aldric_miller"
+name        = "Aldric"
+desc_short  = "A broad-shouldered man of fifty, permanently dusted with flour."
+desc_long   = "The miller is flour-dusted in the specific way that means it went into the skin years ago and is now just part of him. He's broad and deliberate, the kind of man who moves slowly because he knows the work will still be there and has learned not to waste energy on speed when steadiness serves better. He has kind eyes but they're currently preoccupied — you can tell from the way he keeps glancing toward the village notice board."
+tags        = ["humanoid", "slow"]
+style       = "brawling"
+style_prof  = 10
+hp          = 40
+max_hp      = 40
+attack      = 7
+defense     = 4
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "You'll have heard about the amulet. Everyone has. It belonged to my mother."
+shop        = [
+  { item_id = "iron_pickaxe",  price = 30 },
+  { item_id = "iron_hatchet",  price = 18 },
+  { item_id = "iron_ingot",    price = 8  },
+  { item_id = "hard_wood",     price = 5  },
+  { item_id = "iron_lantern",  price = 12 },
+]
+give_accepts = [
+  { item_id  = "millbrook_amulet",
+    message  = "Aldric goes very still when you put the amulet in his hand. He turns it over, reads the name on the back. 'Edda Aldric. That's my mother.' He closes his fingers around it. It takes him a moment before he can speak. 'I didn't think I'd see this again. Thank you.' He presses a coin purse into your hand.",
+    script   = [
+      { op = "advance_quest", quest_id = "lost_amulet",    step = 3 },
+      { op = "give_gold",     amount = 40 },
+      { op = "give_xp",       amount = 120 },
+      { op = "prestige",      delta = 2, reason = "returned a family heirloom" },
+      { op = "set_flag",      flag = "amulet_returned" },
+    ]
+  },
+]
+
+[[npc]]
+id          = "rilla_farmer"
+name        = "Rilla Aldric"
+desc_short  = "A woman of sixty, moving through the yard with calm efficiency."
+desc_long   = "Rilla is Aldric's aunt, technically, though she runs the farm and he runs the mill and the relationship between the two businesses is managed entirely by her. She's not dramatic about anything. The farm works because she makes it work. She notices you the way she notices everything: quickly and without fuss, then gets on with what she was doing."
+tags        = ["humanoid", "slow"]
+style       = "brawling"
+style_prof  = 5
+hp          = 30
+max_hp      = 30
+attack      = 5
+defense     = 3
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "You're not from here. Looking for work, or just passing through?"
+
+[[npc]]
+id          = "tobias_brewer"
+name        = "Tobias"
+desc_short  = "A big man behind a bar, clearly proud of what's in the barrels."
+desc_long   = "Tobias Clover — yes, that's actually his name, and yes, the tavern name is a coincidence — is the kind of barman who makes you feel slightly more optimistic about the world by existing. He's big enough that nobody has been stupid in his tavern in living memory, but his actual manner is warm. He speaks slowly because he thinks carefully. He is currently trying to decide whether to top off a glass or leave it and is taking the decision seriously."
+tags        = ["humanoid", "slow"]
+style       = "brawling"
+style_prof  = 15
+hp          = 50
+max_hp      = 50
+attack      = 8
+defense     = 5
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+rest_cost   = 5
+dialogue    = "Cloverleaf pale or the darker one? The darker one is better but I say that to everyone."
+shop        = [
+  { item_id = "cloverleaf_ale",  price = 4 },
+  { item_id = "health_potion",   price = 15 },
+  { item_id = "meadow_tonic",    price = 20 },
+  { item_id = "leather_bracers", price = 8 },
+  { item_id = "padded_coif",     price = 6 },
+]
+
+[[npc]]
+id          = "ruffian_bram"
+name        = "Bram"
+desc_short  = "A boy of seventeen trying very hard to look dangerous."
+desc_long   = "Bram is the oldest of the three ruffians and their presumed leader by virtue of being tallest. He's not cruel — he's bored, which at seventeen in a small village is almost the same thing. He watches you with the particular intensity of someone who hasn't decided yet whether to be impressed or hostile. The posture is aggressive; the eyes are still figuring out the situation."
+tags        = ["humanoid", "fast", "youth", "coward", "spar"]
+style       = "brawling"
+style_prof  = 15
+hp          = 30
+max_hp      = 30
+attack      = 7
+defense     = 3
+xp_reward   = 15
+gold_reward = 3
+hostile     = false
+kill_script = [
+  { op = "set_flag",  flag = "bram_humbled" },
+  { op = "set_flag",  flag = "ruffians_resolved" },
+  { op = "advance_quest", quest_id = "village_ruffians", step = 3 },
+  { op = "prestige",  delta = 2, reason = "fairly defeated the ruffians in a spar" },
+  { op = "give_xp",   amount = 40 },
+  { op = "message",   tag = "system",
+    text = "Bram holds up a hand. 'All right. You win. That was — fair. I'll hear what you have to say.'" },
+]
+dialogue    = "What do you want?"
+
+[[npc]]
+id          = "ruffian_dal"
+name        = "Dal"
+desc_short  = "A wiry fifteen-year-old with ink-stained fingers and an attitude."
+desc_long   = "Dal is the quick one of the three — fast and a little reckless, the kind of kid who acts before the thought arrives. The ink on his hands is from the village schoolteacher's lessons, which he attends sporadically but clearly absorbs, judging from the unusual sharpness of his observations. He is currently pretending you are not there."
+tags        = ["humanoid", "fast", "youth", "spar"]
+style       = "brawling"
+style_prof  = 10
+hp          = 22
+max_hp      = 22
+attack      = 6
+defense     = 2
+xp_reward   = 10
+gold_reward = 2
+hostile     = false
+dialogue    = "We're not bothering anyone."
+
+[[npc]]
+id          = "ruffian_fen"
+name        = "Fen"
+desc_short  = "The largest of the three, quiet, watching."
+desc_long   = "Fen doesn't talk much but listens well. He's the one who will actually land a punch if it comes to that. He's also the one who looks faintly uncomfortable with the whole performance, as if he's not entirely sure he chose this correctly. He's the one you'd be able to get through to, probably, if the others weren't watching."
+tags        = ["humanoid", "slow", "youth", "spar"]
+style       = "iron_root"
+style_prof  = 12
+hp          = 28
+max_hp      = 28
+attack      = 8
+defense     = 4
+xp_reward   = 12
+gold_reward = 2
+hostile     = false
+dialogue    = "He doesn't want trouble. Neither do we."
+
+[[npc]]
+id          = "thorngrub_worker"
+name        = "Thorngrub Worker"
+desc_short  = "An armoured insect the length of your forearm, mandibles forward."
+desc_long   = "About eighteen inches long, segmented like a millipede but with the body plan of a large beetle: six legs, a hard carapace, and mandibles sized for cutting roots. Its eyes are small and multifaceted. It has found you and made a decision about you."
+tags        = ["insect", "fast", "small"]
+style       = "brawling"
+style_prof  = 10
+hp          = 18
+max_hp      = 18
+attack      = 6
+defense     = 3
+xp_reward   = 12
+gold_reward = 0
+hostile     = true
+kill_script = [
+  { op = "give_item", item_id = "thorngrub_chitin" },
+]
+
+[[npc]]
+id          = "thorngrub_guard"
+name        = "Thorngrub Guard"
+desc_short  = "A larger Thorngrub variant, heavier-plated, positioned at the entrance."
+desc_long   = "Considerably larger than the workers — perhaps two and a half feet long, with heavier plating and mandibles wide enough to be properly dangerous. Whether the colony has a caste system or these are simply older workers is a question for a naturalist. For practical purposes: it is bigger and angrier than the others."
+tags        = ["insect", "slow", "armored"]
+style       = "iron_root"
+style_prof  = 15
+hp          = 30
+max_hp      = 30
+attack      = 9
+defense     = 6
+xp_reward   = 20
+gold_reward = 0
+hostile     = true
+kill_script = [
+  { op = "give_item", item_id = "thorngrub_chitin" },
+]
+
+[[npc]]
+id          = "thorngrub_soldier"
+name        = "Thorngrub Soldier"
+desc_short  = "A mine-adapted Thorngrub, longer-legged and faster in the dark."
+desc_long   = "The miners' variant — longer legs for traversing uneven ground, slightly narrower body for moving through tight passages, and a more aggressive posture than the surface workers. It has been in the dark long enough that the carapace is paler than the surface variants."
+tags        = ["insect", "fast", "small"]
+style       = "serpent_strike"
+style_prof  = 20
+hp          = 25
+max_hp      = 25
+attack      = 10
+defense     = 4
+xp_reward   = 18
+gold_reward = 0
+hostile     = true
+kill_script = [
+  { op = "give_item", item_id = "thorngrub_chitin" },
+]
+
+[[npc]]
+id          = "thorngrub_queen"
+name        = "Thorngrub Queen"
+desc_short  = "A five-foot insect of deliberate, terrible purpose."
+desc_long   = "She is enormous for an insect and moves with the weight of something that knows it is the last line of defence. The mandibles are as long as short swords and articulate sideways as well as forward. The carapace is deeply segmented, the colour of old iron. Her eyes track you with disturbing intelligence. The eggs around her make this non-negotiable. She will not retreat."
+tags        = ["insect", "boss", "large", "slow"]
+style       = "iron_root"
+style_prof  = 40
+hp          = 120
+max_hp      = 120
+attack      = 18
+defense     = 10
+xp_reward   = 200
+gold_reward = 0
+hostile     = true
+kill_script = [
+  { op = "set_flag",   flag = "mine_opened" },
+  { op = "set_flag",   flag = "thorngrubs_cleared" },
+  { op = "advance_quest", quest_id = "thorngrub_queen", step = 3 },
+  { op = "prestige",   delta = 3, reason = "cleared the Thorngrub nest" },
+  { op = "message",    tag = "system",
+    text = "The Queen is still. The nest falls silent. Deep in the passage, you can hear the sound of the remaining Thorngrubs retreating." },
+  { op = "message",    tag = "system",
+    text = "The mine is yours. The ore veins in the passage are open for working." },
+]
+
+[[npc]]
+id          = "meadow_hare"
+name        = "Meadow Hare"
+desc_short  = "A large brown hare, frozen for a moment, deciding whether to bolt."
+desc_long   = "Long back legs, tawny coat, ears that swivel independently. It has decided you are probably not a threat. It may revise this."
+tags        = ["beast", "fast", "small"]
+style       = "evasion"
+style_prof  = 25
+hp          = 8
+max_hp      = 8
+attack      = 2
+defense     = 2
+xp_reward   = 5
+gold_reward = 0
+dialogue    = "The hare freezes, nose twitching, then bolts into the long grass."
+hostile     = false
+
+[[npc]]
+id          = "river_otter"
+name        = "River Otter"
+desc_short  = "A sleek brown animal moving through the shallows with total confidence."
+desc_long   = "The otter is about two feet long and entirely at home. It catches a small fish with the casual ease of something that has been doing this its whole life and finds it easy. It regards you briefly, decides you're not interesting, and goes back to fishing."
+tags        = ["beast", "fast", "small"]
+style       = "evasion"
+style_prof  = 20
+hp          = 12
+max_hp      = 12
+attack      = 3
+defense     = 3
+xp_reward   = 6
+gold_reward = 0
+dialogue    = "The otter surfaces briefly, regards you with bright eyes, and vanishes."
+hostile     = false
+
+[[npc]]
+id          = "field_crow"
+name        = "Crow"
+desc_short  = "A large crow working the turned soil, aggressive about its finds."
+desc_long   = "Crows are not afraid of you. This one has decided you're too close to its patch and is making that opinion known vocally. It's a big bird — the size of a small cat — and it has the self-assurance of something that knows it can fly away anytime it wants. It just hasn't decided to yet."
+tags        = ["beast", "fast", "small", "bird"]
+style       = "evasion"
+style_prof  = 15
+hp          = 10
+max_hp      = 10
+attack      = 4
+defense     = 2
+xp_reward   = 5
+gold_reward = 0
+hostile     = true
+
+[[npc]]
+id          = "burrowing_vole"
+name        = "Burrowing Vole"
+desc_short  = "A large rodent the size of a rat, with wide digging claws."
+desc_long   = "Bigger than a normal vole — a foot long if you include the tail. The claws are adapted for serious digging, and it has excavated a modest network of tunnels in the field margin. It is not as peaceful as it looks."
+tags        = ["beast", "fast", "small"]
+style       = "serpent_strike"
+style_prof  = 10
+hp          = 14
+max_hp      = 14
+attack      = 5
+defense     = 2
+xp_reward   = 8
+gold_reward = 0
+hostile     = true
+
+[[npc]]
+id          = "farm_goat"
+name        = "Goat"
+desc_short  = "A goat watching you with profound philosophical suspicion."
+desc_long   = "Goats have rectangular pupils, which gives them an unsettling quality even when they're doing nothing. This one is doing something — it is watching you with the specific focus of an animal deciding whether you are edible, a threat, or simply wrong. It may headbutt you. Many goats headbutt things for reasons that are not immediately obvious."
+tags        = ["beast", "fast", "small"]
+style       = "brawling"
+style_prof  = 5
+hp          = 18
+max_hp      = 18
+attack      = 5
+defense     = 3
+xp_reward   = 8
+gold_reward = 0
+dialogue    = "The goat stares at you with rectangular pupils. It chews. It says nothing."
+hostile     = false

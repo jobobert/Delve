@@ -1,0 +1,137 @@
+# data/dialogues/elder_mira.toml — Quest giver
+
+[[node]]
+id     = "root"
+lines  = ["{player}. What brings you to see me?", "I hoped someone capable would arrive soon, {player}."]
+script = [{ op = "set_flag", flag = "met_mira" }]
+
+[[response]]
+node      = "root"
+condition = { not_flag = "ashwood_quest_offered" }
+text      = "Who are you? What's happening in the Ashwood?"
+next      = "intro"
+
+[[response]]
+node      = "root"
+condition = { quest = "ashwood_contract", step = 1 }
+text      = "You wanted me to see Sergeant Vorn?"
+next      = "remind_vorn"
+
+[[response]]
+node      = "root"
+condition = { flag = "vorn_briefed", not_flag = "puzzle_solved" }
+text      = "Vorn briefed me. I'm heading to the Ashwood."
+next      = "after_vorn"
+
+[[response]]
+node      = "root"
+condition = { flag = "ashwood_drake_slain" }
+text      = "I have defeated the Ashwood Drake. Here is proof."
+next      = "victory"
+
+[[response]]
+node      = "root"
+condition = { quest_complete = "ashwood_contract" }
+text      = "The contract is fulfilled."
+next      = "complete"
+
+[[response]]
+node = "root"
+text = "Nothing right now. Farewell."
+next = ""
+
+[[node]]
+id   = "intro"
+line = "I am Mira, Elder of Millhaven. I've watched over this town for thirty years, and for thirty years the Ashwood kept its distance. That is changing. A corruption spreads from the forest — animals turned feral, scouts gone missing. We believe an Ashwood Drake has woken."
+
+[[response]]
+node = "intro"
+text = "A Drake? What is that?"
+next = "about_drake"
+
+[[response]]
+node = "intro"
+text = "Someone needs to stop it. Is there a contract?"
+next = "offer_quest"
+
+[[node]]
+id   = "about_drake"
+line = "An ancient creature that hibernates for decades and wakes hungrier than ever — its presence warping the forest around it. They are intelligent, territorial, and the last one to wake tore apart a village before someone stopped it."
+
+[[response]]
+node = "about_drake"
+text = "I'll deal with it. Tell me about the contract."
+next = "offer_quest"
+
+[[node]]
+id     = "offer_quest"
+line   = "The contract pays well — one hundred fifty gold and a commendation from the town. Find Sergeant Vorn in the barracks first. He has intelligence on what our scouts found."
+script = [
+  { op = "set_flag",      flag = "ashwood_quest_offered" },
+  { op = "advance_quest", quest_id = "ashwood_contract", step = 1 },
+]
+
+[[response]]
+node = "offer_quest"
+text = "I'll find Vorn. (accept quest)"
+next = "accepted"
+
+[[response]]
+node = "offer_quest"
+text = "I need to think about it."
+next = ""
+
+[[node]]
+id   = "accepted"
+line = "Good. Don't underestimate what's out there. Vorn will brief you on gear and route. Come back to me when the Drake is dead and bring proof — a fang will do."
+
+[[response]]
+node = "accepted"
+text = "Understood. I'll be back."
+next = ""
+
+[[node]]
+id   = "remind_vorn"
+line = "Vorn is in the barracks — go up from the Town Square. He'll brief you on what the scouts found before you head east."
+
+[[response]]
+node = "remind_vorn"
+text = "I'll go now."
+next = ""
+
+[[node]]
+id   = "after_vorn"
+line = "Good. Then you understand what you're walking into. The path east through the Ashwood Gate takes you toward the shrine. Stay on the old road as long as you can — and talk to the people you meet out there."
+
+[[response]]
+node = "after_vorn"
+text = "I'll find the Drake."
+next = ""
+
+[[node]]
+id   = "victory"
+line = "By the old stones. Let me see the fang. Yes — this is real. You actually did it."
+script = [{ op = "complete_quest", quest_id = "ashwood_contract" }]
+
+[[response]]
+node = "victory"
+text = "The Ashwood should be safe now?"
+next = "aftermath"
+
+[[node]]
+id   = "aftermath"
+line = "For a generation at least. The corruption will fade without the Drake to sustain it. This town owes you a debt, adventurer. Spend that gold wisely."
+
+[[response]]
+node = "aftermath"
+text = "Farewell, Elder."
+next = ""
+
+[[node]]
+id    = "complete"
+lines = ["Millhaven is in your debt.", "The forest has been quiet since your work. We are grateful."]
+
+[[response]]
+node = "complete"
+text = "Just doing what was needed."
+next = ""

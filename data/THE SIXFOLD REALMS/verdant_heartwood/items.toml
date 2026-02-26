@@ -1,0 +1,73 @@
+# Zone id: verdant_heartwood
+#
+
+[[item]]
+id          = "item_vine_resin" 
+name        = "Vine Resin"
+desc_short  = "A sticky resin used to craft living tools."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_regrowth_sample" 
+name        = "Regrowth Sample"
+desc_short  = "A sample of rapidly regenerating plant matter."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_stream_glass" 
+name        = "Stream Glass"
+desc_short  = "A shard of hardened water from the uphill-flowing stream."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_bloom_pollen" 
+name        = "Bloom Pollen"
+desc_short  = "A glowing pollen that reacts to forest energy."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_canopy_leaf" 
+name        = "Canopy Leaf"
+desc_short  = "A massive leaf that can be used as a glider in strong winds."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+

@@ -1,0 +1,153 @@
+# Zone id: core_chamber
+#
+
+[[room]]
+id          = "the_descent_gate"
+name        = "The Descent Gate"
+description = "A massive stone door carved with symbols representing all five regions."
+coord       = []
+exits       = {down = "the_spiral_descent"}
+items       = []
+flags       = []
+spawns      = ["npc_talla"]
+
+[[room]]
+id          = "the_spiral_descent"
+name        = "The Spiral Descent"
+description = "A spiraling ramp leading deep underground, lit by flickering blue energy veins."
+coord       = []
+exits       = {up = "the_descent_gate", down = "the_resonant_threshold"}
+items       = []
+flags       = []
+spawns      = ["enemy_core_sentinel"]
+
+[[room]]
+id          = "the_resonant_threshold"
+name        = "The Resonant Threshold"
+description = "A chamber where the air vibrates with the combined resonance of all device pieces."
+coord       = []
+exits       = {up = "the_spiral_descent", north = "the_calibration_hall", east = "the_overgrowth_conduit"}
+items       = []
+flags       = []
+spawns      = ["enemy_resonance_wraith"]
+
+[[room]]
+id          = "the_calibration_hall"
+name        = "The Calibration Hall"
+description = "Rows of ancient consoles flicker with unstable holographic displays."
+coord       = []
+exits       = {south = "the_resonant_threshold", north = "the_lightfall_chamber"}
+items       = ["item_core_diagnostic_key"]
+flags       = []
+spawns      = ["npc_eldric"]
+
+[[room]]
+id          = "the_overgrowth_conduit"
+name        = "The Overgrowth Conduit"
+description = "Vines and roots have broken through the stone, pulsing with green energy."
+coord       = []
+exits       = {west = "the_resonant_threshold", north = "the_mycelial_breach"}
+items       = []
+flags       = []
+spawns      = ["npc_aranel", "enemy_overgrowth_horror"]
+
+[[room]]
+id          = "the_lightfall_chamber"
+name        = "The Lightfall Chamber"
+description = "Beams of unstable light flicker across the room, bending unpredictably."
+coord       = []
+exits       = {south = "the_calibration_hall", east = "the_mist_convergence"}
+items       = []
+flags       = []
+spawns      = ["npc_eldric", "enemy_lightbound_specter"]
+
+[[room]]
+id          = "the_mycelial_breach"
+name        = "The Mycelial Breach"
+description = "Fungal growths pulse with psychic energy, whispering faint echoes."
+coord       = []
+exits       = {south = "the_overgrowth_conduit", east = "the_thermal_core"}
+items       = ["item_psychoactive_spore"]
+flags       = []
+spawns      = ["npc_rissa", "enemy_mycelial_aberration"]
+
+[[room]]
+id          = "the_mist_convergence"
+name        = "The Mist Convergence"
+description = "Thick mist swirls in controlled patterns, reacting to your movements."
+coord       = []
+exits       = {west = "the_lightfall_chamber", north = "the_central_nexus"}
+items       = []
+flags       = []
+spawns      = ["npc_vessa", "enemy_mist_phantom"]
+
+[[room]]
+id          = "the_thermal_core"
+name        = "The Thermal Core"
+description = "Heat radiates from molten channels running beneath the floor."
+coord       = []
+exits       = {west = "the_mycelial_breach", north = "the_pressure_vault"}
+items       = ["item_thermal_regulator"]
+flags       = []
+spawns      = ["npc_foreman_emberfall", "enemy_molten_construct"]
+
+[[room]]
+id          = "the_central_nexus"
+name        = "The Central Nexus"
+description = "A circular chamber where all environmental conduits converge."
+coord       = []
+exits       = {south = "the_mist_convergence", east = "the_core_antechamber", west = "the_pressure_vault"}
+items       = []
+flags       = []
+spawns      = ["npc_selka"]
+
+[[room]]
+id          = "the_pressure_vault"
+name        = "The Pressure Vault"
+description = "A reinforced chamber regulating atmospheric pressure across the world."
+coord       = []
+exits       = {south = "the_thermal_core", east = "the_central_nexus"}
+items       = []
+flags       = []
+spawns      = ["enemy_pressure_wraith"]
+
+[[room]]
+id          = "the_core_antechamber"
+name        = "The Core Antechamber"
+description = "A quiet room filled with dormant machinery awaiting activation."
+coord       = []
+exits       = {west = "the_central_nexus", north = "the_heart_of_the_device"}
+items       = ["item_core_alignment_rod"]
+flags       = []
+spawns      = ["npc_talla"]
+
+[[room]]
+id          = "the_heart_of_the_device"
+name        = "The Heart of the Device"
+description = "A massive crystalline structure suspended above a chasm, pulsing with unstable energy."
+coord       = []
+exits       = {south = "the_core_antechamber", north = "the_resonance_bridge"}
+items       = []
+flags       = []
+spawns      = ["enemy_core_overseer"]
+
+[[room]]
+id          = "the_resonance_bridge"
+name        = "The Resonance Bridge"
+description = "A narrow bridge of solidified energy leading to the final chamber."
+coord       = []
+exits       = {south = "the_heart_of_the_device", north = "the_control_spire"}
+items       = []
+flags       = []
+spawns      = ["enemy_resonance_wraith"]
+
+[[room]]
+id          = "the_control_spire"
+name        = "The Control Spire"
+description = "The central control interface of the ancient device, now unstable and dangerous."
+coord       = []
+exits       = {south = "the_resonance_bridge"}
+items       = ["item_device_piece_6"]
+flags       = []
+spawns      = ["npc_selka", "npc_eldric", "npc_aranel", "enemy_core_overseer"]
+

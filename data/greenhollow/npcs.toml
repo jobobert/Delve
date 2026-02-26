@@ -1,0 +1,372 @@
+# data/greenhollow/npcs.toml
+
+# ── Villagers ─────────────────────────────────────────────────────────────────
+
+[[npc]]
+id          = "elder_torva"
+name        = "Elder Torva"
+desc_short  = "A stout woman in her sixties with a walking stick she doesn't need."
+desc_long   = "Torva is Greenhollow's oldest resident and has been making decisions for the village for thirty years. She carries a walking stick but uses it mostly to poke things she's suspicious of. Her eyes are sharp and slightly amused. She's heard every story and is waiting to see if yours is different."
+hostile     = false
+tags        = ["humanoid", "slow", "prestige_neutral"]
+style       = "brawling"
+style_prof  = 10
+hp          = 35
+max_hp      = 35
+attack      = 4
+defense     = 3
+xp_reward   = 0
+gold_reward = 0
+dialogue    = "Greenhollow's been standing since before your grandfather was born. We'll be standing after you're gone. What do you need?"
+give_accepts = [
+  { item_id = "groundhog_trophy",
+    message  = "Torva takes the tooth, turns it in her fingers, taps it once against her stick. 'Good. I wasn't looking forward to another harvest with those things in the fields.' She passes you a pouch that's heavier than it looks.",
+    script   = [
+      { op = "set_flag",      flag = "groundhog_quest_complete" },
+      { op = "advance_quest", quest_id = "the_groundhog_king", step = 3 },
+      { op = "give_gold",     amount = 80 },
+      { op = "give_xp",       amount = 120 },
+      { op = "prestige",      amount = 3, reason = "cleared Greenhollow infestation — Elder Torva's thanks" },
+      { op = "message",       tag = "reward_gold", text = "Elder Torva pays you 80g for clearing the infestation." },
+    ]
+  },
+]
+
+[[npc]]
+id          = "miller_owain"
+name        = "Owain the Miller"
+desc_short  = "A tall flour-dusted man with the patience of someone who waits on weather for a living."
+desc_long   = "Owain has been milling for Greenhollow for fifteen years. He's the kind of person who notices everything but says only what's necessary. Flour has settled into the lines of his face, making him look older than he is. His hands are enormous — millwork builds a specific kind of strength."
+hostile     = false
+tags        = ["humanoid", "slow"]
+style       = "brawling"
+style_prof  = 15
+hp          = 40
+max_hp      = 40
+attack      = 6
+defense     = 3
+xp_reward   = 0
+gold_reward = 0
+dialogue    = "Mill's running. What else do you want to know?"
+shop        = [
+  { item_id = "flour_sack",       price = 5  },
+  { item_id = "health_potion",    price = 15 },
+]
+
+[[npc]]
+id          = "farrier_brynn"
+name        = "Brynn Farrier"
+desc_short  = "A compact woman in a leather apron, with burn scars on her forearms from years at the forge."
+desc_long   = "Brynn is the smithy, the farrier, and — on quiet evenings behind the forge — the only practitioner of Flowing Water in the valley. She learned it years ago from a travelling monk who paid for ironwork in knowledge. She's been looking for a student worth teaching ever since. She has the still quality of someone who has spent a long time paying attention."
+hostile     = false
+tags        = ["humanoid", "slow", "armored"]
+style       = "flowing_water"
+style_prof  = 70
+hp          = 55
+max_hp      = 55
+attack      = 10
+defense     = 8
+xp_reward   = 0
+gold_reward = 0
+dialogue    = "What do you need made? Or are you here about something else?"
+shop        = [
+  { item_id = "iron_pickaxe",    price = 18 },
+  { item_id = "iron_sword",      price = 25 },
+  { item_id = "iron_cap",        price = 18 },
+  { item_id = "iron_vambraces",  price = 16 },
+  { item_id = "iron_greaves",    price = 22 },
+  { item_id = "iron_ore",        price = 6  },
+  { item_id = "coal_chunk",      price = 4  },
+]
+
+[[npc]]
+id          = "farm_hand_npc"
+name        = "Farm Hand"
+desc_short  = "A lean young man with soil on his boots and a hoe over his shoulder."
+desc_long   = "One of several farm hands working Greenhollow's common fields. This one has the particular look of someone who works hard and resents it slightly. He's carrying a hoe but mostly uses it as something to lean on."
+hostile     = false
+tags        = ["humanoid", "slow"]
+style       = "brawling"
+style_prof  = 5
+hp          = 25
+max_hp      = 25
+attack      = 5
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+dialogue    = "Fields are in bad shape. Something's been under them all summer. Watch your step near the hedgerow."
+
+[[npc]]
+id          = "mine_foreman_osric"
+name        = "Osric Bryne"
+desc_short  = "A solid man in his fifties with a miner's lamp on his belt and a worried expression."
+desc_long   = "Osric has run the Greenhollow mine for twenty years. He knows every tunnel and seam from memory. The groundhog infestation has him rattled — not because he's afraid, but because the mine is his responsibility and it's currently full of something he didn't put there. He lost his pickaxe last week when the lower level flooded with groundhogs and he had to retreat fast."
+hostile     = false
+tags        = ["humanoid", "slow"]
+style       = "iron_root"
+style_prof  = 25
+hp          = 45
+max_hp      = 45
+attack      = 7
+defense     = 4
+xp_reward   = 0
+gold_reward = 0
+dialogue    = "I'd go down there myself but I've got three miners who won't work until it's cleared. Priorities."
+give_accepts = [
+  { item_id = "osric_pickaxe",
+    message  = "Osric's expression changes completely. He takes the pick, runs his thumb over the scratched initials, looks up at you. 'Been looking for this. Thank you.' He reaches into his coat pocket and pulls out a small coin purse without counting it.",
+    script   = [
+      { op = "set_flag",      flag = "osric_pick_returned" },
+      { op = "advance_quest", quest_id = "osrics_pick", step = 3 },
+      { op = "give_gold",     amount = 30 },
+      { op = "give_xp",       amount = 40 },
+      { op = "prestige",      amount = 1, reason = "returned Osric's pickaxe" },
+      { op = "message",       tag = "reward_gold", text = "Osric presses 30g into your hand." },
+    ]
+  },
+]
+
+[[npc]]
+id          = "herb_wife_sable"
+name        = "Sable"
+desc_short  = "An older woman with herb-stained fingers and an evaluating look."
+desc_long   = "Sable isn't from Greenhollow originally — she arrived twenty years ago and never left. She knows herbs, minor remedies, and the kind of practical medicine that gets you through until you can reach a proper healer. She watches you with the look of someone assessing whether you're likely to cause her work."
+hostile     = false
+tags        = ["humanoid", "slow", "prestige_neutral"]
+style       = "brawling"
+style_prof  = 5
+hp          = 20
+max_hp      = 20
+attack      = 3
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+dialogue    = "You look like you've been somewhere. I've got salves and something for bone-ache if you need it."
+shop        = [
+  { item_id = "health_potion",    price = 12 },
+  { item_id = "fen_antitoxin",    price = 15 },
+  { item_id = "ghost_willow_bark", price = 8 },
+]
+rest_cost   = 5
+
+# ── Ruffians ──────────────────────────────────────────────────────────────────
+
+[[npc]]
+id          = "ruffian_finn"
+name        = "Finn"
+desc_short  = "The tallest of the three boys, standing with an authority that hasn't been earned yet."
+desc_long   = "Finn is fifteen, tall for his age, and has decided that being the biggest means being in charge. He wears this with the combination of uncertainty and aggression that comes from not yet knowing how that story usually ends. He's not malicious — he's bored and underestimated and has no idea how to say that."
+hostile     = false
+tags        = ["humanoid", "fast", "teenager", "coward", "spar"]
+style       = "brawling"
+style_prof  = 12
+hp          = 18
+max_hp      = 18
+attack      = 6
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+dialogue    = "What are you looking at?"
+kill_script = [
+  { op = "message", tag = "system", text = "Finn goes down hard. His eyes are open and confused. You haven't killed him — he's a kid — but he's done for the day." },
+  { op = "set_flag",      flag = "finn_defeated" },
+  { op = "advance_quest", quest_id = "finns_reckoning", step = 2 },
+  { op = "prestige",      amount = -1, reason = "beat up a teenager" },
+]
+admin_comment = "HP floor: never actually dies, kill_script fires at 0 HP. Non-lethal logic in world engine."
+
+[[npc]]
+id          = "ruffian_dale"
+name        = "Dale"
+desc_short  = "A stocky boy with bruised knuckles and a grin that says he's done this before."
+desc_long   = "Dale is the muscle of the group — shorter than Finn but wider and harder to put down. He grins when he fights, which is unsettling until you realise he's mostly just pleased to have something to do. He's the kind of person who will be difficult in a productive direction if someone ever points him right."
+hostile     = false
+tags        = ["humanoid", "slow", "teenager", "large", "spar"]
+style       = "brawling"
+style_prof  = 15
+hp          = 22
+max_hp      = 22
+attack      = 7
+defense     = 3
+xp_reward   = 0
+gold_reward = 0
+dialogue    = "You trying something?"
+kill_script = [
+  { op = "message", tag = "system", text = "Dale sits down in the dirt looking surprised. That's enough for him." },
+  { op = "set_flag", flag = "dale_defeated" },
+]
+
+[[npc]]
+id          = "ruffian_scratch"
+name        = "Scratch"
+desc_short  = "A small wiry boy who moves too fast to feel comfortable about."
+desc_long   = "Scratch doesn't say much but is always moving — circling, shifting, looking for angles. He's the youngest and smallest but probably the most dangerous in an actual fight. His name comes from a scar over his left eye from something he won't explain. He watches you with the calculated attention of someone who has learned to compensate."
+hostile     = false
+tags        = ["humanoid", "fast", "teenager", "small", "spar"]
+style       = "serpent_strike"
+style_prof  = 18
+hp          = 15
+max_hp      = 15
+attack      = 8
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+dialogue    = "..."
+kill_script = [
+  { op = "message", tag = "system", text = "Scratch goes down fast and quiet. You check — still breathing." },
+  { op = "set_flag", flag = "scratch_defeated" },
+]
+
+# ── Mine enemies ──────────────────────────────────────────────────────────────
+
+[[npc]]
+id          = "groundhog_scout"
+name        = "Giant Groundhog"
+desc_short  = "A heavily built rodent the size of a large dog, with orange incisors and attitude."
+desc_long   = "Considerably larger than a groundhog has any right to be. The orange-yellow incisors are the most prominent feature — they're used for burrowing but work fine as weapons. This one has emerged from a field burrow and is regarding you with the territorial aggression of an animal that has decided this is its ground now."
+hostile     = true
+tags        = ["beast", "slow", "small", "burrowing"]
+style       = "brawling"
+style_prof  = 8
+hp          = 20
+max_hp      = 20
+attack      = 7
+defense     = 2
+xp_reward   = 15
+gold_reward = 0
+dialogue    = "The turtle snaps its beak once in warning. It does not seem interested in conversation."
+respawn_time= 180
+
+[[npc]]
+id          = "groundhog_worker"
+name        = "Mine Groundhog"
+desc_short  = "A groundhog adapted to tunnel work — smaller than the field variety but faster."
+desc_long   = "The groundhogs that have taken over the mine are slightly smaller than the field scouts, with wider, stronger forepaws from constant burrowing. They move quickly in the tunnels they've dug — quick enough to be genuinely dangerous. This one has oil from the mine lanterns on its fur."
+hostile     = true
+tags        = ["beast", "fast", "small", "burrowing"]
+style       = "serpent_strike"
+style_prof  = 12
+hp          = 18
+max_hp      = 18
+attack      = 9
+defense     = 3
+xp_reward   = 18
+gold_reward = 0
+dialogue    = "The moorhen makes an alarmed sound and edges toward the reeds."
+respawn_time= 180
+
+[[npc]]
+id          = "groundhog_king"
+name        = "Groundhog King"
+desc_short  = "An enormous groundhog the size of a bear, incisors stained orange-red from the deep ore."
+desc_long   = "The Groundhog King is genuinely alarming. Its body is a barrel of compressed muscle, the haunches designed for digging through solid earth. Its incisors are extraordinary — each one ten inches of curved orange ivory, worn to a working edge by constant use. It has the specific focus of an animal that considers this entire mountain its territory and has absolutely no doubts about that."
+hostile     = true
+tags        = ["beast", "slow", "large", "burrowing"]
+style       = "iron_root"
+style_prof  = 30
+hp          = 80
+max_hp      = 80
+attack      = 16
+defense     = 8
+xp_reward   = 150
+gold_reward = 0
+kill_script = [
+  { op = "message",       tag = "system", text = "The Groundhog King collapses. The sound echoes through the deep chamber. Then silence — the first real silence the mine has had in months." },
+  { op = "advance_quest", quest_id = "the_groundhog_king", step = 2 },
+  { op = "spawn_item",    item_id = "groundhog_trophy" },
+]
+admin_comment = "Boss. kill_script spawns the trophy item in room rather than as a drop."
+
+# ── Wildlife ──────────────────────────────────────────────────────────────────
+
+[[npc]]
+id          = "pond_turtle"
+name        = "Pond Snapping Turtle"
+desc_short  = "A large flat-shelled turtle with a neck that extends far further than seems reasonable."
+desc_long   = "This turtle has been in this pond longer than most of the villagers have been alive. Its shell is mossy, its eyes are cold and ancient. When it snaps, it's fast — the neck can extend a surprising distance. It does not move unless provoked, which makes it easy to avoid if you choose."
+hostile     = false
+tags        = ["beast", "slow", "armored", "small"]
+style       = "iron_root"
+style_prof  = 20
+hp          = 30
+max_hp      = 30
+attack      = 10
+defense     = 7
+xp_reward   = 25
+gold_reward = 0
+dialogue    = "The dog wags its tail hopefully. Biscuit, apparently."
+respawn_time= 300
+
+[[npc]]
+id          = "moorhen"
+name        = "Moorhen"
+desc_short  = "A small black water bird with a red beak, entirely unimpressed by you."
+desc_long   = "The moorhen is busy with its own affairs at the pond margin and has no interest in yours. It will peck if you get close to its nest in the reeds, harder than you'd expect. Mostly it is just a bird."
+hostile     = false
+tags        = ["beast", "fast", "small"]
+style       = "serpent_strike"
+style_prof  = 5
+hp          = 5
+max_hp      = 5
+attack      = 3
+defense     = 1
+xp_reward   = 2
+gold_reward = 0
+dialogue    = "The fox watches you from a careful distance. It does not speak. It is a fox."
+respawn_time= 120
+admin_comment = "Very weak. XP is negligible. Exists for atmosphere and comic value."
+
+[[npc]]
+id          = "stray_dog"
+name        = "Stray Dog"
+desc_short  = "A scruffy dog of no clear breed, living on handouts and enthusiasm."
+desc_long   = "This dog has been living in Greenhollow longer than anyone can remember. It has no owner but everyone feeds it. It has a name — Biscuit, apparently — though it only responds to it occasionally. It is friendly to everyone and dangerous to nothing except the village's rat population."
+hostile     = false
+tags        = ["beast", "fast", "small"]
+style       = "brawling"
+style_prof  = 8
+hp          = 15
+max_hp      = 15
+attack      = 4
+defense     = 2
+xp_reward   = 5
+gold_reward = 0
+dialogue    = "The pigeon coos. Once. Twice. It has nothing further to offer."
+respawn_time= 60
+
+[[npc]]
+dialogue    = "The fox watches you with amber eyes, assessing. It does not speak."
+id          = "forest_fox"
+name        = "Red Fox"
+desc_short  = "A fox pausing at the treeline, watching you with amber eyes."
+desc_long   = "The fox has the lean alert quality of an animal that is always calculating. It takes in your presence, runs some kind of assessment, and decides you're interesting but not threatening. Its coat is in good condition — a healthy animal, well-fed. It will bolt if you move suddenly."
+hostile     = false
+tags        = ["beast", "fast", "small"]
+style       = "serpent_strike"
+style_prof  = 15
+hp          = 18
+max_hp      = 18
+attack      = 7
+defense     = 3
+xp_reward   = 12
+gold_reward = 0
+respawn_time = 240
+
+[[npc]]
+id          = "wood_pigeon"
+name        = "Wood Pigeon"
+desc_short  = "A plump pigeon in an oak branch, cooing with inappropriate contentment."
+desc_long   = "The pigeon is the kind of creature that has managed to be everywhere without anyone quite noticing. Fat, slow, oblivious. It coos steadily. There are three more in the branches above it."
+hostile     = false
+tags        = ["beast", "fast", "small"]
+style       = "evasion"
+style_prof  = 10
+hp          = 4
+max_hp      = 4
+attack      = 1
+defense     = 1
+xp_reward   = 1
+gold_reward = 0
+respawn_time = 60
+dialogue    = "The pigeon coos."
+admin_comment = "Essentially harmless. Good for new players to practise on."

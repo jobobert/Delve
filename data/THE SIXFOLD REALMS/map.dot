@@ -1,0 +1,237 @@
+digraph WorldMap {
+  rankdir=LR;
+  node [shape=box, fontsize=10];
+  splines=ortho;
+
+  // =====================
+  // RIVERLANDS CONFLUENCE
+  // =====================
+  subgraph cluster_riverlands {
+    label="Riverlands Confluence";
+    color=lightblue;
+
+    riverlands_1  [label="Southbank Jetty"];
+    riverlands_2  [label="Riverbend Market"];
+    riverlands_3  [label="Misty Fork"];
+    riverlands_4  [label="Shaded Bank"];
+    riverlands_5  [label="Confluence Bridge"];
+    riverlands_6  [label="Fogshore Landing"];
+    riverlands_7  [label="Greenwater Ford"];
+    riverlands_8  [label="Confluence Shore"];
+    riverlands_9  [label="Twilight Bank"];
+    riverlands_10 [label="Emberflow Dock"];
+    riverlands_11 [label="Sporeward Bank"];
+    riverlands_12 [label="Fungal Drift"];
+    riverlands_13 [label="Confluence Isle Dock"];
+    riverlands_14 [label="Confluence Square"];
+    riverlands_15 [label="Island Shrine"];
+    riverlands_16 [label="Eastwatch Bluff"];
+    riverlands_17 [label="Westshore Lookout"];
+
+    riverlands_1  -> riverlands_2  [label="north"];
+    riverlands_1  -> riverlands_3  [label="east"];
+    riverlands_2  -> riverlands_1  [label="south"];
+    riverlands_2  -> riverlands_5  [label="north"];
+    riverlands_2  -> riverlands_4  [label="west"];
+    riverlands_3  -> riverlands_1  [label="west"];
+    riverlands_3  -> riverlands_6  [label="north"];
+    riverlands_4  -> riverlands_2  [label="east"];
+    riverlands_4  -> riverlands_7  [label="north"];
+    riverlands_5  -> riverlands_2  [label="south"];
+    riverlands_5  -> riverlands_8  [label="north"];
+    riverlands_6  -> riverlands_3  [label="south"];
+    riverlands_6  -> riverlands_9  [label="north"];
+    riverlands_7  -> riverlands_4  [label="south"];
+    riverlands_7  -> riverlands_10 [label="north"];
+    riverlands_8  -> riverlands_5  [label="south"];
+    riverlands_8  -> riverlands_11 [label="east"];
+    riverlands_8  -> riverlands_12 [label="west"];
+    riverlands_8  -> riverlands_13 [label="boat_to_island_1"];
+    riverlands_9  -> riverlands_6  [label="south"];
+    riverlands_10 -> riverlands_7  [label="south"];
+    riverlands_11 -> riverlands_8  [label="west"];
+    riverlands_12 -> riverlands_8  [label="east"];
+    riverlands_13 -> riverlands_8  [label="south"];
+    riverlands_13 -> riverlands_14 [label="north"];
+    riverlands_14 -> riverlands_13 [label="south"];
+    riverlands_14 -> riverlands_15 [label="north"];
+    riverlands_14 -> riverlands_16 [label="east"];
+    riverlands_14 -> riverlands_17 [label="west"];
+    riverlands_15 -> riverlands_14 [label="south"];
+    riverlands_16 -> riverlands_14 [label="west"];
+    riverlands_17 -> riverlands_14 [label="east"];
+  }
+
+  // =============
+  // DRAGON PEAKS
+  // =============
+  subgraph cluster_dragon_peaks {
+    label="Dragon Peaks";
+    color=lightcoral;
+
+    dp_1 [label="Sky Burns Red"];
+    dp_2 [label="Ashwalker's Grief"];
+    dp_3 [label="Missing Apprentice"];
+    dp_4 [label="Wings on the Wind"];
+    dp_5 [label="Echo That Shouldn't Be"];
+    dp_6 [label="Secrets of the Spine"];
+    dp_7 [label="Heat Below"];
+    dp_8 [label="Apex of Power"];
+
+    dp_1 -> dp_2 [label="south"];
+    dp_2 -> dp_1 [label="north"];
+    dp_2 -> dp_3 [label="east"];
+    dp_2 -> dp_4 [label="south"];
+    dp_3 -> dp_2 [label="west"];
+    dp_4 -> dp_2 [label="north"];
+    dp_4 -> dp_5 [label="east"];
+    dp_5 -> dp_4 [label="west"];
+    dp_5 -> dp_6 [label="east"];
+    dp_6 -> dp_5 [label="west"];
+    dp_6 -> dp_7 [label="east"];
+    dp_7 -> dp_6 [label="west"];
+    dp_7 -> dp_8 [label="south"];
+    dp_8 -> dp_7 [label="north"];
+  }
+
+  // =================
+  // MISTFEN EXPANSE
+  // =================
+  subgraph cluster_mistfen {
+    label="Mistfen Expanse";
+    color=lightgreen;
+
+    me_1 [label="Anchor the Paths"];
+    me_2 [label="Follow the False Path"];
+    me_3 [label="Stabilize the Heart"];
+    me_4 [label="Chart the Shifting Paths"];
+
+    me_1 -> me_2 [label="east"];
+    me_2 -> me_1 [label="west"];
+    me_2 -> me_3 [label="south"];
+    me_3 -> me_2 [label="north"];
+    me_3 -> me_4 [label="east"];
+    me_4 -> me_3 [label="west"];
+  }
+
+  // ====================
+  // VERDANT HEARTWOOD
+  // ====================
+  subgraph cluster_heartwood {
+    label="Verdant Heartwood";
+    color=darkseagreen;
+
+    vh_1 [label="Living Tools"];
+    vh_2 [label="Balance the Growth"];
+    vh_3 [label="Map the Growth"];
+    vh_4 [label="The Forest Speaks"];
+
+    vh_1 -> vh_2 [label="east"];
+    vh_2 -> vh_1 [label="west"];
+    vh_2 -> vh_3 [label="south"];
+    vh_3 -> vh_2 [label="north"];
+    vh_3 -> vh_4 [label="south"];
+    vh_4 -> vh_3 [label="north"];
+  }
+
+  // ===========
+  // GLOAMREACH
+  // ===========
+  subgraph cluster_gloamreach {
+    label="Gloamreach";
+    color=mediumpurple;
+
+    gr_1 [label="Restore the Light"];
+    gr_2 [label="Lens of Truth"];
+    gr_3 [label="Into the Gloam"];
+    gr_4 [label="Rekindle the Hollow"];
+    gr_5 [label="The Shadow Core"];
+
+    gr_1 -> gr_2 [label="south"];
+    gr_2 -> gr_1 [label="north"];
+    gr_2 -> gr_3 [label="south"];
+    gr_3 -> gr_2 [label="north"];
+    gr_3 -> gr_4 [label="east"];
+    gr_4 -> gr_3 [label="west"];
+    gr_4 -> gr_5 [label="south"];
+    gr_5 -> gr_4 [label="north"];
+  }
+
+  // ==================
+  // MYCELIAL PLAINS
+  // ==================
+  subgraph cluster_mycelial {
+    label="Mycelial Plains";
+    color=khaki;
+
+    mp_1 [label="Clear the Mind"];
+    mp_2 [label="Glowcap Harvest"];
+    mp_3 [label="Map the Network"];
+    mp_4 [label="The Spore Core"];
+
+    mp_1 -> mp_2 [label="east"];
+    mp_2 -> mp_1 [label="west"];
+    mp_2 -> mp_3 [label="east"];
+    mp_3 -> mp_2 [label="west"];
+    mp_3 -> mp_4 [label="east"];
+    mp_4 -> mp_3 [label="west"];
+  }
+
+  // =============
+  // CORE CHAMBER
+  // =============
+  subgraph cluster_core {
+    label="Core Chamber";
+    color=gray;
+
+    cc_1 [label="Enter the Core"];
+    cc_2 [label="Calibrate the System"];
+    cc_3 [label="Stabilize the Nexus"];
+    cc_4 [label="The Final Alignment"];
+    cc_5 [label="Restore the World"];
+
+    cc_1 -> cc_2 [label="east"];
+    cc_2 -> cc_1 [label="west"];
+    cc_2 -> cc_3 [label="east"];
+    cc_3 -> cc_2 [label="west"];
+    cc_3 -> cc_4 [label="east"];
+    cc_4 -> cc_3 [label="west"];
+    cc_4 -> cc_5 [label="east"];
+    cc_5 -> cc_4 [label="west"];
+  }
+
+  // =========================
+  // INTER-REGION CONNECTIONS
+  // =========================
+
+  // Riverlands <-> Dragon Peaks
+  riverlands_1  -> dp_1 [label="to_dragon_peaks_1"];
+  dp_1          -> riverlands_1 [label="to_riverlands_1"];
+  riverlands_10 -> dp_7 [label="to_dragon_peaks_2"];
+  dp_7          -> riverlands_10 [label="to_riverlands_10"];
+
+  // Riverlands <-> Mistfen Expanse
+  riverlands_3  -> me_1 [label="to_mistfen_expanse_1"];
+  me_1          -> riverlands_3 [label="to_riverlands_3"];
+  riverlands_6  -> me_4 [label="to_mistfen_expanse_2"];
+  me_4          -> riverlands_6 [label="to_riverlands_6"];
+
+  // Riverlands <-> Verdant Heartwood
+  riverlands_4  -> vh_1 [label="to_verdant_heartwood_1"];
+  vh_1          -> riverlands_4 [label="to_riverlands_4"];
+  riverlands_7  -> vh_4 [label="to_verdant_heartwood_2"];
+  vh_4          -> riverlands_7 [label="to_riverlands_7"];
+
+  // Riverlands <-> Gloamreach
+  riverlands_9  -> gr_5 [label="to_gloamreach_1"];
+  gr_5          -> riverlands_9 [label="to_riverlands_9"];
+
+  // Riverlands <-> Mycelial Plains
+  riverlands_11 -> mp_4 [label="to_mycelial_plains_2"];
+  mp_4          -> riverlands_11 [label="to_riverlands_11"];
+  riverlands_12 -> mp_4 [label="to_mycelial_plains_3"];
+  mp_4          -> riverlands_12 [label="to_riverlands_12"];
+
+  // (Core Chamber is currently only reachable via narrative means;
+  // hook it up later if you add a specific entrance room.)
+}

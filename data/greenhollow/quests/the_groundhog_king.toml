@@ -1,0 +1,30 @@
+# data/greenhollow/quests/the_groundhog_king.toml
+# "The Groundhog King" — pest extermination quest.
+#
+# Giant groundhogs have infested Greenhollow's mine and fields.
+# The Groundhog King has established itself in the deep chamber.
+# Elder Torva wants it dealt with.
+#
+# Prestige: +5 total (2 on kill, 3 on completion)
+
+id      = "the_groundhog_king"
+title   = "The Groundhog King"
+giver   = "elder_torva"
+summary = "Something has been burrowing through Greenhollow's fields and mine for months. Elder Torva says the source is a colossal groundhog that has taken over the mine's deep chamber. Clear the infestation and bring proof."
+
+[[step]]
+index     = 1
+objective = "Find and enter the Greenhollow mine."
+hint      = "The mine entrance is at the west edge of the fields."
+
+[[step]]
+index     = 2
+objective = "Defeat the Groundhog King in the deep chamber."
+hint      = "Go down two levels. The King is in the natural chamber at the bottom. Take a pickaxe — the groundhogs have no respect for empty hands."
+completion_flag = "groundhog_king_killed"
+
+[[step]]
+index     = 3
+objective = "Return the Groundhog King's tooth to Elder Torva."
+hint      = "The tooth should be in the room after the kill. Torva is somewhere in the main lane."
+completion_flag = "groundhog_quest_complete"

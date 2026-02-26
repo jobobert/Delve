@@ -1,0 +1,132 @@
+# data/training/dialogues/drill_sergeant.toml
+# Sergeant Vorn — quest step NPC, teaches Swordplay
+
+[[node]]
+id = "root"
+lines = [
+  "Eyes forward. What do you need?",
+  "I'm busy. Make it quick.",
+  "Recruits don't impress me. Veterans sometimes do."
+]
+
+[[response]]
+node      = "root"
+condition = { quest = "ashwood_contract", step = 1 }
+text      = "Elder Mira sent me. Something about the Ashwood."
+next      = "mira_sent"
+
+[[response]]
+node      = "root"
+condition = { flag = "vorn_briefed", not_flag = "vorn_style_offered" }
+text      = "Can you teach me to fight properly?"
+next      = "training_offer"
+
+[[response]]
+node      = "root"
+condition = { flag = "vorn_style_offered", not_flag = "vorn_style_done" }
+text      = "I want to learn Swordplay."
+next      = "teach_swordplay"
+
+[[response]]
+node      = "root"
+condition = { flag = "vorn_style_done" }
+text      = "Any advice before I head into the Ashwood?"
+next      = "advice"
+
+[[response]]
+node = "root"
+text = "Never mind."
+next = ""
+
+[[node]]
+id     = "mira_sent"
+line   = "About time. Sit down. Three days ago our best scout went into the Ashwood. She didn't come back. The forest has gone wrong — animals attacking, fog that moves against the wind."
+script = [
+  { op = "set_flag", flag = "vorn_briefed" },
+  { op = "advance_quest", quest_id = "ashwood_contract", step = 2 },
+]
+
+[[response]]
+node = "mira_sent"
+text = "What do I need to deal with it?"
+next = "gear_advice"
+
+[[response]]
+node = "mira_sent"
+text = "How do I get to the Ashwood Gate?"
+next = "directions"
+
+[[node]]
+id   = "gear_advice"
+line = "You need more than a sharp blade. The Drake is armored. You need a style built for heavy targets — power and patience."
+
+[[response]]
+node = "gear_advice"
+text = "Can you teach me that style?"
+next = "training_offer"
+
+[[response]]
+node = "gear_advice"
+text = "Where is the Ashwood Gate?"
+next = "directions"
+
+[[node]]
+id   = "directions"
+line = "Head south through the forest. The Ashwood Gate is east of the deep forest — follow the old stone road."
+
+[[response]]
+node = "directions"
+text = "What about combat training?"
+next = "training_offer"
+
+[[response]]
+node = "directions"
+text = "I'll head out now."
+next = ""
+
+[[node]]
+id     = "training_offer"
+line   = "I can teach you Swordplay. Proper footwork, leverage, controlled aggression. Even the basics will help."
+script = [{ op = "set_flag", flag = "vorn_style_offered" }]
+
+[[response]]
+node = "training_offer"
+text = "Teach me Swordplay."
+next = "teach_swordplay"
+
+[[response]]
+node = "training_offer"
+text = "Maybe later."
+next = ""
+
+[[node]]
+id     = "teach_swordplay"
+line   = "Pay attention. This is what separates soldiers from corpses."
+script = [
+  { op = "teach_style",   style_id = "swordplay" },
+  { op = "set_flag",      flag = "vorn_style_done" },
+  { op = "advance_quest", quest_id = "ashwood_contract", step = 3 },
+]
+
+[[response]]
+node = "teach_swordplay"
+text = "I understand. Thank you, Sergeant."
+next = "trained"
+
+[[node]]
+id   = "trained"
+line = "Don't thank me. Come back alive. The Ashwood Gate is southeast. Get moving."
+
+[[response]]
+node = "trained"
+text = "I'll return."
+next = ""
+
+[[node]]
+id   = "advice"
+line = "The Drake fights in short bursts. Survive the first onslaught and it'll give you an opening. Watch its breathing."
+
+[[response]]
+node = "advice"
+text = "Good advice."
+next = ""

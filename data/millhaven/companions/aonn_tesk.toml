@@ -1,0 +1,21 @@
+# data/millhaven/companions/aonn_tesk.toml
+# Aonn Tesk — veteran swordsman, quest companion for Grandfather's Emerald.
+# He joins as a combat companion when asked after learning your story.
+
+id           = "aonn_tesk"
+name         = "Aonn Tesk"
+type         = "combat"
+desc_short   = "A lean elf veteran with one arm, hand never far from his sword."
+attack       = 8
+defense      = 4
+hp           = 45
+max_hp       = 45
+carry_bonus  = 0
+style        = "swordplay"
+style_prof   = 35.0
+restrictions = []
+
+join_message   = "Aonn rises, buckles his sword belt one-handed with practiced ease, and falls into step at your left. He says nothing. He doesn't need to."
+wait_message   = "Aonn studies the opening. 'I won't fit through that. Go. I'll hold here and be ready when you come back.'"
+rejoin_message = "Aonn straightens and rejoins you, scanning the area once before giving you a small nod."
+downed_message = "Aonn goes down hard, one knee on the ground. 'Don't stop,' he says through gritted teeth. 'I'll be fine. Go.' He needs rest before he can fight again."

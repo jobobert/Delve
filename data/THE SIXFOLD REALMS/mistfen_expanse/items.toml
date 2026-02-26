@@ -1,0 +1,59 @@
+# Zone id: mistfen_expanse
+#
+
+[[item]]
+id          = "item_anchor_stone" 
+name        = "Anchor Stone"
+desc_short  = "A dense stone that stabilizes a small area of warped terrain."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_waterlogged_map" 
+name        = "Waterlogged Map"
+desc_short  = "A partially ruined map showing outdated swamp routes."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_stabilizing_reed" 
+name        = "Stabilizing Reed"
+desc_short  = "A reed that vibrates when spatial distortions intensify."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_echo_compass" 
+name        = "Echo Compass"
+desc_short  = "A compass that points toward areas of stable reality."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+

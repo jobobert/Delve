@@ -1,0 +1,58 @@
+# data/blackfen/quests/the_emerald_in_the_dark.toml
+# The Emerald in the Dark — the main Blackfen Mire quest chain.
+#
+# Quest flow:
+#   Step 1: Warden Holt tells you about the missing patrol and the mire
+#   Step 2: Speak with Grimwick at the Fenwatch Post — she knows the tomb
+#   Step 3: Reach the Vault (enter aldenmoor_vault) and defeat Anurus
+#   Step 4: Defeat Durath Ironteeth (optional but awards step 4)
+#   Step 5: Defeat the Vault Guardian and recover the Celestial Emerald
+#   Step 6: Return to Warden Holt with the Emerald
+#   Complete: Emerald delivered, quest closed
+
+id      = "the_emerald_in_the_dark"
+title   = "The Emerald in the Dark"
+giver   = "fenwatch_warden"
+summary = "Recover the Celestial Emerald from the tomb of Gregor Aldenmoor, deep in Blackfen Mire."
+
+[[step]]
+index     = 1
+objective = "Speak with Grimwick Fenborn at the Fenwatch Post."
+hint      = "Grimwick is the lizard-person near the fire. She knows every path in this mire."
+
+[[step]]
+index     = 2
+objective = "Find a way into the Aldenmoor tomb."
+hint      = "The drowned causeway is the only entrance. You'll need the punt from Blacklake Shore."
+
+[[step]]
+index     = 3
+objective = "Defeat Anurus the Returned at Riversturm's Tower (optional but clears a threat)."
+hint      = "Anurus is in the ruined tower east of the fogmere. His staff is powerful — and he guards a path."
+
+[[step]]
+index     = 4
+objective = "Deal with Durath Ironteeth and his Redbelly crew."
+hint      = "Durath controls the bridge between his camp and the lake. You'll need his key, or another way around."
+
+[[step]]
+index     = 5
+objective = "Defeat the Vault Guardian and recover the Celestial Emerald."
+hint      = "The Vault Guardian has possessed Gregor Aldenmoor's body. The Emerald is inside it."
+
+[[step]]
+index     = 6
+objective = "Return to Warden Holt at the Fenwatch Post with the Emerald."
+hint      = "Holt is stationed at the gate. She'll want to see the Emerald before she'll believe any of this."
+
+[[reward]]
+type   = "xp"
+amount = 500
+
+[[reward]]
+type   = "gold"
+amount = 200
+
+[[reward]]
+type    = "item"
+item_id = "swamp_stalker_cloak"

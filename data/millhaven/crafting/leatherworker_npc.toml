@@ -1,0 +1,81 @@
+# data/millhaven/crafting/leatherworker_npc.toml
+# Commission definitions for Sera the Leatherworker.
+# Specialises in bags, packs, and light armor.
+
+# ── BAGS / CARRYING GEAR ─────────────────────────────────────────────────────
+
+[[commission]]
+id             = "field_satchel"
+npc_id         = "leatherworker_npc"
+label          = "Field Satchel"
+desc           = "A practical over-the-shoulder bag. More room than it looks."
+slot           = "pack"
+materials      = ["tanned_hide", "leather_strip"]
+turns_required = 15
+gold_cost      = 0
+xp_reward      = 20
+weight         = 1
+qualities = [
+  { tier = "poor",        weight = 20, carry_bonus = 3,  equip_msg = "A bit rough at the seams, but it holds together." },
+  { tier = "standard",    weight = 55, carry_bonus = 5,  equip_msg = "Well-stitched. The shoulder strap sits comfortably." },
+  { tier = "exceptional", weight = 20, carry_bonus = 7,  special = "reinforced", name_prefix = "Fine ",        equip_msg = "Double-stitched at every stress point. This will last years." },
+  { tier = "masterwork",  weight = 5,  carry_bonus = 10, special = "reinforced", name_prefix = "Masterwork ", equip_msg = "The internal compartments are clever. Things stop rattling around.", craft_message = "The inner frame is what does it — maintains shape under load. Most makers skip it." },
+]
+
+[[commission]]
+id             = "expedition_pack"
+npc_id         = "leatherworker_npc"
+label          = "Expedition Pack"
+desc           = "A large framed pack built for long hauls. Carries everything you own, twice over."
+slot           = "pack"
+materials      = ["tanned_hide", "tanned_hide", "hard_wood", "leather_strip"]
+turns_required = 30
+gold_cost      = 5
+xp_reward      = 50
+weight         = 3
+qualities = [
+  { tier = "poor",        weight = 15, carry_bonus = 6,  equip_msg = "Heavy even empty. The frame creaks but holds." },
+  { tier = "standard",    weight = 55, carry_bonus = 10, equip_msg = "Solid construction. The hip belt takes most of the load." },
+  { tier = "exceptional", weight = 25, carry_bonus = 14, name_prefix = "Fine ",        equip_msg = "The load distribution is excellent — you barely feel it's full." },
+  { tier = "masterwork",  weight = 5,  carry_bonus = 18, name_prefix = "Masterwork ", equip_msg = "It fits you perfectly. Sera must have measured without you noticing.", craft_message = "The frame is yew — lighter than oak, just as strong. Don't drop it in a swamp." },
+]
+
+# ── LIGHT ARMOR ───────────────────────────────────────────────────────────────
+
+[[commission]]
+id             = "padded_jack"
+npc_id         = "leatherworker_npc"
+label          = "Padded Jack"
+desc           = "A quilted leather jacket, light enough to move in and tough enough to matter."
+slot           = "armor"
+armor_tags     = ["leather", "light", "chest"]
+materials      = ["tanned_hide", "tanned_hide", "linen_cloth"]
+turns_required = 20
+gold_cost      = 5
+xp_reward      = 35
+weight         = 3
+qualities = [
+  { tier = "poor",        weight = 20, defense_bonus = 2, equip_msg = "Uneven padding in places, but it'll slow a blade." },
+  { tier = "standard",    weight = 55, defense_bonus = 4, equip_msg = "Evenly padded and well-fitted. You can move freely." },
+  { tier = "exceptional", weight = 20, defense_bonus = 6, special = "supple", name_prefix = "Fine ",        equip_msg = "The leather is worked soft. It moves with you rather than against you." },
+  { tier = "masterwork",  weight = 5,  defense_bonus = 8, special = "supple", name_prefix = "Masterwork ", equip_msg = "It barely feels like armor. Until something hits it.", craft_message = "Six layers of quilting in the strike zones, two everywhere else. You'll thank me." },
+]
+
+[[commission]]
+id             = "ranger_cloak"
+npc_id         = "leatherworker_npc"
+label          = "Ranger's Cloak"
+desc           = "A hooded travel cloak in muted browns. Practical, warm, and easy to disappear in."
+slot           = "cape"
+armor_tags     = ["leather", "light"]
+materials      = ["tanned_hide", "linen_cloth", "dark_dye"]
+turns_required = 18
+gold_cost      = 3
+xp_reward      = 30
+weight         = 1
+qualities = [
+  { tier = "poor",        weight = 20, defense_bonus = 1, equip_msg = "The hood sits a bit awkward. Still warm." },
+  { tier = "standard",    weight = 55, defense_bonus = 2, equip_msg = "Well-cut. The muted tones suit the forest." },
+  { tier = "exceptional", weight = 20, defense_bonus = 3, special = "quiet", name_prefix = "Fine ",        equip_msg = "The inner lining is soft and the outer almost silent when you move." },
+  { tier = "masterwork",  weight = 5,  defense_bonus = 4, special = "quiet", name_prefix = "Masterwork ", equip_msg = "The hood practically shapes itself. You feel less visible just wearing it.", craft_message = "The outer layer is waxed with a tallow blend I don't share. Sheds water and dulls sound. Try not to sell it." },
+]

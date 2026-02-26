@@ -1,0 +1,168 @@
+# data/millbrook/rooms.toml
+
+[[room]]
+id          = "millbrook_road"
+coord       = [-1, 0]
+name        = "Millbrook Road"
+description = "The road climbs gently from the west, following the line of an old hedgerow thick with blackthorn and dog rose. Ahead, the first slate rooftops of Millbrook catch the light. Someone has set a wooden post at the crossroads with a carved fish and a carved sheaf of wheat — the village's twin industries, both going strong. The air smells of turned earth and, faintly, of hops."
+desc_long   = "A well-maintained dirt road, the verge kept clear by whoever has the thankless job of scything it each season. The hedgerow beside it is centuries old — you can tell by the thickness of the trunks at the base, where hawthorn and hazel have grown together into something almost solid. Sparrows work the hedge in small flocks, complaining about nothing."
+flags       = ["town"]
+exits       = { east = "millbrook_green", north = "millbrook_hilltop" }
+items       = []
+spawns      = []
+
+[[room]]
+id          = "millbrook_green"
+coord       = [0, 0]
+name        = "The Village Green"
+description = "Millbrook gathers itself around a broad oval of grass worn smooth in the middle where children play and the weekly market sets up its trestles. An old oak dominates the south end, its lower branches scarred where generations of kids have shinned up it. A woman hangs washing on a line strung between two fence posts, glancing up as you arrive with the easy calm of someone who doesn't worry about strangers."
+desc_long   = "The village green is the kind of place that doesn't ask permission to exist. It has been here longer than the buildings around it. The grass is patchy from the market traffic, but the tree is magnificent — you'd need four people joining hands to reach around the trunk. A carved stone bench sits beneath it, worn smooth enough to suggest it was old when the current oak was a sapling. Two children are chasing a dog. The dog appears to be winning."
+flags       = ["town", "no_combat"]
+exits       = { west = "millbrook_road", east = "millbrook_mill", north = "millbrook_well", south = "millbrook_farm", northeast = "millbrook_brewhouse" }
+items       = ["millbrook_notice", "fallen_acorn"]
+spawns      = ["marta_villager", "ruffian_bram"]
+admin_comment = "Hub room. Marta gives the lost item quest. Bram is the ruffian gang leader."
+
+[[room]]
+id          = "millbrook_hilltop"
+coord       = [-1, 1]
+name        = "Hilltop Meadow"
+description = "The road gives way to open meadow at the top of the rise, and suddenly you can see for miles. The Millwater river is a silver thread below. Millhaven is a smudge on the western horizon. The meadow itself is a riot of wildflowers — ox-eye daisy, clover, yellow rattle — and the grass is long enough to hiss when the wind moves through it. A red kite rides a thermal somewhere above, barely moving."
+desc_long   = "High enough here that the wind has opinions. The meadow has been left ungrazed for at least this season — possibly as bee forage, judging by the density of clover — and the result is something close to a small piece of nature doing what it wants. Skylarks are audible even when not visible. The view westward shows the whole valley: Millbrook below, the forest beyond, the road to Millhaven threading through it all. It is, objectively, beautiful."
+flags       = []
+exits       = { south = "millbrook_road" }
+items       = ["wildflower_bunch", "flint_shard"]
+spawns      = ["meadow_hare", "meadow_hare"]
+admin_comment = "Peaceful encounter with rabbits. Wildflowers for alchemy/crafting."
+
+[[room]]
+id          = "millbrook_mill"
+coord       = [1, 0]
+name        = "Millbrook Mill"
+description = "The mill sits at the edge of the village where the millrace was cut to feed water from the Millwater's upper reach. The wheel turns with a sound like slow breathing, and the whole building vibrates very slightly with each rotation. Sacks of grain are stacked under a lean-to. The miller is somewhere inside; you can hear the grinding and, occasionally, cursing when something binds."
+desc_long   = "Old as the village, or close to it. The millstone was brought overland from a quarry thirty miles north and is still going strong. The mechanism is wooden above the stone — ash and oak, replaced piecemeal over generations. A faded painted sign above the door shows a wheel and the name 'ALDRIC MILL' in lettering that has been touched up too many times to read cleanly. Grain dust hangs in the air and settles on everything."
+flags       = ["no_combat", "town"]
+exits       = { west = "millbrook_green", south = "millbrook_river" }
+items       = ["grain_sack", "mill_wheel_spoke"]
+spawns      = ["aldric_miller"]
+admin_comment = "Aldric is the miller. Has the lost amulet quest. Gives pickaxe commissions."
+
+[[room]]
+id          = "millbrook_river"
+coord       = [1, -1]
+name        = "River Bend"
+description = "The Millwater bends sharply here around a gravel bar, and the current slows enough that the water is almost clear. Willows trail their fingers in the shallows on the far bank. A wooden dock extends six feet into the river, old enough that the boards are grey and soft-looking but still solid underfoot. Two ducks are aggressively competing for what appears to be nothing of value."
+desc_long   = "The gravel bar has been worked — you can see the half-circle score of someone panning for small stones, though nothing serious. The willows on the far bank are magnificent: old trees that lean over the water at steep angles without falling, sustained by sheer stubbornness. A kingfisher sits on a post and regards you with the total confidence of something that owns the river. Kids swim here in summer, judging by the rope someone has tied to the largest willow's highest accessible branch."
+flags       = []
+exits       = { north = "millbrook_mill", west = "millbrook_green" }
+items       = ["river_stone", "water_reed"]
+spawns      = ["river_otter", "river_otter"]
+admin_comment = "Peaceful area. Otters are non-hostile, low XP."
+
+[[room]]
+id          = "millbrook_well"
+coord       = [0, 1]
+name        = "The Well and Square"
+description = "A stone-lined well stands at the junction of the village's two main lanes, with an iron-bound bucket on a rope so worn the fibres are separating. Around the well is a small square of flat stone, always wet, where people pause to talk, let the children drink, and conduct the quiet business of village life. An old man sits on the wall with no apparent intention of moving."
+desc_long   = "The well is deep — you can't see the bottom when you lean over. The stones around the rim are worn smooth from a thousand mornings of people doing exactly what you're doing. The iron handle for the windlass is loose and rattles if you grab it. Everything about this well says it has been here long enough that fixing things is just part of the rhythm."
+flags       = ["no_combat", "town"]
+exits       = { south = "millbrook_green", east = "millbrook_brewhouse", west = "millbrook_farm" }
+items       = []
+spawns      = ["elder_tomlin"]
+admin_comment = "Elder Tomlin is the Flowing Water trainer. Prestige gate: needs prestige >= 10."
+
+[[room]]
+id          = "millbrook_farm"
+coord       = [0, -1]
+name        = "Aldric's Farm"
+description = "A working farm with none of the decorative nonsense of a rich man's estate. The house is solid stone with a thatched roof that needs attention on the east end. The yard is swept, the tools are hung. Someone takes care of this place out of habit and pride, not for appearances. A kitchen garden runs along the south wall, dense with cabbages, beans, and medicinal herbs. The smell of bread has come from this direction since you entered the village."
+desc_long   = "Generations of the Aldric family have worked this ground. The stone house has had additions built against it on two sides as the family grew; you can tell by the slight change in the stone's colour where new met old. The barn beyond is in good shape. Three goats are watching you through a fence with the particular intensity goats have, which seems to contain a mixture of philosophy and aggression."
+flags       = ["no_combat", "town"]
+exits       = { north = "millbrook_green", east = "millbrook_barn", south = "millbrook_east_field" }
+items       = ["iron_hoe", "cabbage_head"]
+spawns      = ["rilla_farmer", "farm_goat", "farm_goat"]
+admin_comment = "Rilla Aldric runs the farm. Quest giver for lost amulet (connecting to miller)."
+
+[[room]]
+id          = "millbrook_barn"
+coord       = [1, -2]
+name        = "Barn and Paddock"
+description = "The barn is big enough to tell you Millbrook was prosperous once and aims to be again. The ground floor holds hay, tools, and two old horses who have the philosophical calm of animals that have decided nothing is worth panicking about. The upper loft is accessible by a ladder and holds last season's grain, some rope, and a sleeping cat who opens one eye when you come in and immediately closes it."
+desc_long   = "The timbers are old but sound. Someone has carved initials into the central post at various heights — generations of children who used this barn as a private world. The horses' names are carved above their stalls: 'Burden' and 'Trouble.' Whether those are actual names or descriptions is not entirely clear. The hay smells perfect: dry and green and a little sweet. The cat has not moved."
+flags       = ["no_combat", "town"]
+exits       = { west = "millbrook_farm" }
+items       = ["old_rope", "dried_hay"]
+spawns      = ["ruffian_dal", "ruffian_fen"]
+admin_comment = "Two of the three ruffians hang out here. Bram is their leader (green)."
+
+[[room]]
+id          = "millbrook_east_field"
+coord       = [0, -2]
+name        = "East Field"
+description = "The field is newly turned and the soil is the dark, almost black earth of a place that has been loved well. The furrows run straight toward a low stone wall at the far end, beyond which a copse of mixed woodland begins — oak, ash, and some older trees you can't name from here. A crow works the furrows methodically ahead of you, pausing every few steps to extract something edible from the fresh soil."
+desc_long   = "This field has been farmed for centuries. You can tell because the soil is unlike the scrubby earth of the uncultivated ground nearby — deeper, darker, with a structure that holds the shape of the furrow. The wall at the far end is medieval construction, stones fitted without mortar to a height that keeps animals in without keeping determination out. Beyond it, the woodland starts abruptly. The trees are mixed: oak dominant, ash at the margins, and some dark-boled trees toward the centre you can't identify from here."
+flags       = []
+exits       = { north = "millbrook_farm", east = "millbrook_thornwood" }
+items       = ["crow_feather", "smooth_fieldstone"]
+spawns      = ["field_crow", "field_crow", "burrowing_vole"]
+admin_comment = "Transition to Thornwood. Small pests here (vole, crows — aggressive)."
+
+[[room]]
+id          = "millbrook_thornwood"
+coord       = [1, -3]
+name        = "Thornwood Copse"
+description = "The wood is old and dense, the ground between the trees carpeted with wood anemone and the papery skeletons of last year's leaves. The light that gets through is green and shifting. Somewhere in the roots and rocks of this place, something has been eating through the village's grain stores and riddling the field margins with holes. Fresh diggings are visible at the base of several oaks, and the bark of the younger trees has been gnawed."
+desc_long   = "The thornwood is not particularly large — you can see light at the far end — but it has the quality of a place that keeps its own counsel. The undergrowth has been disturbed here: bark stripped at ground level, earth thrown up in mounds between the roots, and the remains of what might once have been a squirrel's drey hanging half-dismantled in a fork of the largest oak. Whatever is doing this is thorough. A narrow path leads down toward a darker, stonier part of the wood — the old mine entrance."
+flags       = []
+exits       = { west = "millbrook_east_field", south = "millbrook_mine_entrance" }
+items       = ["gnawed_root", "fresh_digging", "thornwood_log"]
+spawns      = ["thorngrub_worker", "thorngrub_worker", "thorngrub_worker"]
+admin_comment = "Entry to the pest zone. Thorngrubs here are moderate difficulty."
+
+[[room]]
+id          = "millbrook_mine_entrance"
+coord       = [1, -4]
+name        = "Old Mine Entrance"
+description = "The mine is older than anyone in Millbrook and its original purpose is a matter of debate between those who say iron and those who say coal and those who say it was always abandoned. The entrance is a rough-cut arch in a limestone outcrop, braced with timbers grey with age but still holding. A lantern hook above the entrance has no lantern. The smell coming from inside is damp stone, old rot, and something animal — sharp and faintly sweet."
+desc_long   = "Someone has been here recently: the undergrowth at the entrance is broken, and there are tracks in the soft earth — small clawed prints, thousands of them, all going in. The timbers are dry-rotted in places but the arch is stone and will hold indefinitely. Inside, the light from the entrance carries about fifteen feet before the dark takes over. It is not a welcoming dark. You'll want a light source."
+flags       = []
+exits       = { north = "millbrook_thornwood", enter = "millbrook_mine_passage" }
+items       = ["mine_notice", "iron_lantern"]
+spawns      = ["thorngrub_guard", "thorngrub_guard"]
+admin_comment = "Exit 'enter' into mine. Lantern is findable here. Iron ore veins open after queen killed."
+
+[[room]]
+id          = "millbrook_mine_passage"
+coord       = [1, -5]
+name        = "Mine Passage"
+description = "The passage is low enough that you have to watch your head on the ceiling beams. The walls are raw limestone, slick with moisture, and you can see the marks of old tools in the stone — the patient work of whoever carved this out. Small trickles of water run down the walls and join a shallow channel cut along the floor. Old rail tracks are set into the floor, long since rusted immobile. Iron ore seams glitter faintly in the walls where the lantern-light catches them."
+desc_long   = "The mine passage runs roughly north-south, angling slightly downward. The air is cool and still, the kind of still that feels different from outside — more complete. The ore seams in the walls are varied: mostly iron, some traces of copper green in one section, and a darker, heavier material toward the bottom of the main seam that could be lead or something less common. There is no sound from deeper in except a faint sound that might be water or might be something else. The Thorngrub tracks on the floor are dense here — they own this passage."
+flags       = []
+exits       = { leave = "millbrook_mine_entrance", south = "millbrook_thorngrub_nest" }
+items       = ["iron_vein", "copper_trace"]
+spawns      = ["thorngrub_soldier", "thorngrub_soldier"]
+admin_comment = "Iron vein only mineable (respawning on_get node). copper_trace needs mining 40+."
+
+[[room]]
+id          = "millbrook_thorngrub_nest"
+coord       = [1, -6]
+name        = "The Thorngrub Nest"
+description = "The passage widens suddenly into a rough oval chamber. The floor is covered in a dense mat of compressed organic matter — chewed root, bark, and something less identifiable. The smell here is intense: sweet decay and the particular musk of a large insect colony. At the far end, something large moves. Much larger than the workers you've seen. She sits at the centre of a ring of eggs and regards you with a stillness that isn't calm — it's decision."
+desc_long   = "The Thorngrub Queen is perhaps five feet long, segmented like her workers but thicker, her mandibles the size of daggers. The eggs around her are pale grey ovals embedded in the floor-mat, dozens of them. She moves with surprising deliberateness for something that large. The chamber has no other exit. Whatever you came here for, this is where it ends — one way or another. Through the far wall, half-buried in the organic floor, you can see the glint of something metallic. Scavenged from the village, probably."
+flags       = []
+exits       = { north = "millbrook_mine_passage" }
+items       = ["thorngrub_queen_remains", "millbrook_amulet"]
+spawns      = ["thorngrub_queen"]
+admin_comment = "Boss room. Queen is tough. Amulet only appears after queen dead (on_get trigger via kill_script)."
+
+[[room]]
+id          = "millbrook_brewhouse"
+coord       = [1, 1]
+name        = "The Cloverleaf Brewhouse"
+description = "Half tavern, half brewery, entirely the kind of place a village builds when it decides it deserves good things. The brewhouse smells of hops and yeast and warm wood. Copper fermenting vessels catch the light through windows that clearly haven't been cleaned since they were put in. Behind the bar, a man with forearms built for heaving barrels is filling a glass with something amber and regarding it with professional pride."
+desc_long   = "The Cloverleaf doesn't have a sign so much as an understanding. Everyone in Millbrook knows where it is and what it is. The furniture is mismatched but solid. The floor is flagstone worn smooth. A small stage in one corner suggests there is sometimes music, though not tonight. The fermenting vessels in the back are the serious business; the bar is where you wait for results. The ale is, by any honest accounting, very good."
+flags       = ["town", "no_combat", "inn"]
+exits       = { southwest = "millbrook_green", west = "millbrook_well" }
+items       = []
+spawns      = ["tobias_brewer"]
+admin_comment = "Inn and merchant. Tobias sells gear and offers rest. Also has the ruffian spar here sometimes."

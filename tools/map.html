@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delve — Admin Map</title>
+<link rel="stylesheet" href="map.css">
+</head>
+<body>
+
+<header>
+  <h1>DELVE <span>//</span> Admin Map</h1>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--millhaven)"></div> Millhaven</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--training)"></div> Training</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--ashwood)"></div> Ashwood</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--locked);border-radius:0"></div> Locked exit</div>
+    <div class="legend-item">★ Start room</div>
+  </div>
+</header>
+
+<div id="map-viewport">
+  <div id="map-canvas">
+    <svg id="connections"></svg>
+  </div>
+</div>
+
+<div id="detail-panel">
+  <div class="panel-empty" id="panel-empty">
+    <div class="icon">⬡</div>
+    <div>Click a room to inspect it</div>
+  </div>
+  <div id="room-detail"></div>
+  <div class="stats-bar" id="stats-bar"></div>
+</div>
+
+<div class="zoom-controls">
+  <button class="zoom-btn" onclick="zoom(1.2)">+</button>
+  <button class="zoom-btn" onclick="zoom(0.833)">−</button>
+  <button class="zoom-btn" onclick="resetZoom()" title="Reset">⊙</button>
+</div>
+
+<script>
+// ── World data (embedded) ─────────────────────────────────────────────────
+const WORLD = WORLD_DATA_PLACEHOLDER;
+
+// ── Layout constants ──────────────────────────────────────────────────────
+const CELL = 52, GAP = 28, STEP = CELL + GAP, PAD = 60;
+const ZONE_COLORS = { millhaven: '#4a9eff', training: '#c47aff', ashwood: '#ffaa44' };
+
+// ── Build coordinate maps ─────────────────────────────────────────────────
+const rooms = WORLD.rooms;
+const npcs  = WORLD.npcs;
+const items = WORLD.items;
+
+// Assign coords to rooms that have them
+let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+Object.values(rooms).forEach(r => {
+  if (r.coord) {
+    minX = Math.min(minX, r.coord[0]); maxX = Math.max(maxX, r.coord[0]);
+    minY = Math.min(minY, r.coord[1]); maxY = Math.max(maxY, r.coord[1]);
+  }
+});
+
+// Map coord [x,y] → pixel [px, py]  (y is flipped: higher y = higher on screen)
+function coordToPx(cx, cy) {
+  return [
+    PAD + (cx - minX) * STEP,
+    PAD + (maxY - cy) * STEP,
+  ];
+}
+
+// ── Render rooms ──────────────────────────────────────────────────────────
+const canvas  = document.getElementById('map-canvas');
+const svg     = document.getElementById('connections');
+const roomEls = {};
+
+// Set canvas size
+const W = PAD * 2 + (maxX - minX) * STEP + CELL;
+const H = PAD * 2 + (maxY - minY) * STEP + CELL;
+canvas.style.width  = W + 'px';
+canvas.style.height = H + 'px';
+svg.setAttribute('width',  W);
+svg.setAttribute('height', H);
+svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+Object.entries(rooms).forEach(([rid, room]) => {
+  if (!room.coord) return;
+  const [px, py] = coordToPx(room.coord[0], room.coord[1]);
+  const div = document.createElement('div');
+  div.className = `room-cell zone-${room.zone}`;
+  div.id = 'room-' + rid;
+  div.style.left = px + 'px';
+  div.style.top  = py + 'px';
+  div.dataset.rid = rid;
+  div.addEventListener('click', () => selectRoom(rid));
+
+  const abbr = room.name.replace(/[aeiou\s]/gi,'').slice(0,3).toUpperCase() || room.name.slice(0,3).toUpperCase();
+  const flagIcons = [];
+  if (room.flags.includes('no_combat'))  flagIcons.push('✦');
+  if (room.flags.includes('safe_combat')) flagIcons.push('~');
+  if (room.flags.includes('town'))       flagIcons.push('⌂');
+  const hasNote = !!room.admin_comment;
+
+  div.innerHTML = `
+    <div class="room-box">
+      ${room.start ? '<div class="start-marker">★</div>' : ''}
+      ${hasNote ? '<div class="note-pip" title="Admin note">●</div>' : ''}
+      <div class="room-abbr">${abbr}</div>
+      ${flagIcons.length ? `<div class="room-flags">${flagIcons.join('')}</div>` : ''}
+    </div>`;
+
+  canvas.appendChild(div);
+  roomEls[rid] = { el: div, px, py };
+});
+
+// ── Draw connections ───────────────────────────────────────────────────────
+const drawn = new Set();
+
+Object.entries(rooms).forEach(([rid, room]) => {
+  if (!room.coord) return;
+  const [ax, ay] = coordToPx(room.coord[0], room.coord[1]);
+  const cx1 = ax + CELL / 2, cy1 = ay + CELL / 2;
+
+  Object.entries(room.exits).forEach(([dir, dest]) => {
+    if (!dest) return;
+    const key = [rid, dest].sort().join('|');
+    if (drawn.has(key)) return;
+    drawn.add(key);
+
+    const destRoom = rooms[dest];
+    if (!destRoom || !destRoom.coord) return;
+    const [bx, by] = coordToPx(destRoom.coord[0], destRoom.coord[1]);
+    const cx2 = bx + CELL / 2, cy2 = by + CELL / 2;
+
+    const locked = room.exit_locks[dir] || false;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', cx1); line.setAttribute('y1', cy1);
+    line.setAttribute('x2', cx2); line.setAttribute('y2', cy2);
+    line.classList.add('connection');
+    if (locked) line.classList.add('locked');
+    svg.appendChild(line);
+  });
+});
+
+// ── Room selection & detail panel ─────────────────────────────────────────
+let selectedRid = null;
+
+function selectRoom(rid) {
+  // Deselect old
+  if (selectedRid && roomEls[selectedRid]) {
+    roomEls[selectedRid].el.classList.remove('selected');
+  }
+  selectedRid = rid;
+  roomEls[rid].el.classList.add('selected');
+  renderDetail(rid);
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderDetail(rid) {
+  const room = rooms[rid];
+  document.getElementById('panel-empty').style.display = 'none';
+  const panel = document.getElementById('room-detail');
+  panel.style.display = 'block';
+
+  const zoneColor = ZONE_COLORS[room.zone] || '#888';
+  const flags = room.flags.map(f => `<span class="badge badge-flag">${f}</span>`).join(' ');
+  const adminNote = room.admin_comment
+    ? `<div class="admin-note"><span class="admin-note-label">📝 Note</span>${escapeHtml(room.admin_comment)}</div>`
+    : '';
+
+  // Exits
+  const exitLines = Object.entries(room.exits).map(([dir, dest]) => {
+    if (!dest) return '';
+    const locked = room.exit_locks[dir] ? `<span class="badge badge-lock">locked</span>` : '';
+    const destRoom = rooms[dest];
+    const destName = destRoom ? destRoom.name : dest;
+    const zc = destRoom ? ZONE_COLORS[destRoom.zone] : '#888';
+    return `<li><span style="color:var(--dim);width:40px;display:inline-block">${dir}</span>
+      <span class="exit-link" style="color:${zc}" onclick="selectRoom('${dest}')">${destName}</span>${locked}</li>`;
+  }).filter(Boolean);
+
+  // Items
+  const itemLines = (room.items || []).map(i => {
+    const iid = typeof i === 'string' ? i : i.id || '';
+    const idata = items[iid] || {};
+    const nodrop = idata.no_drop ? `<span class="badge badge-nodrop">no_drop</span>` : '';
+    const inote  = idata.admin_comment ? ` <span class="inline-note" title="${escapeHtml(idata.admin_comment)}">📝</span>` : '';
+    return `<li style="color:#9ab">${idata.name || iid}<span style="color:var(--dim);margin-left:6px">${idata.desc_short||''}</span>${nodrop}${inote}</li>`;
+  });
+
+  // Spawns
+  const spawnLines = (room.spawns || []).map(s => {
+    const nid = typeof s === 'string' ? s : s.id || '';
+    const ndata = npcs[nid] || {};
+    const hostile = ndata.hostile ? `<span class="badge badge-hostile">hostile</span>` : '';
+    const banker  = (ndata.tags||[]).includes('banker') ? `<span class="badge badge-banker">banker</span>` : '';
+    const nnote   = ndata.admin_comment ? ` <span class="inline-note" title="${escapeHtml(ndata.admin_comment)}">📝</span>` : '';
+    return `<li>${ndata.name || nid}${hostile}${banker}${nnote}</li>`;
+  });
+
+  panel.innerHTML = `
+    <div class="detail-zone" style="color:${zoneColor}">${room.zone.toUpperCase()}</div>
+    <div class="detail-name">${room.name}${room.start ? ' ★' : ''}</div>
+    <div class="detail-id">${rid}</div>
+    <div class="detail-desc">${room.description || ''}</div>
+    ${adminNote}
+    ${flags ? `<div style="margin-bottom:14px">${flags}</div>` : ''}
+    ${exitLines.length ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Exits (${exitLines.length})</div>
+        <ul class="detail-list">${exitLines.join('')}</ul>
+      </div>` : ''}
+    ${itemLines.length ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Items (${itemLines.length})</div>
+        <ul class="detail-list">${itemLines.join('')}</ul>
+      </div>` : ''}
+    ${spawnLines.length ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Spawns (${spawnLines.length})</div>
+        <ul class="detail-list">${spawnLines.join('')}</ul>
+      </div>` : ''}
+  `;
+}
+
+// ── Stats bar ─────────────────────────────────────────────────────────────
+const zoneCount = {};
+Object.values(rooms).forEach(r => { zoneCount[r.zone] = (zoneCount[r.zone]||0)+1; });
+const statEl = document.getElementById('stats-bar');
+statEl.innerHTML = `
+  <div>${Object.keys(rooms).length} rooms · ${Object.keys(npcs).length} NPCs · ${Object.keys(items).length} items</div>
+  <div>${Object.entries(zoneCount).map(([z,n])=>`${z}: ${n}`).join(' · ')}</div>`;
+
+// ── Pan & zoom ────────────────────────────────────────────────────────────
+const viewport = document.getElementById('map-viewport');
+let scale = 1, isDragging = false, startX, startY, scrollLeft, scrollTop;
+
+viewport.addEventListener('mousedown', e => {
+  if (e.target.closest('.room-cell')) return;
+  isDragging = true;
+  startX = e.pageX - viewport.offsetLeft;
+  startY = e.pageY - viewport.offsetTop;
+  scrollLeft = viewport.scrollLeft;
+  scrollTop  = viewport.scrollTop;
+});
+viewport.addEventListener('mouseup',   () => isDragging = false);
+viewport.addEventListener('mouseleave',() => isDragging = false);
+viewport.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  e.preventDefault();
+  viewport.scrollLeft = scrollLeft - (e.pageX - viewport.offsetLeft - startX);
+  viewport.scrollTop  = scrollTop  - (e.pageY - viewport.offsetTop  - startY);
+});
+
+viewport.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoom(e.deltaY < 0 ? 1.1 : 0.9);
+}, { passive: false });
+
+function zoom(factor) {
+  scale = Math.max(0.3, Math.min(3, scale * factor));
+  canvas.style.transform = `scale(${scale})`;
+}
+
+function resetZoom() {
+  scale = 1;
+  canvas.style.transform = 'scale(1)';
+  viewport.scrollLeft = 0;
+  viewport.scrollTop  = 0;
+}
+
+// Auto-scroll to start room
+const startRoom = Object.values(rooms).find(r => r.start);
+if (startRoom && startRoom.coord) {
+  const [px, py] = coordToPx(startRoom.coord[0], startRoom.coord[1]);
+  viewport.scrollLeft = px - viewport.clientWidth / 2 + CELL / 2;
+  viewport.scrollTop  = py - viewport.clientHeight / 2 + CELL / 2;
+}
+</script>
+</body>
+</html>

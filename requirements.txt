@@ -1,0 +1,6 @@
+# PyMUD dependencies
+# tomllib is stdlib in Python 3.11+; for 3.10 it's a backport
+# tomli is the read-only backport (stdlib tomllib API)
+# tomli-w is the writer (no stdlib equivalent)
+tomli; python_version < "3.11"
+tomli-w

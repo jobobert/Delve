@@ -1,0 +1,6 @@
+[[region]]
+id                 = "mycelial_plains"
+name               = "Mycelial Plains"
+description        = "A sprawling fungal landscape where spores drift like snow and the ground pulses with faint bioluminescence. The malfunctioning device piece has accelerated fungal growth and created a hive-like network that affects memory and cognition."
+recommended_level  = 11
+admin_comment      = "Piece Effect: Accelerates fungal growth and creates a psychic mycelial network that dulls memory.  Notes: Memory‑altering spores and psychic enemies challenge awareness."

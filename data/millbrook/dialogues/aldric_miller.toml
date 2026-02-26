@@ -1,0 +1,142 @@
+# data/millbrook/dialogues/aldric_miller.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "You'll have heard about the amulet. Everyone has. It belonged to my mother.",
+  "Three months I've been looking. It was in my coat pocket when I crossed the east field.",
+  "I've offered twenty-five gold. It's worth more to me than that, but it's what I have."
+]
+
+[[response]]
+node = "root"
+text = "Tell me about the amulet."
+next = "amulet_desc"
+
+[[response]]
+node = "root"
+text = "What happened to it?"
+next = "amulet_story"
+
+[[response]]
+node = "root"
+text = "What do you sell here?"
+next = "shop_talk"
+
+[[response]]
+node = "root"
+condition = { flag = "amulet_returned" }
+text = "Good to see you. How's the amulet?"
+next = "amulet_after"
+
+[[response]]
+node = "root"
+text = "Nothing right now."
+next = ""
+
+[[node]]
+id   = "amulet_desc"
+line = "Small silver disc, about the size of a coin, on a braided leather cord. There's a millwheel stamped on the front and my mother's name on the back — Edda Aldric. She wore it every day for forty years. I was carrying it to get the cord replaced and I lost it somewhere between here and the thornwood edge. The Thorngrubs have been active there. I wonder sometimes if they carried it off — they seem to take shiny things."
+
+[[response]]
+node = "amulet_desc"
+condition = { not_quest = "lost_amulet" }
+text = "I'll look for it."
+next = "amulet_accept"
+
+[[response]]
+node = "amulet_desc"
+condition = { quest = "lost_amulet", not_flag = "amulet_returned" }
+text = "I'm already looking."
+next = "amulet_looking"
+
+[[response]]
+node = "amulet_desc"
+text = "Sounds like it could be anywhere."
+next = "amulet_anywhere"
+
+[[node]]
+id   = "amulet_story"
+line = "She died six years ago. Left me the mill and the amulet. The mill I have. The amulet I had until three months back. It's not the silver — it's the name on it. I'd like to have it again before I'm too old to remember what it meant."
+
+[[response]]
+node = "amulet_story"
+condition = { not_quest = "lost_amulet" }
+text = "I'll look for it. No promises."
+next = "amulet_accept"
+
+[[response]]
+node = "amulet_story"
+text = "I'm sorry for your loss."
+next = "amulet_condolence"
+
+[[node]]
+id   = "amulet_condolence"
+line = "She'd have laughed at you for saying that — she wasn't the sentimental sort. But thank you. She was a good miller and a better mother."
+
+[[response]]
+node = "amulet_condolence"
+text = "I'll find the amulet."
+next = "amulet_accept"
+
+[[node]]
+id   = "amulet_accept"
+line = "I'd be grateful. Truly. If the Thorngrubs have it, you'll need to deal with them first — the nest is deep in the mine. Clear them out and see if it's in there somewhere. There's twenty-five gold if you find it, and if you clear the Thorngrubs too I'll give you first pick of my tool stock at cost."
+script = [
+  { op = "advance_quest", quest_id = "lost_amulet", step = 1 },
+]
+
+[[response]]
+node = "amulet_accept"
+text = "I'll find it."
+next = ""
+
+[[node]]
+id   = "amulet_anywhere"
+line = "Could be. But I don't think so — it wasn't somewhere random. I had it when I set out that morning. I didn't when I got back. Something between the mill and the thornwood edge. The Thorngrubs have been doing a lot of carrying lately."
+
+[[response]]
+node = "amulet_anywhere"
+text = "I'll keep an eye out."
+next = "amulet_accept"
+
+[[node]]
+id   = "amulet_looking"
+line = "I appreciate it. If it's in the Thorngrub nest, the Queen needs to go first — she won't let anyone near the eggs. Be careful in the mine."
+
+[[response]]
+node = "amulet_looking"
+text = "I'll manage."
+next = ""
+
+[[node]]
+id   = "amulet_after"
+line = "Every morning. It's back where it belongs. I keep it in the box now rather than my pocket — I've learned. Thank you again. It's hard to say how much it matters."
+
+[[response]]
+node = "amulet_after"
+text = "I'm glad."
+next = ""
+
+[[node]]
+id   = "shop_talk"
+line = "Tools, mainly — pickaxes, hatchets, some basic materials. If the mine ever opens up again, I expect I'll be doing a fair bit of business. The ore in those walls is worth working."
+
+[[response]]
+node = "shop_talk"
+text = "What's in the mine?"
+next = "mine_description"
+
+[[response]]
+node = "shop_talk"
+text = "I'll have a look at what you have."
+next = ""
+
+[[node]]
+id   = "mine_description"
+line = "Iron, mostly, from what my grandfather said. Some copper traces, maybe more. The old miners never got to the bottom of it — they abandoned it before the seams ran out. Structural issues with the upper passage. With proper work and the Thorngrubs gone, it could be worth opening again. Good iron ore isn't cheap to import from the eastern mines."
+
+[[response]]
+node = "mine_description"
+text = "Once the Thorngrubs are cleared."
+next = ""

@@ -1,0 +1,98 @@
+# data/dialogues/garrison_ghost.toml
+# The ghost of Private Marsh — gives the garrison key
+
+[[node]]
+id = "root"
+lines = [
+  "...you can see me.",
+  "Still here. Still waiting.",
+  "The garrison fell to the Drake's first awakening. None of us made it out."
+]
+
+[[response]]
+node = "root"
+  condition = { not_flag = "marsh_met" }
+  text  = "Who are you?"
+  next  = "intro"
+
+[[response]]
+node = "root"
+  condition = { flag = "marsh_met", not_flag = "marsh_key_given" }
+  text  = "We need to get into the armory."
+  next  = "give_key"
+
+[[response]]
+node = "root"
+  condition = { flag = "marsh_key_given" }
+  text  = "We've retrieved the weapons."
+  next  = "after_key"
+
+[[response]]
+node = "root"
+  text  = "Rest now. We'll finish this."
+  next  = "farewell"
+
+[[node]]
+id   = "intro"
+line = "Private Marsh. Last of the garrison. We were tasked with sealing the armory and holding the ruins until relief came. Relief never came. The Drake woke early and we weren't ready."
+script = [{ op = "set_flag", flag = "marsh_met" }]
+
+[[response]]
+node = "intro"
+  text  = "The weapons in the armory — we need them."
+  next  = "armory_weapons"
+
+[[response]]
+node = "intro"
+  text  = "I'm sorry. We're here to finish what you couldn't."
+  next  = "acknowledgment"
+
+[[node]]
+id   = "armory_weapons"
+line = "The Drakebone Sword and armor. Yes. They were made for exactly this. Our garrison commander commissioned them when the Drake last stirred, but he died before he could use them. They've been waiting."
+
+[[response]]
+node = "armory_weapons"
+  text  = "Can you give us access?"
+  next  = "give_key"
+
+[[node]]
+id   = "acknowledgment"
+line = "Thank you. We did what we could. The key — take it. It's all I have left to give."
+
+[[response]]
+node = "acknowledgment"
+  text  = "We'll use them well."
+  next  = "give_key"
+
+[[node]]
+id   = "give_key"
+line = "The key was on Sergeant Aldric when he fell. I kept it. Take it. Open the armory. Use what's inside. Don't die down there."
+script = [
+  { op = "give_item",  item_id = "garrison_key" },
+  { op = "set_flag",   flag = "marsh_key_given" },
+  { op = "advance_quest", quest_id = "ashwood_contract", step = 4 },
+]
+
+[[response]]
+node = "give_key"
+  text  = "Thank you, Private."
+  next  = "farewell"
+
+[[node]]
+id   = "after_key"
+line = "You found the armory. Then you're ready. Go carefully."
+
+[[response]]
+node = "after_key"
+  text  = "We will."
+  next  = ""
+
+[[node]]
+id   = "farewell"
+line = "Finish it. Then maybe I can rest."
+
+[[response]]
+node = "farewell"
+  text  = "Farewell, Marsh."
+  next  = ""

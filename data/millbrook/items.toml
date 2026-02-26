@@ -1,0 +1,402 @@
+# data/millbrook/items.toml
+ 
+# ── Scenery / ambient ─────────────────────────────────────────────────────────
+
+[[item]]
+id          = "millbrook_notice"
+name        = "Village Notice Board"
+desc_short  = "A board covered in pinned notices, most of them weather-beaten."
+desc_long   = "Notices in various states of preservation. One says REWARD — LOST AMULET, family heirloom, silver, ask at the mill. Another announces the weekly market. A third advertises the services of a farrier operating out of the next valley. One notice has been pinned so long the paper has become part of the wood."
+slot        = ""
+weight      = 0
+scenery     = true
+
+[[item]]
+id          = "fallen_acorn"
+name        = "Fallen Acorn"
+desc_short  = "A fat acorn from the old oak, still in its cap."
+desc_long   = "Heavy for its size, with the dense smoothness of a seed that knows exactly what it is."
+slot        = ""
+weight      = 0
+respawn     = true
+
+[[item]]
+id          = "mine_notice"
+name        = "Faded Warning Sign"
+desc_short  = "A wooden board nailed above the mine entrance. 'ABANDONED — UNSAFE.'"
+desc_long   = "Old enough that whoever nailed it up is probably also abandoned and unsafe. The mine has clearly been in recent use regardless. Someone has scratched 'and yet' beneath the original text."
+slot        = ""
+weight      = 0
+scenery     = true
+
+# ── Gathering and crafting resources ─────────────────────────────────────────
+
+[[item]]
+id          = "wildflower_bunch"
+name        = "Wildflower Bunch"
+desc_short  = "A loose gathering of meadow flowers — daisy, clover, and yellow rattle."
+desc_long   = "The kind of thing you pick without really deciding to. Some alchemy formulas call for fresh meadow flowers; this would do."
+slot        = ""
+weight      = 0
+respawn     = true
+
+[[item]]
+id          = "flint_shard"
+name        = "Flint Shard"
+desc_short  = "A sharp-edged piece of dark flint from the hilltop."
+desc_long   = "Good for striking fire or use in light fabrication work."
+slot        = ""
+weight      = 0
+respawn     = true
+
+[[item]]
+id          = "water_reed"
+name        = "Water Reed"
+desc_short  = "A long stem of river reed, flexible and fibrous."
+desc_long   = "Reed for weaving, stuffing, or thatching patch-work. Perfectly good material."
+slot        = ""
+weight      = 0
+respawn     = true
+
+[[item]]
+id          = "river_stone"
+name        = "River Stone"
+desc_short  = "A smooth, rounded stone from the Millwater gravel."
+desc_long   = "Worn perfectly smooth over centuries. Useful for sharpening blades or simply pleasant to hold."
+slot        = ""
+weight      = 1
+respawn     = true
+
+[[item]]
+id          = "crow_feather"
+name        = "Crow Feather"
+desc_short  = "A long primary feather, black with a faint blue iridescence."
+desc_long   = "Crows are difficult and well-regarded. The feather is in good condition."
+slot        = ""
+weight      = 0
+respawn     = true
+
+[[item]]
+id          = "smooth_fieldstone"
+name        = "Smooth Fieldstone"
+desc_short  = "A rounded stone turned up by the plough."
+desc_long   = "The field is full of these. This one is particularly smooth — basalt, maybe, carried here by glaciers."
+slot        = ""
+weight      = 1
+respawn     = true
+
+[[item]]
+id          = "gnawed_root"
+name        = "Gnawed Root"
+desc_short  = "An oak root stripped of bark and gnawed down to pale wood."
+desc_long   = "Thorngrub feeding sign. The gnaw marks are distinctive: curved incisors, deep cuts, working systematically along the grain."
+slot        = ""
+weight      = 0
+respawn     = false
+scenery     = true
+
+[[item]]
+id          = "fresh_digging"
+name        = "Fresh Digging"
+desc_short  = "Piles of recently turned earth at the base of several oaks."
+desc_long   = "Something has been excavating around the root systems of these trees. The soil is loose and still damp, the work recent. There are clawed print-marks in the disturbed earth — small but dense, overlapping. A lot of them."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = false
+
+[[item]]
+id          = "old_rope"
+name        = "Coil of Old Rope"
+desc_short  = "A coil of hemp rope, dry and stiff but still usable."
+desc_long   = "Old but not rotten. It will hold a reasonable weight and can be used for any number of purposes."
+slot        = ""
+weight      = 2
+respawn     = false
+
+[[item]]
+id          = "dried_hay"
+name        = "Bundle of Dried Hay"
+desc_short  = "A dense bundle of sweet dried hay."
+desc_long   = "Smells of summer. Technically for animals but useful for bedding or tinder."
+slot        = ""
+weight      = 1
+respawn     = true
+
+[[item]]
+id          = "cabbage_head"
+name        = "Cabbage Head"
+desc_short  = "A dense head of dark green cabbage, just cut."
+desc_long   = "The outer leaves are still dusty from the garden. Heavier than it looks."
+slot        = ""
+weight      = 1
+respawn     = true
+
+[[item]]
+id          = "grain_sack"
+name        = "Sack of Grain"
+desc_short  = "A rough linen sack bulging with milled grain."
+desc_long   = "Good quality grain, recently milled. The sack is tied with a cord."
+slot        = ""
+weight      = 3
+respawn     = false
+scenery     = true
+
+[[item]]
+id          = "mill_wheel_spoke"
+name        = "Mill Wheel Spoke"
+desc_short  = "A turned oak spoke, probably a replacement part."
+desc_long   = "Heavy turned oak, smooth from the lathe. A spare part for the mill wheel."
+slot        = ""
+weight      = 2
+respawn     = false
+scenery     = true
+
+# ── Quest items ───────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "millbrook_amulet"
+name        = "Miller's Amulet"
+desc_short  = "A small silver disc on a cord, tarnished but intact."
+desc_long   = "The Aldric family amulet — a silver disc stamped with a millwheel, hung on a braided leather cord. It has been in the nest for some time but the silver is intact. The back is engraved with a name: 'Edda Aldric.' The miller's mother. He has been looking for this."
+slot        = "ring"
+weight      = 0
+respawn     = false
+no_drop     = true
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 1 },
+  { type = "on_equip", message = "The cold silver disc settles against your chest." },
+]
+on_get      = [
+  { op = "if_not_flag", flag = "amulet_found", then = [
+    { op = "set_flag",   flag = "amulet_found" },
+    { op = "advance_quest", quest_id = "lost_amulet", step = 2 },
+    { op = "message",    tag = "system",
+      text = "A silver disc on a leather cord — stamped with a millwheel and a name on the back: Edda Aldric. This is what the miller has been looking for." },
+  ]},
+]
+
+[[item]]
+id          = "thorngrub_queen_remains"
+name        = "Thorngrub Queen's Carapace"
+desc_short  = "A section of the Queen's reinforced exoskeleton, still warm."
+desc_long   = "The carapace is surprisingly hard — somewhere between leather and light plate. It would make exceptional armour material in the right hands. The surface has a faint iridescence, the segments articulated perfectly. Sera the Leatherworker would know what to do with this."
+slot        = ""
+weight      = 3
+respawn     = false
+no_drop     = false
+
+[[item]]
+id          = "thorngrub_chitin"
+name        = "Thorngrub Chitin"
+desc_short  = "A plate of segmented chitin from a Thorngrub worker."
+desc_long   = "Hard and light. The joints are clever — each segment overlaps the next in a way that allows movement while maintaining coverage. A good armour material."
+slot        = ""
+weight      = 1
+respawn     = false
+
+# ── Tools ─────────────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "iron_pickaxe"
+name        = "Iron Pickaxe"
+desc_short  = "A heavy-headed pickaxe with an ash handle."
+desc_long   = "Standard mining tool. The iron head has a point on one side for breaking rock and a flat side for prying. The ash handle is long enough to get proper leverage. It is heavy. Nobody said mining was pleasant."
+slot        = "weapon"
+tags        = ["pickaxe", "tool", "heavy"]
+weight      = 4
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack", amount = 3 },
+  { type = "stat_bonus", stat = "mining", amount = 15 },
+]
+
+[[item]]
+id          = "iron_hatchet"
+name        = "Iron Hatchet"
+desc_short  = "A short-handled hatchet for splitting kindling and light woodwork."
+desc_long   = "The blade is slightly chipped from use but sharp enough. The handle is well-wrapped with cord for grip. Good for chopping wood and, at a stretch, self-defence."
+slot        = "weapon"
+tags        = ["axe", "tool", "light", "blade"]
+weight      = 2
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack", amount = 2 },
+]
+
+[[item]]
+id          = "iron_hoe"
+name        = "Iron Hoe"
+desc_short  = "A long-handled farming hoe, recently cleaned."
+desc_long   = "A proper heavy-bladed hoe, not one of those thin ornamental ones. The blade is wide and thick enough to break sod. Not a weapon but absolutely capable of making that point."
+slot        = ""
+weight      = 2
+respawn     = false
+scenery     = true
+
+[[item]]
+id          = "iron_lantern"
+name        = "Iron Lantern"
+desc_short  = "A battered iron lantern with a cracked glass pane."
+desc_long   = "Still functional despite the cracked pane. Burns oil, needs a flint to start. Provides enough light to see in a mine. Someone left it at the mine entrance — probably decided they didn't want to go in after all."
+slot        = ""
+weight      = 1
+respawn     = false
+effects     = [
+  { type = "on_equip", message = "You light the lantern. Warm light spills out through the cracked glass." },
+]
+
+# ── Mine resources (ore nodes) ────────────────────────────────────────────────
+
+[[item]]
+id          = "iron_vein"
+name        = "Iron Ore Vein"
+desc_short  = "A seam of dark iron ore running through the limestone wall."
+desc_long   = "A proper vein, not just a trace — three inches wide and continuous for several feet. The ore is dark red-brown where exposed, with a metallic glitter under lamplight. This is good iron. A pickaxe and a few minutes' work would yield several pieces."
+slot        = ""
+weight      = 0
+scenery     = false
+respawn     = true
+on_get      = [
+  { op = "if_not_flag", flag = "mine_opened", then = [
+    { op = "message", tag = "error",
+      text = "The mine is too dangerous with the Thorngrubs still inside. Clear them first." },
+    { op = "fail" },
+  ]},
+  { op = "require_tag", tag = "pickaxe",
+    fail_message = "You need a pickaxe to mine this. Type 'mine iron vein' with a pickaxe equipped." },
+  { op = "skill_check", skill = "mining", dc = 8, grow = false,
+    on_pass = [
+      { op = "give_item",  item_id = "iron_ingot" },
+      { op = "give_item",  item_id = "iron_ingot" },
+      { op = "skill_grow", skill = "mining", amount = 3 },
+      { op = "message",    tag = "reward_xp",
+        text = "You chip free two pieces of good iron ore." },
+    ],
+    on_fail = [
+      { op = "give_item",  item_id = "iron_ingot" },
+      { op = "skill_grow", skill = "mining", amount = 1 },
+      { op = "message",    tag = "system",
+        text = "You chip out one piece, mostly crumbling. Your technique needs work." },
+    ],
+  },
+]
+
+[[item]]
+id          = "copper_trace"
+name        = "Copper Ore Trace"
+desc_short  = "A thin green seam of copper ore running through the passage wall."
+desc_long   = "A narrow trace of malachite-green copper ore, thin but visible for several yards. Harder to work than the iron — the copper is disseminated through the rock rather than consolidated. Requires real skill to get anything useful from it."
+slot        = ""
+weight      = 0
+respawn     = true
+on_get      = [
+  { op = "if_not_flag", flag = "mine_opened", then = [
+    { op = "message", tag = "error",
+      text = "Clear the Thorngrubs first — it's too dangerous here." },
+    { op = "fail" },
+  ]},
+  { op = "require_tag", tag = "pickaxe",
+    fail_message = "You need a pickaxe." },
+  { op = "skill_check", skill = "mining", dc = 40, grow = false,
+    on_pass = [
+      { op = "give_item",  item_id = "copper_chunk" },
+      { op = "skill_grow", skill = "mining", amount = 5 },
+      { op = "message",    tag = "reward_xp",
+        text = "You extract a decent chunk of copper ore from the trace. Nice work." },
+    ],
+    on_fail = [
+      { op = "skill_grow", skill = "mining", amount = 3 },
+      { op = "message",    tag = "system",
+        text = "The copper crumbles as you chip at it. The trace is too fine for your current skill." },
+    ],
+  },
+]
+
+
+
+[[item]]
+id          = "copper_chunk"
+name        = "Copper Ore Chunk"
+desc_short  = "A palm-sized piece of green-tinged copper ore."
+desc_long   = "Malachite green on the surface, with the dull orange of raw copper where freshly broken. Rare enough to be worth something to a metalworker."
+slot        = ""
+weight      = 2
+respawn     = false
+
+# ── Timber nodes (for chop command) ──────────────────────────────────────────
+
+[[item]]
+id          = "thornwood_log"
+name        = "Thornwood Log Pile"
+desc_short  = "A stack of rough-cut logs beside a fallen ash."
+desc_long   = "Someone felled this ash and cut it into rounds but never split or moved it. It has been here long enough that moss is growing on the cut faces. Good hard wood."
+slot        = ""
+weight      = 0
+respawn     = true
+on_get      = [
+  { op = "require_tag", tag = "axe",
+    fail_message = "You need a hatchet or axe to cut timber." },
+  { op = "give_item",  item_id = "hard_wood" },
+  { op = "give_item",  item_id = "hard_wood" },
+  { op = "message",    tag = "reward_xp",
+    text = "You split off two good pieces of hardwood." },
+]
+
+# ── Combat gear (Millbrook-tier) ──────────────────────────────────────────────
+
+[[item]]
+id          = "chitin_helm"
+name        = "Chitin Helm"
+desc_short  = "A helm shaped from Thorngrub Queen's carapace sections."
+desc_long   = "Sera the Leatherworker's work: the Queen's carapace has been shaped and riveted into a close-fitting helm with cheek-guards. It is lighter than iron for equivalent protection. The surface has a faint iridescence in strong light."
+slot        = "head"
+armor_tags  = ["medium", "head", "chitin"]
+weight      = 2
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 8 },
+  { type = "on_equip",   message = "The chitin helm fits well. It doesn't feel like wearing insect." },
+]
+
+[[item]]
+id          = "chitin_cuirass"
+name        = "Chitin Cuirass"
+desc_short  = "A breastplate of shaped Thorngrub carapace segments."
+desc_long   = "The Thorngrub Queen's carapace provides exceptional material: hard, light, and articulated. Sera has shaped it into a full front-and-back cuirass with leather straps. Better than anything the blacksmith can provide from the same weight of material."
+slot        = "chest"
+armor_tags  = ["medium", "chest", "chitin"]
+weight      = 4
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 13 },
+  { type = "on_equip",   message = "The cuirass settles onto your chest with a faint click of segments." },
+]
+
+# ── Consumables ───────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "cloverleaf_ale"
+name        = "Cloverleaf Ale"
+desc_short  = "A clay mug of Tobias's amber ale, still cold."
+desc_long   = "Darker than you expected, with a clean bitter finish and a faint honey note from the clover flowers he uses in the mash. It is, unambiguously, very good."
+slot        = ""
+weight      = 1
+respawn     = true
+effects     = [
+  { type = "on_use", heal = 8 },
+  { type = "on_use", message = "The ale is cold and excellent. You feel measurably better." },
+]
+
+[[item]]
+id          = "meadow_tonic"
+name        = "Meadow Herb Tonic"
+desc_short  = "A small vial of green tonic brewed from hillside herbs."
+desc_long   = "Elder Tomlin's recipe: clover, yellow rattle, and something he won't name. It tastes like the meadow smells. Restorative."
+slot        = ""
+weight      = 0
+respawn     = false
+effects     = [
+  { type = "on_use", heal = 12 },
+  { type = "on_use", message = "The tonic is clean and sharp. Your vision steadies." },
+]

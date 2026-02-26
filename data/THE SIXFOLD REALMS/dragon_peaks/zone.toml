@@ -1,0 +1,6 @@
+[[region]]
+id                 = "dragon_peaks"
+name               = "Dragon Peaks"
+description        = "Jagged volcanic mountains shaped by a malfunctioning resonance device that attracts and empowers draconic creatures."
+recommended_level  = 3
+admin_comment      = "Piece Effect: Attracts dragons and amplifies territorial aggression.  Notes: High mobility enemies, environmental hazards, early boss encounters."

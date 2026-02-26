@@ -1,0 +1,105 @@
+# data/blackfen/dialogues/grimwick_guide.toml
+# Grimwick — the guide at the edge of the Murk Fens.
+# Hiring him sets the "has_grimwick" flag and costs 10 gold.
+# He's the adaptation of "Snakebait" from the original adventure.
+
+[[node]]
+id    = "root"
+lines = [
+  "Bad season. Many swamp lions. Gumperfish is hungry too. No guide today.",
+  "You want to go in there? Without a guide? That's a short life.",
+  "Grimwick knows every path. Every nest. Every place the ground will take your boot and not give it back."
+]
+
+[[response]]
+node = "root"
+text = "I need a guide into the Murk Fens. Name your price."
+next = "offer"
+
+[[response]]
+node = "root"
+text = "What is a Gumperfish?"
+next = "gumperfish"
+
+[[response]]
+node = "root"
+text = "I don't need a guide."
+next = "no_guide"
+
+[[node]]
+id   = "offer"
+line = "Ten gold. Up front. Grimwick doesn't work on credit and he doesn't work on promises. Ten gold and he takes you where you need to go and brings you back out. The sign says 'good guide' and Grimwick means it."
+
+[[response]]
+node = "offer"
+text = "Ten gold. Done. Let's go."
+next = "hired"
+
+[[response]]
+node = "offer"
+text = "That's too much."
+next = "haggle"
+
+[[response]]
+node = "offer"
+text = "I'll manage on my own."
+next = "no_guide"
+
+[[node]]
+id   = "hired"
+line = "Good. Stay close. Don't touch the vines that move. Don't put your hand in any water you can't see through. If Grimwick runs — you run."
+
+[[script]]
+op   = "if"
+flag = "can_afford_grimwick"
+then = [
+  { op = "take_gold",  amount = 10 },
+  { op = "set_flag",   flag = "has_grimwick" },
+  { op = "message",    text = "Grimwick pockets the coin, folds his sign, and falls in behind you. You have a guide.", tag = "system" },
+  { op = "advance_quest", quest_id = "grandfathers_emerald", step = 2 }
+]
+else = [
+  { op = "message", text = "Grimwick peers at your coin purse. 'You don't have ten gold.' He sits back down.", tag = "system" }
+]
+
+[[node]]
+id   = "haggle"
+line = "The sign says ten. The sign has said ten for six years. Grimwick doesn't negotiate on the sign."
+
+[[response]]
+node = "haggle"
+text = "Fine. Ten gold."
+next = "hired"
+
+[[response]]
+node = "haggle"
+text = "Forget it."
+next = "no_guide"
+
+[[node]]
+id   = "gumperfish"
+line = "Big. Old. Lives in the black lake. Eats anything. Grimwick has seen it take a grown man in one snap. Does not chew. Does not bother surfacing for long. You'll know if it's interested in you — the water gets very still right before."
+
+[[response]]
+node = "gumperfish"
+text = "I'd still like to hire you."
+next = "offer"
+
+[[response]]
+node = "gumperfish"
+text = "Good to know. Goodbye."
+next = ""
+
+[[node]]
+id   = "no_guide"
+line = "Your choice. Grimwick will be here when you come back. If you come back."
+
+[[response]]
+node = "no_guide"
+text = "Actually — ten gold. I want the guide."
+next = "offer"
+
+[[response]]
+node = "no_guide"
+text = "Goodbye."
+next = ""

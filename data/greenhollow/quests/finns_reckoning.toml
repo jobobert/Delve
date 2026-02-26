@@ -1,0 +1,36 @@
+# data/greenhollow/quests/finns_reckoning.toml
+# "Finn's Reckoning" — ruffian resolution quest.
+#
+# Three teenage boys (Finn, Dale, Scratch) have been making trouble in
+# Greenhollow. The player can:
+#   Path A: Challenge them to a sparring match (non-lethal — all three
+#           have HP floors and kill_scripts that stop at "knocked down")
+#   Path B: Talk Finn into a task that earns the group real respect
+#           (help defend the mine entrance from a groundhog surge)
+#
+# Both paths complete the quest and award prestige. Path A awards
+# prestige on completion. Path B awards more prestige and XP but is harder.
+#
+# Flags:
+#   ruffians_talked_down    — Player chose dialogue path
+#   finn_defeated           — Finn knocked down in spar
+#   dale_defeated           — Dale knocked down in spar
+#   scratch_defeated        — Scratch knocked down in spar
+#   ruffians_helped_mine    — Path B: boys helped defend mine entrance
+#   finns_quest_complete    — Quest fully resolved
+
+id      = "finns_reckoning"
+title   = "Finn's Reckoning"
+giver   = "ruffian_finn"
+summary = "Three teenage boys rule the practice yard and their idea of entertainment is making trouble. You could knock them down — or you could give them something worth getting up for."
+
+[[step]]
+index     = 1
+objective = "Deal with Finn and his crew at the practice yard."
+hint      = "The practice yard is south of the fields. You can fight them or talk to them. Your choice changes what happens next."
+
+[[step]]
+index     = 2
+objective = "See the resolution through — whether that's a lesson given or a job done."
+hint      = "If you fought them, Finn needs a moment to collect himself. If you offered them a task, check back after the mine is cleared."
+completion_flag = "finns_quest_complete"

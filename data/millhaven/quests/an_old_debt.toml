@@ -1,0 +1,42 @@
+# data/millhaven/quests/an_old_debt.toml
+# "An Old Debt" — Aonn Tesk companion quest.
+#
+# Aonn Tesk, your grandfather's closest friend, lost his arm the night the
+# dragon took everything. He's been sitting in the Rusty Flagon ever since,
+# waiting for someone to finish what they started. When you've proven you're
+# serious about the Blackfen run, he offers to come with you.
+#
+# Quest flow:
+#   Step 1: Talk to Aonn Tesk and hear his offer
+#   Step 2: Accept — Aonn joins as a combat companion
+#   Step 3: Complete the Blackfen run with Aonn present
+#   Step 4: Return and Aonn has his closure
+#
+# Flags:
+#   aonn_offered_to_join   — Aonn has made the offer
+#   aonn_survived_blackfen — Aonn is alive at quest end (bonus XP)
+
+id      = "an_old_debt"
+title   = "An Old Debt"
+giver   = "aonn_tesk"
+summary = "Aonn Tesk has offered to accompany you into the Blackfen Mire. He has unfinished business there — and one good sword arm to offer."
+
+[[step]]
+index     = 1
+objective = "Accept Aonn Tesk's offer to join you."
+hint      = "Talk to Aonn at the Rusty Flagon. Ask him about coming with you."
+
+[[step]]
+index     = 2
+objective = "Enter the Blackfen Mire with Aonn at your side."
+hint      = "Head south to the Fengate. Aonn follows automatically."
+
+[[step]]
+index     = 3
+objective = "Complete your mission in the mire."
+hint      = "Aonn will fight alongside you. Don't let him get downed for too long."
+
+[[step]]
+index     = 4
+objective = "Return to Millhaven together."
+hint      = "The inn will be waiting. Aonn deserves a drink."

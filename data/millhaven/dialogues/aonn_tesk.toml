@@ -1,0 +1,196 @@
+# data/millhaven/dialogues/aonn_tesk.toml
+# Aonn Tesk — your grandfather's oldest friend, and the quest-giver for
+# "Grandfather's Emerald." He sits in the Rusty Flagon Inn in Millhaven.
+# His missing arm is the first thing you notice about him.
+
+[[node]]
+id    = "root"
+lines = [
+  "I wondered when you'd come asking. Sit down. I owe you a story.",
+  "Two ales in, you'll wish I'd said less. Four ales in, you'll understand why I said it.",
+  "Your grandfather was a brave fool. They're the worst kind, because you can't help loving them."
+]
+
+[[response]]
+node = "root"
+text = "Tell me what happened to my grandfather."
+next = "the_story"
+
+[[response]]
+node = "root"
+text = "What is the Celestial Emerald?"
+next = "the_emerald"
+
+[[response]]
+node = "root"
+text = "Where is this dragon now?"
+next = "the_location"
+
+[[response]]
+node = "root"
+text = "I've recovered the Emerald."
+next = "quest_complete"
+condition = { flag = "emerald_recovered" }
+
+[[response]]
+node = "root"
+text = "Would you come with me? Into the mire?"
+next = "companion_offer"
+condition = { quest = "grandfathers_emerald", step = 2 }
+
+[[node]]
+id   = "the_story"
+line = "We found it in a sunken temple — the Celestial Emerald. I thought it held secrets. Your grandfather thought it held a fortune. We never decided what to do with it. We sealed it in a spherical stone safe and celebrated too long. That night, a black serpent dragon came out of the mire. It melted my arm. It swallowed your grandfather whole. I could hear him screaming as I ran. I wish I could tell you I didn't run."
+
+[[script]]
+op        = "advance_quest"
+quest_id  = "grandfathers_emerald"
+step      = 1
+
+[[response]]
+node = "the_story"
+text = "What happened to the dragon?"
+next = "the_dragon"
+
+[[response]]
+node = "the_story"
+text = "The safe was swallowed with him?"
+next = "the_safe"
+
+[[node]]
+id   = "the_dragon"
+line = '''A student from Montbatten Academy accidentally teleported into the middle of the swamp the next morning and found himself face to face with the thing that ate your grandfather. The academy sent Riversturm Malreaver to collect the idiot. Riversturm stopped the dragon's heart and left it hanging in the canopy. The emerald is still inside it. I would go myself, but." He lifts what remains of his arm.'''
+
+[[response]]
+node = "the_dragon"
+text = "Where in the mire is the dragon?"
+next = "the_location"
+
+[[node]]
+id   = "the_safe"
+line = "He was carrying it in his pack. When the dragon swallowed him — your grandfather was a large man — it swallowed everything he had on him. The safe is designed to block magical detection. The emerald is inside the safe. The safe is inside the dragon. Your grandfather is inside the dragon too, in a manner of speaking. I'm sorry."
+
+[[response]]
+node = "the_safe"
+text = "I'm going to get it back."
+next = "map_handoff"
+
+[[node]]
+id   = "map_handoff"
+line = "I know. That's why I've been sitting in this inn for three weeks. Take this map. It's rough — I drew it from memory with one hand — but the Blackfen Mire hasn't moved. The bone-littered trail leads to the clearing. And talk to the warden at the Fengate, or hire Grimwick if he's there. Don't go in alone."
+
+[[script]]
+op        = "give_item"
+item_id   = "aonn_tesk_map"
+
+[[script]]
+op        = "advance_quest"
+quest_id  = "grandfathers_emerald"
+step      = 2
+
+[[response]]
+node = "map_handoff"
+text = "Thank you. I'll bring back what I find."
+next = "farewell"
+
+[[node]]
+id   = "the_emerald"
+line = "A gem the size of your fist. Green — but not a living green, more like deep water lit from beneath. I thought it held something. Some memory or intelligence from before the Banestorm. Your grandfather thought I was seeing things. He was wrong, but I'll never be able to prove it to him now."
+
+[[response]]
+node = "the_emerald"
+text = "Where is this dragon?"
+next = "the_location"
+
+[[node]]
+id   = "the_location"
+line = "The Blackfen Mire, south of the old Millhaven road. They call it the Murk Fens now but it was the Vast Vermin Swamp when I was young and the name suited it better. The Fengate is the formal entrance — Warden Holt will know you're coming if you tell her I sent you. And talk to Grimwick. He's the lizard-person at the gate. He knows those paths better than anyone living."
+
+[[response]]
+node = "the_location"
+text = "I'll go. Tell me about the mire itself."
+next = "mire_warnings"
+
+[[response]]
+node = "the_location"
+text = "I'm ready."
+next = "farewell"
+
+[[node]]
+id   = "mire_warnings"
+line = "Stay on the paths when you can. The water that looks shallow isn't. The vines that move — don't touch them. There's a woman on the south shore of Blacklake, Maren Thornbury, who may help you if you're civil to her. She was civil to me once, which I consider remarkable given the state I arrived in. And watch for Redbellies — they worship the old sorcerer graves and they haven't got friendlier since my day."
+
+[[response]]
+node = "mire_warnings"
+text = "Anything else?"
+next = "one_more_thing"
+
+[[node]]
+id   = "one_more_thing"
+line = "Yes. If you find the emerald — and you will — don't break it. Whatever is stored inside it, it deserves better than being used as a parlour trick. Bring it back. We'll decide what to do with it together, the way your grandfather and I should have."
+
+[[response]]
+node = "one_more_thing"
+text = "I'll be back."
+next = "farewell"
+
+[[node]]
+id   = "quest_complete"
+line = '''You found it." The old elf stands. His remaining hand closes around your wrist. "Let me see it." He holds the emerald for a long moment, turning it in the light. Then he presses it back into your hands. "He'd be proud. He'd pretend he always knew you could do it, and you'd know he was lying, and you'd both be fine with that."'''
+
+[[script]]
+op        = "complete_quest"
+quest_id  = "grandfathers_emerald"
+
+[[script]]
+op   = "message"
+text = "Aonn raises his glass to the ceiling — to your grandfather. You do the same."
+tag  = "system"
+
+[[response]]
+node = "quest_complete"
+text = "What will you do with the emerald?"
+next = "emerald_future"
+
+[[node]]
+id   = "emerald_future"
+line = '''Study it. Carefully. With people I trust and in a place where the academy's collectors won't find it. Your grandfather wanted to sell it. I want to understand it. Between the two of us, maybe we can do something in between." He smiles. "Sit down. Let me buy you a drink.'''
+
+[[node]]
+id   = "farewell"
+line = "The elven sign of farewell. You know it — your grandfather taught it to you when you were small, and laughed when you got it wrong. You get it right this time."
+
+[[node]]
+id   = "companion_offer"
+line = '''I was wondering when you'd ask that." A long pause. He looks at his remaining hand, then at you. "Yes. I'll come. I owe your grandfather a better ending than the one he got — and I owe myself one too. Give me a moment to find my belt.'''
+
+script = [
+  { op = "advance_quest", quest_id = "an_old_debt", step = 2 },
+  { op = "set_flag", flag = "aonn_offered_to_join" }
+]
+
+[[response]]
+node = "companion_offer"
+text = "Thank you. I'm glad you're coming."
+next = "companion_joins"
+
+[[response]]
+node = "companion_offer"
+text = "Take your time. I'll wait."
+next = "companion_joins"
+
+
+[[node]]
+id   = "companion_joins"
+line = "Let's not make it sentimental. The mire is south. You know the way."
+
+script = [
+  { op = "give_companion", companion_id = "aonn_tesk" },
+  { op = "advance_quest",  quest_id = "an_old_debt", step = 2 },
+  { op = "advance_quest",  quest_id = "an_old_debt", step = 3 }
+]
+
+[[response]]
+node = "companion_joins"
+text = "Ready when you are."
+next = ""

@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delve — Admin Map</title>
+<style>
+/* Delve Admin Map — stylesheet */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;600&display=swap');
+
+
+  :root {
+    --bg:        #0a0c10;
+    --panel:     #10141c;
+    --border:    #1e2a3a;
+    --text:      #c8d8e8;
+    --dim:       #4a5a6a;
+    --millhaven: #4a9eff;
+    --training:  #c47aff;
+    --ashwood:   #ffaa44;
+    --hostile:   #ff4a4a;
+    --safe:      #4aff88;
+    --locked:    #ff4a4a;
+    --connection:#2a3a4a;
+    --conn-hover:#4a6a8a;
+    --cell:      68px;
+    --gap:       36px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 1fr 320px;
+    grid-template-areas: "header header" "map panel";
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  header {
+    grid-area: header;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: #e8f0ff;
+  }
+
+  header h1 span { color: var(--millhaven); }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--dim);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  #map-viewport {
+    grid-area: map;
+    overflow: auto;
+    position: relative;
+    cursor: grab;
+    background:
+      radial-gradient(ellipse at 20% 80%, rgba(74,158,255,0.03) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(196,122,255,0.03) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  #map-viewport:active { cursor: grabbing; }
+
+  #map-canvas {
+    position: relative;
+    transform-origin: top left;
+    transition: transform 0.05s ease;
+    padding: 60px;
+  }
+
+  svg#connections {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .room-cell {
+    position: absolute;
+    width: var(--cell);
+    height: var(--cell);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    z-index: 2;
+  }
+
+  .room-cell:hover { transform: scale(1.1); z-index: 10; }
+  .room-cell.selected { z-index: 20; }
+
+  .room-box {
+    width: 100%;
+    height: 100%;
+    border: 1.5px solid;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    user-select: none;
+  }
+
+  .room-abbr {
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.1;
+    padding: 0 3px;
+  }
+
+  .room-flags {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 12px;
+    opacity: 0.7;
+    line-height: 1;
+  }
+
+  .start-marker {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 13px;
+    color: gold;
+  }
+
+  /* Admin note pip — small orange dot in top-right of room nodes that have a comment */
+  .note-pip {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 9px;
+    color: #ff9944;
+    line-height: 1;
+    pointer-events: none;
+    opacity: 0.85;
+  }
+
+  /* Zone color schemes */
+  .zone-millhaven .room-box {
+    background: rgba(74,158,255,0.08);
+    border-color: rgba(74,158,255,0.5);
+    color: var(--millhaven);
+  }
+  .zone-millhaven .room-box:hover,
+  .zone-millhaven.selected .room-box {
+    background: rgba(74,158,255,0.18);
+    border-color: var(--millhaven);
+    box-shadow: 0 0 12px rgba(74,158,255,0.3);
+  }
+
+  .zone-training .room-box {
+    background: rgba(196,122,255,0.08);
+    border-color: rgba(196,122,255,0.5);
+    color: var(--training);
+  }
+  .zone-training .room-box:hover,
+  .zone-training.selected .room-box {
+    background: rgba(196,122,255,0.18);
+    border-color: var(--training);
+    box-shadow: 0 0 12px rgba(196,122,255,0.3);
+  }
+
+  .zone-ashwood .room-box {
+    background: rgba(255,170,68,0.08);
+    border-color: rgba(255,170,68,0.5);
+    color: var(--ashwood);
+  }
+  .zone-ashwood .room-box:hover,
+  .zone-ashwood.selected .room-box {
+    background: rgba(255,170,68,0.18);
+    border-color: var(--ashwood);
+    box-shadow: 0 0 12px rgba(255,170,68,0.3);
+  }
+
+  /* Side panel */
+  #detail-panel {
+    grid-area: panel;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--dim);
+    font-size: 12px;
+    text-align: center;
+    padding: 24px;
+    gap: 8px;
+  }
+
+  .panel-empty .icon { font-size: 32px; opacity: 0.3; }
+
+  #room-detail { display: none; padding: 20px; }
+
+  .detail-zone {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 6px;
+  }
+
+  .detail-name {
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e8f0ff;
+    margin-bottom: 4px;
+  }
+
+  .detail-id {
+    font-size: 12px;
+    color: var(--dim);
+    margin-bottom: 14px;
+  }
+
+  .detail-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #9ab;
+    border-left: 2px solid var(--border);
+    padding-left: 10px;
+    margin-bottom: 16px;
+  }
+
+  .detail-section {
+    margin-bottom: 14px;
+  }
+
+  .detail-section-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+  }
+
+  .detail-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .detail-list li {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .detail-list li::before {
+    content: '▸';
+    font-size: 13px;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  .exit-link {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(255,255,255,0.2);
+    cursor: pointer;
+  }
+  .exit-link:hover { border-bottom-color: currentColor; }
+
+  .badge {
+    display: inline-block;
+    font-size: 13px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  .badge-hostile { background: rgba(255,74,74,0.2); color: var(--hostile); border: 1px solid rgba(255,74,74,0.3); }
+  .badge-lock    { background: rgba(255,74,74,0.2); color: var(--locked);  border: 1px solid rgba(255,74,74,0.3); }
+  .badge-flag    { background: rgba(255,255,255,0.05); color: var(--dim);  border: 1px solid var(--border); }
+  .badge-banker  { background: rgba(255,220,60,0.15); color: #ffd040;      border: 1px solid rgba(255,220,60,0.3); }
+  .badge-nodrop  { background: rgba(255,140,0,0.15); color: #ffa040;       border: 1px solid rgba(255,140,0,0.3); }
+
+  /* Admin note block — shown in detail panel when room/item/npc has an admin_comment */
+  .admin-note {
+    background: rgba(255, 153, 68, 0.08);
+    border: 1px solid rgba(255, 153, 68, 0.25);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #e0a878;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .admin-note-label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #ff9944;
+    margin-bottom: 4px;
+    opacity: 0.8;
+  }
+
+  /* Inline note icon on item/NPC list entries */
+  .inline-note {
+    font-size: 12px;
+    cursor: help;
+    opacity: 0.7;
+    margin-left: 2px;
+  }
+  .inline-note:hover { opacity: 1; }
+
+  /* Zoom controls */
+  .zoom-controls {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 100;
+  }
+
+  .zoom-btn {
+    width: 32px; height: 32px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s;
+  }
+
+  .zoom-btn:hover { background: var(--border); }
+
+  .stats-bar {
+    margin-top: auto;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--dim);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  line.connection { stroke: var(--connection); stroke-width: 1.5; }
+  line.connection.locked { stroke: rgba(255,74,74,0.4); stroke-dasharray: 4 3; }
+  line.connection:hover { stroke: var(--conn-hover); }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>DELVE <span>//</span> Admin Map</h1>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--millhaven)"></div> Millhaven</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--training)"></div> Training</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--ashwood)"></div> Ashwood</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--locked);border-radius:0"></div> Locked exit</div>
+    <div class="legend-item">★ Start room</div>
+  </div>
+</header>
+
+<div id="map-viewport">
+  <div id="map-canvas">
+    <svg id="connections"></svg>
+  </div>
+</div>
+
+<div id="detail-panel">
+  <div class="panel-empty" id="panel-empty">
+    <div class="icon">⬡</div>
+    <div>Click a room to inspect it</div>
+  </div>
+  <div id="room-detail"></div>
+  <div class="stats-bar" id="stats-bar"></div>
+</div>
+
+<div class="zoom-controls">
+  <button class="zoom-btn" onclick="zoom(1.2)">+</button>
+  <button class="zoom-btn" onclick="zoom(0.833)">−</button>
+  <button class="zoom-btn" onclick="resetZoom()" title="Reset">⊙</button>
+</div>
+
+<script>
+// ── World data (embedded) ─────────────────────────────────────────────────
+const WORLD = {"rooms": {"ashwood_gate": {"id": "ashwood_gate", "name": "Ashwood Gate", "description": "Two stone pillars flank the old eastern road, carved with warning sigils that have half-eroded over the centuries. A weathered notice board bears a torn placard: 'ROAD CLOSED — MILITARY ORDER.' Beyond the gate the trees are larger, older, and the air smells faintly of something burnt and animal. A lone ranger sits beside the pillar, sharpening a knife.", "zone": "ashwood", "coord": [1, -4], "flags": ["no_combat", "town"], "exits": {"west": "deep_forest", "east": "ashwood_road"}, "exit_locks": {}, "items": [], "spawns": ["ranger_wren", "ashwood_warden"], "start": false, "admin_comment": ""}, "ashwood_road": {"id": "ashwood_road", "name": "Ashwood Road", "description": "The old stone road is cracked and pushed up by roots that didn't exist a decade ago. The trees on either side lean inward like an audience watching something terrible. Every few paces there's a dead bird on the ground — not fallen, but placed, wings spread. Something here is wrong in a way that goes beyond danger.", "zone": "ashwood", "coord": [2, -4], "flags": [], "exits": {"west": "ashwood_gate", "east": "ashwood_ruins", "south": "ashwood_clearing"}, "exit_locks": {}, "items": [], "spawns": ["corrupted_wolf", "corrupted_wolf"], "start": false, "admin_comment": ""}, "ashwood_ruins": {"id": "ashwood_ruins", "name": "Ruined Garrison", "description": "The stone walls of an old military post, collapsed inward over decades of neglect. Rotted timber beams stick up from the rubble like broken ribs. Something valuable was stored here once — you can see the remains of weapon racks along the surviving walls. The east door is still standing, sealed with a heavy crossbar.", "zone": "ashwood", "coord": [3, -4], "flags": [], "exits": {"west": "ashwood_road", "east": "ashwood_armory"}, "exit_locks": {"east": true}, "items": ["ghost_note"], "spawns": ["garrison_ghost"], "start": false, "admin_comment": ""}, "ashwood_armory": {"id": "ashwood_armory", "name": "Garrison Armory", "description": "The armory has been sealed since the garrison fell. Dust coats everything in a uniform grey. Most of the weapons have rusted to nothing, but one rack holds something remarkable — a sword whose blade still gleams as if freshly forged, dark metal wrapped in what looks like scaled leather. Beside it, a suit of armor built for serious work. On the floor, a small wooden chest.", "zone": "ashwood", "coord": [4, -4], "flags": [], "exits": {"west": "ashwood_ruins"}, "exit_locks": {"west": false}, "items": ["drakebone_sword", "drakebone_armor", "drakebone_bracers", "shrine_descent_key", "garrison_helm", "garrison_hauberk", "garrison_leggings"], "spawns": [], "start": false, "admin_comment": ""}, "ashwood_clearing": {"id": "ashwood_clearing", "name": "Haunted Clearing", "description": "A perfect circle of grass, unnaturally green in the grey-brown forest. In the center stands a stone altar with a brass plaque. The air here is still — no wind, no birdsong, no rustling. The silence isn't peaceful. It feels like waiting. To the north, the road continues. To the south, the land drops toward the old shrine.", "zone": "ashwood", "coord": [2, -5], "flags": [], "exits": {"north": "ashwood_road", "south": "ashwood_shrine"}, "exit_locks": {}, "items": ["puzzle_altar"], "spawns": ["riddle_spirit"], "start": false, "admin_comment": ""}, "ashwood_shrine": {"id": "ashwood_shrine", "name": "Ashwood Shrine", "description": "Ancient stonework, surprisingly intact, carved with interlocking serpent motifs. The shrine was built to contain something powerful — every surface is inscribed with binding prayers in an old dialect. Braziers that should be cold still burn with pale blue flame. A stone door to the south has a circular lock mechanism — six numbered rings that must be set correctly to open.", "zone": "ashwood", "coord": [2, -6], "flags": [], "exits": {"north": "ashwood_clearing", "south": "shrine_descent"}, "exit_locks": {"south": true}, "items": [], "spawns": ["shrine_keeper"], "start": false, "admin_comment": ""}, "shrine_descent": {"id": "shrine_descent", "name": "The Descent", "description": "A long stairway carved into living rock descends into heat and orange light. The walls are scored with long parallel claw marks — something large walked up these stairs long ago. The air thickens with each step. A distant sound, somewhere between breathing and grinding stone, rises from below.", "zone": "ashwood", "coord": [2, -7], "flags": [], "exits": {"north": "ashwood_shrine", "south": "drakes_lair_antechamber"}, "exit_locks": {"north": false}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "drakes_lair_antechamber": {"id": "drakes_lair_antechamber", "name": "Drake's Antechamber", "description": "A wide cavern, its floor covered in scorched earth and crushed bones. Heat radiates from cracks in the southern wall. Three massive wolves pace the chamber — not the grey wolves of the surface forest, but larger, darker, their fur matted with ash. Their eyes glow faintly orange, corrupted by proximity to the Drake. They have been here long enough that they no longer remember the forest.", "zone": "ashwood", "coord": [2, -8], "flags": [], "exits": {"north": "shrine_descent", "south": "drakes_lair"}, "exit_locks": {}, "items": [], "spawns": ["ashwood_wolf", "ashwood_wolf", "ashwood_wolf"], "start": false, "admin_comment": ""}, "drakes_lair": {"id": "drakes_lair", "name": "The Drake's Lair", "description": "The heart of the corruption. A vast natural cavern, its ceiling lost in shadow, its floor a mosaic of fused stone and ancient bone. At the center, coiled around a column of rock as wide as a house, the Ashwood Drake watches you enter. It is enormous — fifteen feet of scaled muscle and ancient malice. Its eyes, the color of dying embers, track you with intelligent, unhurried attention. The Drake has been waiting for something like you. It is not afraid.", "zone": "ashwood", "coord": [2, -9], "flags": [], "exits": {"north": "drakes_lair_antechamber", "east": "lair_treasury"}, "exit_locks": {}, "items": [], "spawns": ["ashwood_drake"], "start": false, "admin_comment": ""}, "lair_treasury": {"id": "lair_treasury", "name": "The Drake's Hoard", "description": "An alcove off the main lair, piled with the accumulated possessions of the Drake's victims over decades. Mostly rusted junk, crumbled leather, and corroded coins. But among the debris are a few items that survived: a leather pack reinforced with Drake scales, and scattered across the floor, more gold than you've seen in one place.", "zone": "ashwood", "coord": [3, -9], "flags": [], "exits": {"west": "drakes_lair"}, "exit_locks": {}, "items": ["drake_scale_pack", "treasure_gold"], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_gate": {"id": "blackfen_gate", "name": "Edge of the Murk Fens", "description": "The road from Millhaven ends here. Beyond the rotting wooden post that marks the boundary, the world turns grey and wet. Twisted willows trail their fingers in black water. The air smells of sulfur and rot and something older than either. A scrawny lizard-person sits on a wobbly stool outside a low hovel, rocking contentedly. A painted wooden plaque hangs from his neck.", "zone": "blackfen", "coord": [0, 0], "flags": ["town"], "exits": {"northeast": "forest_path", "east": "blackfen_trail"}, "exit_locks": {}, "items": [], "spawns": ["grimwick_guide", "fenwatch_warden"], "start": false, "admin_comment": ""}, "blackfen_trail": {"id": "blackfen_trail", "name": "Fen Trail", "description": "A narrow path of packed earth winds between the mire's grey-barked trees. The ground is spongy underfoot. Frog calls and bird-screams compete with the hiss of insects. A spray of old blood on a nearby trunk suggests something died here recently. Aonn Tesk's rough map shows the dead dragon lying to the west of this point — but the direct route would take you off the path entirely.", "zone": "blackfen", "coord": [1, 0], "flags": [], "exits": {"west": "blackfen_gate", "north": "blackfen_thorn_path", "east": "blackfen_clearing", "south": "blackfen_boulderring"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_thorn_path": {"id": "blackfen_thorn_path", "name": "Thorn-Vine Path", "description": "The path narrows until you are weaving between long hanging vines laced with black thorns the length of your finger. As you watch, one of the vines slowly retracts upward, carrying the limp body of a swamp rodent it had caught. You move quickly. The path ends at a hot freshwater spring bubbling from a crack in the rocks. You refill your waterskin — Aonn said such springs run clean. Nearby, a massive old stump sits off the trail. Something has carved a low door in its side, and the hollow within looks very dark.", "zone": "blackfen", "coord": [1, 1], "flags": [], "exits": {"south": "blackfen_trail", "east": "blackfen_stump_exterior"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_stump_exterior": {"id": "blackfen_stump_exterior", "name": "The Scorched Stump", "description": "The stump is the size of a small cottage — the remnant of some vast tree that burned long ago. Someone has cut a low door into its side, fitted with iron hinges gone dark with rust. The top of the stump is scorched, whether by the original fire or something more deliberate you cannot say. The door is locked with a simple mechanism.", "zone": "blackfen", "coord": [2, 1], "flags": [], "exits": {"west": "blackfen_thorn_path", "east": "blackfen_stump_interior"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_stump_interior": {"id": "blackfen_stump_interior", "name": "Stump Laboratory", "description": "The inside of the stump has been carved out and fitted as a tiny alchemist's workroom. Shelves line the curved walls, covered in dusty vials and crockery. A small table bears stains in cherry-red and deep purple that smell sweetly of something fermented. Notes in a cramped, unreadable hand are pinned to every surface. Whoever worked here has been gone for years — maybe decades. One shelf holds a single vial of purplish liquid, conspicuously labelled in clear block lettering.", "zone": "blackfen", "coord": [3, 1], "flags": [], "exits": {"west": "blackfen_stump_exterior"}, "exit_locks": {}, "items": ["blade_polish_vial"], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_clearing": {"id": "blackfen_clearing", "name": "Fly-Ridden Clearing", "description": "A dry patch of high ground, which should be a relief after the wet trail. It isn't. A thick cloud of black flies has claimed this space, drawn by the smell of something that died here not long ago. You wave them off unsuccessfully. Two trails lead on from here: one continues east through flower-fringed reeds, the other winds downhill into darker country.", "zone": "blackfen", "coord": [2, 0], "flags": [], "exits": {"west": "blackfen_trail", "east": "blackfen_flower_path", "south": "blackfen_boulderring", "down": "blackfen_boulderring"}, "exit_locks": {}, "items": [], "spawns": ["redbelly_patrol"], "start": false, "admin_comment": ""}, "blackfen_flower_path": {"id": "blackfen_flower_path", "name": "Reed-Flower Trail", "description": "This part of the mire is almost beautiful. Fist-sized red and purple flowers grow from thick reeds whose barbed edges remind you of arrowheads. They sway gently in air that, here at least, smells of something alive and growing. Grimwick would know exactly what to do with these plants.", "zone": "blackfen", "coord": [3, 0], "flags": [], "exits": {"west": "blackfen_clearing", "south": "blackfen_wading"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_boulderring": {"id": "blackfen_boulderring", "name": "The Boulder Ring", "description": "Tall black stones jut from the brackish water, forming a rough circle around a collapsed pile of the same glossy black rock. This was an altar — perhaps Redbelly, perhaps older. The water is knee-deep and smells of iron. You've heard the Redbellies leave valuables on such altars. You've also heard they leave traps.", "zone": "blackfen", "coord": [2, -1], "flags": [], "exits": {"north": "blackfen_clearing", "south": "blackfen_wading"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_wading": {"id": "blackfen_wading", "name": "Wading Stretch", "description": "The path drops into knee-deep, brackish water. Each step requires dragging your boot free of thick grey silt. Occasionally something wriggles against your leg below the surface and you choose not to investigate. The water smells of old blood and wet rot. Somewhere ahead the tall stones of the Blacklake shoreline are visible through the grey trees.", "zone": "blackfen", "coord": [2, -2], "flags": [], "exits": {"north": "blackfen_boulderring", "west": "blackfen_north_shore", "south": "blackfen_blacklake_shore", "east": "blackfen_stump"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_stump": {"id": "blackfen_stump", "name": "Ghost Willow Grove", "description": "A ghost-white willow tree stands apart from the mire's other vegetation, its bark carved with rough sigils — old marks, not recent. The pale branches hang very still even when there is wind. Other trees give it space. The dead dragon's location should be south and west of here.", "zone": "blackfen", "coord": [3, -2], "flags": [], "exits": {"west": "blackfen_wading"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_north_shore": {"id": "blackfen_north_shore", "name": "North Shore of Blacklake", "description": "The Blacklake lives up to its name — the water is the colour of deep night, completely opaque. Dead jellyfish-like things litter the grey sand shore. Occasionally a fish breaks the surface. Occasionally something much larger than a fish does the same. The lake curves south. A bone-littered trail runs along the western shore.", "zone": "blackfen", "coord": [1, -3], "flags": [], "exits": {"east": "blackfen_wading", "south": "blackfen_witchs_cottage", "southeast": "blackfen_blacklake_shore"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_blacklake_shore": {"id": "blackfen_blacklake_shore", "name": "Blacklake Shore — Insect Crossing", "description": "A long stretch of acid-puddled bog runs along the lake's eastern shore. The entire place hums with mosquitoes and biting things. There is no way to cross this ground without exposing your skin to the swarm. The bone trail and the witch's cottage lie south and west. The dragon clearing lies further south along the lake.", "zone": "blackfen", "coord": [2, -3], "flags": [], "exits": {"northwest": "blackfen_north_shore", "west": "blackfen_witchs_cottage", "south": "blackfen_bone_trail"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_witchs_cottage": {"id": "blackfen_witchs_cottage", "name": "Thornbury's Cottage", "description": "A hovel of logs and twisted branches with a ramshackle dock jutting into the lake. Inside, it is warm — impossibly warm for a building with no visible fire. A heavy iron kettle sits in the middle of the room radiating heat from no apparent source. A cot, a table, three chairs. Neat, lived-in, strange. This is the home of Maren Thornbury, a woman with a great deal of power and no patience whatsoever for nonsense.", "zone": "blackfen", "coord": [1, -4], "flags": ["no_combat"], "exits": {"north": "blackfen_north_shore", "east": "blackfen_blacklake_shore", "south": "blackfen_bone_trail"}, "exit_locks": {}, "items": ["fen_antitoxin"], "spawns": ["maren_thornbury"], "start": false, "admin_comment": ""}, "blackfen_bone_trail": {"id": "blackfen_bone_trail", "name": "Path of Bones", "description": "The trail is littered with bones — vermin, Redbellies, things you cannot identify. Something has been doing a lot of killing in this corridor for a long time. Aonn Tesk's map marks this trail with hurried elvish script: this is the path to where the dead serpent fell. A rope bridge to the east leads to Fanghelm's camp. It is padlocked.", "zone": "blackfen", "coord": [1, -5], "flags": [], "exits": {"north": "blackfen_witchs_cottage", "south": "blackfen_dragon_clearing", "east": "blackfen_slaughter_camp"}, "exit_locks": {"east": true}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_slaughter_camp": {"id": "blackfen_slaughter_camp", "name": "Slaughterstone Camp", "description": "A rough camp on a dry rise above the lake shore. Fire rings, animal carcasses, crude shelters of hide stretched over poles. The Redbelly crew has been here long enough to get comfortable. Their leader's presence is evident in the order of it — this is not a rabble's camp but a warlord's forward base. Fanghelm himself stands near the largest fire, wearing leather fashioned from serpent hide, a fanged helmet tucked under one arm. His face is a ruin of old acid scarring. He looks at you with something like delight.", "zone": "blackfen", "coord": [2, -5], "flags": [], "exits": {"west": "blackfen_bone_trail", "east": "blackfen_dragon_clearing"}, "exit_locks": {"west": false}, "items": [], "spawns": ["durath_ironteeth", "redbelly_brute", "redbelly_brute"], "start": false, "admin_comment": ""}, "blackfen_dragon_clearing": {"id": "blackfen_dragon_clearing", "name": "The Dragon's Clearing", "description": "A massive clearing, the ground burned and scattered with ash. Acidic puddles have eaten brown rings into the earth. The air smells like the inside of a forge that uses something foul for fuel. You look up. The dead serpent dragon hangs in the canopy a dozen yards overhead, its long body tangled in the high branches. Its eyes are white and dead. Its jaws are open. A drip of acidic blood falls and hisses in a puddle at your feet.", "zone": "blackfen", "coord": [1, -6], "flags": [], "exits": {"north": "blackfen_bone_trail", "east": "blackfen_serpent_temple", "south": "blackfen_dragon_belly", "west": "blackfen_slaughter_camp"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "blackfen_serpent_temple": {"id": "blackfen_serpent_temple", "name": "Sunken Serpent Temple", "description": "Stone pillars rise from the water, forming a rough circle around a polished black altar. The rubble of a collapsed roof lies scattered around the site. Dry vines trail across the altar's surface. The glyphs carved into the stone are old — older than the Redbellies, older than the mire. Something about this place makes the air tight, as though the atmosphere itself is holding its breath.", "zone": "blackfen", "coord": [2, -6], "flags": [], "exits": {"west": "blackfen_dragon_clearing"}, "exit_locks": {}, "items": ["sacrificial_knife"], "spawns": ["anurus_the_returned"], "start": false, "admin_comment": ""}, "blackfen_dragon_belly": {"id": "blackfen_dragon_belly", "name": "Beneath the Dragon", "description": "The great carcass has been brought down — the canopy branches still sway from its fall. The creature lies on the clearing floor, its belly facing you. Acid seeps slowly from old wounds in its hide. The stench is tremendous. Your grandfather is in there. So is what he was carrying. The jaws are open at your feet. The belly is before you. You take out your sharpest weapon.", "zone": "blackfen", "coord": [1, -7], "flags": [], "exits": {"north": "blackfen_dragon_clearing"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "greenhollow_path": {"id": "greenhollow_path", "name": "The Downward Path", "description": "A clay road drops away from the ridge into the valley below. Greenhollow sits in the bowl beneath you — three dozen buildings around a mill wheel you can hear from here. The air smells of cut grain and creek water. A hand-lettered sign at the road's edge reads GREENHOLLOW — KEEP THE PACE. Children are small bright shapes at the bottom of the hill.", "zone": "greenhollow", "coord": [0, 1], "flags": [], "exits": {"south": "greenhollow_lane"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": "Zone entry from north. Connects to Millhaven via the ridge road eventually."}, "greenhollow_lane": {"id": "greenhollow_lane", "name": "Main Lane", "description": "The main lane runs through the heart of Greenhollow between two rows of close-packed houses. Washing lines cross overhead. A dog is asleep in the middle of the road. Children dart between the buildings calling names. The mill is audible to the west, a smithy's ring to the south-east, and the lane continues north toward the valley entrance and south toward the fields.", "zone": "greenhollow", "coord": [0, 0], "flags": ["town", "no_combat"], "exits": {"north": "greenhollow_path", "south": "greenhollow_fields_edge", "east": "greenhollow_pond", "west": "greenhollow_mill", "southeast": "greenhollow_smithy"}, "exit_locks": {}, "items": ["greenhollow_sign"], "spawns": ["stray_dog", "farm_hand_npc", "elder_torva"], "start": false, "admin_comment": "Hub room. All main quest NPCs pass through or originate here."}, "greenhollow_mill": {"id": "greenhollow_mill", "name": "The Water Mill", "description": "The mill sits at the stream's edge, wheel turning with a steady wooden rhythm. Flour dust coats every surface in a thin white film. Sacks line the walls, some full and some waiting. The millstone makes the floor vibrate gently. It smells of grain and damp wood and old machinery.", "zone": "greenhollow", "coord": [-1, 0], "flags": ["no_combat"], "exits": {"east": "greenhollow_lane"}, "exit_locks": {}, "items": ["flour_sack", "mill_cat"], "spawns": ["miller_owain"], "start": false, "admin_comment": "Miller Owain is here. He knows about the mine situation and can point to Elder Torva."}, "greenhollow_fields_edge": {"id": "greenhollow_fields_edge", "name": "Field's Edge", "description": "The lane ends and the fields begin here — long rows of wheat stretching south toward the valley wall. The crop looks good except for a string of collapsed sections nearest the hedgerow where something has been burrowing up from below. Deep half-moon holes in the earth, dirt thrown wide, root systems pulled out. The damage has been getting worse each week.", "zone": "greenhollow", "coord": [0, -1], "flags": [], "exits": {"north": "greenhollow_lane", "south": "greenhollow_practice_yard", "east": "greenhollow_pond", "west": "greenhollow_mine_entrance"}, "exit_locks": {}, "items": ["field_burrow", "trampled_wheat"], "spawns": ["groundhog_scout", "groundhog_scout"], "start": false, "admin_comment": "Two groundhog scouts here. Mine entrance is to the west. Ruffian practice yard to south."}, "greenhollow_pond": {"id": "greenhollow_pond", "name": "The Mill Pond", "description": "A broad dark pond fed by the hill stream. Willows drape their branches into the water along the near bank. Ducks move in a slow circuit near the rushes. The water is clear enough to see bottom in the shallows — stones and waterweed and the occasional flash of a fish. Someone has tied a rope to the willow overhanging the swimming hole.", "zone": "greenhollow", "coord": [1, 0], "flags": [], "exits": {"west": "greenhollow_lane", "north": "greenhollow_forest_edge"}, "exit_locks": {}, "items": ["willow_branch", "pond_reed"], "spawns": ["pond_turtle", "moorhen"], "start": false, "admin_comment": "Peaceful encounter area. Pond turtle is a mild combat. Forest edge to north."}, "greenhollow_smithy": {"id": "greenhollow_smithy", "name": "Brynn's Smithy", "description": "A wide open-fronted building with a forge at the back wall. The fire is banked but warm — Brynn works methodical hours and doesn't waste fuel. Finished ironwork hangs from the ceiling: brackets, hinges, tools, a few weapons. The floor is packed earth and the ceiling is black with old smoke. It smells of iron and charcoal and sweat.", "zone": "greenhollow", "coord": [1, -1], "flags": ["no_combat"], "exits": {"northwest": "greenhollow_lane"}, "exit_locks": {}, "items": ["iron_pickaxe", "smithy_tongs"], "spawns": ["farrier_brynn"], "start": false, "admin_comment": "Brynn teaches Flowing Water (level 5+). She also sells picks and can explain mining."}, "greenhollow_practice_yard": {"id": "greenhollow_practice_yard", "name": "The Practice Yard", "description": "A flat patch of bare earth behind the southernmost houses, walled in on two sides by old stone. A straw-stuffed dummy has been hung from the post in the corner — it's been hit so many times it's mostly stuffing and spite. Three teenage boys are here, circling it with the intent focus of people who have nowhere better to be.", "zone": "greenhollow", "coord": [0, -2], "flags": [], "exits": {"north": "greenhollow_fields_edge"}, "exit_locks": {}, "items": ["practice_dummy"], "spawns": ["ruffian_finn", "ruffian_dale", "ruffian_scratch"], "start": false, "admin_comment": "Ruffian encounter room. Both paths available: spar (non-lethal) or dialogue/quest."}, "greenhollow_forest_edge": {"id": "greenhollow_forest_edge", "name": "Oak Edge", "description": "The cultivated land gives out here and old oak begins. The transition is clean — field to treeline in twenty feet, as if the two zones have agreed to leave each other alone. The forest is darker than it looks from the village, and older. The trees are not the tidy managed oak of a coppice — they're ancient, wide-spaced, and indifferent.", "zone": "greenhollow", "coord": [1, 1], "flags": [], "exits": {"south": "greenhollow_pond", "north": "greenhollow_forest_shrine"}, "exit_locks": {}, "items": ["oak_log", "fallen_acorns"], "spawns": ["forest_fox", "wood_pigeon"], "start": false, "admin_comment": "Transition to forest. Light wildlife encounters. Shrine is north deeper in forest."}, "greenhollow_forest_shrine": {"id": "greenhollow_forest_shrine", "name": "The Hollow Shrine", "description": "Deep enough in the forest that the village sounds have faded completely. An ancient oak has grown around a stone marker until the two are inseparable — the stone is visible only as a grey rectangle within the trunk's embrace. Someone still tends this place: there are fresh flowers on the roots, a small oil lamp burning, a woven grass ring hung from the lowest branch.", "zone": "greenhollow", "coord": [1, 2], "flags": ["safe_combat"], "exits": {"south": "greenhollow_forest_edge"}, "exit_locks": {}, "items": ["shrine_lamp", "shrine_offering", "wrapped_bundle"], "spawns": [], "start": false, "admin_comment": "Quiet/safe area. Wrapped bundle is a discoverable item with minor lore."}, "greenhollow_mine_entrance": {"id": "greenhollow_mine_entrance", "name": "Mine Entrance", "description": "A timber-framed portal cut into the valley's west wall. The frame is solid — this isn't a recent dig. Cart tracks lead in from the fields. A rack of tools stands outside: picks, shovels, a hand cart. Mine tallow lanterns hang from the frame. Inside, the shaft drops at a gentle angle into darkness. Something has been digging parallel tunnels alongside the main shaft — you can see the fresh earthworks.", "zone": "greenhollow", "coord": [-1, -1], "flags": [], "exits": {"east": "greenhollow_fields_edge", "down": "greenhollow_mine_level1"}, "exit_locks": {}, "items": ["mine_lantern", "tool_rack"], "spawns": ["mine_foreman_osric"], "start": false, "admin_comment": "Mine foreman Osric is here (non-hostile, worried). Gives Osric's Pick quest."}, "greenhollow_mine_level1": {"id": "greenhollow_mine_level1", "name": "Mine Level One", "description": "The first level of the mine opens into a worked cavern. Greenstone walls sheened with ground water. Timber shoring along the central corridor. The cart tracks split here — one branch going deeper, one looping back to the surface. In the side passages, ore veins are visible: grey stone threaded with reddish iron lines. There are burrows in the floor. Fresh ones.", "zone": "greenhollow", "coord": [-1, -2], "flags": [], "exits": {"up": "greenhollow_mine_entrance", "down": "greenhollow_mine_level2"}, "exit_locks": {}, "items": ["iron_ore_vein", "poor_coal_seam"], "spawns": ["groundhog_worker", "groundhog_worker", "groundhog_worker"], "start": false, "admin_comment": "Three groundhog workers. Iron and coal ore nodes with on_get scripts and skill checks."}, "greenhollow_mine_level2": {"id": "greenhollow_mine_level2", "name": "The Deep Chamber", "description": "The bottom of the mine opens into a natural chamber — the tunnellers hit a void in the greenstone and widened it. The walls here are different: darker, denser, showing a narrow vein of something darker than iron ore. But the chamber belongs to something else now. Burrows honeycomb the floor and walls. A pile of chewed timbers suggests the thing that lives here has been busy. A low, throbbing sound comes from the deepest burrow.", "zone": "greenhollow", "coord": [-1, -3], "flags": [], "exits": {"up": "greenhollow_mine_level1"}, "exit_locks": {}, "items": ["rich_ore_vein", "groundhog_den_item", "osric_pickaxe"], "spawns": ["groundhog_king"], "start": false, "admin_comment": "Boss room. Groundhog King spawns here. osric_pickaxe is the lost item quest target."}, "millbrook_road": {"id": "millbrook_road", "name": "Millbrook Road", "description": "The road climbs gently from the west, following the line of an old hedgerow thick with blackthorn and dog rose. Ahead, the first slate rooftops of Millbrook catch the light. Someone has set a wooden post at the crossroads with a carved fish and a carved sheaf of wheat — the village's twin industries, both going strong. The air smells of turned earth and, faintly, of hops.", "zone": "millbrook", "coord": [-1, 0], "flags": ["town"], "exits": {"east": "millbrook_green", "north": "millbrook_hilltop"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "millbrook_green": {"id": "millbrook_green", "name": "The Village Green", "description": "Millbrook gathers itself around a broad oval of grass worn smooth in the middle where children play and the weekly market sets up its trestles. An old oak dominates the south end, its lower branches scarred where generations of kids have shinned up it. A woman hangs washing on a line strung between two fence posts, glancing up as you arrive with the easy calm of someone who doesn't worry about strangers.", "zone": "millbrook", "coord": [0, 0], "flags": ["town", "no_combat"], "exits": {"west": "millbrook_road", "east": "millbrook_mill", "north": "millbrook_well", "south": "millbrook_farm", "northeast": "millbrook_brewhouse"}, "exit_locks": {}, "items": ["millbrook_notice", "fallen_acorn"], "spawns": ["marta_villager", "ruffian_bram"], "start": false, "admin_comment": "Hub room. Marta gives the lost item quest. Bram is the ruffian gang leader."}, "millbrook_hilltop": {"id": "millbrook_hilltop", "name": "Hilltop Meadow", "description": "The road gives way to open meadow at the top of the rise, and suddenly you can see for miles. The Millwater river is a silver thread below. Millhaven is a smudge on the western horizon. The meadow itself is a riot of wildflowers — ox-eye daisy, clover, yellow rattle — and the grass is long enough to hiss when the wind moves through it. A red kite rides a thermal somewhere above, barely moving.", "zone": "millbrook", "coord": [-1, 1], "flags": [], "exits": {"south": "millbrook_road"}, "exit_locks": {}, "items": ["wildflower_bunch", "flint_shard"], "spawns": ["meadow_hare", "meadow_hare"], "start": false, "admin_comment": "Peaceful encounter with rabbits. Wildflowers for alchemy/crafting."}, "millbrook_mill": {"id": "millbrook_mill", "name": "Millbrook Mill", "description": "The mill sits at the edge of the village where the millrace was cut to feed water from the Millwater's upper reach. The wheel turns with a sound like slow breathing, and the whole building vibrates very slightly with each rotation. Sacks of grain are stacked under a lean-to. The miller is somewhere inside; you can hear the grinding and, occasionally, cursing when something binds.", "zone": "millbrook", "coord": [1, 0], "flags": ["no_combat", "town"], "exits": {"west": "millbrook_green", "south": "millbrook_river"}, "exit_locks": {}, "items": ["grain_sack", "mill_wheel_spoke"], "spawns": ["aldric_miller"], "start": false, "admin_comment": "Aldric is the miller. Has the lost amulet quest. Gives pickaxe commissions."}, "millbrook_river": {"id": "millbrook_river", "name": "River Bend", "description": "The Millwater bends sharply here around a gravel bar, and the current slows enough that the water is almost clear. Willows trail their fingers in the shallows on the far bank. A wooden dock extends six feet into the river, old enough that the boards are grey and soft-looking but still solid underfoot. Two ducks are aggressively competing for what appears to be nothing of value.", "zone": "millbrook", "coord": [1, -1], "flags": [], "exits": {"north": "millbrook_mill", "west": "millbrook_green"}, "exit_locks": {}, "items": ["river_stone", "water_reed"], "spawns": ["river_otter", "river_otter"], "start": false, "admin_comment": "Peaceful area. Otters are non-hostile, low XP."}, "millbrook_well": {"id": "millbrook_well", "name": "The Well and Square", "description": "A stone-lined well stands at the junction of the village's two main lanes, with an iron-bound bucket on a rope so worn the fibres are separating. Around the well is a small square of flat stone, always wet, where people pause to talk, let the children drink, and conduct the quiet business of village life. An old man sits on the wall with no apparent intention of moving.", "zone": "millbrook", "coord": [0, 1], "flags": ["no_combat", "town"], "exits": {"south": "millbrook_green", "east": "millbrook_brewhouse", "west": "millbrook_farm"}, "exit_locks": {}, "items": [], "spawns": ["elder_tomlin"], "start": false, "admin_comment": "Elder Tomlin is the Flowing Water trainer. Prestige gate: needs prestige >= 10."}, "millbrook_farm": {"id": "millbrook_farm", "name": "Aldric's Farm", "description": "A working farm with none of the decorative nonsense of a rich man's estate. The house is solid stone with a thatched roof that needs attention on the east end. The yard is swept, the tools are hung. Someone takes care of this place out of habit and pride, not for appearances. A kitchen garden runs along the south wall, dense with cabbages, beans, and medicinal herbs. The smell of bread has come from this direction since you entered the village.", "zone": "millbrook", "coord": [0, -1], "flags": ["no_combat", "town"], "exits": {"north": "millbrook_green", "east": "millbrook_barn", "south": "millbrook_east_field"}, "exit_locks": {}, "items": ["iron_hoe", "cabbage_head"], "spawns": ["rilla_farmer", "farm_goat", "farm_goat"], "start": false, "admin_comment": "Rilla Aldric runs the farm. Quest giver for lost amulet (connecting to miller)."}, "millbrook_barn": {"id": "millbrook_barn", "name": "Barn and Paddock", "description": "The barn is big enough to tell you Millbrook was prosperous once and aims to be again. The ground floor holds hay, tools, and two old horses who have the philosophical calm of animals that have decided nothing is worth panicking about. The upper loft is accessible by a ladder and holds last season's grain, some rope, and a sleeping cat who opens one eye when you come in and immediately closes it.", "zone": "millbrook", "coord": [1, -2], "flags": ["no_combat", "town"], "exits": {"west": "millbrook_farm"}, "exit_locks": {}, "items": ["old_rope", "dried_hay"], "spawns": ["ruffian_dal", "ruffian_fen"], "start": false, "admin_comment": "Two of the three ruffians hang out here. Bram is their leader (green)."}, "millbrook_east_field": {"id": "millbrook_east_field", "name": "East Field", "description": "The field is newly turned and the soil is the dark, almost black earth of a place that has been loved well. The furrows run straight toward a low stone wall at the far end, beyond which a copse of mixed woodland begins — oak, ash, and some older trees you can't name from here. A crow works the furrows methodically ahead of you, pausing every few steps to extract something edible from the fresh soil.", "zone": "millbrook", "coord": [0, -2], "flags": [], "exits": {"north": "millbrook_farm", "east": "millbrook_thornwood"}, "exit_locks": {}, "items": ["crow_feather", "smooth_fieldstone"], "spawns": ["field_crow", "field_crow", "burrowing_vole"], "start": false, "admin_comment": "Transition to Thornwood. Small pests here (vole, crows — aggressive)."}, "millbrook_thornwood": {"id": "millbrook_thornwood", "name": "Thornwood Copse", "description": "The wood is old and dense, the ground between the trees carpeted with wood anemone and the papery skeletons of last year's leaves. The light that gets through is green and shifting. Somewhere in the roots and rocks of this place, something has been eating through the village's grain stores and riddling the field margins with holes. Fresh diggings are visible at the base of several oaks, and the bark of the younger trees has been gnawed.", "zone": "millbrook", "coord": [1, -3], "flags": [], "exits": {"west": "millbrook_east_field", "south": "millbrook_mine_entrance"}, "exit_locks": {}, "items": ["gnawed_root", "fresh_digging", "thornwood_log"], "spawns": ["thorngrub_worker", "thorngrub_worker", "thorngrub_worker"], "start": false, "admin_comment": "Entry to the pest zone. Thorngrubs here are moderate difficulty."}, "millbrook_mine_entrance": {"id": "millbrook_mine_entrance", "name": "Old Mine Entrance", "description": "The mine is older than anyone in Millbrook and its original purpose is a matter of debate between those who say iron and those who say coal and those who say it was always abandoned. The entrance is a rough-cut arch in a limestone outcrop, braced with timbers grey with age but still holding. A lantern hook above the entrance has no lantern. The smell coming from inside is damp stone, old rot, and something animal — sharp and faintly sweet.", "zone": "millbrook", "coord": [1, -4], "flags": [], "exits": {"north": "millbrook_thornwood", "enter": "millbrook_mine_passage"}, "exit_locks": {}, "items": ["mine_notice", "iron_lantern"], "spawns": ["thorngrub_guard", "thorngrub_guard"], "start": false, "admin_comment": "Exit 'enter' into mine. Lantern is findable here. Iron ore veins open after queen killed."}, "millbrook_mine_passage": {"id": "millbrook_mine_passage", "name": "Mine Passage", "description": "The passage is low enough that you have to watch your head on the ceiling beams. The walls are raw limestone, slick with moisture, and you can see the marks of old tools in the stone — the patient work of whoever carved this out. Small trickles of water run down the walls and join a shallow channel cut along the floor. Old rail tracks are set into the floor, long since rusted immobile. Iron ore seams glitter faintly in the walls where the lantern-light catches them.", "zone": "millbrook", "coord": [1, -5], "flags": [], "exits": {"leave": "millbrook_mine_entrance", "south": "millbrook_thorngrub_nest"}, "exit_locks": {}, "items": ["iron_vein", "copper_trace"], "spawns": ["thorngrub_soldier", "thorngrub_soldier"], "start": false, "admin_comment": "Iron vein only mineable (respawning on_get node). copper_trace needs mining 40+."}, "millbrook_thorngrub_nest": {"id": "millbrook_thorngrub_nest", "name": "The Thorngrub Nest", "description": "The passage widens suddenly into a rough oval chamber. The floor is covered in a dense mat of compressed organic matter — chewed root, bark, and something less identifiable. The smell here is intense: sweet decay and the particular musk of a large insect colony. At the far end, something large moves. Much larger than the workers you've seen. She sits at the centre of a ring of eggs and regards you with a stillness that isn't calm — it's decision.", "zone": "millbrook", "coord": [1, -6], "flags": [], "exits": {"north": "millbrook_mine_passage"}, "exit_locks": {}, "items": ["thorngrub_queen_remains", "millbrook_amulet"], "spawns": ["thorngrub_queen"], "start": false, "admin_comment": "Boss room. Queen is tough. Amulet only appears after queen dead (on_get trigger via kill_script)."}, "millbrook_brewhouse": {"id": "millbrook_brewhouse", "name": "The Cloverleaf Brewhouse", "description": "Half tavern, half brewery, entirely the kind of place a village builds when it decides it deserves good things. The brewhouse smells of hops and yeast and warm wood. Copper fermenting vessels catch the light through windows that clearly haven't been cleaned since they were put in. Behind the bar, a man with forearms built for heaving barrels is filling a glass with something amber and regarding it with professional pride.", "zone": "millbrook", "coord": [1, 1], "flags": ["town", "no_combat", "inn"], "exits": {"southwest": "millbrook_green", "west": "millbrook_well"}, "exit_locks": {}, "items": [], "spawns": ["tobias_brewer"], "start": false, "admin_comment": "Inn and merchant. Tobias sells gear and offers rest. Also has the ruffian spar here sometimes."}, "south_gate": {"id": "south_gate", "name": "South Gate", "description": "A pair of iron-banded wooden gates stand open. Beyond them the road winds toward the dark forest. A nervous-looking guard watches the tree line.", "zone": "millhaven", "coord": [0, -1], "flags": [], "exits": {"north": "town_square", "south": "forest_path"}, "exit_locks": {}, "items": [], "spawns": [], "start": false, "admin_comment": ""}, "forest_path": {"id": "forest_path", "name": "Forest Path", "description": "Tall oaks press in on both sides of a muddy trail. Something rustles in the undergrowth. The town gate is visible to the north.", "zone": "millhaven", "coord": [0, -2], "flags": [], "exits": {"north": "south_gate", "south": "deep_forest", "southwest": "blackfen_gate"}, "exit_locks": {}, "items": [], "spawns": ["wolf"], "start": false, "admin_comment": ""}, "deep_forest": {"id": "deep_forest", "name": "Deep Forest", "description": "Sunlight barely filters through the dense canopy. Strange sounds echo from the darkness between the trees. An old stone road leads east toward two carved pillars — the Ashwood Gate. To the south, the trees thin and the ground grows darker and wetter. A weathered stone arch marks the boundary of Blackfen Mire.", "zone": "millhaven", "coord": [0, -3], "flags": [], "exits": {"north": "forest_path", "east": "ashwood_gate", "south": "blackfen_gate"}, "exit_locks": {}, "items": ["iron_sword", "wolf_fang_dagger"], "spawns": ["goblin", "wolf"], "start": false, "admin_comment": ""}, "town_square": {"id": "town_square", "name": "Town Square", "description": "The heart of Millhaven. Cobblestones worn smooth by centuries of foot traffic surround a mossy fountain. A weathered signpost points in every direction. Stone steps lead up to the barracks door.", "zone": "millhaven", "coord": [0, 0], "flags": ["no_combat", "town"], "exits": {"north": "blacksmith", "south": "south_gate", "east": "market", "west": "inn", "up": "barracks"}, "exit_locks": {}, "items": ["town_signpost"], "spawns": ["town_guard", "millhaven_banker"], "start": true, "admin_comment": "Main hub. Check bind_room on first entry. Mood: safe + busy."}, "blacksmith": {"id": "blacksmith", "name": "The Blacksmith's Forge", "description": "Heat blasts from an enormous furnace. The smell of hot iron fills the air. Weapons and tools hang from every wall.", "zone": "millhaven", "coord": [0, 1], "flags": [], "exits": {"south": "town_square"}, "exit_locks": {}, "items": ["rusty_sword", "leather_cap"], "spawns": ["blacksmith_npc"], "start": false, "admin_comment": ""}, "market": {"id": "market", "name": "Market Street", "description": "Colorful awnings shade rows of market stalls. Merchants call out prices and the smell of tanned leather mixes with spice and fresh bread. A leatherworker's stall takes up the eastern corner.", "zone": "millhaven", "coord": [1, 0], "flags": [], "exits": {"west": "town_square", "east": "council_hall"}, "exit_locks": {}, "items": ["health_potion", "leather_satchel", "leather_strip", "tanned_hide"], "spawns": ["merchant", "leatherworker_npc"], "start": false, "admin_comment": ""}, "inn": {"id": "inn", "name": "The Rusty Flagon Inn", "description": "A warm common room filled with the sound of laughter and clinking tankards. A fire crackles in a large hearth.", "zone": "millhaven", "coord": [-1, 0], "flags": [], "exits": {"east": "town_square"}, "exit_locks": {}, "items": [], "spawns": ["innkeeper", "aonn_tesk"], "start": false, "admin_comment": ""}, "council_hall": {"id": "council_hall", "name": "Council Hall", "description": "A stone-floored hall with high ceilings and a long oak table. Maps and ledgers cover every surface. A woman in grey robes sits at the head of the table, reviewing documents with fierce concentration. This is clearly someone who governs by doing the work herself.", "zone": "millhaven", "coord": [2, 0], "flags": ["no_combat"], "exits": {"west": "market"}, "exit_locks": {}, "items": [], "spawns": ["elder_mira"], "start": false, "admin_comment": ""}, "barracks": {"id": "barracks", "name": "Millhaven Barracks", "description": "A long timber building beside the town wall. Rows of bunks line the walls. Recruits clean weapons and argue about technique. A door at the back leads to the training yard. A heavy iron door to the east is the storeroom.", "zone": "training", "coord": [1, 2], "flags": ["no_combat", "town"], "exits": {"south": "town_square", "north": "training_yard", "east": "barracks_storeroom"}, "exit_locks": {"east": true}, "items": ["spiked_knuckles"], "spawns": ["drill_sergeant", "barracks_quartermaster"], "start": false, "admin_comment": ""}, "training_yard": {"id": "training_yard", "name": "Training Yard", "description": "A packed-earth yard ringed by wooden posts and straw dummies. This is where soldiers learn their craft. A chalk line on the ground marks the sparring circle. Whatever happens in the circle, it's only practice — you won't take real wounds here.", "zone": "training", "coord": [1, 3], "flags": ["safe_combat"], "exits": {"south": "barracks"}, "exit_locks": {}, "items": ["rusty_sword", "chain_shirt"], "spawns": ["training_dummy", "sparring_recruit"], "start": false, "admin_comment": ""}, "barracks_storeroom": {"id": "barracks_storeroom", "name": "Barracks Storeroom", "description": "Shelves of equipment line the walls — spare weapons, rations, a small chest. Dusty but well-organized. A locked iron door leads back to the barracks.", "zone": "training", "coord": [2, 2], "flags": ["no_combat"], "exits": {"west": "barracks"}, "exit_locks": {"west": false}, "items": ["barracks_key", "health_potion"], "spawns": [], "start": false, "admin_comment": ""}}, "npcs": {"ranger_wren": {"name": "Ranger Wren", "hostile": false, "tags": ["humanoid", "fast", "small"], "admin_comment": ""}, "corrupted_wolf": {"name": "Corrupted Wolf", "hostile": true, "tags": ["beast", "fast", "small"], "admin_comment": ""}, "garrison_ghost": {"name": "Ghost of Private Marsh", "hostile": false, "tags": ["undead", "slow"], "admin_comment": ""}, "riddle_spirit": {"name": "The Arbiter", "hostile": false, "tags": ["spirit", "slow"], "admin_comment": ""}, "shrine_keeper": {"name": "Shrine Keeper", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "ashwood_wolf": {"name": "Ashwood Wolf", "hostile": true, "tags": ["beast", "fast", "small"], "admin_comment": ""}, "ashwood_drake": {"name": "Ashwood Drake", "hostile": true, "tags": ["beast", "large", "slow", "drake"], "admin_comment": ""}, "ashwood_warden": {"name": "Ashwood Warden", "hostile": false, "tags": ["humanoid", "slow", "banker"], "admin_comment": ""}, "fenwatch_warden": {"name": "Warden Holt", "hostile": false, "tags": ["humanoid", "armored", "slow"], "admin_comment": ""}, "grimwick_fenborn": {"name": "Grimwick Fenborn", "hostile": false, "tags": ["reptile", "slow"], "admin_comment": ""}, "grimwick_fenborn_isle": {"name": "Grimwick Fenborn", "hostile": false, "tags": ["reptile", "slow"], "admin_comment": ""}, "durath_ironteeth": {"name": "Durath Ironteeth", "hostile": true, "tags": ["humanoid", "armored", "slow"], "admin_comment": ""}, "redbelly_brute": {"name": "Redbelly Brute", "hostile": true, "tags": ["humanoid", "armored"], "admin_comment": ""}, "fen_swamp_lion": {"name": "Swamp Lion", "hostile": true, "tags": ["beast", "swift"], "admin_comment": ""}, "blacklake_serpent": {"name": "Blacklake Serpent", "hostile": true, "tags": ["beast", "reptile", "aquatic"], "admin_comment": ""}, "anurus_the_returned": {"name": "Anurus the Returned", "hostile": true, "tags": ["undead", "arcane"], "admin_comment": ""}, "vault_guardian": {"name": "The Vault Guardian", "hostile": true, "tags": ["undead", "aberrant"], "admin_comment": ""}, "sarcophagus_scenery": {"name": "Sarcophagus of Gregor Aldenmoor", "hostile": false, "tags": ["scenery"], "admin_comment": ""}, "grimwick_guide": {"name": "Grimwick", "hostile": false, "tags": ["reptile", "slow"], "admin_comment": ""}, "maren_thornbury": {"name": "Maren Thornbury", "hostile": false, "tags": ["humanoid", "arcane", "slow"], "admin_comment": ""}, "redbelly_patrol": {"name": "Redbelly Hunter", "hostile": true, "tags": ["humanoid"], "admin_comment": ""}, "elder_torva": {"name": "Elder Torva", "hostile": false, "tags": ["humanoid", "slow", "prestige_neutral"], "admin_comment": ""}, "miller_owain": {"name": "Owain the Miller", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "farrier_brynn": {"name": "Brynn Farrier", "hostile": false, "tags": ["humanoid", "slow", "armored"], "admin_comment": ""}, "farm_hand_npc": {"name": "Farm Hand", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "mine_foreman_osric": {"name": "Osric Bryne", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "herb_wife_sable": {"name": "Sable", "hostile": false, "tags": ["humanoid", "slow", "prestige_neutral"], "admin_comment": ""}, "ruffian_finn": {"name": "Finn", "hostile": false, "tags": ["humanoid", "fast", "teenager", "coward", "spar"], "admin_comment": "HP floor: never actually dies, kill_script fires at 0 HP. Non-lethal logic in world engine."}, "ruffian_dale": {"name": "Dale", "hostile": false, "tags": ["humanoid", "slow", "teenager", "large", "spar"], "admin_comment": ""}, "ruffian_scratch": {"name": "Scratch", "hostile": false, "tags": ["humanoid", "fast", "teenager", "small", "spar"], "admin_comment": ""}, "groundhog_scout": {"name": "Giant Groundhog", "hostile": true, "tags": ["beast", "slow", "small", "burrowing"], "admin_comment": ""}, "groundhog_worker": {"name": "Mine Groundhog", "hostile": true, "tags": ["beast", "fast", "small", "burrowing"], "admin_comment": ""}, "groundhog_king": {"name": "Groundhog King", "hostile": true, "tags": ["beast", "slow", "large", "burrowing"], "admin_comment": "Boss. kill_script spawns the trophy item in room rather than as a drop."}, "pond_turtle": {"name": "Pond Snapping Turtle", "hostile": false, "tags": ["beast", "slow", "armored", "small"], "admin_comment": ""}, "moorhen": {"name": "Moorhen", "hostile": false, "tags": ["beast", "fast", "small"], "admin_comment": "Very weak. XP is negligible. Exists for atmosphere and comic value."}, "stray_dog": {"name": "Stray Dog", "hostile": false, "tags": ["beast", "fast", "small"], "admin_comment": ""}, "forest_fox": {"name": "Red Fox", "hostile": false, "tags": ["beast", "fast", "small"], "admin_comment": ""}, "wood_pigeon": {"name": "Wood Pigeon", "hostile": false, "tags": ["beast", "fast", "small"], "admin_comment": "Essentially harmless. Good for new players to practise on."}, "marta_villager": {"name": "Marta", "hostile": false, "tags": ["humanoid", "slow", "prestige_neutral"], "admin_comment": ""}, "elder_tomlin": {"name": "Elder Tomlin", "hostile": false, "tags": ["humanoid", "slow", "elder", "trainer"], "admin_comment": ""}, "aldric_miller": {"name": "Aldric", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "rilla_farmer": {"name": "Rilla Aldric", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "tobias_brewer": {"name": "Tobias", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "ruffian_bram": {"name": "Bram", "hostile": false, "tags": ["humanoid", "fast", "youth", "coward", "spar"], "admin_comment": ""}, "ruffian_dal": {"name": "Dal", "hostile": false, "tags": ["humanoid", "fast", "youth", "spar"], "admin_comment": ""}, "ruffian_fen": {"name": "Fen", "hostile": false, "tags": ["humanoid", "slow", "youth", "spar"], "admin_comment": ""}, "thorngrub_worker": {"name": "Thorngrub Worker", "hostile": true, "tags": ["insect", "fast", "small"], "admin_comment": ""}, "thorngrub_guard": {"name": "Thorngrub Guard", "hostile": true, "tags": ["insect", "slow", "armored"], "admin_comment": ""}, "thorngrub_soldier": {"name": "Thorngrub Soldier", "hostile": true, "tags": ["insect", "fast", "small"], "admin_comment": ""}, "thorngrub_queen": {"name": "Thorngrub Queen", "hostile": true, "tags": ["insect", "boss", "large", "slow"], "admin_comment": ""}, "meadow_hare": {"name": "Meadow Hare", "hostile": false, "tags": ["beast", "fast", "small"], "admin_comment": ""}, "river_otter": {"name": "River Otter", "hostile": false, "tags": ["beast", "fast", "small"], "admin_comment": ""}, "field_crow": {"name": "Crow", "hostile": true, "tags": ["beast", "fast", "small", "bird"], "admin_comment": ""}, "burrowing_vole": {"name": "Burrowing Vole", "hostile": true, "tags": ["beast", "fast", "small"], "admin_comment": ""}, "farm_goat": {"name": "Goat", "hostile": false, "tags": ["beast", "fast", "small"], "admin_comment": ""}, "town_guard": {"name": "Town Guard", "hostile": false, "tags": ["humanoid", "armored", "slow"], "admin_comment": ""}, "blacksmith_npc": {"name": "Dorin the Blacksmith", "hostile": false, "tags": ["humanoid", "slow", "large"], "admin_comment": ""}, "merchant": {"name": "Merchant", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "innkeeper": {"name": "Bron the Innkeeper", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "elder_mira": {"name": "Elder Mira", "hostile": false, "tags": ["humanoid", "slow", "small"], "admin_comment": ""}, "wolf": {"name": "Grey Wolf", "hostile": true, "tags": ["beast", "fast", "small"], "admin_comment": ""}, "goblin": {"name": "Goblin Scout", "hostile": true, "tags": ["humanoid", "fast", "small"], "admin_comment": ""}, "millhaven_banker": {"name": "Town Treasurer", "hostile": false, "tags": ["humanoid", "slow", "banker"], "admin_comment": ""}, "aonn_tesk": {"name": "Aonn Tesk", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": "Quest giver + combat companion. Must stay non-hostile. Key for grandfathers_emerald."}, "leatherworker_npc": {"name": "Sera the Leatherworker", "hostile": false, "tags": ["humanoid", "slow"], "admin_comment": ""}, "drill_sergeant": {"name": "Drill Sergeant Vorn", "hostile": false, "tags": ["humanoid", "armored", "slow"], "admin_comment": ""}, "training_dummy": {"name": "Training Dummy", "hostile": false, "tags": ["slow", "humanoid"], "admin_comment": ""}, "sparring_recruit": {"name": "Sparring Recruit", "hostile": false, "tags": ["humanoid", "slow", "small"], "admin_comment": ""}, "barracks_quartermaster": {"name": "Quartermaster", "hostile": false, "tags": ["humanoid", "slow", "banker"], "admin_comment": ""}}, "items": {"ghost_note": {"name": "Faded Letter", "slot": "", "no_drop": false, "desc_short": "A letter written in a shaking hand.", "admin_comment": ""}, "puzzle_altar": {"name": "Stone Altar", "slot": "", "no_drop": false, "desc_short": "A stone altar with an inscribed brass plaque.", "admin_comment": ""}, "garrison_key": {"name": "Garrison Key", "slot": "", "no_drop": true, "desc_short": "A heavy iron key with a crest of crossed swords.", "admin_comment": ""}, "shrine_descent_key": {"name": "Shrine Descent Key", "slot": "", "no_drop": true, "desc_short": "An ancient stone disc etched with a six-pointed star.", "admin_comment": ""}, "drakebone_sword": {"name": "Drakebone Sword", "slot": "weapon", "no_drop": false, "desc_short": "A blade forged from Drake-bone ore, unnaturally sharp.", "admin_comment": ""}, "drakebone_armor": {"name": "Drakebone Plate", "slot": "armor", "no_drop": false, "desc_short": "Plate armor reinforced with Drake-bone laminate.", "admin_comment": ""}, "drakes_fang": {"name": "Drake's Fang", "slot": "", "no_drop": true, "desc_short": "A curved tooth the length of your forearm, still warm.", "admin_comment": ""}, "millhaven_commendation": {"name": "Millhaven Commendation", "slot": "", "no_drop": true, "desc_short": "A bronze medallion stamped with the Millhaven crest.", "admin_comment": ""}, "drake_scale_pack": {"name": "Drake Scale Pack", "slot": "pack", "no_drop": false, "desc_short": "A large pack reinforced with Drake scales.", "admin_comment": ""}, "treasure_gold": {"name": "Pile of Gold Coins", "slot": "", "no_drop": false, "desc_short": "A scattered pile of old gold coins.", "admin_comment": ""}, "garrison_helm": {"name": "Garrison Helm", "slot": "head", "no_drop": false, "desc_short": "A battered military helm with a dented cheek-guard.", "admin_comment": ""}, "garrison_hauberk": {"name": "Garrison Hauberk", "slot": "chest", "no_drop": false, "desc_short": "A long-skirted chainmail coat, military issue.", "admin_comment": ""}, "garrison_leggings": {"name": "Garrison Leggings", "slot": "legs", "no_drop": false, "desc_short": "Articulated iron plates worn over the thighs and knees.", "admin_comment": ""}, "drakebone_bracers": {"name": "Drakebone Bracers", "slot": "arms", "no_drop": false, "desc_short": "Vambraces reinforced with strips of Drake-bone.", "admin_comment": ""}, "mire_map": {"name": "Mire Survey Map", "slot": "", "no_drop": false, "desc_short": "a hand-drawn map of Blackfen Mire", "admin_comment": ""}, "fenwatch_torch": {"name": "Fenwatch Torch", "slot": "", "no_drop": false, "desc_short": "an oil-soaked torch from the ranger post", "admin_comment": ""}, "grimwicks_pack_scenery": {"name": "Grimwick's Pack", "slot": "", "no_drop": false, "desc_short": "a battered pack labelled G.F.", "admin_comment": ""}, "waterproof_satchel": {"name": "Waterproof Satchel", "slot": "pack", "no_drop": false, "desc_short": "an oilskin satchel, still watertight", "admin_comment": ""}, "blacklake_punt": {"name": "Flat-bottomed Punt", "slot": "", "no_drop": false, "desc_short": "a weathered wooden punt with a pole", "admin_comment": ""}, "riversturm_journal": {"name": "Riversturm's Journal", "slot": "", "no_drop": true, "desc_short": "a waterlogged wizard's journal, bound in oilskin", "admin_comment": ""}, "celestial_emerald": {"name": "The Celestial Emerald", "slot": "", "no_drop": true, "desc_short": "a fist-sized gem of impossible green", "admin_comment": ""}, "aldenmoor_signet": {"name": "Aldenmoor Signet Ring", "slot": "ring", "no_drop": false, "desc_short": "a heavy gold signet ring, ancient", "admin_comment": ""}, "vault_key_shard": {"name": "Key Shard", "slot": "", "no_drop": false, "desc_short": "half of a corroded iron key", "admin_comment": ""}, "fen_antitoxin": {"name": "Fen Antitoxin", "slot": "", "no_drop": false, "desc_short": "a small vial of milky liquid", "admin_comment": ""}, "durath_key": {"name": "Durath's Bridge Key", "slot": "", "no_drop": false, "desc_short": "an iron key on a cord of braided hair", "admin_comment": ""}, "redbelly_dagger": {"name": "Redbelly Dagger", "slot": "weapon", "no_drop": false, "desc_short": "a short blade with a red-painted handle", "admin_comment": ""}, "swamp_stalker_cloak": {"name": "Swamp Stalker's Cloak", "slot": "cape", "no_drop": false, "desc_short": "a mottled grey-green cloak of oiled wool", "admin_comment": ""}, "anurus_staff": {"name": "Staff of Anurus", "slot": "weapon", "no_drop": false, "desc_short": "a blackened ironwood staff crackling with faint energy", "admin_comment": ""}, "blackfen_idol": {"name": "Blackfen Idol", "slot": "", "no_drop": false, "desc_short": "a small carved figure of dark stone", "admin_comment": ""}, "blade_polish_vial": {"name": "M. Batten's Blade Polish", "slot": "", "no_drop": false, "desc_short": "a vial of purplish polish, clearly labelled", "admin_comment": ""}, "ghost_willow_bark": {"name": "Ghost Willow Bark", "slot": "", "no_drop": false, "desc_short": "a pouch of pale bark from a ghost willow", "admin_comment": ""}, "redvange_arrowheads": {"name": "Redvange Arrowheads", "slot": "", "no_drop": false, "desc_short": "barbed reed-heads prized by fletchers", "admin_comment": ""}, "ebony_fish": {"name": "Ebony Fish", "slot": "", "no_drop": false, "desc_short": "a three-eyed lake fish wrapped in cloth", "admin_comment": ""}, "painted_rod": {"name": "Painted Rod", "slot": "weapon", "no_drop": false, "desc_short": "a twisted, hand-painted wooden rod with strange etchings", "admin_comment": ""}, "sacrificial_knife": {"name": "Sacrificial Knife", "slot": "weapon", "no_drop": false, "desc_short": "a silver knife, impossibly sharp and unrusted", "admin_comment": ""}, "swamp_lion_hide": {"name": "Swamp Lion Hide", "slot": "", "no_drop": false, "desc_short": "a thick pelt from a swamp lion", "admin_comment": ""}, "grimwick_payment": {"name": "Guide Fee", "slot": "", "no_drop": false, "desc_short": "10 gold pieces for Grimwick's services", "admin_comment": ""}, "thornbury_sword": {"name": "Thornbury's Blade", "slot": "weapon", "no_drop": false, "desc_short": "a green-bladed shortsword with an emerald in the hilt", "admin_comment": ""}, "mire_hood": {"name": "Mire Hood", "slot": "head", "no_drop": false, "desc_short": "A deep hood of waxed canvas reinforced with bone strips.", "admin_comment": ""}, "fenguard_cuirass": {"name": "Fenguard Cuirass", "slot": "chest", "no_drop": false, "desc_short": "Hardened leather cuirass with overlapping bone scale.", "admin_comment": ""}, "mire_leggings": {"name": "Mire Leggings", "slot": "legs", "no_drop": false, "desc_short": "Reinforced wading trousers with knee guards.", "admin_comment": ""}, "redbelly_gauntlets": {"name": "Redbelly Gauntlets", "slot": "arms", "no_drop": false, "desc_short": "Gauntlets made from the scaled hide of a Redbelly.", "admin_comment": ""}, "greenhollow_sign": {"name": "Village Sign", "slot": "", "no_drop": false, "desc_short": "A hand-lettered board: GREENHOLLOW — KEEP THE PACE.", "admin_comment": ""}, "mill_cat": {"name": "Mill Cat", "slot": "", "no_drop": false, "desc_short": "A large tabby cat who is completely indifferent to you.", "admin_comment": ""}, "flour_sack": {"name": "Flour Sack", "slot": "", "no_drop": false, "desc_short": "A heavy sack of coarse-ground flour.", "admin_comment": ""}, "practice_dummy": {"name": "Practice Dummy", "slot": "", "no_drop": false, "desc_short": "A straw-stuffed figure hanging from a post.", "admin_comment": ""}, "field_burrow": {"name": "Field Burrow", "slot": "", "no_drop": false, "desc_short": "A wide hole in the soil with fresh dirt thrown back around it.", "admin_comment": ""}, "trampled_wheat": {"name": "Trampled Wheat", "slot": "", "no_drop": false, "desc_short": "A section of crop flattened and rooted up.", "admin_comment": ""}, "willow_branch": {"name": "Willow Branch", "slot": "", "no_drop": false, "desc_short": "A trailing willow branch dragging in the pond surface.", "admin_comment": ""}, "pond_reed": {"name": "Reed Bed", "slot": "", "no_drop": false, "desc_short": "A dense stand of reeds at the water's edge.", "admin_comment": ""}, "smithy_tongs": {"name": "Forge Tongs", "slot": "", "no_drop": false, "desc_short": "Heavy iron tongs hanging beside the forge.", "admin_comment": ""}, "shrine_lamp": {"name": "Oil Lamp", "slot": "", "no_drop": false, "desc_short": "A small clay oil lamp burning at the base of the shrine tree.", "admin_comment": ""}, "shrine_offering": {"name": "Wildflower Offering", "slot": "", "no_drop": false, "desc_short": "A handful of wildflowers tied with a grass knot.", "admin_comment": ""}, "mine_lantern": {"name": "Mine Lantern", "slot": "", "no_drop": false, "desc_short": "A tallow lantern hanging from the mine frame.", "admin_comment": ""}, "tool_rack": {"name": "Tool Rack", "slot": "", "no_drop": false, "desc_short": "A wooden rack of mine tools at the entrance.", "admin_comment": ""}, "groundhog_den_item": {"name": "Groundhog Den", "slot": "", "no_drop": false, "desc_short": "A wide depression of compressed earth at the centre of the chamber.", "admin_comment": ""}, "oak_log": {"name": "Fallen Oak Log", "slot": "", "no_drop": false, "desc_short": "A large fallen oak, mossy and slowly returning to the earth.", "admin_comment": ""}, "fallen_acorns": {"name": "Fallen Acorns", "slot": "", "no_drop": false, "desc_short": "A scatter of fresh acorns on the leaf litter.", "admin_comment": ""}, "wrapped_bundle": {"name": "Oilcloth Bundle", "slot": "", "no_drop": false, "desc_short": "A small bundle wrapped in rotting oilcloth, tucked under the shrine's roots.", "admin_comment": ""}, "iron_ore_vein": {"name": "Iron Ore Vein", "slot": "", "no_drop": false, "desc_short": "A vein of reddish iron ore threaded through the greenstone wall.", "admin_comment": ""}, "poor_coal_seam": {"name": "Coal Seam", "slot": "", "no_drop": false, "desc_short": "A thin seam of coal alongside the ore vein.", "admin_comment": ""}, "rich_ore_vein": {"name": "Rich Ore Vein", "slot": "", "no_drop": false, "desc_short": "A deep black vein of dense ore — richer than anything on the upper level.", "admin_comment": ""}, "iron_ore": {"name": "Iron Ore", "slot": "", "no_drop": false, "desc_short": "A rough chunk of reddish iron ore.", "admin_comment": ""}, "greenhollow_timber": {"name": "Oak Timber", "slot": "", "no_drop": false, "desc_short": "A cut length of oak, still smelling of fresh-split wood.", "admin_comment": ""}, "groundhog_trophy": {"name": "Groundhog King's Tooth", "slot": "", "no_drop": true, "desc_short": "A large incisor from the Groundhog King — curved yellow, longer than your finger.", "admin_comment": ""}, "ruffian_peace_token": {"name": "Finn's Handshake", "slot": "", "no_drop": true, "desc_short": "A knotted cord — the village boys' sign that there's no more quarrel.", "admin_comment": ""}, "osric_pickaxe": {"name": "Osric's Pickaxe", "slot": "weapon", "no_drop": false, "desc_short": "An old pickaxe with O.B. scratched into the haft.", "admin_comment": ""}, "millbrook_notice": {"name": "Village Notice Board", "slot": "", "no_drop": false, "desc_short": "A board covered in pinned notices, most of them weather-beaten.", "admin_comment": ""}, "fallen_acorn": {"name": "Fallen Acorn", "slot": "", "no_drop": false, "desc_short": "A fat acorn from the old oak, still in its cap.", "admin_comment": ""}, "mine_notice": {"name": "Faded Warning Sign", "slot": "", "no_drop": false, "desc_short": "A wooden board nailed above the mine entrance. 'ABANDONED — UNSAFE.'", "admin_comment": ""}, "wildflower_bunch": {"name": "Wildflower Bunch", "slot": "", "no_drop": false, "desc_short": "A loose gathering of meadow flowers — daisy, clover, and yellow rattle.", "admin_comment": ""}, "flint_shard": {"name": "Flint Shard", "slot": "", "no_drop": false, "desc_short": "A sharp-edged piece of dark flint from the hilltop.", "admin_comment": ""}, "water_reed": {"name": "Water Reed", "slot": "", "no_drop": false, "desc_short": "A long stem of river reed, flexible and fibrous.", "admin_comment": ""}, "river_stone": {"name": "River Stone", "slot": "", "no_drop": false, "desc_short": "A smooth, rounded stone from the Millwater gravel.", "admin_comment": ""}, "crow_feather": {"name": "Crow Feather", "slot": "", "no_drop": false, "desc_short": "A long primary feather, black with a faint blue iridescence.", "admin_comment": ""}, "smooth_fieldstone": {"name": "Smooth Fieldstone", "slot": "", "no_drop": false, "desc_short": "A rounded stone turned up by the plough.", "admin_comment": ""}, "gnawed_root": {"name": "Gnawed Root", "slot": "", "no_drop": false, "desc_short": "An oak root stripped of bark and gnawed down to pale wood.", "admin_comment": ""}, "fresh_digging": {"name": "Fresh Digging", "slot": "", "no_drop": false, "desc_short": "Piles of recently turned earth at the base of several oaks.", "admin_comment": ""}, "old_rope": {"name": "Coil of Old Rope", "slot": "", "no_drop": false, "desc_short": "A coil of hemp rope, dry and stiff but still usable.", "admin_comment": ""}, "dried_hay": {"name": "Bundle of Dried Hay", "slot": "", "no_drop": false, "desc_short": "A dense bundle of sweet dried hay.", "admin_comment": ""}, "cabbage_head": {"name": "Cabbage Head", "slot": "", "no_drop": false, "desc_short": "A dense head of dark green cabbage, just cut.", "admin_comment": ""}, "grain_sack": {"name": "Sack of Grain", "slot": "", "no_drop": false, "desc_short": "A rough linen sack bulging with milled grain.", "admin_comment": ""}, "mill_wheel_spoke": {"name": "Mill Wheel Spoke", "slot": "", "no_drop": false, "desc_short": "A turned oak spoke, probably a replacement part.", "admin_comment": ""}, "millbrook_amulet": {"name": "Miller's Amulet", "slot": "ring", "no_drop": true, "desc_short": "A small silver disc on a cord, tarnished but intact.", "admin_comment": ""}, "thorngrub_queen_remains": {"name": "Thorngrub Queen's Carapace", "slot": "", "no_drop": false, "desc_short": "A section of the Queen's reinforced exoskeleton, still warm.", "admin_comment": ""}, "thorngrub_chitin": {"name": "Thorngrub Chitin", "slot": "", "no_drop": false, "desc_short": "A plate of segmented chitin from a Thorngrub worker.", "admin_comment": ""}, "iron_pickaxe": {"name": "Iron Pickaxe", "slot": "weapon", "no_drop": false, "desc_short": "A heavy-headed pickaxe with an ash handle.", "admin_comment": ""}, "iron_hatchet": {"name": "Iron Hatchet", "slot": "weapon", "no_drop": false, "desc_short": "A short-handled hatchet for splitting kindling and light woodwork.", "admin_comment": ""}, "iron_hoe": {"name": "Iron Hoe", "slot": "", "no_drop": false, "desc_short": "A long-handled farming hoe, recently cleaned.", "admin_comment": ""}, "iron_lantern": {"name": "Iron Lantern", "slot": "", "no_drop": false, "desc_short": "A battered iron lantern with a cracked glass pane.", "admin_comment": ""}, "iron_vein": {"name": "Iron Ore Vein", "slot": "", "no_drop": false, "desc_short": "A seam of dark iron ore running through the limestone wall.", "admin_comment": ""}, "copper_trace": {"name": "Copper Ore Trace", "slot": "", "no_drop": false, "desc_short": "A thin green seam of copper ore running through the passage wall.", "admin_comment": ""}, "copper_chunk": {"name": "Copper Ore Chunk", "slot": "", "no_drop": false, "desc_short": "A palm-sized piece of green-tinged copper ore.", "admin_comment": ""}, "thornwood_log": {"name": "Thornwood Log Pile", "slot": "", "no_drop": false, "desc_short": "A stack of rough-cut logs beside a fallen ash.", "admin_comment": ""}, "chitin_helm": {"name": "Chitin Helm", "slot": "head", "no_drop": false, "desc_short": "A helm shaped from Thorngrub Queen's carapace sections.", "admin_comment": ""}, "chitin_cuirass": {"name": "Chitin Cuirass", "slot": "chest", "no_drop": false, "desc_short": "A breastplate of shaped Thorngrub carapace segments.", "admin_comment": ""}, "cloverleaf_ale": {"name": "Cloverleaf Ale", "slot": "", "no_drop": false, "desc_short": "A clay mug of Tobias's amber ale, still cold.", "admin_comment": ""}, "meadow_tonic": {"name": "Meadow Herb Tonic", "slot": "", "no_drop": false, "desc_short": "A small vial of green tonic brewed from hillside herbs.", "admin_comment": ""}, "town_signpost": {"name": "Signpost", "slot": "", "no_drop": false, "desc_short": "A weathered oak signpost planted deep in the cobblestones.", "admin_comment": ""}, "rusty_sword": {"name": "Rusty Sword", "slot": "weapon", "no_drop": false, "desc_short": "A short sword, pitted with rust.", "admin_comment": ""}, "iron_sword": {"name": "Iron Sword", "slot": "weapon", "no_drop": false, "desc_short": "A serviceable iron sword with a worn leather grip.", "admin_comment": ""}, "wolf_fang_dagger": {"name": "Wolf-Fang Dagger", "slot": "weapon", "no_drop": false, "desc_short": "A curved dagger carved from a wolf's fang. Unnatural and sharp.", "admin_comment": ""}, "leather_cap": {"name": "Leather Cap", "slot": "head", "no_drop": false, "desc_short": "A simple cap of hardened and boiled leather.", "admin_comment": ""}, "health_potion": {"name": "Health Potion", "slot": "", "no_drop": false, "desc_short": "A thumb-sized vial of glowing red liquid.", "admin_comment": ""}, "leather_satchel": {"name": "Leather Satchel", "slot": "pack", "no_drop": false, "desc_short": "A well-worn satchel with multiple straps.", "admin_comment": ""}, "aonn_tesk_map": {"name": "Aonn Tesk's Map", "slot": "", "no_drop": true, "desc_short": "a rough hand-drawn map of the Blackfen Mire", "admin_comment": ""}, "iron_ingot": {"name": "Iron Ingot", "slot": "", "no_drop": false, "desc_short": "A heavy bar of smelted iron.", "admin_comment": ""}, "coal_chunk": {"name": "Coal Chunk", "slot": "", "no_drop": false, "desc_short": "A lump of coal, leaving black on your fingers.", "admin_comment": ""}, "leather_strip": {"name": "Leather Strip", "slot": "", "no_drop": false, "desc_short": "A cured strip of leather, about a hand's length.", "admin_comment": ""}, "tanned_hide": {"name": "Tanned Hide", "slot": "", "no_drop": false, "desc_short": "A cured animal hide, stiff but workable.", "admin_comment": ""}, "hard_wood": {"name": "Hardwood Stave", "slot": "", "no_drop": false, "desc_short": "A straight length of dense hardwood.", "admin_comment": ""}, "linen_cloth": {"name": "Linen Cloth", "slot": "", "no_drop": false, "desc_short": "A folded piece of undyed linen.", "admin_comment": ""}, "dark_dye": {"name": "Dark Dye", "slot": "", "no_drop": false, "desc_short": "A small crock of deep brown dye.", "admin_comment": ""}, "padded_coif": {"name": "Padded Coif", "slot": "head", "no_drop": false, "desc_short": "A close-fitting cap of layered cloth and padding.", "admin_comment": ""}, "iron_cap": {"name": "Iron Cap", "slot": "head", "no_drop": false, "desc_short": "A simple iron skullcap with a riveted brim.", "admin_comment": ""}, "quilted_jacket": {"name": "Quilted Jacket", "slot": "chest", "no_drop": false, "desc_short": "A heavy quilted jacket worn as body armour.", "admin_comment": ""}, "chain_shirt": {"name": "Chain Shirt", "slot": "chest", "no_drop": false, "desc_short": "A waist-length shirt of interlocked iron rings.", "admin_comment": ""}, "leather_breeches": {"name": "Leather Breeches", "slot": "legs", "no_drop": false, "desc_short": "Sturdy leather trousers reinforced at the knees.", "admin_comment": ""}, "iron_greaves": {"name": "Iron Greaves", "slot": "legs", "no_drop": false, "desc_short": "Plate guards strapped over the shins and knees.", "admin_comment": ""}, "leather_bracers": {"name": "Leather Bracers", "slot": "arms", "no_drop": false, "desc_short": "Stiff leather guards strapped over the forearms.", "admin_comment": ""}, "iron_vambraces": {"name": "Iron Vambraces", "slot": "arms", "no_drop": false, "desc_short": "Curved iron guards covering the forearms.", "admin_comment": ""}, "spiked_knuckles": {"name": "Spiked Knuckles", "slot": "weapon", "no_drop": false, "desc_short": "Iron knuckles with short brutal spikes.", "admin_comment": ""}, "barracks_key": {"name": "Barracks Key", "slot": "", "no_drop": false, "desc_short": "A heavy iron key stamped with a soldier's crest.", "admin_comment": ""}}};
+
+// ── Layout constants ──────────────────────────────────────────────────────
+const CELL = 52, GAP = 28, STEP = CELL + GAP, PAD = 60;
+const ZONE_COLORS = { millhaven: '#4a9eff', training: '#c47aff', ashwood: '#ffaa44' };
+
+// ── Build coordinate maps ─────────────────────────────────────────────────
+const rooms = WORLD.rooms;
+const npcs  = WORLD.npcs;
+const items = WORLD.items;
+
+// Assign coords to rooms that have them
+let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+Object.values(rooms).forEach(r => {
+  if (r.coord) {
+    minX = Math.min(minX, r.coord[0]); maxX = Math.max(maxX, r.coord[0]);
+    minY = Math.min(minY, r.coord[1]); maxY = Math.max(maxY, r.coord[1]);
+  }
+});
+
+// Map coord [x,y] → pixel [px, py]  (y is flipped: higher y = higher on screen)
+function coordToPx(cx, cy) {
+  return [
+    PAD + (cx - minX) * STEP,
+    PAD + (maxY - cy) * STEP,
+  ];
+}
+
+// ── Render rooms ──────────────────────────────────────────────────────────
+const canvas  = document.getElementById('map-canvas');
+const svg     = document.getElementById('connections');
+const roomEls = {};
+
+// Set canvas size
+const W = PAD * 2 + (maxX - minX) * STEP + CELL;
+const H = PAD * 2 + (maxY - minY) * STEP + CELL;
+canvas.style.width  = W + 'px';
+canvas.style.height = H + 'px';
+svg.setAttribute('width',  W);
+svg.setAttribute('height', H);
+svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+Object.entries(rooms).forEach(([rid, room]) => {
+  if (!room.coord) return;
+  const [px, py] = coordToPx(room.coord[0], room.coord[1]);
+  const div = document.createElement('div');
+  div.className = `room-cell zone-${room.zone}`;
+  div.id = 'room-' + rid;
+  div.style.left = px + 'px';
+  div.style.top  = py + 'px';
+  div.dataset.rid = rid;
+  div.addEventListener('click', () => selectRoom(rid));
+
+  const abbr = room.name.replace(/[aeiou\s]/gi,'').slice(0,3).toUpperCase() || room.name.slice(0,3).toUpperCase();
+  const flagIcons = [];
+  if (room.flags.includes('no_combat'))  flagIcons.push('✦');
+  if (room.flags.includes('safe_combat')) flagIcons.push('~');
+  if (room.flags.includes('town'))       flagIcons.push('⌂');
+  const hasNote = !!room.admin_comment;
+
+  div.innerHTML = `
+    <div class="room-box">
+      ${room.start ? '<div class="start-marker">★</div>' : ''}
+      ${hasNote ? '<div class="note-pip" title="Admin note">●</div>' : ''}
+      <div class="room-abbr">${abbr}</div>
+      ${flagIcons.length ? `<div class="room-flags">${flagIcons.join('')}</div>` : ''}
+    </div>`;
+
+  canvas.appendChild(div);
+  roomEls[rid] = { el: div, px, py };
+});
+
+// ── Draw connections ───────────────────────────────────────────────────────
+const drawn = new Set();
+
+Object.entries(rooms).forEach(([rid, room]) => {
+  if (!room.coord) return;
+  const [ax, ay] = coordToPx(room.coord[0], room.coord[1]);
+  const cx1 = ax + CELL / 2, cy1 = ay + CELL / 2;
+
+  Object.entries(room.exits).forEach(([dir, dest]) => {
+    if (!dest) return;
+    const key = [rid, dest].sort().join('|');
+    if (drawn.has(key)) return;
+    drawn.add(key);
+
+    const destRoom = rooms[dest];
+    if (!destRoom || !destRoom.coord) return;
+    const [bx, by] = coordToPx(destRoom.coord[0], destRoom.coord[1]);
+    const cx2 = bx + CELL / 2, cy2 = by + CELL / 2;
+
+    const locked = room.exit_locks[dir] || false;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', cx1); line.setAttribute('y1', cy1);
+    line.setAttribute('x2', cx2); line.setAttribute('y2', cy2);
+    line.classList.add('connection');
+    if (locked) line.classList.add('locked');
+    svg.appendChild(line);
+  });
+});
+
+// ── Room selection & detail panel ─────────────────────────────────────────
+let selectedRid = null;
+
+function selectRoom(rid) {
+  // Deselect old
+  if (selectedRid && roomEls[selectedRid]) {
+    roomEls[selectedRid].el.classList.remove('selected');
+  }
+  selectedRid = rid;
+  roomEls[rid].el.classList.add('selected');
+  renderDetail(rid);
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderDetail(rid) {
+  const room = rooms[rid];
+  document.getElementById('panel-empty').style.display = 'none';
+  const panel = document.getElementById('room-detail');
+  panel.style.display = 'block';
+
+  const zoneColor = ZONE_COLORS[room.zone] || '#888';
+  const flags = room.flags.map(f => `<span class="badge badge-flag">${f}</span>`).join(' ');
+  const adminNote = room.admin_comment
+    ? `<div class="admin-note"><span class="admin-note-label">📝 Note</span>${escapeHtml(room.admin_comment)}</div>`
+    : '';
+
+  // Exits
+  const exitLines = Object.entries(room.exits).map(([dir, dest]) => {
+    if (!dest) return '';
+    const locked = room.exit_locks[dir] ? `<span class="badge badge-lock">locked</span>` : '';
+    const destRoom = rooms[dest];
+    const destName = destRoom ? destRoom.name : dest;
+    const zc = destRoom ? ZONE_COLORS[destRoom.zone] : '#888';
+    return `<li><span style="color:var(--dim);width:40px;display:inline-block">${dir}</span>
+      <span class="exit-link" style="color:${zc}" onclick="selectRoom('${dest}')">${destName}</span>${locked}</li>`;
+  }).filter(Boolean);
+
+  // Items
+  const itemLines = (room.items || []).map(i => {
+    const iid = typeof i === 'string' ? i : i.id || '';
+    const idata = items[iid] || {};
+    const nodrop = idata.no_drop ? `<span class="badge badge-nodrop">no_drop</span>` : '';
+    const inote  = idata.admin_comment ? ` <span class="inline-note" title="${escapeHtml(idata.admin_comment)}">📝</span>` : '';
+    return `<li style="color:#9ab">${idata.name || iid}<span style="color:var(--dim);margin-left:6px">${idata.desc_short||''}</span>${nodrop}${inote}</li>`;
+  });
+
+  // Spawns
+  const spawnLines = (room.spawns || []).map(s => {
+    const nid = typeof s === 'string' ? s : s.id || '';
+    const ndata = npcs[nid] || {};
+    const hostile = ndata.hostile ? `<span class="badge badge-hostile">hostile</span>` : '';
+    const banker  = (ndata.tags||[]).includes('banker') ? `<span class="badge badge-banker">banker</span>` : '';
+    const nnote   = ndata.admin_comment ? ` <span class="inline-note" title="${escapeHtml(ndata.admin_comment)}">📝</span>` : '';
+    return `<li>${ndata.name || nid}${hostile}${banker}${nnote}</li>`;
+  });
+
+  panel.innerHTML = `
+    <div class="detail-zone" style="color:${zoneColor}">${room.zone.toUpperCase()}</div>
+    <div class="detail-name">${room.name}${room.start ? ' ★' : ''}</div>
+    <div class="detail-id">${rid}</div>
+    <div class="detail-desc">${room.description || ''}</div>
+    ${adminNote}
+    ${flags ? `<div style="margin-bottom:14px">${flags}</div>` : ''}
+    ${exitLines.length ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Exits (${exitLines.length})</div>
+        <ul class="detail-list">${exitLines.join('')}</ul>
+      </div>` : ''}
+    ${itemLines.length ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Items (${itemLines.length})</div>
+        <ul class="detail-list">${itemLines.join('')}</ul>
+      </div>` : ''}
+    ${spawnLines.length ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Spawns (${spawnLines.length})</div>
+        <ul class="detail-list">${spawnLines.join('')}</ul>
+      </div>` : ''}
+  `;
+}
+
+// ── Stats bar ─────────────────────────────────────────────────────────────
+const zoneCount = {};
+Object.values(rooms).forEach(r => { zoneCount[r.zone] = (zoneCount[r.zone]||0)+1; });
+const statEl = document.getElementById('stats-bar');
+statEl.innerHTML = `
+  <div>${Object.keys(rooms).length} rooms · ${Object.keys(npcs).length} NPCs · ${Object.keys(items).length} items</div>
+  <div>${Object.entries(zoneCount).map(([z,n])=>`${z}: ${n}`).join(' · ')}</div>`;
+
+// ── Pan & zoom ────────────────────────────────────────────────────────────
+const viewport = document.getElementById('map-viewport');
+let scale = 1, isDragging = false, startX, startY, scrollLeft, scrollTop;
+
+viewport.addEventListener('mousedown', e => {
+  if (e.target.closest('.room-cell')) return;
+  isDragging = true;
+  startX = e.pageX - viewport.offsetLeft;
+  startY = e.pageY - viewport.offsetTop;
+  scrollLeft = viewport.scrollLeft;
+  scrollTop  = viewport.scrollTop;
+});
+viewport.addEventListener('mouseup',   () => isDragging = false);
+viewport.addEventListener('mouseleave',() => isDragging = false);
+viewport.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  e.preventDefault();
+  viewport.scrollLeft = scrollLeft - (e.pageX - viewport.offsetLeft - startX);
+  viewport.scrollTop  = scrollTop  - (e.pageY - viewport.offsetTop  - startY);
+});
+
+viewport.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoom(e.deltaY < 0 ? 1.1 : 0.9);
+}, { passive: false });
+
+function zoom(factor) {
+  scale = Math.max(0.3, Math.min(3, scale * factor));
+  canvas.style.transform = `scale(${scale})`;
+}
+
+function resetZoom() {
+  scale = 1;
+  canvas.style.transform = 'scale(1)';
+  viewport.scrollLeft = 0;
+  viewport.scrollTop  = 0;
+}
+
+// Auto-scroll to start room
+const startRoom = Object.values(rooms).find(r => r.start);
+if (startRoom && startRoom.coord) {
+  const [px, py] = coordToPx(startRoom.coord[0], startRoom.coord[1]);
+  viewport.scrollLeft = px - viewport.clientWidth / 2 + CELL / 2;
+  viewport.scrollTop  = py - viewport.clientHeight / 2 + CELL / 2;
+}
+</script>
+</body>
+</html>

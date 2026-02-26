@@ -1,0 +1,89 @@
+# data/millhaven/dialogues/merchant.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "Best prices in Millhaven. Only prices in Millhaven, but still the best.",
+  "What are you after?",
+  "Take a look, take your time.",
+]
+
+[[response]]
+node = "root"
+text = "Let me see what you've got. (use 'list')"
+next = "wares"
+
+[[response]]
+node = "root"
+text = "Do you have any crafting materials?"
+next = "materials"
+
+[[response]]
+node = "root"
+text = "Heard anything interesting lately?"
+next = "gossip"
+
+[[response]]
+node = "root"
+text = "Nothing today."
+next = ""
+
+
+[[node]]
+id   = "wares"
+line = "Potions, bags, and a selection of smithing supplies. Use 'list' to browse — I'll wait."
+
+[[response]]
+node = "wares"
+text = "I'll take a look."
+next = ""
+
+
+[[node]]
+id   = "materials"
+line = "Iron ingots, coal, hardwood stave — basic forge supplies. The blacksmith buys from the same sources, honestly, but I don't charge for a conversation. Tanned hide and cloth are over at Sera's stall."
+
+[[response]]
+node = "materials"
+text = "What does Sera make?"
+next = "sera"
+
+[[response]]
+node = "materials"
+text = "I'll check your stock."
+next = ""
+
+
+[[node]]
+id   = "sera"
+line = "Bags, packs, cloaks. If you need to carry more or move quieter, she's your person. She won't rush you and she won't do shoddy work. Commission something and come back for it."
+
+[[response]]
+node = "sera"
+text = "Good to know."
+next = ""
+
+
+[[node]]
+id   = "gossip"
+line = "Caravans are backing up east of the Ashwood. No one wants to move goods through. Prices on iron are up — which is bad for everyone. Something's happening out there and it's starting to affect business."
+
+[[response]]
+node = "gossip"
+text = "What do you think it is?"
+next = "gossip2"
+
+[[response]]
+node = "gossip"
+text = "Interesting."
+next = ""
+
+
+[[node]]
+id   = "gossip2"
+line = "I think it's whatever drove Elder Mira to start hiring adventurers. And I think anyone with a good head on their shoulders should let those adventurers handle it and stay put."
+
+[[response]]
+node = "gossip2"
+text = "Smart thinking."
+next = ""

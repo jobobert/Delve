@@ -1,0 +1,203 @@
+# Zone id: gloamreach
+#
+
+[[room]]
+id          = "duskhaven_gate"
+name        = "Duskhaven Gate"
+description = "A wooden gate illuminated by flickering lanterns that struggle to stay lit."
+coord       = []
+exits       = {north = "duskhaven_square", east = "lanternwatch_road"}
+items       = []
+flags       = []
+spawns      = ["npc_lysa"]
+
+[[room]]
+id          = "duskhaven_square"
+name        = "Duskhaven Square"
+description = "A dim town square where lanterns cast long, wavering shadows."
+coord       = []
+exits       = {south = "duskhaven_gate", north = "eldric’s_observatory", west = "shadowbend_alley"}
+items       = ["item_dim_lantern"]
+flags       = []
+spawns      = ["npc_lysa"]
+
+[[room]]
+id          = "lanternwatch_road"
+name        = "Lanternwatch Road"
+description = "A road lined with lantern posts, many of which have gone dark."
+coord       = []
+exits       = {west = "duskhaven_gate", north = "the_dimway"}
+items       = []
+flags       = []
+spawns      = ["enemy_gloam_rat"]
+
+[[room]]
+id          = "eldric’s_observatory"
+name        = "Eldric’s Observatory"
+description = "A small tower filled with lenses, prisms, and experimental light devices."
+coord       = []
+exits       = {south = "duskhaven_square", north = "gloamwatch_rise"}
+items       = ["item_prism_shard"]
+flags       = []
+spawns      = ["npc_eldric"]
+
+[[room]]
+id          = "shadowbend_alley"
+name        = "Shadowbend Alley"
+description = "An alley where shadows bend at impossible angles."
+coord       = []
+exits       = {east = "duskhaven_square", north = "the_flickering_path"}
+items       = []
+flags       = []
+spawns      = ["enemy_shadowling"]
+
+[[room]]
+id          = "the_dimway"
+name        = "The Dimway"
+description = "A path where light fades the farther you walk, regardless of direction."
+coord       = []
+exits       = {south = "lanternwatch_road", north = "deep_gloam_verge"}
+items       = []
+flags       = []
+spawns      = ["enemy_gloam_rat"]
+
+[[room]]
+id          = "gloamwatch_rise"
+name        = "Gloamwatch Rise"
+description = "A hill overlooking the region, bathed in eerie half-light."
+coord       = []
+exits       = {south = "eldric’s_observatory", east = "the_prism_bridge"}
+items       = ["item_gloam_crystal"]
+flags       = []
+spawns      = []
+
+[[room]]
+id          = "the_flickering_path"
+name        = "The Flickering Path"
+description = "A trail where light flickers unpredictably, revealing and hiding dangers."
+coord       = []
+exits       = {south = "shadowbend_alley", north = "shadowfall_crossing"}
+items       = []
+flags       = []
+spawns      = ["enemy_shadowling"]
+
+[[room]]
+id          = "deep_gloam_verge"
+name        = "Deep Gloam Verge"
+description = "The edge of a zone where light barely penetrates."
+coord       = []
+exits       = {south = "the_dimway", east = "gloamroot_thicket"}
+items       = []
+flags       = []
+spawns      = ["enemy_gloam_beast"]
+
+[[room]]
+id          = "the_prism_bridge"
+name        = "The Prism Bridge"
+description = "A bridge made of crystal-like material that refracts dim light into shifting colors."
+coord       = []
+exits       = {west = "gloamwatch_rise", north = "the_twilight_span"}
+items       = []
+flags       = []
+spawns      = ["enemy_prism_specter"]
+
+[[room]]
+id          = "shadowfall_crossing"
+name        = "Shadowfall Crossing"
+description = "A crossing where shadows fall like curtains, obscuring vision."
+coord       = []
+exits       = {south = "the_flickering_path", east = "the_lightless_grove"}
+items       = []
+flags       = []
+spawns      = ["enemy_shadowling"]
+
+[[room]]
+id          = "gloamroot_thicket"
+name        = "Gloamroot Thicket"
+description = "A dense thicket where roots glow faintly with trapped light."
+coord       = []
+exits       = {west = "deep_gloam_verge", north = "the_luminous_hollow"}
+items       = ["item_gloamroot_sample"]
+flags       = []
+spawns      = ["enemy_gloam_beast"]
+
+[[room]]
+id          = "the_twilight_span"
+name        = "The Twilight Span"
+description = "A long stretch of land suspended between light and shadow."
+coord       = []
+exits       = {south = "the_prism_bridge", north = "the_shadowed_stair"}
+items       = []
+flags       = []
+spawns      = ["enemy_prism_specter"]
+
+[[room]]
+id          = "the_lightless_grove"
+name        = "The Lightless Grove"
+description = "A grove where no natural light exists, yet faint shapes move."
+coord       = []
+exits       = {west = "shadowfall_crossing", north = "the_gloamrift"}
+items       = []
+flags       = []
+spawns      = ["enemy_gloam_shade"]
+
+[[room]]
+id          = "the_luminous_hollow"
+name        = "The Luminous Hollow"
+description = "A hollow lit by glowing fungi and reflective stones."
+coord       = []
+exits       = {south = "gloamroot_thicket", east = "the_reflecting_pool"}
+items       = ["item_lumen_shard"]
+flags       = []
+spawns      = []
+
+[[room]]
+id          = "the_shadowed_stair"
+name        = "The Shadowed Stair"
+description = "A staircase carved into stone, each step darker than the last."
+coord       = []
+exits       = {south = "the_twilight_span", north = "the_gloamspire"}
+items       = []
+flags       = []
+spawns      = ["enemy_gloam_shade"]
+
+[[room]]
+id          = "the_gloamrift"
+name        = "The Gloamrift"
+description = "A rift where shadows swirl like liquid."
+coord       = []
+exits       = {south = "the_lightless_grove", east = "the_shadow_core"}
+items       = []
+flags       = []
+spawns      = ["enemy_gloam_beast"]
+
+[[room]]
+id          = "the_reflecting_pool"
+name        = "The Reflecting Pool"
+description = "A still pool that reflects not the present, but faint echoes of the past."
+coord       = []
+exits       = {west = "the_luminous_hollow"}
+items       = ["item_reflection_fragment"]
+flags       = []
+spawns      = ["npc_eldric"]
+
+[[room]]
+id          = "the_gloamspire"
+name        = "The Gloamspire"
+description = "A towering spire of stone and shadow, pulsing with dark energy."
+coord       = []
+exits       = {south = "the_shadowed_stair"}
+items       = ["item_gloam_crystal"]
+flags       = []
+spawns      = ["enemy_gloam_titan"]
+
+[[room]]
+id          = "the_shadow_core"
+name        = "The Shadow Core"
+description = "The deepest point of the Gloamreach, where the device piece twists light into darkness."
+coord       = []
+exits       = {west = "the_gloamrift"}
+items       = ["item_device_piece_4"]
+flags       = []
+spawns      = ["enemy_gloam_titan"]
+

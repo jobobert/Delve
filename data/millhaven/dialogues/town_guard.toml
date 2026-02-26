@@ -1,0 +1,59 @@
+# data/millhaven/dialogues/town_guard.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "Move along, then.",
+  "Quiet day. Hoping it stays that way.",
+  "Keep your weapons sheathed in town.",
+]
+
+[[response]]
+node = "root"
+text = "What's the situation out there?"
+next = "situation"
+
+[[response]]
+node = "root"
+text = "Is the south road safe?"
+next = "south_road"
+
+[[response]]
+node = "root"
+text = "Nothing. Carry on."
+next = ""
+
+
+[[node]]
+id   = "situation"
+line = "Wolves are pushing closer to the gate than I'd like. There's something wrong in the Ashwood — even the locals won't go near it anymore. My advice? Stay in town until someone figures out what's driving the animals."
+
+[[response]]
+node = "situation"
+text = "I'm heading out anyway."
+next = "brave_fool"
+
+[[response]]
+node = "situation"
+text = "Sound advice."
+next = ""
+
+
+[[node]]
+id   = "brave_fool"
+line = "Then you'd better be well-armed. The blacksmith's just north of the square — decent stock. Don't expect to be rescued if you get into trouble past the south gate. We don't have the numbers for it."
+
+[[response]]
+node = "brave_fool"
+text = "I'll manage."
+next = ""
+
+
+[[node]]
+id   = "south_road"
+line = "Not particularly. Wolves on the forest path. Strange lights seen from the Ashwood Gate at night. The further south you go, the worse it gets. We've had three merchants refuse to come through from the east — that tells you something."
+
+[[response]]
+node = "south_road"
+text = "Thanks for the warning."
+next = ""

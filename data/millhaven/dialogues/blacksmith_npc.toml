@@ -1,0 +1,117 @@
+# data/dialogues/blacksmith_npc.toml
+
+[[node]]
+id    = "root"
+lines = ["Looking to buy or just looking?", "Best iron in Millhaven. The only iron, but still the best.", "What do you need?"]
+
+[[response]]
+node      = "root"
+condition = { flag = "vorn_briefed" }
+text      = "I need a weapon that can hurt an armored Drake."
+next      = "drake_weapon"
+
+[[response]]
+node = "root"
+text = "I need something made to order."
+next = "commissions"
+
+[[response]]
+node = "root"
+text = "What have you got for sale? (use 'list' to browse)"
+next = "wares"
+
+[[response]]
+node = "root"
+text = "Can you tell me about the Ashwood?"
+next = "ashwood"
+
+[[response]]
+node = "root"
+text = "Nothing today."
+next = ""
+
+[[node]]
+id   = "drake_weapon"
+line = "Drake? You're going after the Drake? There's an old blade cache in the Ashwood ruins — Drakebone Steel. Holds an edge better than anything I can forge. I heard the garrison soldiers hid them in the armory before the place fell."
+
+[[response]]
+node = "drake_weapon"
+text = "Where in the ruins?"
+next = "ruins_hint"
+
+[[response]]
+node = "drake_weapon"
+text = "I'll look for it. Show me your stock anyway."
+next = "wares"
+
+[[node]]
+id   = "ruins_hint"
+line = "The old garrison, east of the Ashwood Gate. The armory should still have them — if someone got there before you, you're out of luck. But I don't think anyone has."
+
+[[response]]
+node = "ruins_hint"
+text = "Good to know."
+next = ""
+
+[[node]]
+id   = "commissions"
+line = "Custom work takes time and materials, but it's worth it. Weapons, helms, breastplate — I can do it all. Type 'commission' to see what I can make and what I need from you."
+
+[[response]]
+node = "commissions"
+text = "Open the commission menu."
+next = ""
+script = [{ op = "message", text = "  (Type 'commission' to place an order.)", tag = "system" }]
+
+[[response]]
+node = "commissions"
+text = "What materials do you usually need?"
+next = "materials_info"
+
+[[response]]
+node = "commissions"
+text = "Maybe later."
+next = ""
+
+
+[[node]]
+id   = "materials_info"
+line = "Iron ingots, mostly — I smelt my own but I charge for it. Coal to fire the forge. Leather strips for handles and padding. The merchant across the square stocks most of it. Bring me what I ask and I'll do the rest."
+
+[[response]]
+node = "materials_info"
+text = "I'll bring what you need."
+next = ""
+
+
+[[node]]
+id   = "wares"
+line = "Iron swords, leather cap, chain shirt, knuckles. Standard stuff. Use 'list' to see prices."
+
+[[response]]
+node = "wares"
+text = "I'll take a look."
+next = ""
+
+[[node]]
+id   = "ashwood"
+line = "Don't go. I had a wolf in my yard last night — just standing there staring for half an hour. This isn't normal behavior. Something is wrong out there."
+
+[[response]]
+node = "ashwood"
+text = "Someone has to deal with it."
+next = "respect"
+
+[[response]]
+node = "ashwood"
+text = "Sound advice."
+next = ""
+
+[[node]]
+id   = "respect"
+line = "I respect that. I won't go. But I respect it. Make sure you're properly armed first."
+
+[[response]]
+node = "respect"
+text = "I'll be back for supplies."
+next = ""

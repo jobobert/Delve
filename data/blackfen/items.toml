@@ -1,0 +1,484 @@
+# data/blackfen/items.toml
+# Blackfen Mire — item definitions
+
+[[item]]
+id         = "mire_map"
+name       = "Mire Survey Map"
+desc_short = "a hand-drawn map of Blackfen Mire"
+desc_long  = """
+A sheet of oiled canvas, well-used, showing the mire from above. The
+causeway, the ford, the fogbank, the lake and the central island are all
+marked. In the south, the drowned causeway is noted with: 'entry only
+possible with punt from shore.' The tomb is marked simply as X.
+
+Someone has added a note in the margin: 'Grimwick knows the paths. Don't
+go without her.'
+"""
+weight = 0
+scenery = false
+
+[[item]]
+id         = "fenwatch_torch"
+name       = "Fenwatch Torch"
+desc_short = "an oil-soaked torch from the ranger post"
+desc_long  = "A sturdy torch soaked in rendered fat. Burns for hours and resists the mire's damp."
+weight = 1
+
+[[item]]
+id         = "grimwicks_pack_scenery"
+name       = "Grimwick's Pack"
+desc_short = "a battered pack labelled G.F."
+desc_long  = """
+A leather pack, water-treated, tied with multiple straps. A tag reads
+'G.F. — touch this and I'll know'. Whatever's inside shifts and clinks
+when the pack moves. The bag is tied too tightly to open casually.
+"""
+weight  = 2
+scenery = true  # examine only — can't take
+
+[[item]]
+id         = "waterproof_satchel"
+name       = "Waterproof Satchel"
+desc_short = "an oilskin satchel, still watertight"
+desc_long  = """
+A satchel of oiled leather stitched with waxed thread. The buckles are
+brass, still bright. Inside: a block of dried meat, a rolled bandage, and
+a small vial of something that smells intensely antiseptic.
+"""
+weight = 2
+slot   = "pack"
+
+[[effects]]
+type             = "stat_bonus"
+stat             = "carry_capacity"
+amount           = 3
+
+[[effects]]
+type             = "on_equip"
+message          = "The satchel sits close to your back and keeps your hands free."
+
+[[item]]
+id         = "blacklake_punt"
+name       = "Flat-bottomed Punt"
+desc_short = "a weathered wooden punt with a pole"
+desc_long  = """
+A shallow-drafted punt of tarred planks. The pole is a single straight
+ash rod, long enough to reach the lake bottom. The boat is sound — someone
+maintains it, though you see no-one.
+"""
+weight  = 20
+scenery = true  # environment item, navigated by moving south from shore
+
+[[item]]
+id         = "riversturm_journal"
+name       = "Riversturm's Journal"
+desc_short = "a waterlogged wizard's journal, bound in oilskin"
+desc_long  = """
+The journal of Aldric Riversturm, last entry dated forty years ago. Most
+pages are illegible, swollen by moisture. Three passages survive:
+
+'The Aldenmoor boy brought the Emerald to me for study. It is not merely
+a gem — it stores intelligence. Memories. I believe it holds every
+thought Gregor Aldenmoor ever had, compressed into crystal.'
+
+'Gregor died before I could return it. They buried it with him. The
+Emerald will wait — it is patient beyond any stone.'
+
+'Something is in the vault. Not the dead. Something that came in with
+the water. I will not go back.'
+
+Stamped on the inside cover in faded ink: MILLHAVEN TREASURY — CHARTER LEDGER.
+"""
+weight  = 1
+on_get  = [
+  { op = "if_not_flag", flag = "ledger_found", then = [
+    { op = "set_flag",   flag = "ledger_found" },
+    { op = "advance_quest", quest_id = "the_lost_ledger", step = 2 },
+    { op = "message",    tag = "system", text = "This is the charter ledger the Millhaven banker mentioned. Return it to claim expanded vault access." },
+  ]},
+]
+no_drop = true
+
+[[item]]
+id         = "celestial_emerald"
+name       = "The Celestial Emerald"
+desc_short = "a fist-sized gem of impossible green"
+desc_long  = """
+A gem the size of your clenched fist, cut in a style no modern lapidary
+would recognise. The green is not the green of growing things but of deep
+ocean water over pale sand — a colour that seems lit from within. When
+you hold it, you feel an impression: not words, not images, but a
+personality pressing against the inside of your skull. Patient. Old.
+Curious about you.
+
+This is what Gregor Aldenmoor carried into the swamp and never brought
+out. This is what you came for.
+"""
+weight  = 1
+no_drop = true
+
+[[item]]
+id         = "aldenmoor_signet"
+name       = "Aldenmoor Signet Ring"
+desc_short = "a heavy gold signet ring, ancient"
+desc_long  = """
+A gold ring bearing the Aldenmoor crest: a tree split by lightning, its
+roots still holding. The metal is warm to the touch despite the cold of
+the vault. A faint magical trace lingers — this ring was used to seal
+important things.
+"""
+weight = 0
+slot   = "ring"
+
+[[effects]]
+type   = "stat_bonus"
+stat   = "defense"
+amount = 1
+
+[[effects]]
+type    = "on_equip"
+message = "The ring settles on your finger with an almost audible click of recognition."
+
+[[item]]
+id         = "vault_key_shard"
+name       = "Key Shard"
+desc_short = "half of a corroded iron key"
+desc_long  = "One half of a key. The break is old but clean. Matches nothing here."
+weight = 0
+
+[[item]]
+id         = "fen_antitoxin"
+name       = "Fen Antitoxin"
+desc_short = "a small vial of milky liquid"
+desc_long  = """
+A glass vial sealed with wax. The label (still legible under a protective
+coating) reads: BLACKFEN ANTITOXIN — DOSE FOR STANDARD FEN AILMENTS.
+GRIMWICK'S REMEDY. NO SUBSTITUTE.
+"""
+weight = 0
+
+[[effects]]
+type  = "on_use"
+heal  = 15
+
+[[effects]]
+type    = "on_use"
+special = "clear_status_poisoned"
+
+[[item]]
+id         = "durath_key"
+name       = "Durath's Bridge Key"
+desc_short = "an iron key on a cord of braided hair"
+desc_long  = """
+A heavy iron key on a braided cord. It operates the padlock on the rope
+bridge between the Slaughterstone camp and the lake shore. The key was
+taken from Durath Ironteeth, or found on his body, depending on how
+things went.
+"""
+weight  = 0
+key_tag = "durath_key"
+
+[[item]]
+id         = "redbelly_dagger"
+name       = "Redbelly Dagger"
+desc_short = "a short blade with a red-painted handle"
+desc_long  = """
+A fighting dagger, the handle wrapped in leather dyed red — the mark of
+Durath's Redbelly crew. The blade is well-kept despite the rough hands
+that have held it.
+"""
+weight = 1
+slot   = "weapon"
+
+[[effects]]
+type   = "stat_bonus"
+stat   = "attack"
+amount = 3
+
+[[effects]]
+type    = "on_hit"
+ability = "bleed"
+chance  = 0.2
+magnitude = 2
+
+[[item]]
+id         = "swamp_stalker_cloak"
+name       = "Swamp Stalker's Cloak"
+desc_short = "a mottled grey-green cloak of oiled wool"
+desc_long  = """
+A heavy cloak in shades of grey, green, and brown that blend into the
+mire's colours remarkably well. The wool has been treated with a
+waterproofing compound. The lining is sewn with a dozen small pockets.
+
+Wearing it makes you feel less visible — and in the swamp, that matters.
+"""
+weight = 2
+slot   = "cape"
+
+[[effects]]
+type   = "stat_bonus"
+stat   = "defense"
+amount = 2
+
+[[effects]]
+type    = "on_equip"
+message = "The cloak settles over your shoulders. The mire colours make you feel harder to spot."
+
+[[item]]
+id         = "anurus_staff"
+name       = "Staff of Anurus"
+desc_short = "a blackened ironwood staff crackling with faint energy"
+desc_long  = """
+The staff of the sorcerer Anurus, recovered from his skeletal hands. The
+wood is ironwood, charred black in some ritual long ago, but the energy in
+it has never diminished. Holding it, you feel a faint resistance to hostile
+magic — a ward built into the wood itself.
+"""
+weight = 3
+slot   = "weapon"
+
+[[effects]]
+type   = "stat_bonus"
+stat   = "attack"
+amount = 5
+
+[[effects]]
+type   = "stat_bonus"
+stat   = "defense"
+amount = 2
+
+[[effects]]
+type    = "on_equip"
+message = "The staff hums in your grip. Something in it recognises a strong will."
+
+[[item]]
+id         = "blackfen_idol"
+name       = "Blackfen Idol"
+desc_short = "a small carved figure of dark stone"
+desc_long  = """
+A palm-sized figure carved from the same black stone as the mire's
+bedrock. The carving is very old — older than the tomb, older than the
+wizard's tower. It depicts a figure with both human and serpent features.
+The local lizard-folk used to make offerings to such idols at the lake's
+edge.
+
+Grimwick would recognise this immediately.
+"""
+weight = 1
+
+# ── NEW items for the Dragon's Demise adaptation ───────────────────────────
+
+[[item]]
+id         = "blade_polish_vial"
+name       = "M. Batten's Blade Polish"
+desc_short = "a vial of purplish polish, clearly labelled"
+desc_long  = """
+A small vial of thick purplish liquid, labelled 'M. BATTEN'S BLADE POLISH
+— FOR ENCHANTMENT PREPARATION ONLY.' The connection to Montbatten Academy
+is obvious to anyone familiar with the name. The grime and scale on any
+blade vanish within a minute of application, leaving the metal mirror-bright
+and faintly warm to the touch.
+"""
+weight = 0
+
+[[effects]]
+type    = "on_use"
+heal    = 0
+special = "enchant_weapon_plus1"
+
+[[effects]]
+type    = "on_equip"
+message = "You smear the polish over your blade. It shines like new and feels somehow more solid."
+
+[[item]]
+id         = "ghost_willow_bark"
+name       = "Ghost Willow Bark"
+desc_short = "a pouch of pale bark from a ghost willow"
+desc_long  = """
+Bark stripped from the ghost-white willow in the Murk Fens. Brewed as tea,
+it closes wounds and reduces fever. The taste is bitter and earthy. Three
+doses in the pouch.
+"""
+weight = 0
+
+[[effects]]
+type = "on_use"
+heal = 12
+
+[[item]]
+id         = "redvange_arrowheads"
+name       = "Redvange Arrowheads"
+desc_short = "barbed reed-heads prized by fletchers"
+desc_long  = """
+A bundle of dried redvange reed-tips, their barbs sharp as any metal point.
+Fletchers value these for how easily they take enchantment — a set of arrows
+fitted with redvange heads holds magic longer than iron. Worth good coin.
+"""
+weight = 1
+
+[[item]]
+id         = "ebony_fish"
+name       = "Ebony Fish"
+desc_short = "a three-eyed lake fish wrapped in cloth"
+desc_long  = """
+One of the black, three-eyed fish unique to Blacklake. When dried and salted,
+these are considered a delicacy in noble households throughout the region.
+This one is wrapped in spare cloth and ready for the journey home.
+"""
+weight = 1
+
+[[item]]
+id         = "painted_rod"
+name       = "Painted Rod"
+desc_short = "a twisted, hand-painted wooden rod with strange etchings"
+desc_long  = """
+A two-foot rod of some dark wood, twisted naturally into a slight spiral.
+Someone painted it with symbols in at least four colours, then carved
+additional etchings over the paint. The etchings respond to light
+differently than the wood around them — they seem almost to shift.
+
+Whatever this is, it's magical. Someone with arcane knowledge might be
+able to say more.
+"""
+weight = 1
+slot   = "weapon"
+
+[[effects]]
+type   = "stat_bonus"
+stat   = "attack"
+amount = 3
+
+[[effects]]
+type    = "on_equip"
+message = "The rod hums faintly in your grip. Something inside it is paying attention."
+
+[[item]]
+id         = "sacrificial_knife"
+name       = "Sacrificial Knife"
+desc_short = "a silver knife, impossibly sharp and unrusted"
+desc_long  = """
+A blade of pure silver, the handle wound in leather that has dried to the
+hardness of wood. The silver is not rusted — has never rusted — despite
+being half-buried in swamp dirt. The edge is sharp enough to shave with.
+Someone made this blade with serious intent.
+"""
+weight = 1
+slot   = "weapon"
+
+[[effects]]
+type   = "stat_bonus"
+stat   = "attack"
+amount = 4
+
+[[effects]]
+type    = "on_hit"
+ability = "bleed"
+chance  = 0.25
+magnitude = 3
+
+[[item]]
+id         = "swamp_lion_hide"
+name       = "Swamp Lion Hide"
+desc_short = "a thick pelt from a swamp lion"
+desc_long  = """
+A pelt of heavy, mottled hide stripped from the swamp lion. Master
+leatherworkers pay well for swamp lion hide — it resists moisture and
+blade alike. Needs proper curing, but worth carrying out.
+"""
+weight = 3
+
+[[item]]
+id         = "grimwick_payment"
+name       = "Guide Fee"
+desc_short = "10 gold pieces for Grimwick's services"
+desc_long  = "A fair price for a guide who knows the Murk Fens. Grimwick earned it."
+weight = 0
+
+[[item]]
+id         = "thornbury_sword"
+name       = "Thornbury's Blade"
+desc_short = "a green-bladed shortsword with an emerald in the hilt"
+desc_long  = """
+A shortsword with a blade of pale green metal that holds its edge
+unnaturally well. The hilt is silver, set with a small emerald that is
+distinctly warm to the touch. Maren Thornbury gave you this with the
+offhand casualness of someone giving away something they know is valuable
+but no longer needs.
+
+The blade is enchanted to be especially effective against the kind of
+things that live in places like the Murk Fens.
+"""
+weight = 2
+slot   = "weapon"
+
+[[effects]]
+type   = "stat_bonus"
+stat   = "attack"
+amount = 6
+
+[[effects]]
+type    = "on_equip"
+message = "The blade is lighter than it looks. It wants to be used."
+
+[[effects]]
+type      = "on_hit"
+ability   = "bleed"
+chance    = 0.15
+magnitude = 4
+
+# ── Blackfen armor (high-tier, swamp-adapted) ─────────────────────────────────
+
+[[item]]
+id         = "mire_hood"
+name       = "Mire Hood"
+desc_short = "A deep hood of waxed canvas reinforced with bone strips."
+desc_long  = "Worn by those who spend extended time in the Blackfen Mire. The outer layer is waxed canvas that sheds water; bone strips from fenbirds have been worked into the crown to give it shape and rigidity. The inner lining is oiled wool. It smells faintly of the fen even when dry."
+slot       = "head"
+armor_tags = ["medium", "head", "swamp"]
+weight     = 2
+respawn    = false
+effects    = [
+  { type = "stat_bonus", stat = "defense", amount = 7 },
+  { type = "stat_bonus", stat = "max_hp",  amount = 5 },
+]
+
+[[item]]
+id         = "fenguard_cuirass"
+name       = "Fenguard Cuirass"
+desc_short = "Hardened leather cuirass with overlapping bone scale."
+desc_long  = "The Fenwatch Wardens wear these. A base of thick hardened leather with rows of overlapping bone scales stitched to the outer surface. The bone comes from the large fenbirds that nest in the deep mire — the wardens say it has a natural resistance to the fen's corruption, though no one has tested that properly."
+slot       = "chest"
+armor_tags = ["medium", "scale", "chest", "swamp"]
+weight     = 5
+respawn    = false
+effects    = [
+  { type = "stat_bonus", stat = "defense", amount = 11 },
+  { type = "on_equip",   message = "The bone scales shift and settle across your chest. Lighter than it looks." },
+]
+
+[[item]]
+id         = "mire_leggings"
+name       = "Mire Leggings"
+desc_short = "Reinforced wading trousers with knee guards."
+desc_long  = "Designed for movement through deep water and mud. The thighs are standard waxed canvas but the knees and shins are reinforced with lacquered wood splints wrapped in oiled leather. They're heavy when wet, which is always. There are dark stains on the knees that might be mud, might not be."
+slot       = "legs"
+armor_tags = ["medium", "legs", "swamp"]
+weight     = 4
+respawn    = false
+effects    = [
+  { type = "stat_bonus", stat = "defense", amount = 8 },
+]
+
+[[item]]
+id         = "redbelly_gauntlets"
+name       = "Redbelly Gauntlets"
+desc_short = "Gauntlets made from the scaled hide of a Redbelly."
+desc_long  = "The Redbelly's scaled hide is nearly as hard as cured leather but flexible enough to work with properly. These gauntlets cover the hands and forearms in overlapping scales with a leather lining. The scales on the back of the hand have been left their natural deep red — no point dyeing what won't take dye."
+slot       = "arms"
+armor_tags = ["medium", "arms", "swamp", "scale"]
+weight     = 2
+respawn    = false
+effects    = [
+  { type = "stat_bonus", stat = "defense", amount = 7 },
+  { type = "stat_bonus", stat = "attack",  amount = 1 },
+]

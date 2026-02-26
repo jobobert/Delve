@@ -1,0 +1,47 @@
+# data/greenhollow/dialogues/herb_wife_sable.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "You look like you've been somewhere. I've got salves and bone-ache remedy if you need it.",
+  "Rest here costs five. Cheaper than dying from whatever's in that mine.",
+  "I don't ask where you've been. I just fix what I can see.",
+]
+
+[[response]]
+node = "root"
+text = "What do you know about the mine creatures?"
+next = "mine_creatures"
+
+[[response]]
+node = "root"
+text = "Can I rest here?"
+next = "rest"
+
+[[response]]
+node = "root"
+text = "I'll take a look at what you're selling."
+next = ""
+
+[[response]]
+node = "root"
+text = "Nothing. Thank you."
+next = ""
+
+[[node]]
+id   = "mine_creatures"
+line = "Giant groundhogs. I've treated three miners for bite wounds — those incisors are serious. The miners say the ones in the tunnels are faster than the field variety. I don't know what made them this size. Might be the ore — the greenstone has unusual mineral content. But that's speculation."
+
+[[response]]
+node = "mine_creatures"
+text = "Good to know. I'll be careful."
+next = ""
+
+[[node]]
+id   = "rest"
+line = "Five gold. No questions, no judgement. Come back any time."
+
+[[response]]
+node = "rest"
+text = "That works for me."
+next = ""

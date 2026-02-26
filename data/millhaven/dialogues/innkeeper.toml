@@ -1,0 +1,129 @@
+# data/millhaven/dialogues/innkeeper.toml
+# Bron the Innkeeper — Rusty Flagon Inn, Millhaven.
+# Also manages the stable out back; can rent Dust the mule.
+
+[[node]]
+id    = "root"
+lines = [
+  "What'll it be? Room, meal, or just talk?",
+  "Quiet tonight. The way I like it.",
+  "The fire's warm and the ale's cold. That's all I can promise."
+]
+
+[[response]]
+node = "root"
+text = "I need a room for the night. (use 'sleep' or 'rest')"
+next = "room"
+
+[[response]]
+node = "root"
+text = "Do you know anything about the mire to the south?"
+next = "mire"
+
+[[response]]
+node = "root"
+text = "I heard you keep a stable out back."
+next = "stable"
+
+[[response]]
+node = "root"
+text = "Tell me about Millhaven."
+next = "town"
+
+[[response]]
+node = "root"
+text = "Nothing. I'm just passing through."
+next = ""
+
+
+[[node]]
+id   = "room"
+line = "Ten gold for a clean bed and breakfast. Worth every coin — I change the linens myself, unlike that place in Ashridge. Use 'sleep' or 'rest' and I'll sort you out."
+
+[[response]]
+node = "room"
+text = "Worth it. Thank you."
+next = ""
+
+
+[[node]]
+id   = "mire"
+line = "Bad place. Always has been. My grandfather's grandfather lost a sheep to it and declared the whole swamp cursed. I think he was probably right. If you're going in, talk to Warden Holt at the Fengate first. And say hello to Grimwick if you see her — she's saved more idiots than she ought to have."
+
+[[response]]
+node = "mire"
+text = "Who's Grimwick?"
+next = "grimwick"
+
+[[response]]
+node = "mire"
+text = "I'll be careful."
+next = ""
+
+
+[[node]]
+id   = "grimwick"
+line = "Lizard-person. Been around longer than anyone knows. She guides travellers through the mire for coin, or favours, or sometimes just because she finds you interesting enough not to leave to the swamp lions. Pay her if she asks. She's worth it."
+
+[[response]]
+node = "grimwick"
+text = "Good to know."
+next = ""
+
+
+[[node]]
+id   = "stable"
+line = "Old girl named Dust. Grey mule, bad temper, incredible back. She can carry more than you'd think and she's steady on bad ground. If you're heading into the mire with the intention of coming out heavy, fifty gold and she's yours for the run. She knows the way back."
+
+[[response]]
+node = "stable"
+text = "Fifty gold sounds fair. I'll take her."
+next = "hire_dust"
+condition = { gold = 50 }
+
+[[response]]
+node = "stable"
+text = "I'll think about it."
+next = ""
+
+
+[[node]]
+id   = "hire_dust"
+line = "Pleasure. Don't let her eat your pack — she'll do it if she thinks no one's watching. She's smart enough to know what she can get away with."
+
+script = [
+  { op = "take_gold",      amount = 50 },
+  { op = "give_companion", companion_id = "dust" },
+  { op = "advance_quest",  quest_id = "a_good_mule", step = 2 },
+  { op = "message", text  = "Bron leads you out back and hands you Dust's lead rope. The mule regards you with magnificent indifference.", tag = "system" }
+]
+
+[[response]]
+node = "hire_dust"
+text = "She and I will get along fine."
+next = ""
+
+
+[[node]]
+id   = "town"
+line = "Millhaven's been here three hundred years and nothing has killed it yet, which I consider a personal achievement. We've got a good blacksmith, a decent market, Elder Mira who runs everything with an iron hand in a velvet glove, and more wolves than we'd like. What else do you want to know?"
+
+[[response]]
+node = "town"
+text = "Who is Elder Mira?"
+next = "mira"
+
+[[response]]
+node = "town"
+text = "That's enough, thank you."
+next = ""
+
+
+[[node]]
+id   = "mira"
+line = "Best governor this town has had. Hard, fair, and impossible to lie to — she has an eye for it. If she's hired you for something, take it seriously. If you disappoint her, she'll just note it down and remember it for the next thirty years."
+
+[[response]]
+node = "mira"
+text = "Good to know."
+next = ""

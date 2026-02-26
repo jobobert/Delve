@@ -1,0 +1,134 @@
+# data/millhaven/dialogues/millhaven_banker.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "Welcome to the Millhaven treasury. How can I help you?",
+  "Your account is in good standing.",
+  "We operate branches at the barracks and the Ashwood Gate. Same account across all three."
+]
+
+[[response]]
+node = "root"
+text = "How does banking work?"
+next = "explain_bank"
+
+[[response]]
+node = "root"
+text = "What happens to my gold if I die?"
+next = "death_gold"
+
+[[response]]
+node = "root"
+text = "Nothing, thanks."
+next = ""
+
+[[node]]
+id   = "explain_bank"
+line = "Simple enough. Use 'deposit' to store items here for safekeeping — they survive anything, including death. Use 'withdraw' to take them back. 'balance' shows what you have stored. Your account is shared across all branches."
+
+[[response]]
+node = "explain_bank"
+text = "And my gold?"
+next = "death_gold"
+
+[[response]]
+node = "explain_bank"
+text = "Understood. Thank you."
+next = ""
+
+[[node]]
+id   = "death_gold"
+line = "Gold on your person is lost when you die — same as it's always been. Items stored with us, however, are perfectly safe. Most experienced adventurers bank anything they can't afford to lose before heading somewhere dangerous."
+
+[[response]]
+node = "death_gold"
+text = "Good advice. Thank you."
+next = ""
+
+[[response]]
+node = "root"
+text = "Can I expand my account capacity?"
+next = "expand_info"
+
+[[node]]
+id   = "expand_info"
+line = "Normally, yes — for a fee. Ten slots is the standard account. Twenty costs one hundred and fifty gold. But I'm authorised to waive that fee for the first expansion if you can help me with something. We're missing a ledger — the original charter document. It disappeared into the Blackfen Mire about three years ago with a former depositor who never came back."
+
+[[response]]
+node = "expand_info"
+condition = { not_flag = "ledger_quest_accepted" }
+text = "What's in it for me if I find this ledger?"
+next = "expand_quest_offer"
+
+[[response]]
+node = "expand_info"
+condition = { flag = "ledger_quest_accepted", not_flag = "ledger_returned" }
+text = "I'm looking for the ledger. Any more details?"
+next = "ledger_hint"
+
+[[response]]
+node = "expand_info"
+condition = { flag = "ledger_returned" }
+text = "I returned the ledger. Is my account expanded?"
+next = "ledger_done"
+
+[[response]]
+node = "expand_info"
+text = "I'll pay the gold instead."
+next = "expand_gold"
+
+[[response]]
+node = "expand_info"
+text = "Never mind."
+next = ""
+
+[[node]]
+id   = "expand_quest_offer"
+line = "Find the ledger — it'll be the Riversturm journal, bound in dark oilskin — and bring it back here. In exchange I'll process your first vault expansion at no charge. Twenty slots instead of ten, permanently. The ledger is somewhere in the mire, probably near where Riversturm was last seen."
+script = [
+  { op = "set_flag",   flag = "ledger_quest_accepted" },
+  { op = "advance_quest", quest_id = "the_lost_ledger", step = 1 },
+]
+
+[[response]]
+node = "expand_quest_offer"
+text = "I'll find it."
+next = ""
+
+[[response]]
+node = "expand_quest_offer"
+text = "I'd rather just pay."
+next = "expand_gold"
+
+[[node]]
+id   = "ledger_hint"
+line = "Riversturm fled south through the Fengate the night his debts caught up with him. The wardens say he made it at least as far as the clearing inside. I doubt he made it much further. Look near where the path forks."
+
+[[response]]
+node = "ledger_hint"
+text = "I'll keep looking."
+next = ""
+
+[[node]]
+id   = "ledger_done"
+line = "Ah — yes, this is it. The Riversturm charter ledger, recovered. I'll process your expanded vault access immediately. Twenty slots, no charge. And thank you — this document has been a headache for three years."
+script = [
+  { op = "set_flag",   flag = "ledger_returned" },
+  { op = "advance_quest", quest_id = "the_lost_ledger", step = 3 },
+  { op = "bank_expand", tier = 20 },
+]
+
+[[response]]
+node = "ledger_done"
+text = "Happy to help."
+next = ""
+
+[[node]]
+id   = "expand_gold"
+line = "Expansion tiers: ten to twenty slots costs one-fifty gold, twenty to forty costs five hundred, and forty to eighty runs two thousand. Use 'upgrade confirm' at any branch to pay and expand immediately."
+
+[[response]]
+node = "expand_gold"
+text = "Understood."
+next = ""

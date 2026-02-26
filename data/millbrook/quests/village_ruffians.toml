@@ -1,0 +1,50 @@
+# data/millbrook/quests/village_ruffians.toml
+# "A Lesson in Respect" — ruffian quest with dual resolution paths.
+#
+# Bram, Dal, and Fen are three teenagers getting into trouble around the
+# village. They're not malicious — they're bored, under-challenged, and
+# performing toughness for each other. Elder Tomlin has been watching them
+# and thinks they need either a good sparring match or a real challenge.
+#
+# Two resolution paths (both lead to same completion):
+#
+# PATH A — Sparring:
+#   The player can challenge the ruffians to a group sparring match.
+#   Combat is non-lethal: each ruffian has an HP floor (1 HP minimum).
+#   Defeating all three unlocks Bram's dialogue → they ask to learn from the player.
+#   Prestige +2, XP, ruffian_humbled flag.
+#
+# PATH B — Companion Adventure:
+#   Through dialogue with Bram, offer to take them somewhere real.
+#   All three join as a temporary group companion.
+#   Completing the Thorngrub queen quest with ruffians present → they've faced
+#   something real and earned respect for themselves.
+#   Prestige +3, XP, ruffian_mentored flag.
+#
+# Either path: on completion Elder Tomlin comments positively.
+
+id      = "village_ruffians"
+title   = "A Lesson in Respect"
+giver   = "elder_tomlin"
+summary = "Three village teenagers are causing trouble and drifting toward something worse. Elder Tomlin thinks they need either a good hard lesson or a real challenge. Give them one."
+
+[[step]]
+index     = 1
+objective = "Talk to Elder Tomlin about the ruffians."
+hint      = "Elder Tomlin sits by the well. He's noticed the situation and has thoughts."
+
+[[step]]
+index     = 2
+objective = "Engage with Bram and his group on the village green."
+hint      = "Bram is usually on the green or in the barn. Talk to him first."
+
+[[step]]
+index     = 3
+objective = "Resolve the situation: spar with them or take them on a real challenge."
+hint      = "Bram will offer a fight or you can offer them something better."
+completion_flag = "ruffians_resolved"
+
+[[step]]
+index     = 4
+objective = "Tell Elder Tomlin what happened."
+hint      = "He'll know, but he'll want to hear it."

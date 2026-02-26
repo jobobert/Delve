@@ -1,0 +1,33 @@
+# data/millbrook/companions/ruffian_trio.toml
+# Bram, Dal, and Fen — teenage village ruffians, companion path of village_ruffians quest.
+# Joins as a combat companion when offered a real challenge via Bram's dialogue.
+# They learn respect by actually facing danger together.
+
+id           = "ruffian_trio"
+name         = "Bram, Dal & Fen"
+type         = "combat"
+desc_short   = "Three village teenagers trying to look like they aren't nervous."
+attack       = 9
+defense      = 3
+hp           = 55
+max_hp       = 55
+carry_bonus  = 2
+style        = "brawling"
+style_prof   = 12.0
+restrictions = []
+
+join_message   = "Bram, Dal, and Fen fall in behind you. Dal's already asking what something was called. Fen is watching the exits. Bram is pretending he's done this before."
+wait_message   = "Bram holds up a fist. 'We'll hold the entrance. Three of us can handle anything that comes through.' Dal looks less certain. Fen looks completely certain, which is the useful one."
+rejoin_message = "The three of them reform around you. Dal has a shallow cut on his arm and is pretending not to notice it. 'Ready,' says Bram."
+downed_message = "The three of them take a beating they weren't expecting and fall back, panting. Fen is sitting on the ground; Dal is beside him; Bram is standing but bent over with his hands on his knees. 'We need a minute,' Bram says, and it's the first time you've heard him sound young."
+
+# When they survive the Thorngrub quest, trigger the completion flags
+on_quest_complete = [
+  { op = "set_flag",   flag = "ruffian_mentored" },
+  { op = "set_flag",   flag = "ruffians_resolved" },
+  { op = "advance_quest", quest_id = "village_ruffians", step = 3 },
+  { op = "prestige",   delta = 3, reason = "mentored village youth through real danger" },
+  { op = "give_xp",    amount = 60 },
+  { op = "message",    tag = "system",
+    text = "As you leave the mine, Bram stops. 'We did that,' he says quietly, to no one in particular. Fen nods. Dal is inspecting a Thorngrub chitin plate with the focus of someone who has just discovered they have opinions about armour." },
+]

@@ -1,0 +1,28 @@
+# data/greenhollow/dialogues/farm_hand_npc.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "Fields are in bad shape. Watch your step near the hedgerow.",
+  "You heading for the mine? Take a lamp. The lanterns on the rack are free to borrow.",
+  "Don't bother the turtle at the pond. She bit Owain's apprentice last month.",
+]
+
+[[response]]
+node = "root"
+text = "How bad is the field damage?"
+next = "field_damage"
+
+[[response]]
+node = "root"
+text = "Thanks for the warning."
+next = ""
+
+[[node]]
+id   = "field_damage"
+line = "Bad enough. The south rows are half-undermined. We've been losing maybe a tenth of the crop to the burrows collapsing overnight. It's not ruinous yet but it would be by spring."
+
+[[response]]
+node = "field_damage"
+text = "I'm working on it."
+next = ""

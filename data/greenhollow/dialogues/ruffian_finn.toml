@@ -1,0 +1,222 @@
+# data/greenhollow/dialogues/ruffian_finn.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "What are you looking at?",
+  "You've got the look of someone who thinks they can handle themselves.",
+  "We don't need people poking around here.",
+]
+
+[[response]]
+node = "root"
+condition = { not_flag = "finn_quest_started" }
+text = "I'm looking at three kids who look bored."
+next = "challenged"
+
+[[response]]
+node = "root"
+condition = { not_flag = "finn_quest_started", not_flag = "ruffians_talked_down" }
+text = "I'll give you a fair fight. All three of you."
+next = "spar_offer"
+
+[[response]]
+node = "root"
+condition = { not_flag = "finn_quest_started", not_flag = "ruffians_talked_down" }
+text = "I'm not here to fight you. But I've got something you might want."
+next = "quest_offer_path"
+
+[[response]]
+node = "root"
+condition = { flag = "finn_defeated", not_flag = "finns_quest_complete" }
+text = "You still on the ground, or are we done?"
+next = "post_spar"
+
+[[response]]
+node = "root"
+condition = { flag = "ruffians_talked_down", not_flag = "finns_quest_complete" }
+text = "Have you thought about what I said?"
+next = "task_check"
+
+[[response]]
+node = "root"
+condition = { flag = "finns_quest_complete" }
+text = "How are things?"
+next = "quest_done"
+
+[[response]]
+node = "root"
+text = "Forget it."
+next = ""
+
+[[node]]
+id   = "challenged"
+line = "Bored? We're— yeah, all right. We're bored. There's nothing to do here. The mine's closed, the smithy won't take us on, and if I hear one more thing about the harvest I'll—" He stops. Resets. Goes back to posturing. "Doesn't matter. You just passing through?"
+
+[[response]]
+node = "challenged"
+text = "Sounds like you need something to push back against."
+next = "spar_offer"
+
+[[response]]
+node = "challenged"
+text = "Maybe there's something worth doing. Ask me."
+next = "quest_offer_path"
+
+[[response]]
+node = "challenged"
+text = "Passing through. Good luck."
+next = ""
+
+[[node]]
+id   = "spar_offer"
+line = "Fair fight. The three of us." He looks at Dale and Scratch. Dale grins. Scratch is already moving to a better angle. "You lose, you keep walking. You win— I don't know. We'll see what that looks like."
+script = [
+  { op = "set_flag",      flag = "finn_quest_started" },
+  { op = "advance_quest", quest_id = "finns_reckoning", step = 1 },
+]
+
+[[response]]
+node = "spar_offer"
+text = "Deal. Come on then."
+next = ""
+
+[[response]]
+node = "spar_offer"
+text = "Actually — hear me out first."
+next = "quest_offer_path"
+
+[[node]]
+id   = "quest_offer_path"
+line = "Something worth doing." Finn says it flat, like he's heard this before. But he doesn't walk away. "Like what?"
+
+[[response]]
+node = "quest_offer_path"
+text = "The mine needs people to keep watch at the entrance while the deeper levels are cleared."
+next = "quest_detail"
+
+[[response]]
+node = "quest_offer_path"
+text = "Forget it, I'll just fight you."
+next = "spar_offer"
+
+[[node]]
+id   = "quest_detail"
+line = "Mine watch." He looks at Dale and Scratch again. Scratch shrugs. Dale says nothing but stops grinning, which is as close to serious as he gets. 'If the groundhogs come up while someone's in the lower level, they'd need warning. We could—' He catches himself. 'What's in it for us?'
+
+[[response]]
+node = "quest_detail"
+text = "A real job. Done properly. Something the village will remember."
+next = "quest_accept"
+
+[[response]]
+node = "quest_detail"
+text = "Nothing. Do it because it matters."
+next = "quest_accept_hard"
+
+[[node]]
+id   = "quest_accept"
+line = "A real job." He's quiet for a moment. Then: 'Yeah. All right. We'll watch the entrance. When you go in, we'll keep it clear.' He doesn't shake your hand, but he doesn't walk away either. The other two are already moving toward the field's edge."
+script = [
+  { op = "set_flag",      flag = "ruffians_talked_down" },
+  { op = "set_flag",      flag = "finn_quest_started" },
+  { op = "advance_quest", quest_id = "finns_reckoning", step = 1 },
+]
+
+[[response]]
+node = "quest_accept"
+text = "I'll hold you to that."
+next = ""
+
+[[node]]
+id   = "quest_accept_hard"
+line = "He stares at you for a long moment. Then he laughs — once, short, surprised. 'Because it matters.' He says it like he's testing the weight of it. 'Yeah. Fine. Yeah.' He nods at the others and they're moving before you've finished turning around."
+script = [
+  { op = "set_flag",      flag = "ruffians_talked_down" },
+  { op = "set_flag",      flag = "finn_quest_started" },
+  { op = "advance_quest", quest_id = "finns_reckoning", step = 1 },
+  { op = "prestige",      amount = 1, reason = "convinced Finn without offering reward" },
+]
+
+[[response]]
+node = "quest_accept_hard"
+text = "Let's see it then."
+next = ""
+
+[[node]]
+id   = "post_spar"
+line = "He gets up slowly. There's dirt on his face and he's breathing too carefully — ribs maybe. He looks at you with something that's not quite anger. 'You hit hard for someone who said it was fair.' He wipes his mouth. 'Dale? Scratch?' They're both down. He looks around the practice yard. 'All right. All right.'"
+script = [
+  { op = "if_flag", flag = "finn_defeated",
+    then = [
+      { op = "if_flag", flag = "dale_defeated",
+        then = [
+          { op = "if_flag", flag = "scratch_defeated",
+            then = [
+              { op = "set_flag",      flag = "finns_quest_complete" },
+              { op = "advance_quest", quest_id = "finns_reckoning", step = 2 },
+              { op = "give_xp",       amount = 60 },
+              { op = "prestige",      amount = 2, reason = "earned Finn's grudging respect" },
+              { op = "give_item",     item_id = "ruffian_peace_token" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+]
+
+[[response]]
+node = "post_spar"
+text = "We done?"
+next = "post_spar_done"
+
+[[node]]
+id   = "post_spar_done"
+line = "'Yeah.' He sits on the wall. 'We're done.' A pause. 'You didn't have to go easy on us.' He's wrong — you didn't — but he doesn't know that yet. Maybe that's okay."
+
+[[response]]
+node = "post_spar_done"
+text = "Take care of yourself."
+next = ""
+
+[[node]]
+id   = "task_check"
+line = "He's at the mine entrance, or he should be. 'We're there. We said we would be.' Something in his posture is different — straighter, less performance. 'Osric gave us the names of the tunnels. Showed us the alarm horn. Said we were doing it right.'"
+
+[[response]]
+node = "task_check"
+condition = { flag = "groundhog_king_killed" }
+text = "You did well. The King is dead."
+next = "task_complete"
+
+[[response]]
+node = "task_check"
+text = "Good. Keep it up."
+next = ""
+
+[[node]]
+id   = "task_complete"
+line = "He nods once, short and certain. He reaches into his pocket and ties a knot in a bit of twine — you've seen that gesture before, you just don't know the meaning yet. He holds it out. 'Village sign for no more quarrel,' he says. 'We're even.'"
+script = [
+  { op = "set_flag",      flag = "ruffians_helped_mine" },
+  { op = "set_flag",      flag = "finns_quest_complete" },
+  { op = "advance_quest", quest_id = "finns_reckoning", step = 2 },
+  { op = "give_xp",       amount = 90 },
+  { op = "prestige",      amount = 4, reason = "guided Finn's crew to something worth doing" },
+  { op = "give_item",     item_id = "ruffian_peace_token" },
+]
+
+[[response]]
+node = "task_complete"
+text = "We're even."
+next = ""
+
+[[node]]
+id   = "quest_done"
+line = "'Things are different.' He doesn't say how. He doesn't need to. Dale's been helping at the mine entrance on his own initiative. Scratch is — no one knows what Scratch is doing, but he's not here, which is new. Finn just looks at you with that careful assessment look and nods."
+
+[[response]]
+node = "quest_done"
+text = "Good."
+next = ""

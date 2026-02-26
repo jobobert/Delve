@@ -1,0 +1,46 @@
+# data/greenhollow/dialogues/miller_owain.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "Mill's running. Harvest looks good, except for the damage near the fields' edge.",
+  "What do you need?",
+]
+
+[[response]]
+node = "root"
+text = "How long has the infestation been going on?"
+next = "infestation_info"
+
+[[response]]
+node = "root"
+text = "Nice mill."
+next = "mill_comment"
+
+[[response]]
+node = "root"
+text = "Nothing. Carry on."
+next = ""
+
+[[node]]
+id   = "infestation_info"
+line = "Two months, maybe two and a half. Started at the field edge and worked inward. First burrow showed up the morning after a dry week in late summer. I thought it was a single badger. Then I saw the size of the hole. That was not a badger."
+
+[[response]]
+node = "infestation_info"
+text = "I'm dealing with it."
+next = "mill_comment"
+
+[[response]]
+node = "infestation_info"
+text = "Thanks for the context."
+next = ""
+
+[[node]]
+id   = "mill_comment"
+line = "Been here forty years. My father built the wheel. My grandfather cut the millstone. We'll be here when whatever's in that mine is dust."
+
+[[response]]
+node = "mill_comment"
+text = "That's a good way to think about it."
+next = ""

@@ -1,0 +1,149 @@
+# data/blackfen/dialogues/fenwatch_warden.toml
+# Warden Holt — quest giver and mire authority
+
+[[node]]
+id    = "root"
+lines = [
+  "The mire is my jurisdiction. What's your business south of the gate?",
+  "I've seen three patrols go south this season. One came back.",
+  "You've got that look — like you've decided to go in regardless of what I say."
+]
+
+[[response]]
+node = "root"
+text = "I'm looking for a tomb — the Aldenmoor vault."
+next = "aldenmoor_ask"
+
+[[response]]
+node = "root"
+text = "Tell me about the mire."
+next = "mire_info"
+
+[[response]]
+node = "root"
+text = "Nothing. Just passing through."
+next = ""
+
+[[node]]
+id   = "aldenmoor_ask"
+line = "Aldenmoor. Of course. That tomb has been trouble since the lake level dropped. A year ago the entrance resurfaced. Since then I've had four incidents — people going in, things coming out. I've got orders to keep civilians out. But I've also got a missing patrol."
+
+[[response]]
+node = "aldenmoor_ask"
+text = "What happened to the patrol?"
+next = "patrol_missing"
+
+[[response]]
+node = "aldenmoor_ask"
+text = "What's inside the vault?"
+next = "vault_contents"
+
+[[response]]
+node = "aldenmoor_ask"
+text = "I'll find out what happened. Will you let me through?"
+next = "holt_quest_offer"
+
+[[node]]
+id   = "patrol_missing"
+line = "Three rangers, good people. Went south to check the tomb entrance five days ago. Didn't come back. I'm not going to pretend I know what's in that vault — but the scratches on the antechamber wall, last time I looked, were made by something with claws. Not human claws."
+
+[[response]]
+node = "patrol_missing"
+text = "I'll try to find them."
+next = "holt_quest_offer"
+
+[[response]]
+node = "patrol_missing"
+text = "What's in the vault?"
+next = "vault_contents"
+
+[[node]]
+id   = "vault_contents"
+line = "According to the family records, the vault holds the body of Gregor Aldenmoor and something called the Celestial Emerald — a gem he carried everywhere. Riversturm the wizard was supposed to study it, but Gregor died before that happened. The family sealed the tomb and nobody's opened it officially since. Unofficially — I don't know what's been going on in there."
+
+[[response]]
+node = "vault_contents"
+text = "I'll go in and find out."
+next = "holt_quest_offer"
+
+[[response]]
+node = "vault_contents"
+text = "What's so important about the Emerald?"
+next = "emerald_lore"
+
+[[node]]
+id   = "emerald_lore"
+line = "I'm a ranger, not a scholar. But Riversturm's notes — what survived of them — said the Emerald stores memories. Thoughts. Like a crystal that records everything it touches. If something's using Gregor's body, the Emerald might be why."
+
+[[response]]
+node = "emerald_lore"
+text = "I'll investigate."
+next = "holt_quest_offer"
+
+[[node]]
+id   = "mire_info"
+line = "Three paths south: the causeway, the ford, or the sunken road. The causeway is safest. The ford has a swamp lion — big one. The road is tricky if you don't know to look for the old cobbles under the water. Talk to Grimwick. She knows the mire better than anyone alive."
+
+[[response]]
+node = "mire_info"
+text = "Who is Grimwick?"
+next = "grimwick_intro"
+
+[[response]]
+node = "mire_info"
+text = "What else should I know?"
+next = "mire_threats"
+
+[[node]]
+id   = "grimwick_intro"
+line = "Lizard-person, lives on the island in Blacklake. Knows every path and every creature in the mire. She's been here longer than the tower ruins. She doesn't trust outsiders easily but she's not hostile without reason. If she offers to help you — take it."
+
+[[response]]
+node = "grimwick_intro"
+text = "I'll find her."
+next = ""
+
+[[node]]
+id   = "mire_threats"
+line = "Durath Ironteeth and his Redbelly crew have claimed the western path. They're mercenaries who decided extortion in a swamp was easier than honest work. They control the bridge over the lake. You'll need his key or another route to reach the shore from the west."
+
+[[response]]
+node = "mire_threats"
+text = "Anything else?"
+next = "mire_threats_2"
+
+[[node]]
+id   = "mire_threats_2"
+line = "The tower. Stay out of Riversturm's tower unless you're prepared for a fight. Something moved in about six months ago. I don't know what it is, but the rangers who went to check came back pale and didn't want to talk about it."
+
+[[response]]
+node = "mire_threats_2"
+text = "Understood. I'll be careful."
+next = ""
+
+[[node]]
+id   = "holt_quest_offer"
+line = "Fine. I'm not going to stop you — I'd rather have someone competent in there than sit here counting days. Find out what happened to my patrol. If the Emerald is causing the problem, bring it out. I'll make sure you're rewarded properly."
+
+[[response]]
+node = "holt_quest_offer"
+text = "I'll do what I can."
+next = "holt_quest_accept"
+
+[[node]]
+id   = "holt_quest_accept"
+line = "Grimwick will help you if you earn her trust. Start at the post — she spends time there. And take a torch from the rack. The tomb will be dark."
+
+[[response]]
+node = "holt_quest_accept"
+text = "One more question first."
+next = "root"
+
+[[response]]
+node = "holt_quest_accept"
+text = "I'll head south now."
+next = ""
+
+script = [
+  { op = "advance_quest", quest_id = "the_emerald_in_the_dark", step = 1 }
+]

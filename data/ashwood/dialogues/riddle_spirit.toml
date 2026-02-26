@@ -1,0 +1,88 @@
+# data/dialogues/riddle_spirit.toml
+# The Arbiter — puzzle gatekeeper at the Haunted Clearing
+
+[[node]]
+id = "root"
+lines = [
+  "Seeker. You have read the altar.",
+  "The question stands. What is your answer?",
+  "Many have come here. Few have answered correctly."
+]
+
+[[response]]
+node = "root"
+  condition = { not_flag = "puzzle_answered" }
+  text  = "The answer to the riddle is: a map."
+  next  = "correct"
+
+[[response]]
+node = "root"
+  condition = { not_flag = "puzzle_answered" }
+  text  = "The answer is: a dream."
+  next  = "wrong"
+
+[[response]]
+node = "root"
+  condition = { not_flag = "puzzle_answered" }
+  text  = "The answer is: a book."
+  next  = "wrong"
+
+[[response]]
+node = "root"
+  condition = { not_flag = "puzzle_answered" }
+  text  = "I need a hint."
+  next  = "hint"
+
+[[response]]
+node = "root"
+  condition = { flag = "puzzle_answered" }
+  text  = "I have already answered."
+  next  = "already_answered"
+
+[[response]]
+node = "root"
+  text  = "I need more time to think."
+  next  = ""
+
+[[node]]
+id   = "correct"
+line = "Correct. Cities without houses. Mountains without trees. Water without fish. Roads without travellers. You carry a map in your mind — or your pack. The seal recognizes truth. You may pass."
+script = [
+  { op = "set_flag",  flag = "puzzle_solved" },
+  { op = "set_flag",  flag = "puzzle_answered" },
+  { op = "unlock_exit", room_id = "ashwood_shrine", direction = "south" },
+  { op = "advance_quest", quest_id = "ashwood_contract", step = 5 },
+  { op = "message",   text = "The ground shakes faintly. Somewhere south, stone grinds against stone.", tag = "SYSTEM" },
+]
+
+[[response]]
+node = "correct"
+  text  = "The path is open. Thank you."
+  next  = ""
+
+[[node]]
+id   = "wrong"
+line = "No. That is not correct. The question remains. Think more carefully."
+
+[[response]]
+node = "wrong"
+  text  = "Let me reconsider."
+  next  = ""
+
+[[node]]
+id   = "hint"
+line = "The riddle describes something that represents without being. Cities that are not cities. Mountains that are not mountains. What do you carry that holds the world in miniature?"
+
+[[response]]
+node = "hint"
+  text  = "I think I understand."
+  next  = ""
+
+[[node]]
+id   = "already_answered"
+line = "The seal is open. You have proved your worth. Proceed."
+
+[[response]]
+node = "already_answered"
+  text  = "Thank you."
+  next  = ""

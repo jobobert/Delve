@@ -1,0 +1,47 @@
+# data/training/dialogues/barracks_quartermaster.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "Quartermaster. What do you need?",
+  "I handle equipment and accounts. Ask your question.",
+  "I've been doing this thirty years. I've seen everything. Be brief."
+]
+
+[[response]]
+node = "root"
+text = "I need to deposit something."
+next = "how_deposit"
+
+[[response]]
+node = "root"
+text = "Can I withdraw something from my account?"
+next = "how_withdraw"
+
+[[response]]
+node = "root"
+text = "Nothing. Carry on."
+next = ""
+
+[[node]]
+id   = "how_deposit"
+line = "Use 'deposit' followed by the item name. It goes into your account and stays there regardless of what happens to you out in the field. Same account at the treasury in town and the warden at the Ashwood Gate."
+
+[[response]]
+node = "how_deposit"
+text = "And to get it back?"
+next = "how_withdraw"
+
+[[response]]
+node = "how_deposit"
+text = "Understood."
+next = ""
+
+[[node]]
+id   = "how_withdraw"
+line = "'withdraw' followed by the item name. Check 'balance' to see what you have stored. Don't come asking me to fish things out if you forget what you deposited — that's what the list is for."
+
+[[response]]
+node = "how_withdraw"
+text = "Right. Thank you."
+next = ""

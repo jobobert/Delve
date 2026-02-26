@@ -1,0 +1,70 @@
+# data/ashwood/dialogues/ashwood_warden.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "Going into the forest? Smart to leave something behind first.",
+  "I hold accounts for travellers. Same as the Millhaven treasury.",
+  "I've seen people come back from the Ashwood with nothing but the clothes on their backs. Bank before you go deep."
+]
+
+[[response]]
+node = "root"
+text = "What's it like deeper in the forest?"
+next = "deep_forest"
+
+[[response]]
+node = "root"
+text = "How does the banking work here?"
+next = "bank_explain"
+
+[[response]]
+node = "root"
+text = "I'm fine. Just passing through."
+next = ""
+
+[[node]]
+id   = "deep_forest"
+line = "The corruption started maybe two months back. Animals acting wrong. The ruins to the east were always abandoned — now they're not. Whatever is in there, it's drawn to the old garrison. I'd take the Drakebone weapons from the armory if I were going to the lair. Ordinary iron won't do the job."
+
+[[response]]
+node = "deep_forest"
+text = "Tell me about the Drake."
+next = "about_drake"
+
+[[response]]
+node = "deep_forest"
+text = "I'll be careful."
+next = ""
+
+[[node]]
+id   = "about_drake"
+line = "Old. Bigger than anything you've fought. It doesn't rush — it waits. It's been here longer than the garrison, longer than Millhaven. The Drakebone weapons in the armory were forged to kill it, forty years ago. They failed then. Maybe you'll do better."
+
+[[response]]
+node = "about_drake"
+text = "Where is the armory?"
+next = "armory_hint"
+
+[[response]]
+node = "about_drake"
+text = "I'll need to find those weapons."
+next = "armory_hint"
+
+[[node]]
+id   = "armory_hint"
+line = "East through the gate, past the road and the ruins. The armory is locked — you'll need the garrison key. The ghost in the ruins knows where it is. Don't ask me how I know about the ghost. I just know."
+
+[[response]]
+node = "armory_hint"
+text = "Understood. Thank you."
+next = ""
+
+[[node]]
+id   = "bank_explain"
+line = "Same as in Millhaven. 'deposit' to store, 'withdraw' to retrieve, 'balance' to see your account. Stored items survive death — gold on your person does not. Most people learn that lesson the hard way."
+
+[[response]]
+node = "bank_explain"
+text = "Good to know."
+next = ""

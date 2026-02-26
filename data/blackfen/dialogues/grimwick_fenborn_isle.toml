@@ -1,0 +1,85 @@
+# data/blackfen/dialogues/grimwick_fenborn_isle.toml
+# Grimwick on Blacklake Isle — found here if player didn't meet her at the post,
+# or as an alternate meeting point
+
+[[node]]
+id    = "root"
+lines = [
+  "You crossed the lake alone. Either you're capable or you're lucky. I'll find out which.",
+  "I don't often get visitors here. The serpent usually discourages them.",
+  "I've been watching the vault from here for weeks. Something is very wrong in there."
+]
+
+[[response]]
+node = "root"
+text = "I'm going to the Aldenmoor vault."
+next = "vault_response"
+
+[[response]]
+node = "root"
+text = "Will you guide me?"
+next = "guide_ask"
+condition = { not_flag = "has_grimwick" }
+
+[[response]]
+node = "root"
+text = "You're already with me. What do you see from here?"
+next = "grimwick_watching"
+condition = { flag = "has_grimwick" }
+
+[[response]]
+node = "root"
+text = "I need something to clear the poison in me."
+next = "antitoxin_ask"
+condition = { flag = "has_grimwick" }
+
+[[node]]
+id   = "vault_response"
+line = "I know. I've been watching it. The thing that lives in Gregor's body has been active — I've seen it moving at the vault entrance at night. It doesn't like visitors. You'll need to go through it to get the Emerald."
+
+[[response]]
+node = "vault_response"
+text = "Will you come with me?"
+next = "guide_ask"
+
+[[response]]
+node = "vault_response"
+text = "I've fought worse."
+next = ""
+
+[[node]]
+id   = "guide_ask"
+line = "From here? The drowned causeway is right there — south of the shore. But what you'll find in the vault... I'd rather not face it alone. You shouldn't either. Let me come."
+
+script = [
+  { op = "set_flag", flag = "has_grimwick" },
+  { op = "message", text = "Grimwick stands, moving with fluid economy. 'I know what's in that tomb. Let's go.'", tag = "system" },
+  { op = "advance_quest", quest_id = "the_emerald_in_the_dark", step = 2 }
+]
+
+[[response]]
+node = "guide_ask"
+text = "Agreed. Let's go."
+next = ""
+
+[[node]]
+id   = "grimwick_watching"
+line = "The vault entrance has been still for two days. Whatever is inside — the Guardian — it's waiting. It knows something's coming. I think it can sense the Emerald being sought."
+
+[[response]]
+node = "grimwick_watching"
+text = "Then we shouldn't give it more time."
+next = ""
+
+[[node]]
+id   = "antitoxin_ask"
+line = '''Here." She produces a small vial from a pouch at her belt. "Fen antitoxin — I make it from the swamp root that grows near the inlet. Drink it. It won't taste pleasant.'''
+
+script = [
+  { op = "give_item", item_id = "fen_antitoxin" }
+]
+
+[[response]]
+node = "antitoxin_ask"
+text = "Thank you."
+next = ""

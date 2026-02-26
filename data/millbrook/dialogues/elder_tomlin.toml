@@ -1,0 +1,207 @@
+# data/millbrook/dialogues/elder_tomlin.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "I wondered when someone like you would come through.",
+  "Millbrook gets visitors. Most of them don't look the way you look.",
+  "Sit down if you like. The well-wall is comfortable once you're used to it."
+]
+
+[[response]]
+node = "root"
+text = "What kind of person do I look like?"
+next = "what_kind"
+
+[[response]]
+node = "root"
+text = "What do you know about fighting styles?"
+next = "styles_intro"
+
+[[response]]
+node = "root"
+text = "Who are you?"
+next = "who_are_you"
+
+[[response]]
+node = "root"
+text = "The ruffians — you know them?"
+next = "ruffians"
+
+[[response]]
+node = "root"
+text = "Nothing for now."
+next = ""
+
+[[node]]
+id   = "who_are_you"
+line = "Tomlin. I used to be several other things — soldier, briefly a monk, briefly a thief, briefly many things. Now I'm the person who sits on the well-wall. It turns out that after enough years of doing things, sitting and watching has its own depth."
+
+[[response]]
+node = "who_are_you"
+text = "What did you learn from all that?"
+next = "what_learned"
+
+[[response]]
+node = "who_are_you"
+text = "What can you teach me?"
+next = "styles_intro"
+
+[[node]]
+id   = "what_learned"
+line = "That force is the easiest answer and almost never the right one. That stillness is harder than movement. That most violence — most of it — comes from someone being afraid and not having another way to show it. Even the Thorngrubs, in their way."
+
+[[response]]
+node = "what_learned"
+text = "Tell me about Flowing Water."
+next = "flowing_water"
+
+[[response]]
+node = "what_learned"
+text = "Tell me about the ruffians."
+next = "ruffians"
+
+[[node]]
+id   = "what_kind"
+line = "Someone who's been places. Who carries things — not in the pack, in the posture. Someone who's probably seen real danger and walked into it more or less deliberately. There's a quality to it. Most travellers through here are merchants or frightened. You're neither."
+
+[[response]]
+node = "what_kind"
+text = "You sound like a teacher."
+next = "styles_intro"
+
+[[response]]
+node = "what_kind"
+text = "Can you teach me anything?"
+next = "styles_intro"
+
+[[node]]
+id   = "styles_intro"
+line = "I knew several styles. Mastered two. The one I'd call worth passing on is Flowing Water — a style built around not meeting force with force. You let the opponent's strength become their problem. Fast enemies are actually easier to work with because they give you more momentum to redirect. I don't teach it to everyone."
+
+[[response]]
+node = "styles_intro"
+text = "What would it take for you to teach me?"
+next = "teach_requirement"
+
+[[response]]
+node = "styles_intro"
+condition = { flag = "flows_water_learned" }
+text = "You've already taught me."
+next = "already_taught"
+
+[[node]]
+id   = "teach_requirement"
+line = "I teach people who've proven they do things for reasons other than personal gain. That means some track record. Some of the village will tell you how to build one. Clear the Thorngrubs. Return the miller's amulet. Deal with the ruffians sensibly. Come back to me when you've done some of that — I'll know."
+
+[[response]]
+node = "teach_requirement"
+condition = { min_prestige = 10 }
+text = "I've done enough."
+next = "teach_ready"
+
+[[response]]
+node = "teach_requirement"
+condition = { min_prestige = 10 }
+text = "I'd like to learn now."
+next = "teach_ready"
+
+[[response]]
+node = "teach_requirement"
+text = "I'll get there."
+next = ""
+
+[[node]]
+id   = "teach_ready"
+line = "Yes. I've heard what you've done. Sit down — this will take a moment to explain properly. Flowing Water isn't a series of techniques so much as a change in how you understand a fight. Your opponent's force is not your enemy. It's a gift. You accept it, redirect it, and return it with interest."
+script = [
+  { op = "teach_style", style_id = "flowing_water" },
+  { op = "set_flag",    flag = "flows_water_learned" },
+  { op = "prestige",    delta = 1, reason = "earned a master's trust" },
+]
+
+[[response]]
+node = "teach_ready"
+text = "I understand. Thank you."
+next = ""
+
+[[node]]
+id   = "already_taught"
+line = "You have what I can give you. What you do with it is the harder part. Come back when you've been in a few more fights — I'll know if you're using it right."
+
+[[response]]
+node = "already_taught"
+text = "I will."
+next = ""
+
+[[node]]
+id   = "flowing_water"
+line = "It begins with watching. Not doing — watching. You let the opponent commit before you respond. Against someone who strikes fast, that patience becomes an advantage: they've given you their full weight before you've given them anything. The redirect passive is the core of it at first. Later, you learn to absorb their impact and convert it. It takes time. Most people want something they can use immediately."
+
+[[response]]
+node = "flowing_water"
+text = "How do you learn it?"
+next = "teach_requirement"
+
+[[response]]
+node = "flowing_water"
+text = "Sounds like patience is the real skill."
+next = "patience"
+
+[[node]]
+id   = "patience"
+line = "Everything is. People learn ten styles because they're afraid one isn't enough. But one style, understood completely, is more than ten understood partially. The water doesn't become a stone by trying harder. It becomes stone by being cold, by waiting, by having time. You are the water."
+
+[[response]]
+node = "patience"
+text = "That's either profound or absurd."
+next = "profound_absurd"
+
+[[response]]
+node = "patience"
+text = "I'd like to learn Flowing Water."
+next = "teach_requirement"
+
+[[node]]
+id   = "profound_absurd"
+line = "Yes. That's usually how it is with things that are true."
+
+[[response]]
+node = "profound_absurd"
+text = "..."
+next = ""
+
+[[node]]
+id   = "ruffians"
+line = "Bram, Dal, and Fen. I've been watching them for two years. Bram's not cruel — he's just reached the age where energy has to go somewhere and nothing here has asked anything serious of him. Dal will be fine given something real to work with. Fen already knows better; he's just waiting for someone to give him permission to act like it."
+script = [
+  { op = "advance_quest", quest_id = "village_ruffians", step = 1 },
+]
+
+[[response]]
+node = "ruffians"
+text = "What should I do about them?"
+next = "ruffians_advice"
+
+[[response]]
+node = "ruffians"
+text = "What would you do?"
+next = "ruffians_tomlin_would"
+
+[[node]]
+id   = "ruffians_advice"
+line = "Something genuine. A spar — a real one, not a performance — would work. Or take them somewhere that asks something real of them. The thornwood is dangerous now. So is the mine, if you're going in there. Something with actual stakes. They'll rise or they won't, but either way they'll have had a real thing happen to them."
+
+[[response]]
+node = "ruffians_advice"
+text = "I'll talk to Bram."
+next = ""
+
+[[node]]
+id   = "ruffians_tomlin_would"
+line = "I'm eighty. I'd sit here and watch until one of them did something I could comment on. But I don't recommend it as a strategy unless you have my time available."
+
+[[response]]
+node = "ruffians_tomlin_would"
+text = "Fair point."
+next = ""

@@ -1,0 +1,162 @@
+# data/training/styles/styles.toml — All fighting style definitions.
+#
+# All styles live here because the Training zone (Millhaven Barracks) is the
+# game's combat-training hub. Styles that have learned_from = "drill_sergeant"
+# are taught explicitly; the rest (brawling, evasion, whirlwind, serpent_strike)
+# are either innate (brawling — every player starts with it) or discovered.
+#
+# The engine scans data/*/styles/*.toml at startup and merges all found styles
+# into one global dict. Future zones may define their own styles here too.
+#
+# Field reference
+# ───────────────
+# difficulty            = proficiency gain divisor (1.0 = normal, 2.0 = twice as slow)
+# preferred_weapon_tags = weapon tag affinities — matching gear gives damage bonus
+# preferred_armor_tags  = armor tag affinities — matching gear gives defense bonus
+# weapon_bonus / armor_bonus = max % bonus at full proficiency (0.0 = none, 0.30 = 30%)
+# learned_from          = npc id of the trainer, or "" if self-taught / innate
+# learned_at            = minimum player level to learn
+
+[[style]]
+id                = "brawling"
+name              = "Brawling"
+desc_short        = "Raw street-fighting. Works best on unsuspecting humanoids."
+desc_long         = "Brawling is the art of hurting people with whatever you have — fists, elbows, headbutts, knees. No training required to start, but it rewards practice. Effective against humanoids who aren't expecting technique, but struggles against armored foes or quick animals."
+strong_vs         = ["humanoid", "slow"]
+weak_vs           = ["armored", "fast", "beast"]
+strong_multiplier = 1.4
+weak_multiplier   = 0.7
+attack_bonus      = 0
+defense_bonus     = 0
+difficulty        = 1.0
+preferred_weapon_tags = ["fist", "brawling", "blunt"]
+preferred_armor_tags  = ["light"]
+weapon_bonus      = 0.20
+armor_bonus       = 0.10
+learned_from      = ""
+learned_at        = 0
+passives          = [{ability = "stun", threshold = 50}, {ability = "haymaker", threshold = 75}]
+
+[[style]]
+id                = "swordplay"
+name              = "Swordplay"
+desc_short        = "Classical blade technique. Excels against armored humanoids."
+desc_long         = "A formal discipline from military academies. Emphasizes blade angles, leverage at armor joints, and economical footwork. Vastly more effective against armored humanoids than raw strength. Against fast or feral opponents, its rigid structure becomes a liability."
+strong_vs         = ["armored", "humanoid"]
+weak_vs           = ["fast", "beast", "undead"]
+strong_multiplier = 1.5
+weak_multiplier   = 0.65
+attack_bonus      = 2
+defense_bonus     = 0
+difficulty        = 1.5
+preferred_weapon_tags = ["blade", "one_handed"]
+preferred_armor_tags  = ["chain", "heavy"]
+weapon_bonus      = 0.25
+armor_bonus       = 0.15
+learned_from      = "drill_sergeant"
+learned_at        = 1
+passives          = [{ability = "parry", threshold = 50}, {ability = "riposte", threshold = 75}]
+
+[[style]]
+id                = "iron_root"
+name              = "Iron Root"
+desc_short        = "Heavy grounded strikes. Punishes large, slow opponents."
+desc_long         = "Iron Root teaches you to become immovable — plant your feet and deliver crushing blows from a stable base. Devastating against large, slow, or heavily armored opponents. Against anything quick, the style's lack of mobility is a severe problem."
+strong_vs         = ["large", "slow", "armored"]
+weak_vs           = ["fast", "group", "small"]
+strong_multiplier = 1.6
+weak_multiplier   = 0.6
+attack_bonus      = 3
+defense_bonus     = 2
+difficulty        = 1.5
+preferred_weapon_tags = ["blunt", "two_handed", "heavy"]
+preferred_armor_tags  = ["heavy", "chain"]
+weapon_bonus      = 0.30
+armor_bonus       = 0.20
+learned_from      = "drill_sergeant"
+learned_at        = 3
+passives          = [{ability = "knockback", threshold = 50}, {ability = "iron_skin", threshold = 75}]
+
+[[style]]
+id                = "serpent_strike"
+name              = "Serpent Strike"
+desc_short        = "Fast precise attacks on weak points. Excels against agile beasts."
+desc_long         = "Built on patience and precision — wait for the gap, strike the exact point. Developed to counter fast-moving animals where brute force achieves nothing. Against slow or armored foes the light hits barely register."
+strong_vs         = ["fast", "beast", "small"]
+weak_vs           = ["armored", "large", "undead"]
+strong_multiplier = 1.5
+weak_multiplier   = 0.65
+attack_bonus      = 1
+defense_bonus     = 1
+difficulty        = 2.0
+preferred_weapon_tags = ["blade", "light", "one_handed"]
+preferred_armor_tags  = ["light"]
+weapon_bonus      = 0.30
+armor_bonus       = 0.10
+learned_from      = ""
+learned_at        = 5
+passives          = [{ability = "bleed", threshold = 50}, {ability = "vital_strike", threshold = 75}]
+
+[[style]]
+id                = "whirlwind"
+name              = "Whirlwind"
+desc_short        = "Sweeping strikes that hit every nearby enemy. Built for groups."
+desc_long         = "Whirlwind abandons precision for constant wide-arc motion. Against groups it is extraordinarily efficient. Against single powerful opponents it is a disaster — the lack of targeting leaves you constantly off-balance."
+strong_vs         = ["group", "small", "humanoid"]
+weak_vs           = ["armored", "large", "undead"]
+strong_multiplier = 1.5
+weak_multiplier   = 0.6
+attack_bonus      = 0
+defense_bonus     = -1
+difficulty        = 2.0
+preferred_weapon_tags = ["blade", "one_handed"]
+preferred_armor_tags  = ["light"]
+weapon_bonus      = 0.20
+armor_bonus       = 0.05
+learned_from      = ""
+learned_at        = 4
+passives          = [{ability = "cleave", threshold = 50}, {ability = "cyclone", threshold = 75}]
+
+[[style]]
+id                = "evasion"
+name              = "Evasion"
+desc_short        = "Defensive footwork. Neutralizes fast opponents through avoidance."
+desc_long         = "Less a fighting style than a survival philosophy — don't be where the attack lands. Against fast or humanoid opponents who rely on accurate strikes, it is maddening to fight. Against overwhelming numbers or sheer brute force, nearly useless."
+strong_vs         = ["fast", "humanoid", "small"]
+weak_vs           = ["group", "large", "slow"]
+strong_multiplier = 1.3
+weak_multiplier   = 0.7
+attack_bonus      = -1
+defense_bonus     = 4
+difficulty        = 1.0
+preferred_weapon_tags = ["light", "blade", "fist"]
+preferred_armor_tags  = ["light"]
+weapon_bonus      = 0.15
+armor_bonus       = 0.20
+learned_from      = ""
+learned_at        = 2
+passives          = [{ability = "dodge", threshold = 50}, {ability = "counter", threshold = 75}]
+
+[[style]]
+id                = "flowing_water"
+name              = "Flowing Water"
+desc_short        = "A meditative defensive art. Uses opponents' force against them."
+desc_long         = "Flowing Water treats violence as a current — you don't fight it, you redirect it. The style is built around stillness under pressure, reading the opponent's energy, and letting their own momentum become the weapon. Against fast, aggressive opponents, Flowing Water shines: the harder they come, the harder they fall. Against slow, deliberate fighters, the style has little momentum to exploit and must rely on patience."
+strong_vs         = ["fast", "beast", "aggressive"]
+weak_vs           = ["slow", "patient", "armored"]
+strong_multiplier = 1.5
+weak_multiplier   = 0.75
+attack_bonus      = 0
+defense_bonus     = 3
+difficulty        = 2.5
+preferred_weapon_tags = ["staff", "light", "one_handed"]
+preferred_armor_tags  = ["light"]
+weapon_bonus      = 0.15
+armor_bonus       = 0.20
+learned_from      = "elder_wren"
+learned_at        = 5
+passives          = [
+  {ability = "stillness", threshold = 1},
+  {ability = "redirect",  threshold = 40},
+  {ability = "absorb",    threshold = 75},
+]

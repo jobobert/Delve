@@ -1,0 +1,42 @@
+# data/millhaven/quests/the_lost_ledger.toml
+# "The Lost Ledger" — bank expansion quest.
+#
+# The Millhaven bank branch is legally limited in how many accounts it can
+# expand without the original charter ledger — a book that disappeared when
+# a depositor fled into the Blackfen Mire years ago. If you recover it,
+# the banker can officially approve expanded vault access for you, bypassing
+# the gold requirement for the first expansion tier.
+#
+# Quest flow:
+#   Step 1: Talk to the banker and hear about the lost ledger
+#   Step 2: Find the riversturm_journal in the Blackfen Mire (already in world)
+#   Step 3: Return it to the banker — receive tier-2 bank access (20 slots)
+#
+# Flags:
+#   ledger_quest_accepted   — Quest accepted from banker
+#   ledger_returned         — Ledger handed to banker (completion)
+#
+# Reward:
+#   bank_slots upgraded to 20 (tier 2) at no gold cost
+
+id      = "the_lost_ledger"
+title   = "The Lost Ledger"
+giver   = "millhaven_banker"
+summary = "The bank's charter ledger went missing into the Blackfen Mire years ago. Recover it and the banker will grant you expanded vault access — no gold required."
+
+[[step]]
+index     = 1
+objective = "Speak to the Millhaven banker about expanding your account."
+hint      = "The banker at the Millhaven branch may have an alternative to paying for expansion."
+
+[[step]]
+index     = 2
+objective = "Find the lost ledger somewhere in the Blackfen Mire."
+hint      = "The man who took it fled south into the mire. It may still be there."
+completion_flag = "ledger_found"
+
+[[step]]
+index     = 3
+objective = "Return the ledger to the Millhaven banker."
+hint      = "Bring it back and the banker can process your expanded account."
+completion_flag = "ledger_returned"

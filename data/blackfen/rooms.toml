@@ -1,0 +1,613 @@
+# data/blackfen/rooms.toml — Blackfen Mire (The Murk Fens)
+#
+# Adapted from "The Dragon's Demise" by J.C. Connors (1shotadventures.com).
+# Names and lore reskinned to fit Delve's world; mechanics translated to
+# the skill_check / status_effect / flag system.
+#
+# Zone layout (coord [x,y], origin at blackfen_gate):
+#
+#                      [1,1] blackfen_thorn_path
+#                        |
+#  [0,0] blackfen_gate - [1,0] blackfen_trail - [2,0] blackfen_clearing
+#                                |
+#                           [2,-1] blackfen_boulderring
+#                                |
+#                           [2,-2] blackfen_wading  ---- [3,-2] blackfen_stump
+#                                |
+#                  [1,-3] blackfen_north_shore - [2,-3] blackfen_blacklake_shore
+#                                |
+#                     [1,-4] blackfen_witchs_cottage
+#                                |
+#                     [1,-5] blackfen_bone_trail
+#                                |
+#                     [1,-6] blackfen_clearing_dragon
+#                                           |
+#                                    [2,-6] blackfen_serpent_temple
+#
+# Fanghelm's Crossing: a locked rope bridge at [1,-5] east leads to [2,-5]
+# blackfen_slaughter_camp if player has durath_key or defeats Durath there.
+#
+# Companion flag: "has_grimwick" (set by talking to Grimwick at the gate)
+# gives bonus text throughout and DC advantage hints.
+
+# ── ZONE ENTRY ────────────────────────────────────────────────────────────────
+
+[[room]]
+id          = "blackfen_gate"
+name        = "Edge of the Murk Fens"
+description = """
+The road from Millhaven ends here. Beyond the rotting wooden post that marks
+the boundary, the world turns grey and wet. Twisted willows trail their
+fingers in black water. The air smells of sulfur and rot and something older
+than either.
+
+A scrawny lizard-person sits on a wobbly stool outside a low hovel, rocking
+contentedly. A painted wooden plaque hangs from his neck.
+"""
+coord  = [0, 0]
+flags  = ["town"]
+exits  = { northeast = "forest_path", east = "blackfen_trail" }
+items  = []
+spawns = ["grimwick_guide", "fenwatch_warden"]
+
+on_enter = [
+  { op = "message", text = "The stench of the Murk Fens hits you like a damp cloth to the face.", tag = "system" }
+]
+
+# ── MAIN TRAIL ────────────────────────────────────────────────────────────────
+
+[[room]]
+id          = "blackfen_trail"
+name        = "Fen Trail"
+description = """
+A narrow path of packed earth winds between the mire's grey-barked trees.
+The ground is spongy underfoot. Frog calls and bird-screams compete with the
+hiss of insects. A spray of old blood on a nearby trunk suggests something
+died here recently.
+
+Aonn Tesk's rough map shows the dead dragon lying to the west of this point —
+but the direct route would take you off the path entirely.
+"""
+coord  = [1, 0]
+exits  = { west = "blackfen_gate", north = "blackfen_thorn_path", east = "blackfen_clearing", south = "blackfen_boulderring" }
+items  = []
+spawns = []
+
+# ── THORN PATH (optional northern branch) ─────────────────────────────────────
+
+[[room]]
+id          = "blackfen_thorn_path"
+name        = "Thorn-Vine Path"
+description = """
+The path narrows until you are weaving between long hanging vines laced with
+black thorns the length of your finger. As you watch, one of the vines slowly
+retracts upward, carrying the limp body of a swamp rodent it had caught.
+You move quickly.
+
+The path ends at a hot freshwater spring bubbling from a crack in the rocks.
+You refill your waterskin — Aonn said such springs run clean. Nearby, a
+massive old stump sits off the trail. Something has carved a low door in its
+side, and the hollow within looks very dark.
+"""
+coord  = [1, 1]
+exits  = { south = "blackfen_trail", east = "blackfen_stump_exterior" }
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "skill_check", skill = "perception", dc = 10, silent = false,
+    on_pass = [
+      { op = "message", text = "You spot the carved stump door before walking past it. Something about it is deliberate — man-made.", tag = "system" }
+    ],
+    on_fail = [
+      { op = "message", text = "The stump is easy to miss. Just another rotted hulk in the mire.", tag = "system" }
+    ]
+  }
+]
+
+# ── STUMP LABORATORY ──────────────────────────────────────────────────────────
+
+[[room]]
+id          = "blackfen_stump_exterior"
+name        = "The Scorched Stump"
+description = """
+The stump is the size of a small cottage — the remnant of some vast tree that
+burned long ago. Someone has cut a low door into its side, fitted with iron
+hinges gone dark with rust. The top of the stump is scorched, whether by the
+original fire or something more deliberate you cannot say.
+
+The door is locked with a simple mechanism.
+"""
+coord  = [2, 1]
+exits  = { west = "blackfen_thorn_path", east = "blackfen_stump_interior" }
+items  = []
+spawns = []
+
+[[room]]
+id          = "blackfen_stump_interior"
+name        = "Stump Laboratory"
+description = """
+The inside of the stump has been carved out and fitted as a tiny alchemist's
+workroom. Shelves line the curved walls, covered in dusty vials and crockery.
+A small table bears stains in cherry-red and deep purple that smell sweetly
+of something fermented.
+
+Notes in a cramped, unreadable hand are pinned to every surface. Whoever
+worked here has been gone for years — maybe decades. One shelf holds a single
+vial of purplish liquid, conspicuously labelled in clear block lettering.
+"""
+coord  = [3, 1]
+exits  = { west = "blackfen_stump_exterior" }
+items  = ["blade_polish_vial"]
+spawns = []
+
+# ── DRY CLEARING (fly-ridden fork) ────────────────────────────────────────────
+
+[[room]]
+id          = "blackfen_clearing"
+name        = "Fly-Ridden Clearing"
+description = """
+A dry patch of high ground, which should be a relief after the wet trail.
+It isn't. A thick cloud of black flies has claimed this space, drawn by
+the smell of something that died here not long ago. You wave them off
+unsuccessfully.
+
+Two trails lead on from here: one continues east through flower-fringed reeds,
+the other winds downhill into darker country.
+"""
+coord  = [2, 0]
+exits  = { west = "blackfen_trail", east = "blackfen_flower_path", south = "blackfen_boulderring", down = "blackfen_boulderring" }
+items  = []
+spawns = ["redbelly_patrol"]
+
+on_enter = [
+  { op = "if", flag = "redbelly_patrol_cleared",
+    then = [],
+    else = [
+      { op = "skill_check", skill = "perception", dc = 10, silent = false,
+        on_pass = [
+          { op = "message", text = "You spot movement in the treeline before they spot you. Redbelly hunters — three of them, red-daubed bellies visible even at this distance. You have a moment to decide.", tag = "system" },
+          { op = "set_flag", flag = "spotted_redbellies_first" }
+        ],
+        on_fail = [
+          { op = "message", text = "You walk into the clearing and almost collide with a Redbelly hunter. Both of you freeze.", tag = "system" }
+        ]
+      }
+    ]
+  }
+]
+
+# ── FLOWER PATH (nature herb gathering) ───────────────────────────────────────
+
+[[room]]
+id          = "blackfen_flower_path"
+name        = "Reed-Flower Trail"
+description = """
+This part of the mire is almost beautiful. Fist-sized red and purple flowers
+grow from thick reeds whose barbed edges remind you of arrowheads. They sway
+gently in air that, here at least, smells of something alive and growing.
+
+Grimwick would know exactly what to do with these plants.
+"""
+coord  = [3, 0]
+exits  = { west = "blackfen_clearing", south = "blackfen_wading" }
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "skill_check", skill = "survival", dc = 8, silent = false,
+    on_pass = [
+      { op = "message", text = "You recognise the barbed reeds — redvange arrowheads. Fletchers pay well for them. You gather a bundle.", tag = "system" },
+      { op = "give_item", item_id = "redvange_arrowheads" },
+      { op = "set_flag", flag = "gathered_arrowheads" }
+    ],
+    on_fail = [
+      { op = "message", text = "Pretty flowers. You press on.", tag = "system" }
+    ],
+    grow = true
+  }
+]
+
+# ── BOULDER RING (submerged altar) ────────────────────────────────────────────
+
+[[room]]
+id          = "blackfen_boulderring"
+name        = "The Boulder Ring"
+description = """
+Tall black stones jut from the brackish water, forming a rough circle around
+a collapsed pile of the same glossy black rock. This was an altar — perhaps
+Redbelly, perhaps older. The water is knee-deep and smells of iron.
+
+You've heard the Redbellies leave valuables on such altars. You've also heard
+they leave traps.
+"""
+coord  = [2, -1]
+exits  = { north = "blackfen_clearing", south = "blackfen_wading" }
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "if", flag = "boulder_ring_searched",
+    then = [],
+    else = [
+      { op = "message", text = "The rubble catches your eye. Something glints underneath the black stones.", tag = "system" }
+    ]
+  }
+]
+
+# ── WADING STRETCH (swamp coiler hazard) ──────────────────────────────────────
+
+[[room]]
+id          = "blackfen_wading"
+name        = "Wading Stretch"
+description = """
+The path drops into knee-deep, brackish water. Each step requires dragging
+your boot free of thick grey silt. Occasionally something wriggles against
+your leg below the surface and you choose not to investigate.
+
+The water smells of old blood and wet rot. Somewhere ahead the tall stones of
+the Blacklake shoreline are visible through the grey trees.
+"""
+coord  = [2, -2]
+exits  = { north = "blackfen_boulderring", west = "blackfen_north_shore", south = "blackfen_blacklake_shore", east = "blackfen_stump" }
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "if", flag = "coiler_nest_passed",
+    then = [],
+    else = [
+      { op = "skill_check", skill = "survival", dc = 10, silent = false,
+        on_pass = [
+          { op = "message", text = "You spot a dark debris-pile in the water ahead — the nest of a swamp coiler. You steer wide, moving quietly.", tag = "system" },
+          { op = "set_flag", flag = "coiler_nest_passed" }
+        ],
+        on_fail = [
+          { op = "message", text = "Your foot finds the coiler's nest. The serpent strikes your leg and thrashes away — the bite stings but isn't deep.", tag = "combat" },
+          { op = "damage", amount = 8 },
+          { op = "set_flag", flag = "coiler_nest_passed" }
+        ]
+      }
+    ]
+  }
+]
+
+# ── MOSSY STUMP (second stump — ghost willow nearby) ──────────────────────────
+
+[[room]]
+id          = "blackfen_stump"
+name        = "Ghost Willow Grove"
+description = """
+A ghost-white willow tree stands apart from the mire's other vegetation,
+its bark carved with rough sigils — old marks, not recent. The pale branches
+hang very still even when there is wind. Other trees give it space.
+
+The dead dragon's location should be south and west of here.
+"""
+coord  = [3, -2]
+exits  = { west = "blackfen_wading" }
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "if", flag = "gathered_willow_bark",
+    then = [],
+    else = [
+      { op = "skill_check", skill = "survival", dc = 12, silent = false,
+        on_pass = [
+          { op = "message", text = "You recognise ghost willow bark — brewed as tea it closes wounds. You gather a pouch.", tag = "system" },
+          { op = "give_item", item_id = "ghost_willow_bark" },
+          { op = "set_flag", flag = "gathered_willow_bark" }
+        ],
+        on_fail = []
+      }
+    ]
+  }
+]
+
+# ── NORTH SHORE OF BLACKLAKE ──────────────────────────────────────────────────
+
+[[room]]
+id          = "blackfen_north_shore"
+name        = "North Shore of Blacklake"
+description = """
+The Blacklake lives up to its name — the water is the colour of deep night,
+completely opaque. Dead jellyfish-like things litter the grey sand shore.
+Occasionally a fish breaks the surface. Occasionally something much larger
+than a fish does the same.
+
+The lake curves south. A bone-littered trail runs along the western shore.
+"""
+coord  = [1, -3]
+exits  = { east = "blackfen_wading", south = "blackfen_witchs_cottage", southeast = "blackfen_blacklake_shore" }
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "if", flag = "blacklake_fished",
+    then = [],
+    else = [
+      { op = "skill_check", skill = "survival", dc = 10, silent = false, grow = false,
+        on_pass = [
+          { op = "message", text = "You fashion a quick net from vines and snare one of the strange three-eyed ebony fish before it dives. It's ugly. It's also worth good coin in Millhaven.", tag = "system" },
+          { op = "give_item", item_id = "ebony_fish" },
+          { op = "set_flag", flag = "blacklake_fished" }
+        ],
+        on_fail = [
+          { op = "message", text = "The fish are faster than they look. And the things moving in the deeper water make you cautious about wading in.", tag = "system" },
+          { op = "set_flag", flag = "blacklake_fished" }
+        ]
+      }
+    ]
+  }
+]
+
+# ── BLACKLAKE EASTERN SHORE (insect bog crossing) ────────────────────────────
+
+[[room]]
+id          = "blackfen_blacklake_shore"
+name        = "Blacklake Shore — Insect Crossing"
+description = """
+A long stretch of acid-puddled bog runs along the lake's eastern shore. The
+entire place hums with mosquitoes and biting things. There is no way to cross
+this ground without exposing your skin to the swarm.
+
+The bone trail and the witch's cottage lie south and west. The dragon clearing
+lies further south along the lake.
+"""
+coord  = [2, -3]
+exits  = { northwest = "blackfen_north_shore", west = "blackfen_witchs_cottage", south = "blackfen_bone_trail" }
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "if", flag = "insect_bog_crossed",
+    then = [],
+    else = [
+      { op = "skill_check", skill = "athletics", dc = 12, silent = false,
+        on_pass = [
+          { op = "message", text = "You power through the swarm, covering your face. The bites sting but you keep moving without swallowing any.", tag = "system" },
+          { op = "set_flag", flag = "insect_bog_crossed" }
+        ],
+        on_fail = [
+          { op = "message", text = "The insects get everywhere. Your blood tastes like sulfur to them. You emerge on the other side feverish and stiff.", tag = "system" },
+          { op = "apply_status", effect = "weakened", duration = 8 },
+          { op = "set_flag", flag = "insect_bog_crossed" }
+        ]
+      }
+    ]
+  }
+]
+
+# ── WITCH'S COTTAGE ───────────────────────────────────────────────────────────
+
+[[room]]
+id          = "blackfen_witchs_cottage"
+name        = "Thornbury's Cottage"
+description = """
+A hovel of logs and twisted branches with a ramshackle dock jutting into the
+lake. Inside, it is warm — impossibly warm for a building with no visible fire.
+A heavy iron kettle sits in the middle of the room radiating heat from
+no apparent source. A cot, a table, three chairs. Neat, lived-in, strange.
+
+This is the home of Maren Thornbury, a woman with a great deal of power and
+no patience whatsoever for nonsense.
+"""
+coord  = [1, -4]
+flags  = ["no_combat"]
+exits  = { north = "blackfen_north_shore", east = "blackfen_blacklake_shore", south = "blackfen_bone_trail" }
+items  = ["fen_antitoxin"]
+spawns = ["maren_thornbury"]
+
+# Players can long-rest here if Maren is friendly
+on_enter = [
+  { op = "if", flag = "thornbury_friendly",
+    then = [
+      { op = "message", text = "The warmth of the cottage settles over you. You can rest here safely. (Type 'rest' to recover.)", tag = "system" }
+    ],
+    else = []
+  }
+]
+
+# ── PATH OF BONES ─────────────────────────────────────────────────────────────
+
+[[room]]
+id          = "blackfen_bone_trail"
+name        = "Path of Bones"
+description = """
+The trail is littered with bones — vermin, Redbellies, things you cannot
+identify. Something has been doing a lot of killing in this corridor for a
+long time. Aonn Tesk's map marks this trail with hurried elvish script: this
+is the path to where the dead serpent fell.
+
+A rope bridge to the east leads to Fanghelm's camp. It is padlocked.
+"""
+coord  = [1, -5]
+exits  = {
+  north = "blackfen_witchs_cottage",
+  south = "blackfen_dragon_clearing",
+  east  = { to = "blackfen_slaughter_camp", locked = true, lock_tag = "durath_key", desc = "A rope bridge, padlocked with a heavy iron lock." }
+}
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "if", flag = "bone_trail_searched",
+    then = [],
+    else = [
+      { op = "skill_check", skill = "perception", dc = 10, silent = false,
+        on_pass = [
+          { op = "message", text = "Kicking through a bone pile, you see a strangely-coloured branch clutched in skeletal fingers — twisted, hand-painted, with etchings in the wood.", tag = "system" },
+          { op = "give_item", item_id = "painted_rod" },
+          { op = "set_flag", flag = "bone_trail_searched" }
+        ],
+        on_fail = [
+          { op = "message", text = "Just bones.", tag = "system" },
+          { op = "set_flag", flag = "bone_trail_searched" }
+        ]
+      }
+    ]
+  }
+]
+
+# ── FANGHELM'S CAMP (optional — cross the bridge) ────────────────────────────
+
+[[room]]
+id          = "blackfen_slaughter_camp"
+name        = "Slaughterstone Camp"
+description = """
+A rough camp on a dry rise above the lake shore. Fire rings, animal carcasses,
+crude shelters of hide stretched over poles. The Redbelly crew has been here
+long enough to get comfortable. Their leader's presence is evident in the
+order of it — this is not a rabble's camp but a warlord's forward base.
+
+Fanghelm himself stands near the largest fire, wearing leather fashioned from
+serpent hide, a fanged helmet tucked under one arm. His face is a ruin of
+old acid scarring. He looks at you with something like delight.
+"""
+coord  = [2, -5]
+exits  = { west = { to = "blackfen_bone_trail", locked = false }, east = "blackfen_dragon_clearing" }
+items  = []
+spawns = ["durath_ironteeth", "redbelly_brute", "redbelly_brute"]
+
+# ── DRAGON CLEARING (the climax approach) ─────────────────────────────────────
+
+[[room]]
+id          = "blackfen_dragon_clearing"
+name        = "The Dragon's Clearing"
+description = """
+A massive clearing, the ground burned and scattered with ash. Acidic puddles
+have eaten brown rings into the earth. The air smells like the inside of a
+forge that uses something foul for fuel.
+
+You look up.
+
+The dead serpent dragon hangs in the canopy a dozen yards overhead, its long
+body tangled in the high branches. Its eyes are white and dead. Its jaws are
+open. A drip of acidic blood falls and hisses in a puddle at your feet.
+"""
+coord  = [1, -6]
+exits  = { north = "blackfen_bone_trail", east = "blackfen_serpent_temple", south = "blackfen_dragon_belly", west = "blackfen_slaughter_camp" }
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "if", flag = "seen_dragon_clearing",
+    then = [
+      # Returning visit: auto-down the dragon if Fanghelm was defeated
+      { op = "if", flag = "durath_defeated",
+        then = [
+          { op = "if_not_flag", flag = "dragon_downed",
+            then = [
+              { op = "set_flag", flag = "dragon_downed" },
+              { op = "message", text = "The carcass of the serpent has crashed to the clearing floor — the Redbellies finished their work before scattering. Acid puddles steam around it. The belly is right in front of you.", tag = "system" }
+            ],
+            else = []
+          }
+        ],
+        else = []
+      }
+    ],
+    else = [
+      { op = "message", text = "The size of it is stunning. This creature's body is twice the length of a house. And somewhere in its belly — your grandfather's safe.", tag = "system" },
+      { op = "set_flag", flag = "seen_dragon_clearing" },
+      { op = "advance_quest", quest_id = "grandfathers_emerald", step = 3 },
+      # Show Fanghelm crew if they haven't been dealt with
+      { op = "if_not_flag", flag = "durath_defeated",
+        then = [
+          { op = "message", text = "Voices. You duck behind a tree as two Redbelly hunters lope into the clearing — led by a larger man in serpent-hide leather, a massive axe on his shoulders and a fanged helmet tucked under his arm. His face is a ruin of acid scarring. He looks up at the dead dragon with the delight of a man who has found something valuable.", tag = "system" },
+          { op = "message", text = "He orders his men into the canopy to cut the beast down. The camp is west. He is unarmed for the moment. Your call.", tag = "system" }
+        ],
+        else = []
+      }
+    ]
+  }
+]
+
+# ── SERPENT TEMPLE (optional — Anurus encounter) ──────────────────────────────
+
+[[room]]
+id          = "blackfen_serpent_temple"
+name        = "Sunken Serpent Temple"
+description = """
+Stone pillars rise from the water, forming a rough circle around a polished
+black altar. The rubble of a collapsed roof lies scattered around the site.
+Dry vines trail across the altar's surface. The glyphs carved into the stone
+are old — older than the Redbellies, older than the mire.
+
+Something about this place makes the air tight, as though the atmosphere
+itself is holding its breath.
+"""
+coord  = [2, -6]
+exits  = { west = "blackfen_dragon_clearing" }
+items  = ["sacrificial_knife"]
+spawns = ["anurus_the_returned"]
+
+on_enter = [
+  { op = "if", flag = "anurus_encountered",
+    then = [],
+    else = [
+      { op = "skill_check", skill = "arcana", dc = 12, silent = false,
+        on_pass = [
+          { op = "message", text = "The glyphs resolve into meaning: fire on an altar summons the bound spirit of a dead conjuror. The vines are tinder. You understand exactly what is at risk here.", tag = "system" },
+          { op = "set_flag", flag = "read_altar_glyphs" }
+        ],
+        on_fail = []
+      },
+      { op = "set_flag", flag = "anurus_encountered" }
+    ]
+  }
+]
+
+# ── DRAGON BELLY (quest completion point) ─────────────────────────────────────
+
+[[room]]
+id          = "blackfen_dragon_belly"
+name        = "Beneath the Dragon"
+description = """
+The great carcass has been brought down — the canopy branches still sway from
+its fall. The creature lies on the clearing floor, its belly facing you. Acid
+seeps slowly from old wounds in its hide. The stench is tremendous.
+
+Your grandfather is in there. So is what he was carrying.
+
+The jaws are open at your feet. The belly is before you. You take out your
+sharpest weapon.
+"""
+coord  = [1, -7]
+exits  = { north = "blackfen_dragon_clearing" }
+items  = []
+spawns = []
+
+on_enter = [
+  { op = "if", flag = "emerald_recovered",
+    then = [
+      { op = "message", text = "The dragon's belly has been opened. The spherical container is gone — you are already carrying the emerald.", tag = "system" }
+    ],
+    else = [
+      { op = "if_not_flag", flag = "dragon_downed",
+        then = [
+          { op = "message", text = "The dragon still hangs in the canopy. You'll need to bring it down. It's wedged in heavy branches — it'll take real effort to cut free.", tag = "system" },
+          { op = "skill_check", skill = "athletics", dc = 10, silent = false,
+            on_pass = [
+              { op = "message", text = "You find a grip in the bark and haul yourself up. After ten minutes of hacking at the canopy branches, the dead serpent crashes to the clearing floor in an explosion of acid-spray and snapped wood.", tag = "system" },
+              { op = "set_flag", flag = "dragon_downed" },
+              { op = "message", text = "The dragon lies before you. Its belly is within reach.", tag = "system" }
+            ],
+            on_fail = [
+              { op = "message", text = "The canopy is too high and too tangled. You can't get a grip. Come back with more strength — or wait for someone else to do the work.", tag = "system" }
+            ]
+          }
+        ],
+        else = [
+          { op = "message", text = "You slice into the belly. Acid-pocked bones and slimy green innards spill out. Then — there it is. A stone-textured spherical container, exactly as Aonn Tesk described.", tag = "system" },
+          { op = "give_item", item_id = "celestial_emerald" },
+          { op = "set_flag", flag = "emerald_recovered" },
+          { op = "advance_quest", quest_id = "grandfathers_emerald", step = 4 },
+          { op = "give_xp", amount = 200, silent = false },
+          { op = "message", text = "You open the container. Inside: a gem the size of your fist, green as deep water lit from within. The Celestial Emerald.", tag = "system" }
+        ]
+      }
+    ]
+  }
+]

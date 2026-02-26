@@ -1,0 +1,56 @@
+# data/millbrook/dialogues/rilla_farmer.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "You're not from here. Looking for work, or just passing through?",
+  "The goats are harmless. Mostly. Stay out of their way and they'll stay out of yours.",
+  "There's always work if you want it, but I suspect you're not the long-term kind."
+]
+
+[[response]]
+node = "root"
+text = "Just passing through. What's happening in the village?"
+next = "village_state"
+
+[[response]]
+node = "root"
+text = "The Thorngrubs — how bad has it been for the farm?"
+next = "thorngrubs_farm"
+
+[[response]]
+node = "root"
+text = "Nothing right now."
+next = ""
+
+[[node]]
+id   = "village_state"
+line = "Depends on which day you ask. Today is a medium day. The Thorngrubs have been worse — they got into the east field edge again last night, judging by the fresh diggings. Aldric's still distracted over that amulet. The boys are being boys. Normal village problems except the insect one, which is not normal."
+
+[[response]]
+node = "village_state"
+text = "I'll look into the Thorngrubs."
+next = "thorgrubs_offer"
+
+[[response]]
+node = "village_state"
+text = "I'll keep it in mind."
+next = ""
+
+[[node]]
+id   = "thorngrubs_farm"
+line = "Two root systems damaged in the south field. They got under the cabbage bed once — I found the tunnel and filled it but there'll be more. It's a slow damage. Not catastrophic yet but trending that way. The cellar break-in at the mill was worse. Whatever's running the colony is getting bolder."
+
+[[response]]
+node = "thorngrubs_farm"
+text = "Something needs to deal with the nest."
+next = "thorgrubs_offer"
+
+[[node]]
+id   = "thorgrubs_offer"
+line = "Yes. If you're offering, Marta on the green is coordinating. She'll tell you what we know."
+
+[[response]]
+node = "thorgrubs_offer"
+text = "I'll talk to her."
+next = ""

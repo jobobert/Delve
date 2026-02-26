@@ -1,0 +1,144 @@
+# data/millbrook/dialogues/tobias_brewer.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "Cloverleaf pale or the darker one? The darker one is better but I say that to everyone.",
+  "Sit down. Tell me what you need.",
+  "First time in Millbrook? The ale will make up for whatever brought you here."
+]
+
+[[response]]
+node = "root"
+text = "I'll take the darker one."
+next = "ale"
+
+[[response]]
+node = "root"
+text = "What's happening in the village?"
+next = "village_news"
+
+[[response]]
+node = "root"
+text = "I need a room."
+next = "room"
+
+[[response]]
+node = "root"
+text = "What do you have for sale?"
+next = ""
+
+[[response]]
+node = "root"
+text = "Nothing yet."
+next = ""
+
+[[node]]
+id   = "ale"
+line = "Good call. The pale's fine but the dark has character. Four copper — leave it on the bar if you want me to top it off without interrupting."
+
+[[response]]
+node = "ale"
+text = "What's in it?"
+next = "ale_recipe"
+
+[[response]]
+node = "ale"
+text = "What else is going on?"
+next = "village_news"
+
+[[node]]
+id   = "ale_recipe"
+line = "Clover flowers in the mash — that's why the name. Meadow clover from the hilltop, dried. Changes the character, adds that honey note. Everything else is standard: barley, hops from the east hedge, water from the well. The well is the secret. Something in the limestone."
+
+[[response]]
+node = "ale_recipe"
+text = "Smart."
+next = ""
+
+[[node]]
+id   = "village_news"
+line = "The Thorngrubs are the news. They've been active for months and they're getting worse. Beyond that — the ruffians are the usual problem, the miller's still talking about his amulet, and Elder Tomlin has been sitting on the well-wall for three straight days, which means he's thinking about something. Could be the ruffians. Could be you, now you're here."
+
+[[response]]
+node = "village_news"
+text = "Tell me about the ruffians."
+next = "ruffians"
+
+[[response]]
+node = "village_news"
+text = "Tell me about the Thorngrubs."
+next = "thorngrubs"
+
+[[response]]
+node = "village_news"
+text = "Tell me about Elder Tomlin."
+next = "tomlin"
+
+[[node]]
+id   = "ruffians"
+line = "Bram's the oldest. Seventeen. He's not bad, he's just got nowhere to put whatever he is. Dal is quick and sharp and still doesn't know it. Fen is the most sensible one and the most miserable because of it. They'll either grow out of this or they won't. Someone like you — someone who's clearly been places — might be the variable."
+
+[[response]]
+node = "ruffians"
+text = "I'll look into it."
+next = ""
+
+[[node]]
+id   = "thorngrubs"
+line = "They came out of the old mine. We thought they'd stop but they haven't. The east field is getting damaged. Aldric's root cellar was broken into. Nobody wants to go into the mine but everybody agrees something has to be done about it. Classic situation, that."
+
+[[response]]
+node = "thorngrubs"
+text = "I'll deal with the mine."
+next = "thorngrubs_confident"
+
+[[response]]
+node = "thorngrubs"
+text = "Sounds like a job for someone."
+next = "thorngrubs_vague"
+
+[[node]]
+id   = "thorngrubs_confident"
+line = "Good. You'll want the lantern at the entrance — whoever went to look last time left it there. I'll have a drink waiting when you come back."
+
+[[response]]
+node = "thorngrubs_confident"
+text = "Hold one."
+next = ""
+
+[[node]]
+id   = "thorngrubs_vague"
+line = "Funny, that's exactly what everyone keeps saying."
+
+[[response]]
+node = "thorngrubs_vague"
+text = "Fair point. I'll go."
+next = "thorngrubs_confident"
+
+[[node]]
+id   = "tomlin"
+line = "He's been here thirty years and still no one really knows where he came from. He teaches people sometimes — real teaching, the kind that sticks. There's a style of fighting he knows that nobody else in three days' travel would recognise. He doesn't give it to just anyone. He's patient. He'll wait until someone worthy arrives."
+
+[[response]]
+node = "tomlin"
+text = "How do you know if he thinks you're worthy?"
+next = "tomlin_worthy"
+
+[[node]]
+id   = "tomlin_worthy"
+line = "He talks to you. Beyond 'good morning.' That's apparently the tell — if he's having a real conversation, you've passed some initial assessment you weren't aware of sitting."
+
+[[response]]
+node = "tomlin_worthy"
+text = "Interesting."
+next = ""
+
+[[node]]
+id   = "room"
+line = "Five gold for the night, includes breakfast — real breakfast, not the thin gruel the inn in Millhaven apparently charges the same for. Room's upstairs, second door. I'll know if you're in past the time I expect you to be up."
+
+[[response]]
+node = "room"
+text = "Done."
+next = ""

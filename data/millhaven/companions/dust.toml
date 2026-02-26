@@ -1,0 +1,21 @@
+# data/millhaven/companions/dust.toml
+# Dust — a pack mule from the Millhaven stable.
+# A utility companion: carries extra gear, can't enter tight spaces.
+
+id           = "dust"
+name         = "Dust"
+type         = "utility"
+desc_short   = "A grey pack mule with a patient expression and an impressive carry frame."
+attack       = 0
+defense      = 0
+hp           = 0
+max_hp       = 0
+carry_bonus  = 15
+style        = "brawling"
+style_prof   = 0.0
+restrictions = ["no_large_companion"]
+
+join_message   = "Dust ambles alongside you, loaded packs creaking. She eyes you with the deeply unimpressed look of a mule who has seen it all before."
+wait_message   = "Dust plants her hooves and refuses to squeeze any further. You hitch her lead to a branch. She'll wait — mules are good at that."
+rejoin_message = "Dust has not moved an inch. She accepts your return with stoic dignity."
+downed_message = ""

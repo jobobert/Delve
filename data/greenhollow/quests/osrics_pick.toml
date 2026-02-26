@@ -1,0 +1,30 @@
+# data/greenhollow/quests/osrics_pick.toml
+# "Osric's Pick" — lost item recovery quest.
+#
+# Mine Foreman Osric lost his personal pickaxe when the groundhog
+# infestation forced a rapid evacuation of the deep chamber.
+# The pick is in the deep mine alongside the Groundhog King.
+#
+# This quest naturally runs in parallel with The Groundhog King,
+# since reaching the deep chamber is required for both.
+
+id      = "osrics_pick"
+title   = "Osric's Pick"
+giver   = "mine_foreman_osric"
+summary = "Mine Foreman Osric left his pickaxe — twenty years old, initialled O.B. — in the deep chamber when the groundhog infestation forced everyone out. He'd like it back."
+
+[[step]]
+index     = 1
+objective = "Find Osric's pickaxe in the deep mine."
+hint      = "Osric dropped it in the natural chamber at the bottom level. It's marked with his initials."
+
+[[step]]
+index     = 2
+objective = "Return the pickaxe to Osric."
+hint      = "Osric is at the mine entrance, or somewhere nearby."
+completion_flag = "osric_pick_found"
+
+[[step]]
+index     = 3
+objective = "Osric has his pick back."
+completion_flag = "osric_pick_returned"

@@ -1,0 +1,6 @@
+[[region]]
+id                 = "riverlands_confluence"
+name               = "Riverlands Confluence"
+description        = "A broad network of branching rivers converging around a central island. Traders, ferrymen, and wanderers pass through here on their way to the outer regions."
+recommended_level  = 1
+admin_comment      = "Piece Effect: None directly; the Riverlands feel the echoes of all other regions’ instability.  Notes: Safe starting area with mild threats and navigation challenges."

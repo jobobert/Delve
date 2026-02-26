@@ -1,0 +1,36 @@
+# data/training/rooms.toml — Millhaven Barracks and Training facilities.
+# Zone id: training
+#
+# Demonstrates:
+#   locked door  — barracks east door requires barracks_key (lock_tag = "barracks_lock")
+#   room flags   — no_combat (barracks), safe_combat (training_yard)
+
+[[room]]
+id          = "barracks"
+name        = "Millhaven Barracks"
+description = "A long timber building beside the town wall. Rows of bunks line the walls. Recruits clean weapons and argue about technique. A door at the back leads to the training yard. A heavy iron door to the east is the storeroom."
+coord       = [1, 2]
+exits       = { south = "town_square", north = "training_yard", east = { to = "barracks_storeroom", locked = true, lock_tag = "barracks_lock", desc = "a heavy iron door" } }
+flags       = ["no_combat", "town"]
+items       = ["spiked_knuckles"]
+spawns      = ["drill_sergeant", "barracks_quartermaster"]
+
+[[room]]
+id          = "training_yard"
+name        = "Training Yard"
+description = "A packed-earth yard ringed by wooden posts and straw dummies. This is where soldiers learn their craft. A chalk line on the ground marks the sparring circle. Whatever happens in the circle, it's only practice — you won't take real wounds here."
+coord       = [1, 3]
+exits       = { south = "barracks" }
+flags       = ["safe_combat"]
+items       = ["rusty_sword", "chain_shirt"]
+spawns      = ["training_dummy", "sparring_recruit"]
+
+[[room]]
+id          = "barracks_storeroom"
+name        = "Barracks Storeroom"
+description = "Shelves of equipment line the walls — spare weapons, rations, a small chest. Dusty but well-organized. A locked iron door leads back to the barracks."
+coord       = [2, 2]
+exits       = { west = { to = "barracks", locked = false, lock_tag = "barracks_lock", desc = "the iron door back to the barracks" } }
+flags       = ["no_combat"]
+items       = ["barracks_key", "health_potion"]
+spawns      = []

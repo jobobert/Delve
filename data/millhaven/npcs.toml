@@ -1,0 +1,207 @@
+# data/millhaven/npcs.toml — NPCs native to the Millhaven zone.
+#
+# See README for full NPC field reference.
+
+[[npc]]
+id          = "town_guard"
+name        = "Town Guard"
+tags        = ["humanoid", "armored", "slow"]
+style       = "swordplay"
+style_prof  = 30
+desc_short  = "A bored-looking guard in dented chainmail."
+desc_long   = "He's young — younger than the job makes him look. His chainmail hauberk is dented across one shoulder and several rings have been replaced with mismatched iron. He's not watching the road so much as staring through it, lost somewhere else entirely. His hand rests near his sword out of habit more than alertness."
+hp          = 50
+max_hp      = 50
+attack      = 8
+defense     = 6
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "Move along."
+
+[[npc]]
+id          = "blacksmith_npc"
+name        = "Dorin the Blacksmith"
+tags        = ["humanoid", "slow", "large"]
+style       = "brawling"
+style_prof  = 55
+desc_short  = "A barrel-chested smith with forearms like ham hocks."
+desc_long   = "Dorin fills the doorway in a way that makes you briefly reconsider whether you want to go in. He's not hostile — his eyes are warm and slightly distracted, the eyes of someone always half-thinking about a problem in metal. His apron has burn marks in a pattern that suggests long practice rather than accidents. His hammer is on his belt even now, apparently a permanent fixture."
+hp          = 80
+max_hp      = 80
+attack      = 12
+defense     = 5
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+shop        = [
+  { item_id = "rusty_sword",     price = 5  },
+  { item_id = "iron_sword",      price = 25 },
+  { item_id = "spiked_knuckles", price = 15 },
+  { item_id = "iron_cap",        price = 18 },
+  { item_id = "chain_shirt",     price = 40 },
+  { item_id = "iron_greaves",    price = 22 },
+  { item_id = "iron_vambraces",  price = 16 },
+]
+
+[[npc]]
+id          = "merchant"
+name        = "Merchant"
+tags        = ["humanoid", "slow"]
+style       = "brawling"
+style_prof  = 5
+desc_short  = "A round-faced trader surrounded by colourful goods."
+desc_long   = "She has the practised smile of someone who has sold things to difficult people for a long time. Her stall is impeccably organized — everything priced, tagged, and positioned for maximum visibility. She clocks your equipment in the first half-second without appearing to."
+hp          = 20
+max_hp      = 20
+attack      = 3
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+shop        = [
+  { item_id = "health_potion",   price = 15 },
+  { item_id = "leather_satchel", price = 20 },
+  { item_id = "leather_cap",     price = 8  },
+  { item_id = "padded_coif",     price = 6  },
+  { item_id = "quilted_jacket",  price = 14 },
+  { item_id = "leather_breeches",price = 10 },
+  { item_id = "leather_bracers", price = 8  },
+  { item_id = "iron_ingot",      price = 12 },
+  { item_id = "coal_chunk",      price = 6  },
+  { item_id = "hard_wood",       price = 8  },
+]
+
+[[npc]]
+id          = "innkeeper"
+name        = "Bron the Innkeeper"
+tags        = ["humanoid", "slow"]
+style       = "brawling"
+style_prof  = 20
+desc_short  = "A heavyset man with a warm smile and watchful eyes."
+desc_long   = "Bron has the innkeeper's gift of seeming pleased to see everyone who walks through the door, while simultaneously never being surprised by what they do next. He keeps a club behind the bar and has presumably used it, given the lack of trouble in his establishment."
+hp          = 40
+max_hp      = 40
+attack      = 6
+defense     = 3
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+rest_cost   = 10
+
+[[npc]]
+id          = "elder_mira"
+name        = "Elder Mira"
+tags        = ["humanoid", "slow", "small"]
+style       = "iron_root"
+style_prof  = 10
+desc_short  = "A grey-robed elder with sharp eyes and ink-stained fingers."
+desc_long   = "Mira has governed Millhaven for thirty years and looks every year of it — not worn down, but worn in, like a tool that has been used properly. Her eyes are the kind that see what you're actually doing rather than what you say you're doing. The ink on her fingers is fresh. Whatever she was reviewing when you walked in, she has already decided whether you're useful."
+hp          = 30
+max_hp      = 30
+attack      = 4
+defense     = 3
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "I am Mira, Elder of Millhaven. State your business."
+
+[[npc]]
+id          = "wolf"
+name        = "Grey Wolf"
+tags        = ["beast", "fast", "small"]
+style       = "serpent_strike"
+style_prof  = 20
+desc_short  = "A lean grey wolf with amber eyes."
+desc_long   = "Not large for a wolf, but fast — it moves with the loose-limbed efficiency of something that hunts regularly. Its coat is thick and its ribs aren't showing. This is a healthy predator on its own territory, not a desperate one."
+hp          = 25
+max_hp      = 25
+attack      = 7
+defense     = 2
+xp_reward   = 15
+gold_reward = 0
+hostile     = true
+dialogue    = "The wolf regards you with flat amber eyes."
+
+[[npc]]
+id          = "goblin"
+name        = "Goblin Scout"
+tags        = ["humanoid", "fast", "small"]
+style       = "evasion"
+style_prof  = 15
+desc_short  = "A small green-skinned creature with a rusty knife."
+desc_long   = "It's about four feet tall, lean and wiry, with skin the colour of old moss and eyes that are too big for its head. The knife it carries is probably stolen. It sizes you up with the quick, darting assessment of something that has survived by knowing when to run."
+hp          = 20
+max_hp      = 20
+attack      = 6
+defense     = 2
+xp_reward   = 12
+gold_reward = 3
+hostile     = true
+dialogue    = "The goblin hisses and raises its knife."
+
+[[npc]]
+id          = "millhaven_banker"
+name        = "Town Treasurer"
+tags        = ["humanoid", "slow", "banker"]
+style       = "brawling"
+style_prof  = 5
+desc_short  = "A careful-eyed clerk behind a reinforced oak counter."
+desc_long   = "She has the particular stillness of someone who spends their days handling other people's valuables. The counter between you and her is solid oak reinforced with iron straps. A ledger open in front of her is covered in neat, dense handwriting. She's already noticed what you're carrying."
+hp          = 30
+max_hp      = 30
+attack      = 3
+defense     = 3
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "The Millhaven treasury. Deposit, withdraw, or check your balance — your account is good across all branches."
+give_accepts = [
+  { item_id = "riversturm_journal",
+    message  = "She takes the ledger carefully, opens it to the stamp inside. 'Millhaven Treasury — Charter Ledger. Yes. This is it.' She sets it in the strongbox behind her. 'Your account is expanded. Twenty slots. No charge.'",
+    script   = [
+      { op = "set_flag",   flag = "ledger_returned" },
+      { op = "advance_quest", quest_id = "the_lost_ledger", step = 3 },
+      { op = "bank_expand", tier = 20 },
+    ]
+  },
+]
+
+[[npc]]
+id          = "aonn_tesk"
+admin_comment = "Quest giver + combat companion. Must stay non-hostile. Key for grandfathers_emerald."
+name        = "Aonn Tesk"
+tags        = ["humanoid", "slow"]
+style       = "swordplay"
+style_prof  = 30
+desc_short  = "A lean old elf nursing an ale, one sleeve pinned where an arm used to be."
+desc_long   = "A lean old elf in a worn travelling coat, his left sleeve pinned neatly where the arm ends at the shoulder. He nurses an ale and stares at nothing with the look of someone replaying a memory they can't quite undo. When he notices you, there's no surprise in it — as if he's been expecting someone, anyone, for a while."
+hp          = 50
+max_hp      = 50
+attack      = 8
+defense     = 5
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+
+[[npc]]
+id          = "leatherworker_npc"
+name        = "Sera the Leatherworker"
+tags        = ["humanoid", "slow"]
+style       = "brawling"
+style_prof  = 10
+desc_short  = "A lean woman with ink-stained hands and a measuring tape around her neck."
+desc_long   = "Sera works with the quiet focus of someone who has spent years making things fit exactly right. Her stall is a controlled explosion of hides, thread, buckles, and half-finished work. She sizes you up the moment you walk in — not rudely, just professionally. Her hands are never still; she's stitching something even now."
+hp          = 25
+max_hp      = 25
+attack      = 4
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+shop        = [
+  { item_id = "leather_strip",  price = 3  },
+  { item_id = "tanned_hide",    price = 10 },
+  { item_id = "linen_cloth",    price = 4  },
+  { item_id = "dark_dye",       price = 6  },
+]

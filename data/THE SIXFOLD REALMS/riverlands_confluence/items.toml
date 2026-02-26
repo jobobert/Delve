@@ -1,0 +1,45 @@
+# Zone id: riverlands_confluence
+#
+
+[[item]]
+id          = "item_river_map_fragment" 
+name        = "River Map Fragment"
+desc_short  = "A hand-drawn fragment showing several river branches and partial routes to distant regions."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_driftwood_charm" 
+name        = "Driftwood Charm"
+desc_short  = "A small charm said to keep boats from capsizing in rough currents."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_river_token" 
+name        = "River Token"
+desc_short  = "A carved stone token granting free passage with certain ferrymen."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+

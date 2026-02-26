@@ -1,0 +1,294 @@
+# data/millhaven/items.toml — Items native to the Millhaven zone.
+#
+# rusty_sword and health_potion also appear in training/items.toml.
+# The engine loads millhaven first (alphabetical), so these definitions win.
+#
+# See README for full item field reference.
+
+# ── Scenery ───────────────────────────────────────────────────────────────────
+
+[[item]]
+id             = "town_signpost"
+name           = "Signpost"
+display_prefix = "Standing here"
+desc_short  = "A weathered oak signpost planted deep in the cobblestones."
+desc_long   = "Carved arrows point in each direction. North: The Forge. South: South Gate. East: Market Street. West: The Rusty Flagon Inn. Up: Millhaven Barracks.\n\nThe wood is grey with age and someone has scratched 'HERE BE MONSTERS →' under the southern arrow."
+slot        = ""
+scenery     = true
+weight      = 0
+respawn     = false
+effects     = []
+
+# ── Weapons ───────────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "rusty_sword"
+name        = "Rusty Sword"
+desc_short  = "A short sword, pitted with rust."
+desc_long   = "The blade is chipped and orange with corrosion along most of its length. The leather wrap on the hilt is cracked and peeling. It will hold an edge only barely, but the weight is right and it would still ruin someone's day."
+slot        = "weapon"
+weapon_tags = ["blade", "one_handed"]
+weight      = 3
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack", amount = 5 },
+]
+
+[[item]]
+id          = "iron_sword"
+name        = "Iron Sword"
+desc_short  = "A serviceable iron sword with a worn leather grip."
+desc_long   = "Forged from decent iron, this blade has seen use but been maintained. A few shallow nicks line the edge, and the cross-guard bears a maker's mark that has mostly worn away. It's balanced well enough for a road fighter."
+slot        = "weapon"
+weapon_tags = ["blade", "one_handed"]
+weight      = 3
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack", amount = 10 },
+  { type = "on_hit",     ability = "bleed", chance = 0.08, magnitude = 2 },
+]
+
+[[item]]
+id          = "wolf_fang_dagger"
+name        = "Wolf-Fang Dagger"
+desc_short  = "A curved dagger carved from a wolf's fang. Unnatural and sharp."
+desc_long   = "The fang has been fitted with a simple wrapped-leather handle and the tip sharpened to a needle point. It shouldn't hold an edge this well — bone doesn't. But it does, and the wounds it makes bleed freely and stubbornly."
+slot        = "weapon"
+weapon_tags = ["blade", "one_handed", "light"]
+weight      = 1
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack", amount = 8 },
+  { type = "on_hit",     ability = "bleed", chance = 0.25, magnitude = 3 },
+  { type = "on_equip",   message = "The dagger feels cold in your hand even on a warm day." },
+]
+
+# ── Armor ─────────────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "leather_cap"
+name        = "Leather Cap"
+desc_short  = "A simple cap of hardened and boiled leather."
+desc_long   = "The leather has been boiled until stiff, then shaped over a mold and stitched with heavy waxed thread. It won't stop a serious blow, but it will keep small cuts from opening your scalp. The inside is lined with rough wool."
+slot        = "head"
+armor_tags  = ["light", "head"]
+weight      = 1
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 3 },
+]
+
+# ── Consumables ───────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "health_potion"
+name        = "Health Potion"
+desc_short  = "A thumb-sized vial of glowing red liquid."
+desc_long   = "The glass vial is sealed with a wax cork and warm to the touch. The liquid inside catches the light and pulses faintly, as if something alive stirs within. A handwritten label reads 'Drink in need. Do not smell first.'"
+slot        = ""
+weight      = 0
+respawn     = true
+effects     = [
+  { type = "on_use", heal = 30 },
+]
+
+# ── Containers ────────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "leather_satchel"
+name        = "Leather Satchel"
+desc_short  = "A well-worn satchel with multiple straps."
+desc_long   = "Oiled brown leather, reinforced at the corners with brass rivets. Three interior pockets and a main compartment. A good adventurer's bag — not glamorous, but it holds a lot and doesn't fall apart."
+slot        = "pack"
+armor_tags  = []
+weight      = 1
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "carry_capacity", amount = 5 },
+]
+
+[[item]]
+id         = "aonn_tesk_map"
+name       = "Aonn Tesk's Map"
+desc_short = "a rough hand-drawn map of the Blackfen Mire"
+desc_long  = """
+A sheet of oilskin, drawn in a shaky single-handed script. The Murk Fens
+are sketched from memory — the Fengate entry, the Blacklake, the bone trail,
+and the clearing marked with an X. A note in the margin reads: 'Grimwick.
+Talk to Grimwick.' The X is circled twice.
+"""
+weight  = 0
+no_drop = true
+
+# ── Crafting Materials ────────────────────────────────────────────────────────
+# These items are used as commission materials. They are sold by the merchant
+# and found as loot in Ashwood and Blackfen.
+
+[[item]]
+id         = "iron_ingot"
+name       = "Iron Ingot"
+desc_short = "A heavy bar of smelted iron."
+desc_long  = "A solid bar of grey iron, still faintly warm from the forge. The surface is pitted with small imperfections — raw metal, not yet shaped into anything."
+slot       = ""
+weight     = 3
+respawn    = true
+
+[[item]]
+id         = "coal_chunk"
+name       = "Coal Chunk"
+desc_short = "A lump of coal, leaving black on your fingers."
+desc_long  = "Dense black coal, the kind smiths use to reach forge-heat. It crumbles slightly at the edges."
+slot       = ""
+weight     = 2
+respawn    = true
+
+[[item]]
+id         = "leather_strip"
+name       = "Leather Strip"
+desc_short = "A cured strip of leather, about a hand's length."
+desc_long  = "A flat strip of tanned leather, punched with holes along one edge for stitching. Smells like the tannery."
+slot       = ""
+weight     = 0
+respawn    = true
+
+[[item]]
+id         = "tanned_hide"
+name       = "Tanned Hide"
+desc_short = "A cured animal hide, stiff but workable."
+desc_long  = "A full-cured hide, scraped clean and tanned to a warm brown. The grain is tight and the leather is thick."
+slot       = ""
+weight     = 2
+respawn    = true
+
+[[item]]
+id         = "hard_wood"
+name       = "Hardwood Stave"
+desc_short = "A straight length of dense hardwood."
+desc_long  = "A seasoned piece of hardwood — ash or yew — straight-grained and free of knots. Good for hafts, frames, or shaft-work."
+slot       = ""
+weight     = 2
+respawn    = true
+
+[[item]]
+id         = "linen_cloth"
+name       = "Linen Cloth"
+desc_short = "A folded piece of undyed linen."
+desc_long  = "A few yards of tight-woven linen cloth, folded into a flat square. Clean and undyed."
+slot       = ""
+weight     = 0
+respawn    = true
+
+[[item]]
+id         = "dark_dye"
+name       = "Dark Dye"
+desc_short = "A small crock of deep brown dye."
+desc_long  = "A sealed clay crock of walnut-based dye. Deep brown, almost black. Used by leatherworkers and tailors."
+slot       = ""
+weight     = 0
+respawn    = true
+
+# ── Starter armor (new slots) ─────────────────────────────────────────────────
+
+[[item]]
+id          = "padded_coif"
+name        = "Padded Coif"
+desc_short  = "A close-fitting cap of layered cloth and padding."
+desc_long   = "Several layers of heavy linen quilted together and shaped into a skullcap. Won't stop a serious blade but will turn minor cuts and absorb blunt impact. Smells slightly of the previous owner."
+slot        = "head"
+armor_tags  = ["light", "head"]
+weight      = 1
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+]
+
+[[item]]
+id          = "iron_cap"
+name        = "Iron Cap"
+desc_short  = "A simple iron skullcap with a riveted brim."
+desc_long   = "Hammered iron shaped into a rounded skullcap with a narrow riveted brim that deflects downward strikes. Basic and heavy but reliable. The metal has the dull grey of iron that has never been polished."
+slot        = "head"
+armor_tags  = ["medium", "head"]
+weight      = 2
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 5 },
+]
+
+[[item]]
+id          = "quilted_jacket"
+name        = "Quilted Jacket"
+desc_short  = "A heavy quilted jacket worn as body armour."
+desc_long   = "The outer shell is canvas, the inner fill is raw wool packed tight enough to resist a stabbing thrust. It's warm, slightly stiff, and will keep you alive through a few hits that might otherwise find your ribs."
+slot        = "chest"
+armor_tags  = ["light", "chest"]
+weight      = 2
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 3 },
+]
+
+[[item]]
+id          = "chain_shirt"
+name        = "Chain Shirt"
+desc_short  = "A waist-length shirt of interlocked iron rings."
+desc_long   = "Thousands of small iron rings interlocked into a flexible mesh. Covers the torso and upper arms. The rings are riveted, not just butted — proper work. Heavy on the shoulders after a long march."
+slot        = "chest"
+armor_tags  = ["medium", "chain", "chest"]
+weight      = 5
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 7 },
+]
+
+[[item]]
+id          = "leather_breeches"
+name        = "Leather Breeches"
+desc_short  = "Sturdy leather trousers reinforced at the knees."
+desc_long   = "Heavy vegetable-tanned leather cut into trousers with double-thickness panels at the knee and inner thigh where wear is worst. They creak when you walk and take weeks to break in, but they'll last for years."
+slot        = "legs"
+armor_tags  = ["light", "legs"]
+weight      = 2
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+]
+
+[[item]]
+id          = "iron_greaves"
+name        = "Iron Greaves"
+desc_short  = "Plate guards strapped over the shins and knees."
+desc_long   = "Two curved plates of hammered iron, one for the shin and one for the knee, held together with leather straps. Standard infantry issue in most armies. They make a distinctive clanking sound when you walk fast."
+slot        = "legs"
+armor_tags  = ["medium", "legs"]
+weight      = 3
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 4 },
+]
+
+[[item]]
+id          = "leather_bracers"
+name        = "Leather Bracers"
+desc_short  = "Stiff leather guards strapped over the forearms."
+desc_long   = "A matched pair of vegetable-tanned leather guards buckled over the forearms. Used by archers to protect against the bowstring, but useful enough in a scuffle to stop a deflected blade from cutting deep."
+slot        = "arms"
+armor_tags  = ["light", "arms"]
+weight      = 1
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+]
+
+[[item]]
+id          = "iron_vambraces"
+name        = "Iron Vambraces"
+desc_short  = "Curved iron guards covering the forearms."
+desc_long   = "Two formed iron plates — one for each forearm — with buckled leather straps. They cover from wrist to elbow and have a slight outward curve that deflects blows away from the inner arm. The right one has an old dent that someone hammered flat."
+slot        = "arms"
+armor_tags  = ["medium", "arms"]
+weight      = 2
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 4 },
+]

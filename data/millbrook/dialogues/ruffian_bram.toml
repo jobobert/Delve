@@ -1,0 +1,303 @@
+# data/millbrook/dialogues/ruffian_bram.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "What do you want?",
+  "We're not bothering anyone.",
+  "You're not from here."
+]
+
+[[response]]
+node = "root"
+text = "Just looking around."
+next = "brush_off"
+
+[[response]]
+node = "root"
+text = "I've heard about you three."
+next = "heard_about"
+
+[[response]]
+node = "root"
+condition = { quest = "village_ruffians" }
+text = "Elder Tomlin asked me to talk to you."
+next = "tomlin_sent"
+
+[[response]]
+node = "root"
+condition = { flag = "ruffians_resolved" }
+text = "How are things?"
+next = "after_resolution"
+
+[[response]]
+node = "root"
+text = "Nothing."
+next = ""
+
+[[node]]
+id   = "brush_off"
+line = "Right. Good luck with that."
+
+[[response]]
+node = "brush_off"
+text = "What do you do around here?"
+next = "what_do_you_do"
+
+[[response]]
+node = "brush_off"
+text = "Sure. See you around."
+next = ""
+
+[[node]]
+id   = "what_do_you_do"
+line = "Not much. That's the problem, isn't it. Farm work if Rilla needs hands. Odd jobs. Nothing that takes more than one morning. You've seen the village — there's only so much of it."
+
+[[response]]
+node = "what_do_you_do"
+text = "Have you ever considered that there's something real to be done here?"
+next = "something_real"
+
+[[response]]
+node = "what_do_you_do"
+text = "What would you rather be doing?"
+next = "what_rather"
+
+[[node]]
+id   = "heard_about"
+line = "Good things or bad things?"
+
+[[response]]
+node = "heard_about"
+text = "That you're bored and handling it badly."
+next = "handling_badly"
+
+[[response]]
+node = "heard_about"
+text = "That you're worth talking to."
+next = "worth_talking"
+
+[[node]]
+id   = "handling_badly"
+line = "..."
+script = [{ op = "skill_check", skill = "social", dc = 14,
+    on_pass = [{ op = "message", tag = "dialogue",
+                 text = "Bram snorts. 'Fair. Dal would say it's entertainment but he's wrong.'" }],
+    on_fail = [{ op = "message", tag = "dialogue",
+                 text = "Bram's expression closes. 'You don't know us.'" }],
+  }
+]
+
+[[response]]
+node = "handling_badly"
+text = "I know what boredom looks like."
+next = "boredom"
+
+[[node]]
+id   = "worth_talking"
+line = "Tomlin said that? He doesn't say that often."
+
+[[response]]
+node = "worth_talking"
+text = "Something like it. What do you want, actually?"
+next = "what_want"
+
+[[node]]
+id   = "tomlin_sent"
+line = "Tomlin doesn't send people. He waits until they figure things out themselves. If he pointed you at us, it means he's decided something."
+
+[[response]]
+node = "tomlin_sent"
+text = "He thinks you're ready for something real."
+next = "something_real"
+
+[[response]]
+node = "tomlin_sent"
+text = "He said you needed a wake-up call."
+next = "wake_up"
+
+[[node]]
+id   = "wake_up"
+line = "Did he. And you're going to provide that."
+
+[[response]]
+node = "wake_up"
+text = "If you want a spar, yes. No hard feelings afterward."
+next = "spar_offer"
+
+[[response]]
+node = "wake_up"
+text = "I thought maybe something more useful."
+next = "useful_offer"
+
+[[node]]
+id   = "something_real"
+line = "Like what?"
+
+[[response]]
+node = "something_real"
+text = "The Thorngrubs. Someone needs to go in the mine and I could use backup."
+next = "useful_offer"
+
+[[response]]
+node = "something_real"
+text = "A fair fight. You three against me. Just to see."
+next = "spar_offer"
+
+[[node]]
+id   = "spar_offer"
+line = "Against you alone? You're serious."
+
+[[response]]
+node = "spar_offer"
+text = "Three on one. Your call."
+next = "spar_accept"
+
+[[response]]
+node = "spar_offer"
+text = "I'll be careful. Nobody gets hurt badly."
+next = "spar_terms"
+
+[[node]]
+id   = "spar_terms"
+line = "Careful. Right. Dal's going to find that funny. — Fine. Come at us, then. We'll see how careful you can be."
+script = [
+  { op = "advance_quest", quest_id = "village_ruffians", step = 2 },
+  { op = "set_flag",      flag = "spar_accepted" },
+  { op = "message",       tag = "system",
+    text = "Bram whistles for Dal and Fen. 'Right. We've got a challenger. Be fair — first to yield or drop wins.'" },
+]
+
+[[response]]
+node = "spar_terms"
+text = "Here and now."
+next = "spar_begin"
+
+[[node]]
+id   = "spar_accept"
+line = "Dal'll love this. Fen won't but he'll come. — Right. The three of us. You lose, you admit the village actually has decent fighters. We lose, we'll hear whatever you've got to say."
+script = [
+  { op = "advance_quest", quest_id = "village_ruffians", step = 2 },
+  { op = "set_flag",      flag = "spar_accepted" },
+]
+
+[[response]]
+node = "spar_accept"
+text = "Agreed."
+next = "spar_begin"
+
+[[node]]
+id   = "spar_begin"
+line = "Don't hold back too obviously. We'll notice."
+script = [
+  { op = "set_flag",  flag = "spar_in_progress" },
+  { op = "message",   tag = "system",
+    text = "The three of them spread out. Bram in front, Dal circling, Fen solid on the right." },
+  { op = "message",   tag = "system",
+    text = "This is a spar — they'll fight to 1 HP but no one dies. Attack Bram to begin." },
+]
+
+[[response]]
+node = "spar_begin"
+text = "Let's see what you've got."
+next = ""
+
+[[node]]
+id   = "useful_offer"
+line = "The mine. That place has been sealed up my whole life and now it's full of giant insects. You're saying you'd actually go in there."
+
+[[response]]
+node = "useful_offer"
+text = "I'm going in regardless. The question is whether you come with me."
+next = "companion_offer"
+
+[[response]]
+node = "useful_offer"
+text = "If you help clear it, the village gets the mine back. That's real work."
+next = "companion_pitch"
+
+[[node]]
+id   = "companion_offer"
+line = "..."
+
+[[response]]
+node = "companion_offer"
+text = "No pressure."
+next = "companion_decide"
+
+[[node]]
+id   = "companion_pitch"
+line = "You're not just trying to get us killed to do us some sort of favour."
+
+[[response]]
+node = "companion_pitch"
+text = "I'm trying to get the job done. If you can handle yourselves, you'd be useful."
+next = "companion_decide"
+
+[[node]]
+id   = "companion_decide"
+line = "Dal's going to say yes before I finish saying we'll do it. Fen's going to think about it. I'm — yeah. We're in. Just don't let anyone in the village act like they knew we'd do it all along."
+script = [
+  { op = "advance_quest", quest_id = "village_ruffians", step = 2 },
+  { op = "set_flag",      flag = "ruffians_companion_path" },
+  { op = "give_companion",
+    companion_id = "ruffian_trio",
+    message      = "Bram, Dal, and Fen fall in behind you. They're trying not to look eager." },
+]
+
+[[response]]
+node = "companion_decide"
+text = "Good. Let's move."
+next = ""
+
+[[node]]
+id   = "what_want"
+line = "Something that doesn't feel like filling time. I don't know what that is. I've been trying to work it out."
+
+[[response]]
+node = "what_want"
+text = "Then come help me with the mine."
+next = "companion_offer"
+
+[[response]]
+node = "what_want"
+text = "Let's find out if you can fight first."
+next = "spar_offer"
+
+[[node]]
+id   = "boredom"
+line = "Yeah. And you can't fix boredom with more of what's here."
+
+[[response]]
+node = "boredom"
+text = "I might have something better."
+next = "something_real"
+
+[[node]]
+id   = "what_rather"
+line = "Something with actual risk. And actual outcome. Either I'm good at something or I'm not — I'd rather find out than keep not finding out."
+
+[[response]]
+node = "what_rather"
+text = "I can give you that. The mine or a real fight."
+next = "something_real"
+
+[[node]]
+id   = "after_resolution"
+condition = { flag = "ruffian_humbled" }
+line = "Good. Actually good. Fen's started helping Rilla at the farm. Dal's been going to lessons voluntarily, which — I didn't see coming. I've been thinking about what you said. About it being worth figuring out."
+
+[[response]]
+node = "after_resolution"
+text = "Sounds like progress."
+next = ""
+
+[[node]]
+id   = "after_resolution"
+condition = { flag = "ruffian_mentored" }
+line = "The mine was — that was real. I didn't like all of it. I liked that I didn't completely fall apart. Dal saved Fen from getting bitten and then didn't say anything about it for three days, which is how you know it meant something to him."
+
+[[response]]
+node = "after_resolution"
+text = "You did well."
+next = ""

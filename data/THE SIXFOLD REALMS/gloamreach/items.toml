@@ -1,0 +1,101 @@
+# Zone id: gloamreach
+#
+
+[[item]]
+id          = "item_dim_lantern" 
+name        = "Dim Lantern"
+desc_short  = "A lantern that glows faintly, resisting the deep gloam."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_prism_shard" 
+name        = "Prism Shard"
+desc_short  = "A shard of crystal capable of refracting even weak light."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_gloam_crystal" 
+name        = "Gloam Crystal"
+desc_short  = "A crystal infused with twilight energy."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_gloamroot_sample" 
+name        = "Gloamroot Sample"
+desc_short  = "A root that glows faintly with trapped light."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_lumen_shard" 
+name        = "Lumen Shard"
+desc_short  = "A shard of pure light harvested from glowing fungi."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_reflection_fragment" 
+name        = "Reflection Fragment"
+desc_short  = "A fragment of mirrored stone showing faint echoes of the past."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+
+[[item]]
+id          = "item_device_piece_4" 
+name        = "Device Piece: Shadow Regulator"
+desc_short  = "A component of the ancient device that controls the balance between light and shadow."
+desc_long   = ""
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = false
+tags        = []
+effects     = []
+value       = 0
+on_get      = []
+

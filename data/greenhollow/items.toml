@@ -1,0 +1,347 @@
+# data/greenhollow/items.toml
+# Greenhollow zone items: scenery, mining nodes, tools, loot, quest items.
+
+# ── Scenery / atmospheric ─────────────────────────────────────────────────────
+
+[[item]]
+id          = "greenhollow_sign"
+name        = "Village Sign"
+desc_short  = "A hand-lettered board: GREENHOLLOW — KEEP THE PACE."
+desc_long   = "Painted on a plank of oak that has warped slightly with age. The lettering is careful — someone who takes signs seriously. Below the main text, in smaller letters: EST. BY OSWALD BRYNE AND COMPANIONS, YEAR OF THE LONG FROST."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "mill_cat"
+name        = "Mill Cat"
+desc_short  = "A large tabby cat who is completely indifferent to you."
+desc_long   = "The cat has the air of a senior employee — it has been here longer than the current miller and considers the mill to be its domain that he merely visits. It is sitting on a sack of milled flour and its fur is white with dust. It blinks at you once, slowly, and returns to its interior life."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "flour_sack"
+name        = "Flour Sack"
+desc_short  = "A heavy sack of coarse-ground flour."
+desc_long   = "Sewn burlap, stamped GREENHOLLOW MILL in blue. Forty pounds of flour. Heavier than it looks. The bottom is slightly damp from the stone floor."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "practice_dummy"
+name        = "Practice Dummy"
+desc_short  = "A straw-stuffed figure hanging from a post."
+desc_long   = "The dummy has taken years of abuse and shows it. The stuffing has migrated mostly to the bottom. Someone has given it a face — two button eyes, a lopsided chalk mouth — which makes it look faintly dignified despite its circumstances. A sign pinned to its chest reads: HIT HARDER."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "field_burrow"
+name        = "Field Burrow"
+desc_short  = "A wide hole in the soil with fresh dirt thrown back around it."
+desc_long   = "The burrow is round in section, about two feet across, and smells strongly of earth and animal. Fresh dirt has been pushed back in a rough crescent. You can see scratch marks in the soil around the rim — claws, working hard. The burrow goes down at a steep angle. You can hear nothing from inside."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "trampled_wheat"
+name        = "Trampled Wheat"
+desc_short  = "A section of crop flattened and rooted up."
+desc_long   = "Whatever came through here went down several rows before returning underground. The roots have been chewed — not just trampled but eaten. The damage is getting wider each week according to the field markers nailed to the posts."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "willow_branch"
+name        = "Willow Branch"
+desc_short  = "A trailing willow branch dragging in the pond surface."
+desc_long   = "The willow has grown too far out over the water and one of its long branches trails in the surface, creating a tiny eddy. Small fish are sitting in the shelter of it. The bark is grey-green and peels in long strips."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "pond_reed"
+name        = "Reed Bed"
+desc_short  = "A dense stand of reeds at the water's edge."
+desc_long   = "Tall, stiff reeds, the kind used for thatching and basket-making. A moorhen has a nest tucked into the base of the reed bed. You can see the eggs if you look carefully — three of them, spotted brown."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "smithy_tongs"
+name        = "Forge Tongs"
+desc_short  = "Heavy iron tongs hanging beside the forge."
+desc_long   = "Three feet long, solid iron, worn smooth at the grip from years of use. The business end has scorch marks and small dents from working hot metal. These are serious tools belonging to someone who uses them every day."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "shrine_lamp"
+name        = "Oil Lamp"
+desc_short  = "A small clay oil lamp burning at the base of the shrine tree."
+desc_long   = "A very simple lamp: a clay saucer filled with rendered fat, a twisted wick. It gives a small clean flame and no smoke. Someone filled it recently — it's not running low. The stone marker behind it says KEEP WATCH in letters you have to feel with your fingers to read."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "shrine_offering"
+name        = "Wildflower Offering"
+desc_short  = "A handful of wildflowers tied with a grass knot."
+desc_long   = "Meadow clover, vetch, and something yellow you don't know the name of. They're fresh — cut within the day. Tied with braided grass in the old way. Someone is still keeping this up, whoever they are."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "mine_lantern"
+name        = "Mine Lantern"
+desc_short  = "A tallow lantern hanging from the mine frame."
+desc_long   = "A tin box with a punched pattern on the sides to let the light through, and a hook on top for hanging. Inside, a tallow candle burns steadily. There are a dozen more on the rack below it, unlit. Good for four hours each."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "tool_rack"
+name        = "Tool Rack"
+desc_short  = "A wooden rack of mine tools at the entrance."
+desc_long   = "Eight pickaxes, four shovels, two pry bars, a hand cart. The picks vary in quality — some old and worn, one new with a bright haft. All sharpened. A board nailed to the rack says: CHECK OUT, CHECK IN. OSRIC KNOWS HOW MANY."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "groundhog_den_item"
+name        = "Groundhog Den"
+desc_short  = "A wide depression of compressed earth at the centre of the chamber."
+desc_long   = "The den is built from compressed earth and chewed timber, roughly circular, deep enough that you could sit in it. The smell is overwhelming — animal musk, old fur, and something that might be a territorial marker. Whatever the Groundhog King is, it has been here long enough to make this home."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "oak_log"
+name        = "Fallen Oak Log"
+desc_short  = "A large fallen oak, mossy and slowly returning to the earth."
+desc_long   = "A storm took this tree some years ago. The bark has begun to peel and the wood underneath is soft. Bracket fungi grow in rings along its length. It's a good habitat now — voles, beetles, a family of wrens in the hollow end."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "fallen_acorns"
+name        = "Fallen Acorns"
+desc_short  = "A scatter of fresh acorns on the leaf litter."
+desc_long   = "This year's acorns, still in their cups. The squirrels haven't found all of them yet. A jay has cached a few nearby — you can see the disturbed leaves where it buried them."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "wrapped_bundle"
+name        = "Oilcloth Bundle"
+desc_short  = "A small bundle wrapped in rotting oilcloth, tucked under the shrine's roots."
+desc_long   = "The oilcloth has protected the contents for years but is finally giving way. Inside: a small bronze disc with a hole in it, a folded note in faded ink ('For whoever finds this — keep watching. — T'), and a pressed flower. The bronze disc has been worn smooth by handling — someone's good luck piece, left deliberately."
+slot        = ""
+weight      = 0
+respawn     = false
+effects     = [
+  { type = "on_equip", message = "You tuck the bronze disc into your pocket. Keep watching." },
+]
+
+
+# ── Mining ore nodes (with skill-gated on_get scripts) ────────────────────────
+
+[[item]]
+id          = "iron_ore_vein"
+name        = "Iron Ore Vein"
+desc_short  = "A vein of reddish iron ore threaded through the greenstone wall."
+desc_long   = "The ore runs in a band two or three inches wide through the grey greenstone. It's a good seam — consistent depth, no pinching. With a pickaxe you could work out several pounds of ore in an hour. You need some mining skill to do it cleanly without wasting the rock."
+slot        = ""
+weight      = 0
+scenery     = false
+respawn     = true
+on_get      = [
+  { op = "if_skill", skill = "mining", min = 1,
+    then = [
+      { op = "skill_check", skill = "mining", dc = 8,
+        on_pass = [
+          { op = "message", tag = "item",  text = "You work the seam carefully. A good chunk of iron ore breaks free." },
+          { op = "give_item", item_id = "iron_ore" },
+          { op = "give_item", item_id = "iron_ore" },
+          { op = "skill_grow", skill = "mining" },
+        ],
+        on_fail = [
+          { op = "message", tag = "system", text = "You chip at the seam but the ore crumbles. You need more practice." },
+          { op = "give_item", item_id = "iron_ore" },
+          { op = "skill_grow", skill = "mining" },
+        ],
+      },
+    ],
+    else = [
+      { op = "message", tag = "error", text = "You don't know how to mine ore. Ask Brynn or Osric about learning the skill." },
+    ],
+  },
+]
+
+[[item]]
+id          = "poor_coal_seam"
+name        = "Coal Seam"
+desc_short  = "A thin seam of coal alongside the ore vein."
+desc_long   = "Darker than the surrounding stone, softer, with the mineral smell of old compressed forest. The seam is thin — maybe an inch across — but consistent. Good fuel, and Brynn's smithy uses it."
+slot        = ""
+weight      = 0
+scenery     = false
+respawn     = true
+on_get      = [
+  { op = "if_skill", skill = "mining", min = 1,
+    then = [
+      { op = "message", tag = "item",   text = "You pry out a chunk of coal from the seam." },
+      { op = "give_item", item_id = "coal_chunk" },
+      { op = "skill_grow", skill = "mining" },
+    ],
+    else = [
+      { op = "message", tag = "error", text = "You need mining skill to extract coal. Ask Brynn about getting started." },
+    ],
+  },
+]
+
+[[item]]
+id          = "rich_ore_vein"
+name        = "Rich Ore Vein"
+desc_short  = "A deep black vein of dense ore — richer than anything on the upper level."
+desc_long   = "This ore is different from the iron above. Denser, darker, with a faint metallic sheen that catches your lantern light in ways iron ore doesn't. It may be something rarer — a mixed ore, perhaps, or a purer iron seam. Getting it out without wasting it requires real technique. Osric would know what it is."
+slot        = ""
+weight      = 0
+scenery     = false
+respawn     = true
+on_get      = [
+  { op = "if_skill", skill = "mining", min = 5,
+    then = [
+      { op = "skill_check", skill = "mining", dc = 14,
+        on_pass = [
+          { op = "message", tag = "item",  text = "You read the grain of the rock and take a clean strike. Rich ore breaks free — three good chunks." },
+          { op = "give_item", item_id = "iron_ore" },
+          { op = "give_item", item_id = "iron_ore" },
+          { op = "give_item", item_id = "iron_ore" },
+          { op = "give_item", item_id = "iron_ingot" },
+          { op = "skill_grow", skill = "mining" },
+        ],
+        on_fail = [
+          { op = "message", tag = "system", text = "This ore is harder than it looks. You get one piece but crack several more." },
+          { op = "give_item", item_id = "iron_ore" },
+          { op = "skill_grow", skill = "mining" },
+        ],
+      },
+    ],
+    else = [
+      { op = "message", tag = "error", text = "This ore requires advanced mining skill (level 5+). Come back when you know what you're doing." },
+    ],
+  },
+]
+
+# ── Crafting materials ────────────────────────────────────────────────────────
+
+[[item]]
+id         = "iron_ore"
+name       = "Iron Ore"
+desc_short = "A rough chunk of reddish iron ore."
+desc_long  = "Iron ore from the Greenhollow seam. Grey-green host rock with the iron running through it in reddish bands. This needs smelting before it's useful. Brynn or any smith will buy it or work it for you."
+slot       = ""
+weight     = 2
+respawn    = false
+value      = 8
+
+[[item]]
+id         = "greenhollow_timber"
+name       = "Oak Timber"
+desc_short = "A cut length of oak, still smelling of fresh-split wood."
+desc_long  = "The valley oaks are managed on a long rotation — this piece came from a tree taken this season. Straight-grained, dense, good for furniture or tool hafts. Worth something at the mill or to any carpenter."
+slot       = ""
+weight     = 3
+respawn    = false
+value      = 6
+
+# ── Quest items ───────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "groundhog_trophy"
+name        = "Groundhog King's Tooth"
+desc_short  = "A large incisor from the Groundhog King — curved yellow, longer than your finger."
+desc_long   = "The Groundhog King's defining feature in death: an enormous incisor, curved like a scimitar, yellow-orange from minerals in the mine. Elder Torva will recognise it as proof the infestation is ended. It's oddly warm to the touch."
+slot        = ""
+weight      = 1
+respawn     = false
+no_drop     = true
+value       = 0
+on_get      = [
+  { op = "if_not_flag", flag = "groundhog_king_killed", then = [
+    { op = "set_flag",      flag = "groundhog_king_killed" },
+    { op = "advance_quest", quest_id = "the_groundhog_king", step = 2 },
+    { op = "message",       tag = "system", text = "Evidence of the kill. Elder Torva will want to see this." },
+    { op = "prestige",      amount = 2, reason = "cleared the Greenhollow infestation" },
+  ]},
+]
+
+[[item]]
+id          = "ruffian_peace_token"
+name        = "Finn's Handshake"
+desc_short  = "A knotted cord — the village boys' sign that there's no more quarrel."
+desc_long   = "Finn tied this himself after the accord. It's a simple overhand knot in a length of brown twine — meaningless to anyone outside Greenhollow, but Finn pressed it into your hand with more seriousness than most adults manage. The other boys watched without speaking."
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = true
+value       = 0
+
+# ── Quest items ─ osric_pickaxe ───────────────────────────────────────────────
+
+[[item]]
+id          = "osric_pickaxe"
+name        = "Osric's Pickaxe"
+desc_short  = "An old pickaxe with O.B. scratched into the haft."
+desc_long   = "Mine Foreman Osric Bryne's personal pick — used for twenty years and lost when the groundhogs moved into the deep chamber. The head is slightly worn but still good. 'O.B.' is scratched near the base of the haft in deep, deliberate letters. He'll want this back."
+slot        = "weapon"
+weight      = 3
+respawn     = false
+no_drop     = false
+tags        = ["pickaxe", "tool", "quest_item"]
+effects     = [
+  { type = "stat_bonus", stat = "attack",  amount = 3  },
+  { type = "stat_bonus", stat = "mining",  amount = 10 },
+]
+value       = 0
+on_get      = [
+  { op = "if_not_flag", flag = "osric_pick_found", then = [
+    { op = "set_flag",      flag = "osric_pick_found" },
+    { op = "advance_quest", quest_id = "osrics_pick", step = 2 },
+    { op = "message",       tag = "system",
+      text = "That's Osric's mark on the haft. He'll be glad to have this back." },
+  ]},
+]

@@ -1,0 +1,23 @@
+# data/blackfen/zone.toml
+# Blackfen Mire — A fetid swamp south of Millhaven, hiding the sunken
+# tomb of Gregor Aldenmoor and the Celestial Emerald he carried to his grave.
+
+id          = "blackfen"
+name        = "Blackfen Mire"
+description = """
+A vast, poisonous wetland stretching south of the Millhaven road. The Mire
+earned its name from the black, sulphurous water that pools beneath its
+surface — step wrong and you'll sink to the knee before the mud releases
+you. Travellers who venture in without a guide rarely come back.
+
+Three generations ago, the wizard Aldric Riversturm built a retreat in
+the swamp's heart. When he vanished, his unfinished towers became home to
+something older and more patient.
+"""
+
+# Coordinates use [x, y] — origin at blackfen_gate [0, 0]
+# Zone extends south (decreasing y) and east (increasing x)
+
+room_files = ["data/blackfen/rooms.toml"]
+npc_file   = "data/blackfen/npcs.toml"
+item_file  = "data/blackfen/items.toml"

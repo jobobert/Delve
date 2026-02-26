@@ -1,0 +1,203 @@
+# Zone id: mistfen_expanse
+#
+
+[[room]]
+id          = "mistfen_crossing"
+name        = "Mistfen Crossing"
+description = "A wooden walkway barely visible through the thick fog. The boards creak underfoot."
+coord       = []
+exits       = {north = "sunken_market", east = "fogwhisper_bend"}
+items       = []
+flags       = []
+spawns      = ["npc_fenric"]
+
+[[room]]
+id          = "sunken_market"
+name        = "Sunken Market"
+description = "Half-submerged stalls lean at odd angles. Waterlogged crates float lazily between them."
+coord       = []
+exits       = {south = "mistfen_crossing", north = "reedrunner’s_camp", west = "the_tilted_bazaar"}
+items       = ["item_anchor_stone"]
+flags       = []
+spawns      = ["npc_marla"]
+
+[[room]]
+id          = "fogwhisper_bend"
+name        = "Fogwhisper Bend"
+description = "The mist here seems to whisper faintly, though no wind blows."
+coord       = []
+exits       = {west = "mistfen_crossing", north = "looping_fenway"}
+items       = []
+flags       = []
+spawns      = ["enemy_mist_wraith"]
+
+[[room]]
+id          = "reedrunner’s_camp"
+name        = "Reedrunner’s Camp"
+description = "A small camp with drying reeds and a smoldering firepit."
+coord       = []
+exits       = {south = "sunken_market", east = "the_crooked_bridge"}
+items       = []
+flags       = []
+spawns      = ["npc_fenric"]
+
+[[room]]
+id          = "the_tilted_bazaar"
+name        = "The Tilted Bazaar"
+description = "A collapsed trading platform now half-swallowed by the swamp."
+coord       = []
+exits       = {east = "sunken_market", north = "silted_alley"}
+items       = ["item_waterlogged_map"]
+flags       = []
+spawns      = ["enemy_swamp_lurker"]
+
+[[room]]
+id          = "looping_fenway"
+name        = "Looping Fenway"
+description = "A stretch of swamp that seems to repeat itself. Footprints appear ahead of you before you make them."
+coord       = []
+exits       = {south = "fogwhisper_bend", north = "mistfen_heart"}
+items       = []
+flags       = []
+spawns      = ["enemy_mist_wraith"]
+
+[[room]]
+id          = "the_crooked_bridge"
+name        = "The Crooked Bridge"
+description = "A warped wooden bridge that bends in unnatural ways."
+coord       = []
+exits       = {west = "reedrunner’s_camp", north = "bogshadow_crossing"}
+items       = []
+flags       = []
+spawns      = ["enemy_bog_stalker"]
+
+[[room]]
+id          = "silted_alley"
+name        = "Silted Alley"
+description = "A narrow path between leaning trees, the ground soft and treacherous."
+coord       = []
+exits       = {south = "the_tilted_bazaar", north = "the_murkway"}
+items       = []
+flags       = []
+spawns      = ["enemy_swamp_lurker"]
+
+[[room]]
+id          = "mistfen_heart"
+name        = "Mistfen Heart"
+description = "The mist thickens into a swirling vortex. The air hums with unstable energy."
+coord       = []
+exits       = {south = "looping_fenway", east = "fenwatch_rise"}
+items       = ["item_stabilizing_reed"]
+flags       = []
+spawns      = ["npc_vessa"]
+
+[[room]]
+id          = "bogshadow_crossing"
+name        = "Bogshadow Crossing"
+description = "Shadows move beneath the water, following your steps."
+coord       = []
+exits       = {south = "the_crooked_bridge", north = "the_sinking_steps"}
+items       = []
+flags       = []
+spawns      = ["enemy_bog_shadow"]
+
+[[room]]
+id          = "the_murkway"
+name        = "The Murkway"
+description = "A twisting path where the fog forms shapes that mimic travelers."
+coord       = []
+exits       = {south = "silted_alley", east = "whisperroot_grove"}
+items       = []
+flags       = []
+spawns      = ["enemy_mist_echo"]
+
+[[room]]
+id          = "fenwatch_rise"
+name        = "Fenwatch Rise"
+description = "A rare patch of dry land offering a vantage point over the swamp."
+coord       = []
+exits       = {west = "mistfen_heart", north = "the_lost_causeway"}
+items       = ["item_echo_compass"]
+flags       = []
+spawns      = []
+
+[[room]]
+id          = "the_sinking_steps"
+name        = "The Sinking Steps"
+description = "Stone steps descend into murky water, each one sinking slightly as you step."
+coord       = []
+exits       = {south = "bogshadow_crossing", north = "deepfen_hollow"}
+items       = []
+flags       = []
+spawns      = ["enemy_bog_stalker"]
+
+[[room]]
+id          = "whisperroot_grove"
+name        = "Whisperroot Grove"
+description = "Trees with hollow trunks emit faint, melodic tones."
+coord       = []
+exits       = {west = "the_murkway", north = "the_croaking_mire"}
+items       = []
+flags       = []
+spawns      = ["enemy_whisperroot_spirit"]
+
+[[room]]
+id          = "the_lost_causeway"
+name        = "The Lost Causeway"
+description = "A stone walkway that appears ancient, its carvings half-erased by time."
+coord       = []
+exits       = {south = "fenwatch_rise", east = "fenlight_ruins"}
+items       = []
+flags       = []
+spawns      = ["enemy_swamp_lurker"]
+
+[[room]]
+id          = "deepfen_hollow"
+name        = "Deepfen Hollow"
+description = "A cavernous pit filled with swirling mist and faint lights."
+coord       = []
+exits       = {south = "the_sinking_steps", north = "mistfen_verge"}
+items       = []
+flags       = []
+spawns      = ["enemy_mist_wraith"]
+
+[[room]]
+id          = "the_croaking_mire"
+name        = "The Croaking Mire"
+description = "The air vibrates with the sound of countless unseen creatures."
+coord       = []
+exits       = {south = "whisperroot_grove", east = "the_distorted_clearing"}
+items       = []
+flags       = []
+spawns      = ["enemy_bog_shadow"]
+
+[[room]]
+id          = "fenlight_ruins"
+name        = "Fenlight Ruins"
+description = "Ruins of an ancient settlement now half-swallowed by the swamp."
+coord       = []
+exits       = {west = "the_lost_causeway"}
+items       = ["item_stabilizing_reed"]
+flags       = []
+spawns      = ["npc_vessa"]
+
+[[room]]
+id          = "mistfen_verge"
+name        = "Mistfen Verge"
+description = "The outer edge of the swamp, where the fog thins but never fully lifts."
+coord       = []
+exits       = {south = "deepfen_hollow"}
+items       = []
+flags       = []
+spawns      = ["enemy_mist_echo"]
+
+[[room]]
+id          = "the_distorted_clearing"
+name        = "The Distorted Clearing"
+description = "A clearing where trees appear in multiple places at once, flickering like mirages."
+coord       = []
+exits       = {west = "the_croaking_mire"}
+items       = ["item_anchor_stone"]
+flags       = []
+spawns      = ["enemy_distortion_beast"]
+

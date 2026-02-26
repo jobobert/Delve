@@ -1,0 +1,135 @@
+# data/blackfen/dialogues/anurus_the_returned.toml
+# Anurus the Returned — a reawakened sorcerer in Riversturm's Tower.
+# Will talk before fighting if player shows knowledge. Otherwise attacks immediately.
+# Dialogue is only possible if player has read Riversturm's journal (has it in inventory)
+# OR has the "saw_aldenmoor_clue" flag.
+
+[[node]]
+id    = "root"
+line  = '''You. You smell of the outside world. Of roads and smoke and living things." The jaw moves with an audible click. "I have been here a long time. How long, I have lost count. Ask your question. I will decide whether to answer it.'''
+
+[[response]]
+node = "root"
+text = "Who are you?"
+next = "identity"
+
+[[response]]
+node = "root"
+text = "What happened to Riversturm?"
+next = "riversturm_fate"
+
+[[response]]
+node = "root"
+text = "I know about the Celestial Emerald."
+next = "emerald_knowledge"
+condition = { item = "riversturm_journal" }
+
+[[response]]
+node = "root"
+text = "I saw the claw marks in the antechamber."
+next = "claw_marks"
+condition = { flag = "saw_aldenmoor_clue" }
+
+[[response]]
+node = "root"
+text = "I have no questions for you."
+next = "combat_trigger"
+
+[[node]]
+id   = "identity"
+line = "Anurus. I was a student of Riversturm — one of three. I came to help him catalogue the objects in this region. I was here when he disappeared. I was here when the mire rose and the tower flooded. I died in the flooding and came back when the water receded. I don't know what I am now. Something in between."
+
+[[response]]
+node = "identity"
+text = "What is in the vault?"
+next = "vault_warning"
+
+[[response]]
+node = "identity"
+text = "What happened to Riversturm?"
+next = "riversturm_fate"
+
+[[node]]
+id   = "riversturm_fate"
+line = "He went into the vault. He thought the Emerald was calling to him — he'd been studying it in communication with the Aldenmoor family and believed it had developed enough intelligence to communicate. He went in. He didn't come back out. I felt it when he died. Something in the vault used him up and discarded him."
+
+[[response]]
+node = "riversturm_fate"
+text = "The same thing that's in the vault now?"
+next = "vault_entity"
+
+[[node]]
+id   = "vault_entity"
+line = "The same. It's not the Emerald itself — the Emerald stores, it doesn't act. Something arrived in the vault from elsewhere, using the Emerald as an anchor. It inhabits bodies. Gregor Aldenmoor's body is what it's using now. If you destroy the body, the entity must retreat — but the Emerald will still be there, and it will still be an anchor."
+
+[[response]]
+node = "vault_entity"
+text = "What do I do about the Emerald after?"
+next = "emerald_advice"
+
+[[node]]
+id   = "emerald_knowledge"
+line = '''You've read Riversturm's notes." The skeleton is still for a moment. "Then you understand what the Emerald is. Every thought Gregor Aldenmoor ever had, compressed into crystal. The entity in the vault found that... useful. A record of a human mind, available for study. I don't know what it intended to do with that knowledge. I hope you never find out.'''
+
+[[response]]
+node = "emerald_knowledge"
+text = "How do I stop it?"
+next = "vault_entity"
+
+[[node]]
+id   = "claw_marks"
+line = "The Guardian uses the antechamber as a threshold. It doesn't leave the tomb — there's something anchoring it to the vicinity of the Emerald. The claw marks are where it tested the walls. Looking for weakness, or perhaps just... moving. It's been in there a long time."
+
+[[response]]
+node = "claw_marks"
+text = "How do I fight it?"
+next = "guardian_tactics"
+
+[[node]]
+id   = "guardian_tactics"
+line = "Gregor Aldenmoor was a soldier. The body is still soldier-shaped — strong, disciplined. The entity improves on it. Fight defensively. If you have someone with you — a guide, a companion — use them. The Guardian focuses on the most immediate threat. Two threats divide its attention."
+
+[[response]]
+node = "guardian_tactics"
+text = "And the Emerald itself?"
+next = "emerald_advice"
+
+[[node]]
+id   = "emerald_advice"
+line = "Take it out of the vault. Distance weakens the anchor. Once you're above ground, the entity cannot easily re-enter the vault — it's tied to that specific space. Whether the Emerald itself is dangerous over time... yes. Probably. But not immediately. Not to someone with a strong will."
+
+[[response]]
+node = "emerald_advice"
+text = "Thank you. That's enough."
+next = "anurus_farewell"
+
+[[node]]
+id   = "vault_warning"
+line = "Something that arrived a long time ago. It uses bodies — possesses them after death, uses what it finds there. Gregor Aldenmoor was the most recent. Before him, something smaller. Before that, I don't know. Don't go to the vault unless you can kill what's wearing Gregor."
+
+[[response]]
+node = "vault_warning"
+text = "I intend to."
+next = "anurus_farewell"
+
+[[node]]
+id   = "anurus_farewell"
+line = '''Then go. I won't stop you. I've been in this tower long enough to know I'm not going to be the one who resolves this." A pause. "If you destroy the Guardian — what remains of Gregor — do it cleanly. He was a decent person once.'''
+
+[[response]]
+node = "anurus_farewell"
+text = "I will."
+next = ""
+
+[[node]]
+id   = "combat_trigger"
+line = "No questions. Then you are a threat, and I will treat you as one."
+
+script = [
+  { op = "message", text = "The skeleton raises its staff. The air in the tower crackles.", tag = "combat_recv" }
+]
+
+[[response]]
+node = "combat_trigger"
+text = "(fight)"
+next = ""

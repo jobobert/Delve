@@ -1,0 +1,44 @@
+# data/millbrook/quests/thorngrub_queen.toml
+# "The Thorngrub Queen" — pest eradication quest.
+#
+# The Thorngrubs have been expanding from the old mine into the Thornwood and
+# the east field margins. They've damaged root systems, gotten into grain stores,
+# and are visibly getting worse. The mine is unusable. Marta Wren on the village
+# green can brief you; Elder Tomlin may mention it in passing.
+#
+# Quest flow:
+#   Step 1: Learn about the Thorngrub problem (talk to Marta)
+#   Step 2: Reach the Thorngrub Nest (explore mine)
+#   Step 3: Kill the Thorngrub Queen (kill_script advances quest + sets flags)
+#   Step 4: Return to Marta for reward
+#
+# Completion effects (via kill_script):
+#   mine_opened flag → ore veins become accessible
+#   thorngrubs_cleared flag → Thornwood workers stop respawning
+#   prestige +3
+
+id      = "thorngrub_queen"
+title   = "The Thorngrub Queen"
+giver   = "marta_villager"
+summary = "The Thorngrubs from the old mine are spreading into the fields and woodlands. Find their nest deep in the mine and kill the Queen before the colony gets larger."
+
+[[step]]
+index     = 1
+objective = "Speak to Marta about the Thorngrub problem."
+hint      = "Marta Wren is usually on the village green."
+
+[[step]]
+index     = 2
+objective = "Find the Thorngrub nest in the old mine."
+hint      = "The mine entrance is south through the Thornwood. You'll need a lantern."
+
+[[step]]
+index     = 3
+objective = "Kill the Thorngrub Queen."
+hint      = "She's at the deepest point of the mine. She won't yield."
+completion_flag = "thorngrubs_cleared"
+
+[[step]]
+index     = 4
+objective = "Return to Marta and report."
+hint      = "She'll be on the village green."

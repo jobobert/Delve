@@ -1,0 +1,191 @@
+# data/ashwood/items.toml — Items native to the Ashwood quest zone.
+#
+# These items are either found in Ashwood rooms, awarded by Ashwood NPCs/quests,
+# or exist only as quest evidence (drakes_fang, millhaven_commendation).
+
+# ── Scenery ───────────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "ghost_note"
+name        = "Faded Letter"
+desc_short  = "A letter written in a shaking hand."
+desc_long   = "The paper is old but preserved by the dry air. It reads:\n\n'If you found this, the garrison has fallen. The armory key is hidden in the east wing storeroom — the crossbar lifts from the inside but the lock needs the garrison key, which Sergeant Aldric kept on his person. I pray someone comes who can use what we left behind.'\n\n'The Drake cannot be killed by ordinary iron. The Drakebone weapons in the armory are proof against its hide. Take them. Please.'\n\n  — Private E. Marsh, Last Survivor"
+slot        = ""
+scenery     = true
+weight      = 0
+respawn     = false
+effects     = []
+
+[[item]]
+id          = "puzzle_altar"
+name        = "Stone Altar"
+desc_short  = "A stone altar with an inscribed brass plaque."
+desc_long   = "The plaque reads:\n\n'Seeker, to pass the shrine you must prove you carry wisdom, not merely steel. Answer truly:\n\nI have cities, but no houses live there. I have mountains, but no trees grow there. I have water, but no fish swim there. I have roads, but no travellers walk there.\n\nWhat am I?'\n\nBelow the text, a slot sized for a flat object. The slot is empty."
+slot        = ""
+scenery     = true
+weight      = 0
+respawn     = false
+effects     = []
+
+# ── Keys ──────────────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "garrison_key"
+name        = "Garrison Key"
+desc_short  = "A heavy iron key with a crest of crossed swords."
+desc_long   = "Cold iron, old but sound. The bow bears the crest of an old military garrison — crossed swords over a tower. It would open a military-grade lock."
+slot        = ""
+key_tag     = "garrison_lock"
+weight      = 0
+respawn     = false
+no_drop     = true
+effects     = []
+
+[[item]]
+id          = "shrine_descent_key"
+name        = "Shrine Descent Key"
+desc_short  = "An ancient stone disc etched with a six-pointed star."
+desc_long   = "A circular stone disc the size of a large coin, carved from black granite and etched with a six-pointed star. The grooves are filled with something that glows faintly when the light hits it at the right angle. The design matches the lock mechanism on the shrine's south door.\n\nThis is the solution to the shrine seal. You know what to do with it."
+slot        = ""
+key_tag     = "shrine_seal"
+weight      = 0
+respawn     = false
+no_drop     = true
+effects     = []
+
+# ── Drakebone weapons ─────────────────────────────────────────────────────────
+
+[[item]]
+id          = "drakebone_sword"
+name        = "Drakebone Sword"
+desc_short  = "A blade forged from Drake-bone ore, unnaturally sharp."
+desc_long   = "The blade is dark metal — almost black — with a faint pattern in the steel like scales pressed into the surface. It was forged to kill things that ordinary weapons cannot. The edge is absurdly sharp and has remained so despite years of abandonment. The grip is wrapped in what appears to be Drake hide leather. It is heavy enough to feel serious and balanced enough to use."
+slot        = "weapon"
+weapon_tags = ["blade", "one_handed", "drake_forged"]
+weight      = 4
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack",  amount = 18 },
+  { type = "on_hit",     ability = "bleed", chance = 0.20, magnitude = 4 },
+  { type = "on_equip",   message = "The Drakebone Sword hums faintly in your grip, as if it recognizes what you're hunting." },
+]
+
+[[item]]
+id          = "drakebone_armor"
+name        = "Drakebone Plate"
+desc_short  = "Plate armor reinforced with Drake-bone laminate."
+desc_long   = "Heavy plate with strips of Drake-bone laminate riveted across the chest and shoulders. The Drake-bone turns blades that would punch through ordinary steel. It weighs more than chain but protects considerably more. The inside is lined with padded cloth that's survived remarkably well."
+slot        = "armor"
+armor_tags  = ["heavy", "plate", "drake_forged", "torso"]
+weight      = 8
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 15 },
+  { type = "stat_bonus", stat = "attack",  amount = -3 },
+  { type = "on_equip",   message = "The armor settles onto your shoulders with a familiar weight. Something about it says: this is what you came here for." },
+]
+
+# ── Quest evidence and rewards ────────────────────────────────────────────────
+
+[[item]]
+id          = "drakes_fang"
+name        = "Drake's Fang"
+desc_short  = "A curved tooth the length of your forearm, still warm."
+desc_long   = "The Drake's fang, removed after the kill. It curves like a scimitar and tapers to a needle point. Still warm to the touch, and slightly luminescent — the Drake's essence hasn't fully faded yet. This is your proof for Elder Mira."
+slot        = ""
+weight      = 1
+respawn     = false
+no_drop     = true
+effects     = []
+
+[[item]]
+id          = "millhaven_commendation"
+name        = "Millhaven Commendation"
+desc_short  = "A bronze medallion stamped with the Millhaven crest."
+desc_long   = "A bronze disc the size of a palm, stamped on one side with the Millhaven crest — a tower over a river — and on the other, an inscription: 'For service to Millhaven in the Year of the Drake.' It has no practical use, but it is a record. Something happened here, and you were part of it."
+slot        = ""
+weight      = 0
+respawn     = false
+no_drop     = true
+effects     = []
+
+# ── Loot ─────────────────────────────────────────────────────────────────────
+
+[[item]]
+id          = "drake_scale_pack"
+name        = "Drake Scale Pack"
+desc_short  = "A large pack reinforced with Drake scales."
+desc_long   = "A well-made traveller's pack with Drake scale plates sewn into the exterior — both as reinforcement and as a statement. The main compartment is enormous. Several external pockets. Straps that actually distribute weight properly."
+slot        = "pack"
+weight      = 2
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "carry_capacity", amount = 10 },
+  { type = "on_equip",   message = "The pack sits well. You can carry considerably more now." },
+]
+
+[[item]]
+id          = "treasure_gold"
+name        = "Pile of Gold Coins"
+desc_short  = "A scattered pile of old gold coins."
+desc_long   = "Dozens of coins in various minting styles spanning at least three generations, suggesting the Drake has been accumulating victims for a long time. The gold itself is good — heavy and bright under the lair's orange light."
+slot        = ""
+weight      = 3
+respawn     = false
+gold_value  = 75
+effects     = []
+
+# ── Garrison gear (mid-tier, dropped by garrison enemies or found in armory) ──
+
+[[item]]
+id          = "garrison_helm"
+name        = "Garrison Helm"
+desc_short  = "A battered military helm with a dented cheek-guard."
+desc_long   = "Standard issue from whatever garrison occupied this forest before the corruption. Iron bowl with riveted cheek-guards and a nasal strip. The inside lining has rotted out but the metal is solid. Someone scratched a tally of kills into the bowl's interior."
+slot        = "head"
+armor_tags  = ["medium", "head", "military"]
+weight      = 3
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 6 },
+]
+
+[[item]]
+id          = "garrison_hauberk"
+name        = "Garrison Hauberk"
+desc_short  = "A long-skirted chainmail coat, military issue."
+desc_long   = "A knee-length coat of riveted chainmail, split front and back for mounted use even though the garrison soldiers here were infantry. Heavy, well-made, and clearly old — but the rings are sound. The crest that was once on the chest has been scratched off."
+slot        = "chest"
+armor_tags  = ["medium", "chain", "chest", "military"]
+weight      = 7
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 9 },
+]
+
+[[item]]
+id          = "garrison_leggings"
+name        = "Garrison Leggings"
+desc_short  = "Articulated iron plates worn over the thighs and knees."
+desc_long   = "Three overlapping iron plates held together with leather rivets, designed to cover the thigh and knee while still allowing movement. The leather has stiffened with age but the plates are intact. Military manufacture — there are dozens of these in garrison supply rooms across the region."
+slot        = "legs"
+armor_tags  = ["medium", "legs", "military"]
+weight      = 4
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 6 },
+]
+
+[[item]]
+id          = "drakebone_bracers"
+name        = "Drakebone Bracers"
+desc_short  = "Vambraces reinforced with strips of Drake-bone."
+desc_long   = "Iron vambraces with strips of Drake-bone riveted along the outer edge. The Drake-bone has a faint iridescence in certain light. They're lighter than you'd expect from how hard they are — Drake-bone has that quality. The soldier who wore these either abandoned them or didn't survive."
+slot        = "arms"
+armor_tags  = ["heavy", "arms", "drake_forged"]
+weight      = 3
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 8 },
+  { type = "on_equip",   message = "The Drake-bone bracers settle on your forearms with surprising lightness." },
+]

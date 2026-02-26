@@ -1,0 +1,21 @@
+# data/greenhollow/zone.toml
+# Greenhollow — a working farming valley with a mine, a mill, and a group
+# of teenage ruffians who need a lesson they won't forget.
+
+id          = "greenhollow"
+name        = "Greenhollow Valley"
+desc_short  = "A prosperous farming valley threaded with clear streams and old oak."
+desc_long   = """
+Greenhollow is what people mean when they say 'the countryside'. Wheat fields
+that catch the light in late afternoon. A mill wheel turning in cold stream water.
+Kids running between the houses. Women hanging linen and calling to each other
+across the lane. Men sharpening tools in the yard.
+
+It is exactly what it looks like — which is the whole point. A place built slowly
+by people who intended to stay.
+
+At the moment, something has been getting into the fields and the mine both.
+Big burrows. Lost equipment. A nervous foreman who won't go below the third
+level alone. And a group of village boys who've decided the best use of their
+energy is making every passing traveller's life slightly worse.
+"""

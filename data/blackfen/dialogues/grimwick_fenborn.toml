@@ -1,0 +1,182 @@
+# data/blackfen/dialogues/grimwick_fenborn.toml
+# Grimwick Fenborn at Fenwatch Post
+# Acquiring the companion flag "has_grimwick" changes room descriptions and
+# scripted events throughout the zone.
+
+[[node]]
+id    = "root"
+lines = [
+  "You smell like you've never been in a swamp before. That's a problem.",
+  "Most outsiders are dead within two hours of going south. You have that look, though.",
+  "The mire talks. If you listen, it tells you where not to step."
+]
+
+[[response]]
+node = "root"
+text = "I'm going to the Aldenmoor vault."
+next = "vault_response"
+
+[[response]]
+node = "root"
+text = "Will you guide me through the mire?"
+next = "guide_ask"
+condition = { quest = "the_emerald_in_the_dark", step = 1 }
+
+[[response]]
+node = "root"
+text = "What do you know about this place?"
+next = "grimwick_lore"
+
+[[response]]
+node = "root"
+text = "Never mind."
+next = ""
+
+[[node]]
+id   = "vault_response"
+line = '''The vault. The Aldenmoor tomb." The golden eyes fix on you. "My kin used to gather at that lake for the solstice. When the vault entrance surfaced, something came out of it and drove them away. I've been waiting for someone willing to go back in.'''
+
+[[response]]
+node = "vault_response"
+text = "What came out of the vault?"
+next = "vault_creature"
+
+[[response]]
+node = "vault_response"
+text = "Will you help me get there?"
+next = "guide_ask"
+
+[[node]]
+id   = "vault_creature"
+line = "It wears the body of a man. Moves wrong — too many joints, fingers too long. It doesn't come far from the vault, but it patrols the drowned causeway. My kin say it's protecting something. I think whatever is inside Gregor Aldenmoor is protecting itself."
+
+[[response]]
+node = "vault_creature"
+text = "The Celestial Emerald."
+next = "emerald_response"
+condition = { flag = "riversturm_journal" }
+
+[[response]]
+node = "vault_creature"
+text = "I'll deal with it."
+next = "guide_ask"
+
+[[node]]
+id   = "emerald_response"
+line = '''You found Riversturm's journal." A pause. "Then you know what the Emerald is. It's not just a gem — it's everything Gregor Aldenmoor was, compressed into crystal. Whatever possesses the body wants to use it as a key. To what, I don't know. But I don't want to find out.'''
+
+[[response]]
+node = "emerald_response"
+text = "Guide me in and we'll end this."
+next = "guide_ask"
+
+[[node]]
+id   = "guide_ask"
+line = "I've guided three outsiders into this mire. Two came back. The third — I don't blame myself. I do blame the mire. If you want my help, I'll come with you as far as the vault. After that, what happens is between you and whatever is in there."
+
+[[response]]
+node = "guide_ask"
+text = "I want your help. Let's go."
+next = "grimwick_joins"
+
+[[response]]
+node = "guide_ask"
+text = "I'll manage on my own."
+next = "grimwick_declines"
+
+[[node]]
+id   = "grimwick_joins"
+line = "Then we go together. I know three paths through the fogmere that avoid the worst of the leeches. Stay behind me and step where I step."
+
+script = [
+  { op = "set_flag", flag = "has_grimwick" },
+  { op = "message", text = "Grimwick rises and falls into step behind you. Her feet make almost no sound.", tag = "system" },
+  { op = "advance_quest", quest_id = "the_emerald_in_the_dark", step = 2 }
+]
+
+[[response]]
+node = "grimwick_joins"
+text = "Lead the way."
+next = ""
+
+[[node]]
+id   = "grimwick_declines"
+line = "Your choice. Follow the causeway south, look for the cobbles under the water on the sunken road, and don't stop moving in the fogmere. And watch for Durath's crew — they'll want your coin or your blood."
+
+[[response]]
+node = "grimwick_declines"
+text = "Thank you."
+next = ""
+
+[[node]]
+id   = "grimwick_lore"
+lines = [
+  "My people have lived here since before the first human set a stone in Millhaven. The mire remembers everything that sinks into it.",
+  "The fog isn't natural — it's old magic from the tower, gone wild without its keeper. Things get confused in it. So do people.",
+  "The black water isn't toxic. Most of it. The stuff near the Slaughterstone camp is something else — Durath's crew pours waste into it."
+]
+
+[[response]]
+node = "grimwick_lore"
+text = "Tell me about Durath."
+next = "durath_lore"
+
+[[response]]
+node = "grimwick_lore"
+text = "Tell me about the tower."
+next = "tower_lore"
+
+[[response]]
+node = "grimwick_lore"
+text = "That's enough. Thank you."
+next = ""
+
+[[node]]
+id   = "durath_lore"
+line = "Mercenary. Came three years ago to do a job and never left. The job was to guard a surveying party — the surveying party left, Durath decided he liked being in charge of something. Now he runs his crew like a little kingdom, taxing anyone who tries to cross his bridge."
+
+[[response]]
+node = "durath_lore"
+text = "Can he be reasoned with?"
+next = "durath_reason"
+
+[[response]]
+node = "durath_lore"
+text = "What about the tower?"
+next = "tower_lore"
+
+[[node]]
+id   = "durath_reason"
+line = "I tried. He wanted me to catch him fish. Every day, specific fish. I declined. That was two years ago — we have an understanding now. He doesn't cross the lake; I don't pull him into it."
+
+[[response]]
+node = "durath_reason"
+text = "I may have to fight him."
+next = "durath_fight"
+
+[[node]]
+id   = "durath_fight"
+line = "He fights like a wall falling on you — slow but unavoidable. Keep moving. He has a key for the bridge lock. If you take the key, you can reach the lake from the south side of his camp."
+
+[[response]]
+node = "durath_fight"
+text = "Good to know."
+next = ""
+
+[[node]]
+id   = "tower_lore"
+line = "Riversturm's tower. The wizard was... not a bad person. Eccentric, obsessed with accumulated knowledge. He built the tower here because the mire isolates things. When he disappeared, something moved into the ruin. Something that calls itself Anurus. I don't know what Anurus is — undead, demon, confused ghost. It doesn't leave the tower. I leave it alone."
+
+[[response]]
+node = "tower_lore"
+text = "Maybe it knows something useful."
+next = "anurus_advice"
+
+[[node]]
+id   = "anurus_advice"
+line = "Maybe. Or maybe it tries to kill you before you can ask. My advice: if you must go to the tower, go prepared. Anurus responds to knowledge — show it you know something about the mire, the tomb, the Emerald — and it might talk before it attacks."
+
+[[response]]
+node = "anurus_advice"
+text = "Valuable. Thank you."
+next = ""

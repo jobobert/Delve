@@ -1,0 +1,36 @@
+# data/millbrook/quests/lost_amulet.toml
+# "The Miller's Amulet" — lost item quest.
+#
+# Aldric the miller has been missing his mother's silver amulet for months.
+# It was in his coat pocket when he passed through the east field, and he
+# suspects it fell somewhere near the thornwood. In fact, the Thorngrubs
+# carried it to their nest (they collect shiny things).
+#
+# Quest flow:
+#   Step 1: Talk to Aldric about the amulet (or read the notice board)
+#   Step 2: Find and pick up the Miller's Amulet (in Thorngrub Nest — only accessible after Queen killed)
+#   Step 3: Return it to Aldric (via give command)
+#
+# Reward: 40 gold, 120 XP, prestige +2
+
+id      = "lost_amulet"
+title   = "The Miller's Amulet"
+giver   = "aldric_miller"
+summary = "Aldric the miller has been missing his mother's silver amulet for months. Find it and return it to him."
+
+[[step]]
+index     = 1
+objective = "Speak to Aldric about the missing amulet."
+hint      = "Aldric is at the mill on the east side of the village."
+
+[[step]]
+index     = 2
+objective = "Find the Miller's Amulet."
+hint      = "The Thorngrubs collect shiny things. Their nest is in the old mine."
+completion_flag = "amulet_found"
+
+[[step]]
+index     = 3
+objective = "Return the amulet to Aldric."
+hint      = "Use 'give amulet to aldric' at the mill."
+completion_flag = "amulet_returned"

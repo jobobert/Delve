@@ -1,0 +1,325 @@
+# data/blackfen/npcs.toml
+# Blackfen Mire — NPC definitions
+
+[[npc]]
+id       = "fenwatch_warden"
+name     = "Warden Holt"
+desc_short  = "A lean woman in ranger's leathers, her face mapped with weather lines."
+desc_long   = "A lean woman in ranger's leathers, her face mapped with weather lines. A crossbow hangs at her hip."
+hostile  = false
+tags     = ["humanoid", "armored", "slow"]
+style    = "swordplay"
+style_prof = 35
+attack   = 12
+defense  = 8
+hp       = 60
+max_hp   = 60
+gold_reward = 0
+xp_reward   = 0
+dialogue = "The mire is my jurisdiction. What's your business south of the gate?"
+shop     = [
+  { item_id = "mire_hood",           price = 55 },
+  { item_id = "fenguard_cuirass",    price = 90 },
+  { item_id = "mire_leggings",       price = 65 },
+  { item_id = "redbelly_gauntlets",  price = 50 },
+  { item_id = "swamp_stalker_cloak", price = 45 },
+  { item_id = "fen_antitoxin",       price = 20 },
+]
+
+[[npc]]
+id       = "grimwick_fenborn"
+name     = "Grimwick Fenborn"
+desc_short  = "A lizard-person the height of a human, covered in mottled grey-green scales."
+desc_long   = "A lizard-person the height of a human, covered in mottled grey-green scales. She watches you with golden slit eyes and says nothing yet."
+hostile  = false
+tags     = ["reptile", "slow"]
+style    = "evasion"
+style_prof = 45
+attack   = 8
+defense  = 6
+hp       = 55
+max_hp   = 55
+gold_reward = 0
+xp_reward   = 0
+dialogue = "You smell like you've never been in a swamp before. That's a problem."
+
+[[npc]]
+id       = "grimwick_fenborn_isle"
+name     = "Grimwick Fenborn"
+desc_short  = "The lizard-person who lives on this island."
+desc_long   = "The lizard-person who lives on this island. She is watching you with the unhurried patience of a very old predator."
+hostile  = false
+tags     = ["reptile", "slow"]
+style    = "evasion"
+style_prof = 45
+attack   = 8
+defense  = 6
+hp       = 55
+max_hp   = 55
+gold_reward = 0
+xp_reward   = 0
+dialogue = "You crossed the lake alone. Either you're capable or you're lucky. I'll find out which."
+
+[[npc]]
+id       = "durath_ironteeth"
+name     = "Durath Ironteeth"
+desc_short  = "A heavyset man in dented plate, a red slash of paint across his visor."
+desc_long   = "A heavyset man in dented plate, a red slash of paint across his visor. He's missing two fingers on his left hand and doesn't seem to notice."
+hostile  = true
+tags     = ["humanoid", "armored", "slow"]
+style    = "iron_root"
+style_prof = 55
+attack   = 16
+defense  = 10
+hp       = 90
+max_hp   = 90
+gold_reward = 45
+xp_reward   = 180
+
+[[kill_script]]
+op   = "message"
+text = "Durath topples like a felled oak. The Redbelly crew takes one look and backs away."
+tag  = "combat_death"
+
+[[kill_script]]
+op      = "give_item"
+item_id = "durath_key"
+
+[[kill_script]]
+op   = "set_flag"
+flag = "durath_defeated"
+
+[[kill_script]]
+op   = "set_flag"
+flag = "dragon_downed"
+
+[[kill_script]]
+op   = "message"
+text = "The Redbellies, leaderless, have already begun cutting the dead serpent from the canopy. A few minutes later the carcass crashes to the clearing floor."
+tag  = "system"
+
+[[kill_script]]
+op        = "advance_quest"
+quest_id  = "the_emerald_in_the_dark"
+step      = 4
+
+[[npc]]
+id       = "redbelly_brute"
+name     = "Redbelly Brute"
+desc_short  = "One of Durath's crew — big, stupid, dangerous, and proud of it."
+desc_long   = "One of Durath's crew — big, stupid, dangerous, and proud of it."
+hostile  = true
+tags     = ["humanoid", "armored"]
+style    = "brawling"
+style_prof = 20
+attack   = 10
+defense  = 5
+hp       = 40
+max_hp   = 40
+gold_reward = 8
+xp_reward   = 60
+
+[[npc]]
+id       = "fen_swamp_lion"
+name     = "Swamp Lion"
+desc_short  = "A broad-chested predator built low to the ground, its coat matted with mire mud."
+desc_long   = "A broad-chested predator built low to the ground, its coat matted with mire mud. It growls from deep in its chest."
+hostile  = true
+tags     = ["beast", "swift"]
+style    = "evasion"
+style_prof = 30
+attack   = 14
+defense  = 4
+hp       = 50
+max_hp   = 50
+gold_reward = 0
+xp_reward   = 90
+
+[[kill_script]]
+op   = "message"
+text = "The swamp lion collapses into the reeds, its growl becoming a long exhale."
+tag  = "combat_death"
+
+[[kill_script]]
+op   = "set_flag"
+flag = "swamp_lion_slain"
+
+[[npc]]
+id       = "blacklake_serpent"
+name     = "Blacklake Serpent"
+desc_short  = "A water serpent twenty feet long, its scales the same black as the lake."
+desc_long   = "A water serpent twenty feet long, its scales the same black as the lake. It surfaces silently from the deep water near the shore."
+hostile  = true
+tags     = ["beast", "reptile", "aquatic"]
+style    = "brawling"
+style_prof = 15
+attack   = 12
+defense  = 6
+hp       = 70
+max_hp   = 70
+gold_reward = 0
+xp_reward   = 110
+
+[[kill_script]]
+op   = "message"
+text = "The serpent rolls on its side, fouling the water with dark ichor."
+tag  = "combat_death"
+
+[[kill_script]]
+op   = "set_flag"
+flag = "serpent_slain"
+
+[[npc]]
+id       = "anurus_the_returned"
+name     = "Anurus the Returned"
+desc_short  = "A skeleton in robes that retain their colour despite decades of damp."
+desc_long   = "A skeleton in robes that retain their colour despite decades of damp. The skeleton stands upright, one hand on a staff, the jaw moving slightly as though testing its own capacity for speech."
+hostile  = true
+tags     = ["undead", "arcane"]
+style    = "swordplay"
+style_prof = 60
+attack   = 15
+defense  = 8
+hp       = 65
+max_hp   = 65
+gold_reward = 20
+xp_reward   = 200
+
+[[kill_script]]
+op   = "message"
+text = "The skeleton collapses, robes settling over a pile of old bones. The staff remains upright for a moment, then falls."
+tag  = "combat_death"
+
+[[kill_script]]
+op      = "give_item"
+item_id = "anurus_staff"
+
+[[kill_script]]
+op   = "set_flag"
+flag = "anurus_defeated"
+
+[[kill_script]]
+op        = "advance_quest"
+quest_id  = "the_emerald_in_the_dark"
+step      = 3
+
+[[npc]]
+id       = "vault_guardian"
+name     = "The Vault Guardian"
+desc_short  = "Something that was once the corpse of Gregor Aldenmoor."
+desc_long   = "Something that was once the corpse of Gregor Aldenmoor. It stands behind the great sarcophagus, moving with the jerky deliberateness of a thing relearning how to inhabit a body. Its hands are wrong — too many joints, fingers too long."
+hostile  = true
+tags     = ["undead", "aberrant"]
+style    = "iron_root"
+style_prof = 40
+attack   = 18
+defense  = 7
+hp       = 11
+max_hp   = 110
+gold_reward = 0
+xp_reward   = 350
+
+[[kill_script]]
+op   = "message"
+text = "The Guardian convulses, the alien control releasing it. The body collapses. Something small and luminous falls from its chest — rolling to a stop against the sarcophagus base."
+tag  = "combat_death"
+
+[[kill_script]]
+op      = "give_item"
+item_id = "celestial_emerald"
+
+[[kill_script]]
+op      = "give_item"
+item_id = "aldenmoor_signet"
+
+[[kill_script]]
+op   = "set_flag"
+flag = "guardian_defeated"
+
+[[kill_script]]
+op        = "advance_quest"
+quest_id  = "the_emerald_in_the_dark"
+step      = 5
+
+[[npc]]
+id          = "sarcophagus_scenery"
+name        = "Sarcophagus of Gregor Aldenmoor"
+desc_short  = "A sarcophagus of black granite, lid half-open."
+desc_long   = "A sarcophagus of black granite, lid half-open. Inside, a body in armour, chest cavity exposed."
+hostile     = false
+tags        = ["scenery"]
+style       = "brawling"
+style_prof  = 0
+attack      = 0
+defense     = 0
+hp          = 999
+max_hp      = 9999
+gold_reward = 0
+xp_reward   = 0
+dialogue    = "The sarcophagus is cold to the touch."
+
+# ── NEW NPCs for the Dragon's Demise adaptation ────────────────────────────
+
+[[npc]]
+id       = "grimwick_guide"
+name     = "Grimwick"
+desc_short  = "A scrawny lizard-person sitting on a wobbly stool outside a low hovel."
+desc_long   = "A scrawny lizard-person sitting on a wobbly stool outside a low hovel. A painted plaque hangs from his neck: 'Good Guide. 10 gold.' He rocks back and forth, ignoring you."
+hostile  = false
+tags     = ["reptile", "slow"]
+style    = "evasion"
+style_prof = 45
+attack   = 8
+defense  = 6
+hp       = 55
+max_hp   = 55
+gold_reward = 0
+xp_reward   = 0
+dialogue = "Bad season. Many swamp lions. Gumperfish is hungry too. No guide today."
+
+[[npc]]
+id       = "maren_thornbury"
+name     = "Maren Thornbury"
+desc_short  = "An old woman with sharp eyes and sharper teeth, carrying a fish spear ..."
+desc_long   = "An old woman with sharp eyes and sharper teeth, carrying a fish spear and wearing a shabby coat that conceals at least one thing capable of flinging you into the lake."
+hostile  = false
+tags     = ["humanoid", "arcane", "slow"]
+style    = "swordplay"
+style_prof = 60
+attack   = 20
+defense  = 15
+hp       = 100
+max_hp   = 100
+gold_reward = 0
+xp_reward   = 0
+dialogue = "You're not Josper. Well, come in before something eats you. Wipe your boots."
+
+[[npc]]
+id       = "redbelly_patrol"
+name     = "Redbelly Hunter"
+desc_short  = "One of three emaciated men in tattered hides, bellies daubed red."
+desc_long   = "One of three emaciated men in tattered hides, bellies daubed red. They carry stone-tipped spears and hatchets and look at you with the calculation of people who regularly decide whether strangers are worth killing."
+hostile  = true
+tags     = ["humanoid"]
+style    = "brawling"
+style_prof = 20
+attack   = 10
+defense  = 4
+hp       = 40
+max_hp   = 40
+gold_reward = 5
+xp_reward   = 60
+
+[[kill_script]]
+op   = "message"
+text = "The hunter goes down hard. The others back into the brush."
+tag  = "combat_death"
+
+[[kill_script]]
+op   = "set_flag"
+flag = "redbelly_patrol_cleared"
+
+[[kill_script]]
+op   = "give_xp"
+amount = 60
+silent = true

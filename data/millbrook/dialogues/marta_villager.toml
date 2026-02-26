@@ -1,0 +1,133 @@
+# data/millbrook/dialogues/marta_villager.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "You're not from here. Good — maybe fresh eyes'll see what we've been too busy to deal with.",
+  "I've got four things that need doing and no time to do them. Which one would you like to hear about?",
+  "The Thorngrubs are worse this week than last. Something needs to be done."
+]
+
+[[response]]
+node = "root"
+text = "Tell me about the Thorngrubs."
+next = "thorngrubs"
+
+[[response]]
+node = "root"
+text = "What else needs doing around here?"
+next = "village_needs"
+
+[[response]]
+node = "root"
+text = "Nothing right now."
+next = ""
+
+[[node]]
+id   = "thorngrubs"
+line = "They came up from the old mine about four months ago. Started with just a few in the thornwood — we thought nothing of it. Then they got into the east field, started chewing up root systems. Last week they got into Aldric's root cellar. They're spreading, and fast. The mine entrance goes back a long way. Whatever they are, they started in there."
+
+[[response]]
+node = "thorngrubs"
+text = "What's in the mine?"
+next = "thorngrubs_mine"
+
+[[response]]
+node = "thorngrubs"
+condition = { not_quest = "thorngrub_queen" }
+text = "I'll look into it."
+next = "thorngrubs_accept"
+
+[[response]]
+node = "thorngrubs"
+condition = { quest = "thorngrub_queen", not_flag = "thorngrubs_cleared" }
+text = "I'm already working on it."
+next = "thorngrubs_working"
+
+[[response]]
+node = "thorngrubs"
+condition = { flag = "thorngrubs_cleared" }
+text = "It's done. The Queen is dead."
+next = "thorngrubs_done"
+
+[[node]]
+id   = "thorngrubs_mine"
+line = "Old iron mine. Abandoned before my grandmother's time. Nobody goes in — the timber bracing is old enough to be nervous about. But the Thorngrubs clearly don't care about that. You'll want a lantern. There's one at the entrance, I think, left by whoever last tried to investigate and then thought better of it."
+
+[[response]]
+node = "thorngrubs_mine"
+text = "I'll take care of it."
+next = "thorngrubs_accept"
+
+[[response]]
+node = "thorngrubs_mine"
+text = "What will you give me for it?"
+next = "thorngrubs_reward"
+
+[[node]]
+id   = "thorngrubs_reward"
+line = "I can offer you the village's gratitude and twenty-five gold from the common fund. It's not much but it's what we have. The miller might have something extra — his root cellar's the worst affected."
+
+[[response]]
+node = "thorngrubs_reward"
+text = "Done. I'll clear the nest."
+next = "thorngrubs_accept"
+
+[[node]]
+id   = "thorngrubs_accept"
+line = "Good. Go carefully. The workers aren't as bad as what I imagine is deeper in. And take the lantern from the mine entrance — you'll need light."
+script = [
+  { op = "advance_quest", quest_id = "thorngrub_queen", step = 1 },
+]
+
+[[response]]
+node = "thorngrubs_accept"
+text = "Understood."
+next = ""
+
+[[node]]
+id   = "thorngrubs_working"
+line = "Glad to hear it. The sooner the better. The east field's starting to look like a burrow yard."
+
+[[response]]
+node = "thorngrubs_working"
+text = "I'm on it."
+next = ""
+
+[[node]]
+id   = "thorngrubs_done"
+line = "You— actually did it. I wasn't sure you would. The village owes you. Here — twenty-five from the common fund, and I'll put the word out that you're someone people can trust."
+script = [
+  { op = "advance_quest", quest_id = "thorngrub_queen", step = 4 },
+  { op = "give_gold",     amount = 25 },
+  { op = "give_xp",       amount = 100 },
+  { op = "prestige",      delta = 2, reason = "cleared the Thorngrub infestation" },
+]
+
+[[response]]
+node = "thorngrubs_done"
+text = "Glad I could help."
+next = ""
+
+[[node]]
+id   = "village_needs"
+line = "Let's see. The miller's still looking for his mother's amulet — been months, he won't stop mentioning it. The ruffians need someone to either spar with or give them a real job. Elder Tomlin's been muttering about teaching again, which means he's seen someone worth teaching. And the Thorngrubs. That's the urgent one."
+
+[[response]]
+node = "village_needs"
+text = "Tell me more about the ruffians."
+next = "ruffians"
+
+[[response]]
+node = "village_needs"
+text = "I'll start with the Thorngrubs."
+next = "thorngrubs"
+
+[[node]]
+id   = "ruffians"
+line = "Bram, Dal, and Fen. Good kids who've found nothing worth their energy. Bram's trying to be hard and doesn't quite have the character for it yet. Dal's quick but reckless. Fen is actually the one I'd worry about — he's sensible enough to know this isn't right but not confident enough to say so. Someone who could actually challenge them, fight or otherwise, might be the turning point."
+
+[[response]]
+node = "ruffians"
+text = "I'll see what I can do."
+next = ""

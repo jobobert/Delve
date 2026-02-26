@@ -1,0 +1,141 @@
+# data/millhaven/dialogues/leatherworker_npc.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "You need gear that lasts? Or gear that fits?",
+  "I can make it, given the right materials.",
+  "Commissions take time. I don't rush.",
+]
+
+[[response]]
+node = "root"
+text = "What can you make for me?"
+next = "commissions"
+
+[[response]]
+node = "root"
+text = "What materials do you need?"
+next = "materials"
+
+[[response]]
+node = "root"
+text = "Do you sell anything ready-made?"
+next = "readymade"
+
+[[response]]
+node = "root"
+text = "Nothing right now."
+next = ""
+
+
+[[node]]
+id   = "commissions"
+line = "Bags, packs, light armor — that's my trade. Better than anything you'll find off a shelf, given time. Type 'commission' to see the full menu and place an order."
+
+[[response]]
+node = "commissions"
+text = "Let me see the commission menu."
+next = ""
+script = [{ op = "message", text = "  (Type 'commission' to open the menu.)", tag = "system" }]
+
+[[response]]
+node = "commissions"
+text = "What's the best bag you make?"
+next = "best_bag"
+
+[[response]]
+node = "commissions"
+text = "Tell me about the armor."
+next = "armor_info"
+
+
+[[node]]
+id   = "best_bag"
+line = "The Expedition Pack. Framed yew, hip belt, six inner pockets. I source the wood myself — takes longer that way, but the weight sits right. If you're going somewhere dangerous and coming back with things, that's what you want."
+
+[[response]]
+node = "best_bag"
+text = "I'll keep that in mind."
+next = ""
+
+[[response]]
+node = "best_bag"
+text = "What materials does it take?"
+next = "pack_materials"
+
+
+[[node]]
+id   = "pack_materials"
+line = "Two tanned hides, a hardwood stave, and a leather strip for the buckles. The merchant on this street sells most of it. The hardwood you can find in Ashwood forest if you don't want to pay his prices."
+
+[[response]]
+node = "pack_materials"
+text = "Got it."
+next = ""
+
+
+[[node]]
+id   = "armor_info"
+line = "Padded jack is the staple — light, flexible, won't slow you down. If you want something you can move in quietly, the Ranger's Cloak is worth it. I don't do plate. That's Dorin's work."
+
+[[response]]
+node = "armor_info"
+text = "What about the Ranger's Cloak?"
+next = "cloak_info"
+
+[[response]]
+node = "armor_info"
+text = "That makes sense."
+next = ""
+
+
+[[node]]
+id   = "cloak_info"
+line = "Waxed outer layer, soft lining. Sheds water, muffles movement a bit. The color is earthy — nothing that catches the light. I use dark dye that I blend myself. You'd look like part of the landscape."
+
+[[response]]
+node = "cloak_info"
+text = "I'd like one of those."
+next = ""
+script = [{ op = "message", text = "  (Type 'commission' to order a Ranger's Cloak.)", tag = "system" }]
+
+[[response]]
+node = "cloak_info"
+text = "Good to know."
+next = ""
+
+
+[[node]]
+id   = "materials"
+line = "Depends on the piece. Mostly tanned hide, leather strips, linen cloth. Some items need hardwood for frames, or dark dye. I sell the smaller bits at my stall — 'list' to see. For hides and wood, check the merchant or bring them back from your travels."
+
+[[response]]
+node = "materials"
+text = "What if I find materials out in the field?"
+next = "field_materials"
+
+[[response]]
+node = "materials"
+text = "Understood."
+next = ""
+
+
+[[node]]
+id   = "field_materials"
+line = "Even better. Wolf and boar hide from the Ashwood, if you have someone to cure it — though unprocessed hide won't do. Tanned is what I need. There's a tanner in the south district who'll buy raw hides and process them for a coin."
+
+[[response]]
+node = "field_materials"
+text = "Useful to know."
+next = ""
+
+
+[[node]]
+id   = "readymade"
+line = "Leather strips and hides at the stall — use 'list'. For finished gear I only do commissions. Ready-made is never the right fit."
+
+[[response]]
+node = "readymade"
+text = "Fair enough."
+next = ""

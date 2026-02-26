@@ -1,0 +1,58 @@
+# data/millhaven/town.toml — Millhaven town rooms.
+# Zone id: millhaven
+#
+# Covers the town proper: the central square, surrounding shops, the inn,
+# and the Council Hall where Elder Mira gives the Ashwood Contract quest.
+#
+# coord = [x, y]  east = +x, north = +y  (used by tools/map.py)
+# exits can be plain strings or door objects:
+#   { to = "room_id", locked = true, lock_tag = "tag", desc = "..." }
+
+[[room]]
+id          = "town_square"
+admin_comment = "Main hub. Check bind_room on first entry. Mood: safe + busy."
+name        = "Town Square"
+description = "The heart of Millhaven. Cobblestones worn smooth by centuries of foot traffic surround a mossy fountain. A weathered signpost points in every direction. Stone steps lead up to the barracks door."
+start       = true
+coord       = [0, 0]
+exits       = { north = "blacksmith", south = "south_gate", east = "market", west = "inn", up = "barracks" }
+flags       = ["no_combat", "town"]
+items       = ["town_signpost"]
+spawns      = ["town_guard", "millhaven_banker"]
+
+[[room]]
+id          = "blacksmith"
+name        = "The Blacksmith's Forge"
+description = "Heat blasts from an enormous furnace. The smell of hot iron fills the air. Weapons and tools hang from every wall."
+coord       = [0, 1]
+exits       = { south = "town_square" }
+items       = ["rusty_sword", "leather_cap"]
+spawns      = ["blacksmith_npc"]
+
+[[room]]
+id          = "market"
+name        = "Market Street"
+description = "Colorful awnings shade rows of market stalls. Merchants call out prices and the smell of tanned leather mixes with spice and fresh bread. A leatherworker's stall takes up the eastern corner."
+coord       = [1, 0]
+exits       = { west = "town_square", east = "council_hall" }
+items       = ["health_potion", "leather_satchel", "leather_strip", "tanned_hide"]
+spawns      = ["merchant", "leatherworker_npc"]
+
+[[room]]
+id          = "inn"
+name        = "The Rusty Flagon Inn"
+description = "A warm common room filled with the sound of laughter and clinking tankards. A fire crackles in a large hearth."
+coord       = [-1, 0]
+exits       = { east = "town_square" }
+items       = []
+spawns      = ["innkeeper", "aonn_tesk"]
+
+[[room]]
+id          = "council_hall"
+name        = "Council Hall"
+description = "A stone-floored hall with high ceilings and a long oak table. Maps and ledgers cover every surface. A woman in grey robes sits at the head of the table, reviewing documents with fierce concentration. This is clearly someone who governs by doing the work herself."
+coord       = [2, 0]
+exits       = { west = "market" }
+flags       = ["no_combat"]
+items       = []
+spawns      = ["elder_mira"]

@@ -1,0 +1,111 @@
+# data/greenhollow/dialogues/mine_foreman_osric.toml
+
+[[node]]
+id    = "root"
+lines = [
+  "I'd go down there myself but I've got three miners who won't work until it's clear. Priorities.",
+  "Mine's been sealed off below level one. Can't afford to lose anyone to whatever's down there.",
+  "Thirty years I've run this mine. This is the first time something else has been running it.",
+]
+
+[[response]]
+node = "root"
+condition = { not_flag = "osric_quest_started" }
+text = "I heard you lost something down there."
+next = "pick_mention"
+
+[[response]]
+node = "root"
+text = "Tell me about the mine layout."
+next = "mine_layout"
+
+[[response]]
+node = "root"
+condition = { flag = "osric_quest_started", not_flag = "osric_pick_found" }
+text = "I'm looking for your pickaxe."
+next = "pick_search"
+
+[[response]]
+node = "root"
+condition = { flag = "osric_pick_found", not_flag = "osric_pick_returned" }
+text = "I found your pick."
+next = ""
+
+[[response]]
+node = "root"
+condition = { flag = "osric_pick_returned" }
+text = "How's the mine now?"
+next = "mine_clear"
+
+[[response]]
+node = "root"
+text = "Just looking."
+next = ""
+
+[[node]]
+id   = "pick_mention"
+line = """My pickaxe. Yes. He looks uncomfortable. I've had it twenty years. Left it in the deep chamber when we had to get out fast. It's got my initials scratched in — O.B. If you're going down there anyway, I'd be grateful to see it come back up."""
+script = [
+  { op = "set_flag",      flag = "osric_quest_started" },
+  { op = "advance_quest", quest_id = "osrics_pick", step = 1 },
+]
+
+[[response]]
+node = "pick_mention"
+text = "I'll keep an eye out for it."
+next = ""
+
+[[node]]
+id   = "mine_layout"
+line = "Main shaft goes straight down to level one — that's where the ore seams are. Level one is worked passages, timber-shored. From there the secondary shaft — follow the branch that goes left from the cart tracks — drops to the natural chamber. That's level two. Natural void in the greenstone, about thirty feet across. Good ore down there, or it was. That's where the big one is."
+
+[[response]]
+node = "mine_layout"
+text = "What's in the natural chamber besides the King?"
+next = "chamber_contents"
+
+[[response]]
+node = "mine_layout"
+text = "How do you know it's down there?"
+next = "chamber_evidence"
+
+[[response]]
+node = "mine_layout"
+text = "Understood. Thank you."
+next = ""
+
+[[node]]
+id   = "chamber_contents"
+line = "The rich ore seam — denser than what's on level one, might be a composite. My pickaxe, which I mentioned. Whatever the groundhog King has built down there. And a lot of its offspring, probably. Go carefully."
+
+[[response]]
+node = "chamber_contents"
+text = "I will."
+next = ""
+
+[[node]]
+id   = "chamber_evidence"
+line = "I heard it once when we were trying to clear the lower level. Sound like a millstone grinding, but from under the earth. Twice as loud. The vibration came up through the floor. Whatever it is, it's big."
+
+[[response]]
+node = "chamber_evidence"
+text = "I'll deal with it."
+next = ""
+
+[[node]]
+id   = "pick_search"
+line = "It should be on the floor of the deep chamber — I left it when we ran. Near the ore seam on the south wall, if I remember right. Watch yourself down there."
+
+[[response]]
+node = "pick_search"
+text = "I'll find it."
+next = ""
+
+[[node]]
+id   = "mine_clear"
+line = "Better. Much better. I've had Finn and his friends clearing the entrance burrows — I didn't expect that, but I'm not complaining. The main shafts are already rebounding. Give it a week and we'll have full production again. You did good work."
+
+[[response]]
+node = "mine_clear"
+text = "Glad to hear it."
+next = ""

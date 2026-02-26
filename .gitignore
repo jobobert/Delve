@@ -1,0 +1,9 @@
+*.json
+For Claude.txt
+*.log
+*.docx
+tools/ai_sessions/*
+*.pdf
+*/__pycache__
+config.py
+config - Copy.py

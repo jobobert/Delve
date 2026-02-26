@@ -1,0 +1,176 @@
+# data/blackfen/dialogues/maren_thornbury.toml
+# Maren Thornbury — the swamp witch at the lakeside cottage.
+# Adaptation of the adventure's unnamed witch.
+# She can be won over (social check or lucky choice), give the green-bladed
+# sword, and allow a long rest. She can also throw you in the lake.
+
+[[node]]
+id    = "root"
+lines = [
+  "You're not Josper. You're in my house. Explain quickly.",
+  "I have a spear and I know where the Gumperfish likes to feed. Talk.",
+  "Most people who come through my door don't knock. You didn't knock either. But you're here now."
+]
+
+[[response]]
+node = "root"
+text = "I'm sorry for the intrusion. I'm looking for a dead dragon."
+next = "apologise"
+
+[[response]]
+node = "root"
+text = "I was cold and your door was open. I mean no harm."
+next = "charm"
+
+[[response]]
+node = "root"
+text = "I heard you might help travellers."
+next = "reputation"
+
+[[response]]
+node = "root"
+text = "Never mind. I'll leave."
+next = "leaving"
+
+[[node]]
+id   = "apologise"
+line = "A dead dragon. You mean the serpent Riversturm killed. I watched him do it, as it happens — I was fishing from the dock. Magnificent. Waste of a perfectly good dragon, but magnificent. Sit down. I'll put something on."
+
+[[script]]
+op      = "skill_check"
+skill   = "social"
+dc      = 13
+silent  = true
+on_pass = [
+  { op = "set_flag", flag = "thornbury_friendly" },
+  { op = "message",  text = "Something in your manner puts the old woman at ease. She lowers the spear.", tag = "system" }
+]
+on_fail = []
+
+[[response]]
+node = "apologise"
+text = "You saw Riversturm fight the dragon?"
+next = "riversturm_story"
+
+[[response]]
+node = "apologise"
+text = "Thank you. I won't stay long."
+next = "gift"
+
+[[node]]
+id   = "charm"
+line = "Ha. Cold. Yes. The mire has a way of getting into your bones that fire can't quite fix. I know something that can."
+
+[[script]]
+op      = "skill_check"
+skill   = "social"
+dc      = 11
+silent  = false
+on_pass = [
+  { op = "set_flag", flag = "thornbury_friendly" },
+  { op = "message",  text = "Thornbury laughs — a real laugh, startled out of her — and waves you in properly.", tag = "system" }
+]
+on_fail = [
+  { op = "message", text = "The old woman's eyes narrow. She doesn't quite believe you.", tag = "system" }
+]
+
+[[response]]
+node = "charm"
+text = "What have you got?"
+next = "gift"
+
+[[node]]
+id   = "reputation"
+line = "Help travellers. Is that what they say. I help the ones worth helping. The rest I throw in the lake. I'm still deciding which kind you are."
+
+[[response]]
+node = "reputation"
+text = "I'm worth helping. I'm after the Celestial Emerald."
+next = "emerald_knowledge"
+
+[[response]]
+node = "reputation"
+text = "I'm looking for a dead dragon."
+next = "apologise"
+
+[[node]]
+id   = "emerald_knowledge"
+line = "The Emerald. Gregor Aldenmoor's stone. I knew Gregor — not well, but I knew of him. If the gem is in that dragon, you'll need something sharper than what you're carrying to get it out. Dragon belly is thick."
+
+[[script]]
+op      = "skill_check"
+skill   = "social"
+dc      = 10
+silent  = true
+on_pass = [
+  { op = "set_flag",   flag = "thornbury_friendly" },
+  { op = "give_item",  item_id = "thornbury_sword" },
+  { op = "message",    text = "She reaches through the cottage wall — which is apparently illusory — and produces a green-bladed shortsword. 'Take it. I have no use for it anymore.'", tag = "system" }
+]
+on_fail = [
+  { op = "message", text = "She nods slowly but doesn't offer anything further.", tag = "system" }
+]
+
+[[response]]
+node = "emerald_knowledge"
+text = "Thank you. Can I rest here before going on?"
+next = "rest_offer"
+
+[[node]]
+id   = "riversturm_story"
+line = "I really do hate saying anything nice about Montbatten Academy — dreadful place, full of dreadful people — but they did do a good job on him. The dragon didn't even see the second spell coming. Riversturm grabbed some terrified apprentice by the ear and was gone before the body hit the water."
+
+[[response]]
+node = "riversturm_story"
+text = "What happened to the emerald inside the dragon?"
+next = "emerald_knowledge"
+
+[[response]]
+node = "riversturm_story"
+text = "Thank you for this. Can I rest here?"
+next = "rest_offer"
+
+[[node]]
+id   = "gift"
+line = "You look like you've been through something. Here. Take this. It's sharper than it looks — I had it from a student who owed me a favour years ago. Emerald in the hilt. Go on, take it."
+
+[[script]]
+op        = "if_not_flag"
+flag      = "received_thornbury_sword"
+then = [
+  { op = "give_item", item_id = "thornbury_sword" },
+  { op = "set_flag",  flag = "received_thornbury_sword" },
+  { op = "set_flag",  flag = "thornbury_friendly" }
+]
+else = []
+
+[[response]]
+node = "gift"
+text = "Thank you. I should go."
+next = "farewell"
+
+[[response]]
+node = "gift"
+text = "May I stay and rest?"
+next = "rest_offer"
+
+[[node]]
+id   = "rest_offer"
+line = "The cot is against the wall. The blanket's clean — cleaner than you, I'd wager. Sleep if you need it. I'll be fishing. Don't touch anything on the shelves."
+
+[[script]]
+op   = "set_flag"
+flag = "thornbury_rest_offered"
+
+[[response]]
+node = "rest_offer"
+text = "Thank you. I'll rest briefly."
+next = "farewell"
+
+[[node]]
+id   = "leaving"
+line = "Probably wise. The path south — stay on the bones trail, don't go east of the big stump. Good luck with whatever foolishness brought you out here."
+
+[[node]]
+id   = "farewell"
+line = '''Now go, before I decide to keep you here forever." A pause. "I'm teasing. Mostly.'''
