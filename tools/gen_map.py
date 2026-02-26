@@ -99,3 +99,5 @@ def generate(output_path: Path) -> None:
 if __name__ == "__main__":
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "tools" / "admin_map.html"
     generate(out)
+
+

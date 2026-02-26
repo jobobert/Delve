@@ -263,3 +263,5 @@ def can_learn(style: dict, player_level: int,
     if req_teacher and teacher_npc_id != req_teacher:
         return False, f"{style['name']} must be taught by a specific trainer."
     return True, ""
+
+

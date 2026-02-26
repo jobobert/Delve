@@ -95,3 +95,5 @@ class Msg:
     def __str__(self) -> str:
         """Fallback plain-text representation (no formatting)."""
         return self.text
+
+

@@ -452,3 +452,5 @@ class World:
             f"({', '.join(loaded) or 'none'})\n"
             f"Rooms in memory: {total_rooms} | Live NPCs: {total_npcs}"
         )
+
+

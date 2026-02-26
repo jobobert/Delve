@@ -435,3 +435,5 @@ class CLIFrontend:
             self.processor.process(raw)
 
         _elog.close()  # normal quit path
+
+

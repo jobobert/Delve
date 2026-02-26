@@ -258,3 +258,5 @@ class QuestTracker:
                 lines.append((Tag.SYSTEM, f"  ✓ {title}"))
 
         return lines
+
+

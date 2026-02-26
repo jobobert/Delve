@@ -2538,3 +2538,5 @@ class CommandProcessor:
             self._out(Tag.SYSTEM,
                       f"  [Commission ready] Your {label} is finished! "
                       f"Return to the crafter and 'collect' it.")
+
+

@@ -317,3 +317,5 @@ def deserialise(raw: dict) -> dict | None:
     if not cdef:
         return None   # companion definition removed — drop silently
     return {**raw, "_def": cdef}
+
+

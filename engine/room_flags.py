@@ -70,3 +70,5 @@ class RoomFlags:
     def all_flags(room: dict) -> list[str]:
         """Return all flags set on this room."""
         return list(room.get("flags", []))
+
+

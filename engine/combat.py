@@ -675,3 +675,5 @@ class CombatSession:
 
         # ── 7. Signal frontend ─────────────────────────────────────────────────
         self.bus.emit(Event.PLAYER_DIED)
+
+

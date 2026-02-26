@@ -52,3 +52,5 @@ class Event:
 
     # Frontend → Engine (available for async/web use; CLI calls engine directly)
     COMMAND_IN   = "command_in"    # payload: raw_input str
+
+

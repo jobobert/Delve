@@ -149,3 +149,5 @@ def hostile_on_sight(npc: dict, player) -> bool:
         return True
 
     return False
+
+
