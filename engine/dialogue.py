@@ -472,3 +472,5 @@ def run_inline(npc: dict, player, quests, ctx, bus,
     bus.emit(Event.OUTPUT, Msg(Tag.BLANK, ""))
 
 
+
+

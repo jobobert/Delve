@@ -72,3 +72,5 @@ class RoomFlags:
         return list(room.get("flags", []))
 
 
+
+
