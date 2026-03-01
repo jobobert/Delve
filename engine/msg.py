@@ -67,6 +67,7 @@ class Tag:
 
     # ── Quests ────────────────────────────────────────────────────
     QUEST        = "quest"         # Quest start, update, and completion banners
+    JOURNAL      = "journal"       # Player journal entries written by scripts
 
     # ── Economy / shops ───────────────────────────────────────────
     SHOP         = "shop"          # Shop listings and buy/sell confirmations

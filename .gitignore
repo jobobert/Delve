@@ -7,3 +7,9 @@ tools/ai_sessions/*
 */__pycache__
 config.py
 config - Copy.py
+data/players/*
+data/zone_state/*
+.claude
+output/
+*.dot
+*.svg

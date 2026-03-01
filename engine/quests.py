@@ -57,7 +57,10 @@ The final step is usually marked complete by the quest-giver NPC's dialogue.
 """
 
 from __future__ import annotations
+import copy
 from pathlib import Path
+from engine.events import Event
+from engine.msg import Msg, Tag
 from engine.toml_io import load as toml_load
 from typing import TYPE_CHECKING
 
@@ -172,8 +175,6 @@ class QuestTracker:
 
     def _emit_step(self, quest: dict, step: int,
                    ctx: "GameContext", just_started: bool = False) -> None:
-        from engine.events import Event
-        from engine.msg import Msg, Tag
         title = quest.get("title","Quest")
         steps = {s["index"]: s for s in quest.get("step", [])}
         step_data = steps.get(step, {})
@@ -194,10 +195,10 @@ class QuestTracker:
         ctx.bus.emit(Event.OUTPUT, Msg(Tag.QUEST, "╚" + "═" * 36))
 
     def _emit_completion(self, quest: dict, ctx: "GameContext") -> None:
-        from engine.events import Event
-        from engine.msg import Msg, Tag
+        # ScriptRunner is imported locally to avoid a circular import:
+        # script.py imports QuestTracker (from quests) under TYPE_CHECKING,
+        # so at runtime the dependency is one-way (quests → script only).
         from engine.script import ScriptRunner
-        import copy
 
         title = quest.get("title","Quest")
         ctx.bus.emit(Event.OUTPUT, Msg(Tag.QUEST,

@@ -8,6 +8,8 @@ Configuration is in frontend/config.py (word wrap, auto-attack, colors, aliases)
 """
 
 from __future__ import annotations
+import random
+import re
 import textwrap
 import sys
 from pathlib import Path
@@ -69,6 +71,24 @@ def _bg(r: int, g: int, b: int) -> str:
     return f"\033[48;2;{r};{g};{b}m"
 
 
+def _parse_color_override(value: str) -> str:
+    """Convert a human-readable color spec to an ANSI sequence.
+
+    Accepted formats:
+      "B(r,g,b)"  → bold + foreground colour
+      "(r,g,b)"   → plain foreground colour
+      "D(r,g,b)"  → dim + foreground colour
+    Any string that doesn't match is returned unchanged (raw ANSI passthrough).
+    """
+    import re
+    m = re.fullmatch(r'\s*([BD]?)\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)\s*', value)
+    if m:
+        prefix, r, g, b = m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4))
+        weight = BOLD if prefix == "B" else DIM if prefix == "D" else ""
+        return weight + _fg(r, g, b)
+    return value   # already a raw ANSI string — pass through unchanged
+
+
 # ── Color palette ─────────────────────────────────────────────────────────────
 
 PALETTE: dict[str, str] = {
@@ -104,14 +124,14 @@ PALETTE: dict[str, str] = {
     Tag.DOOR:         BOLD   + _fg(200, 160,  80),
     Tag.MAP:                   _fg( 60, 180,  80),
     Tag.QUEST:        BOLD   + _fg(255, 215,   0),
-    Tag.NPC:          BOLD   + _fg(230, 130,  60),
+    Tag.JOURNAL:      BOLD   + _fg(180, 220, 255),   # bright icy blue — journal entries
 }
 
 # Apply any overrides from config
-for _tag_name, _ansi in COLOR_OVERRIDES.items():
+for _tag_name, _raw in COLOR_OVERRIDES.items():
     _tag = getattr(Tag, _tag_name, None)
     if _tag is not None:
-        PALETTE[_tag] = _ansi
+        PALETTE[_tag] = _parse_color_override(_raw)
 
 
 def _render(msg: Msg) -> str:
@@ -120,7 +140,8 @@ def _render(msg: Msg) -> str:
     if not text and msg.tag == Tag.BLANK:
         return ""
 
-    # Word-wrap long lines (skip map lines and dividers which must be exact width)
+    # Word-wrap long lines. MAP and ROOM_DIVIDER use exact-width ASCII art;
+    # STATS uses aligned columns. Wrapping any of these would break their layout.
     if WRAP_WIDTH > 0 and msg.tag not in (Tag.MAP, Tag.ROOM_DIVIDER, Tag.STATS):
         if len(text) > WRAP_WIDTH:
             indent = len(text) - len(text.lstrip())
@@ -235,7 +256,6 @@ class CLIFrontend:
                 player = Player(name)
                 player.room_id = self.world.start_room
                 # Roll random starting stats: 3d6 drop lowest
-                import random
                 def roll3d6_drop_low() -> int:
                     dice = sorted([random.randint(1, 6) for _ in range(3)])
                     return sum(dice[1:])
@@ -298,7 +318,6 @@ class CLIFrontend:
         When a numbered target (e.g. "Corrupted Wolf 1") dies, the loop
         automatically re-resolves to the next alive target with the same base name.
         """
-        import re as _re
         p         = self.player
         from engine.commands import CommandProcessor
         swing = 0
@@ -321,7 +340,7 @@ class CLIFrontend:
             npcs = room.get("_npcs", []) if room else []
 
             # Strip trailing number to get the family of targets
-            base_name = _re.sub(r"\s+\d+$", "", full_name).lower()
+            base_name = re.sub(r"\s+\d+$", "", full_name).lower()
 
             # Get numbered list of live NPCs that match the base name
             alive = [n for n in npcs if n.get("hp", 0) > 0]

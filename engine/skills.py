@@ -5,14 +5,15 @@ Skills are separate from fighting styles. They represent general adventuring
 competencies that grow through use and affect skill checks against room events,
 dialogue conditions, and scripted encounters.
 
-The six core skills
-───────────────────
+The seven skills
+────────────────
   stealth    — Moving quietly, hiding, avoiding detection
   survival   — Wilderness navigation, avoiding natural hazards, foraging
   perception — Noticing hidden things, reading situations
   athletics  — Climbing, swimming, feats of strength and endurance
   social     — Persuasion, deception, reading people
   arcana     — Knowledge of magic, identifying enchantments, resisting spells
+  mining     — Extracting ore from rock seams; used by ore-node on_get scripts
 
 Skill values
 ────────────
@@ -125,10 +126,6 @@ def _growth_amount(current: float, success: bool) -> float:
     elif current >= 50:
         base *= 0.6
     return base
-
-
-def _old_tier(value: float) -> str:
-    return tier_name(value)
 
 
 def apply_growth(current: float, success: bool) -> tuple[float, str | None]:

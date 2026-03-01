@@ -1,6 +1,0 @@
-[[region]]
-id                 = "core_chamber"
-name               = "The Core Chamber"
-description        = "A vast subterranean complex housing the ancient environmental control device. The air hums with unstable energy as all five malfunctioning device pieces resonate in chaotic harmony."
-recommended_level  = 14
-admin_comment      = "Piece Effect: The central device regulates all environmental systems. Its malfunction destabilizes the entire world.  Notes: Final region with multi‑phase encounters and system‑wide hazards."

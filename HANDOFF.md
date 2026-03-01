@@ -31,12 +31,13 @@ mud/
 ├── data/            All TOML world data (zones, items, NPCs, quests, dialogues)
 ├── tools/           validate.py, map.py, wct_server.py, ai_player.py, clean.py
 ├── main.py
-├── README.md        Full system reference — READ THIS for any system details
+├── README.md        Partial system reference — READ THIS for any system details, and reference the engine/README.md and data/README.md as necessary
 └── HANDOFF.md       This file
 ```
 
 **Always read `README.md` for authoritative details** on any system before
 touching code. It reflects the actual current state of every file.
+**Always update the appropriate `README.md` when making changes.**
 
 ---
 

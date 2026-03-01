@@ -56,10 +56,17 @@ from pathlib import Path
 from typing import Any
 import random
 
+from engine.events import Event
+from engine.msg import Msg, Tag
 from engine.toml_io import load as toml_load
 
 
-DATA_DIR = Path("data")
+def _emit(bus, tag: str, text: str) -> None:
+    """Emit a single output message on the bus."""
+    bus.emit(Event.OUTPUT, Msg(tag, text))
+
+
+DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 # ── Definition loading ────────────────────────────────────────────────────────
@@ -209,12 +216,6 @@ def companion_attack(companion: dict, npc: dict, bus, safe_room: bool) -> None:
     Only called if companion type == 'combat' and status == 'active'.
     Emits output via the bus. Modifies npc['hp'] in place.
     """
-    from engine.msg import Msg, Tag
-    from engine.events import Event
-
-    def _out(tag: str, text: str) -> None:
-        bus.emit(Event.OUTPUT, Msg(tag, text))
-
     cdef = companion.get("_def", {})
     name = companion.get("name", cdef.get("name", "Your companion"))
     atk  = int(cdef.get("attack", 5))
@@ -222,24 +223,20 @@ def companion_attack(companion: dict, npc: dict, bus, safe_room: bool) -> None:
 
     # Style matchup bonus (simple: swordplay vs humanoid gets +1)
     style_id = cdef.get("style", "")
-    bonus = 0
-    if style_id == "swordplay" and "humanoid" in npc.get("tags", []):
-        bonus = 1
-    elif style_id == "brawling":
-        bonus = 0
+    bonus = 1 if style_id == "swordplay" and "humanoid" in npc.get("tags", []) else 0
 
     dmg = max(1, atk + bonus - npc_def + random.randint(-1, 3))
     npc_max = npc.get("max_hp", 10)
 
     if safe_room:
-        _out(Tag.COMBAT_HIT,
-             f"{name} strikes the {npc['name']} for {dmg} — but it shrugs it off. [safe zone]")
+        _emit(bus, Tag.COMBAT_HIT,
+              f"{name} strikes the {npc['name']} for {dmg} — but it shrugs it off. [safe zone]")
         return
 
     npc["hp"] -= dmg
     hp_now = max(0, npc["hp"])
-    _out(Tag.COMBAT_HIT,
-         f"{name} strikes {npc['name']} for {dmg}. ({hp_now}/{npc_max} HP)")
+    _emit(bus, Tag.COMBAT_HIT,
+          f"{name} strikes {npc['name']} for {dmg}. ({hp_now}/{npc_max} HP)")
 
 
 def companion_take_hit(companion: dict, npc: dict, bus) -> bool:
@@ -248,12 +245,6 @@ def companion_take_hit(companion: dict, npc: dict, bus) -> bool:
     Returns True if the companion was just downed.
     Only called occasionally — companions are not always in the line of fire.
     """
-    from engine.msg import Msg, Tag
-    from engine.events import Event
-
-    def _out(tag: str, text: str) -> None:
-        bus.emit(Event.OUTPUT, Msg(tag, text))
-
     cdef    = companion.get("_def", {})
     name    = companion.get("name", cdef.get("name", "Your companion"))
     n_atk   = int(npc.get("attack", 5))
@@ -263,15 +254,15 @@ def companion_take_hit(companion: dict, npc: dict, bus) -> bool:
 
     companion["hp"] = max(0, companion.get("hp", max_hp) - dmg)
     hp_now = companion["hp"]
-    _out(Tag.COMBAT_RECV,
-         f"{npc['name']} also strikes {name} for {dmg}. "
-         f"({hp_now}/{max_hp} HP)")
+    _emit(bus, Tag.COMBAT_RECV,
+          f"{npc['name']} also strikes {name} for {dmg}. "
+          f"({hp_now}/{max_hp} HP)")
 
     if hp_now <= 0:
         companion["status"] = "downed"
         down_msg = cdef.get("downed_message",
                             f"{name} is downed! They need rest to recover.")
-        _out(Tag.COMBAT_RECV, down_msg)
+        _emit(bus, Tag.COMBAT_RECV, down_msg)
         return True
     return False
 

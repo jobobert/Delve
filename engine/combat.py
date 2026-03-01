@@ -73,7 +73,6 @@ def npc_damage(npc: dict, player: "Player") -> int:
     just a quick d6 + attack vs player defense roll.
     Returns damage dealt (minimum 0).
     """
-    import random
     n_atk = npc.get("attack", 5)
     p_def = player.effective_defense
     roll  = random.randint(1, 6)
@@ -92,6 +91,7 @@ class CombatSession:
         self.player_won   = False
         self._player_bleed = False   # bleed applied to NPC by player
         self._npc_bleed    = False   # bleed applied to player by NPC
+        self.round        = 0        # incremented at the start of each player_attack()
         log.debug("combat", "CombatSession created",
                   player=player.name,
                   npc=npc.get("name","?"),
@@ -184,10 +184,14 @@ class CombatSession:
         return n_atk, n_def
 
     # ── Main round ────────────────────────────────────────────────────────────
+    # TODO: player_attack() handles the full round in one method (~325 lines).
+    #       Future refactor candidate: split into _player_turn(), _npc_turn(),
+    #       and _apply_bleed_ticks() for easier testing and maintenance.
 
     def player_attack(self) -> None:
         if self.done:
             return
+        self.round += 1
 
         p_style = styles_mod.get(self.player.active_style)
         p_prof  = self.player.style_proficiency()
@@ -519,6 +523,23 @@ class CombatSession:
                 and companion_mod.companion_type(comp) == "combat"
                 and random.random() < 0.30):
             companion_mod.companion_take_hit(comp, self.npc, self.bus)
+
+        # ── Round script ──────────────────────────────────────────────────────
+        # Runs after each full round where both combatants are still fighting.
+        # Gives NPCs the ability to react to round count and HP thresholds.
+        if not self.done and self.ctx:
+            round_script = self.npc.get("round_script", [])
+            if round_script and not self._safe():
+                from engine.script import ScriptRunner
+                self.ctx.round = self.round
+                self.ctx.npc   = self.npc
+                ScriptRunner(self.ctx).run(round_script)
+                if "_end_combat" in self.player.flags:
+                    self.player.flags.discard("_end_combat")
+                    self.npc["hp"]      = max(1, self.npc.get("hp", 1))
+                    self.npc["hostile"] = False
+                    self.done           = True
+                    self.player_won     = True
 
     # ── Outcomes ─────────────────────────────────────────────────────────────
 

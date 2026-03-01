@@ -38,12 +38,19 @@ Special node IDs:
   ""      — end conversation immediately when chosen as `next`
 
 Conditions (on nodes or responses):
-  { flag = "name" }           — player.flags contains "name"
-  { not_flag = "name" }       — player.flags does NOT contain "name"
-  { item = "item_id" }        — player carries item with that id
-  { quest = "qid", step = N } — active quest is at step N
-  { quest_complete = "qid" }  — quest is complete
-  { level_gte = N }           — player.level >= N
+  { flag = "name" }              — player.flags contains "name"
+  { not_flag = "name" }          — player.flags does NOT contain "name"
+  { item = "item_id" }           — player carries item with that id
+  { quest = "qid", step = N }    — active quest is at step N
+  { quest_complete = "qid" }     — quest is complete
+  { level_gte = N }              — player.level >= N
+  { skill = "id", min = N }      — skill value >= N
+  { gold = N }                   — player gold >= N
+  { prestige_min = N }           — prestige >= N
+  { prestige_max = N }           — prestige <= N
+  { affinity = "tag" }           — player has this prestige affinity
+  { no_affinity = "tag" }        — player does NOT have this prestige affinity
+  { no_companion = true }        — player has no active companion
 
 Rolling / cycling dialogue:
   lines = ["a", "b", "c"]        — random pick every time
@@ -53,12 +60,17 @@ Rolling / cycling dialogue:
 
 from __future__ import annotations
 import random
+import re
 from pathlib import Path
 from engine.toml_io import load as toml_load
 import engine.log as log
+import engine.quests as quests_mod
 
 _DATA_ROOT = Path(__file__).parent.parent / "data"
 _SKIP_DIRS = {"zone_state", "players"}
+
+# Matches {entity_id.field} — entity_id and field may contain letters, digits, underscores.
+_ENTITY_FIELD_RE = re.compile(r"\{([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)\}")
 
 
 # ── Fallback dialogue lines ────────────────────────────────────────────────────
@@ -271,26 +283,45 @@ class DialogueSession:
             line = node.get("line", "...")
         return self._substitute(line)
 
+    def _resolve_entity_field(self, entity_id: str, field: str) -> str:
+        """Return str(entity.field) for an NPC, item, or quest template; empty string if not found."""
+        world = self.ctx.world
+        if entity_id in world.npcs:
+            return str(world.npcs[entity_id].get(field, ""))
+        if entity_id in world.items:
+            return str(world.items[entity_id].get(field, ""))
+        quest = quests_mod.get(entity_id)
+        if quest is not None:
+            return str(quest.get(field, ""))
+        return ""
+
     def _substitute(self, text: str) -> str:
         """
         Replace template tokens in dialogue text with live values.
 
-        Supported tokens:
-          {player}      → player's character name
-          {player_name} → same
-          {npc}         → this NPC's name
-          {npc_name}    → same
-          {gold}        → player's current gold
-          {hp}          → player's current HP
-          {level}       → player's current level
-          {zone}        → current zone id (for flavour)
+        Built-in tokens:
+          {player}          → player's character name
+          {player_name}     → same
+          {npc}             → this NPC's name
+          {npc_name}        → same
+          {gold}            → player's current gold
+          {hp}              → player's current HP
+          {level}           → player's current level
+          {zone}            → current zone id (for flavour)
+
+        Entity field tokens:
+          {entity_id.field} → any NPC, item, or quest template field looked up by id.
+                              Resolution order: NPC → item → quest. Any TOML field is
+                              accessible (name, desc_short, desc_long, hp, title, …).
+                              Returns an empty string if the entity or field is not found.
 
         Example TOML:
-          line = "Ah, {player}. I've been expecting someone like you."
+          line = "Ah, {player}. Tell {guard_captain.name} I sent you."
         """
         if "{" not in text:
             return text   # fast path — no substitutions needed
-        return (text
+        # Fixed built-in tokens
+        text = (text
             .replace("{player}",      self.player.name)
             .replace("{player_name}", self.player.name)
             .replace("{npc}",         self.npc.get("name", ""))
@@ -300,6 +331,13 @@ class DialogueSession:
             .replace("{level}",       str(self.player.level))
             .replace("{zone}",        self.player.room_id.split("_")[0])
         )
+        # Entity.field tokens — second pass, only if braces remain
+        if "{" in text:
+            text = _ENTITY_FIELD_RE.sub(
+                lambda m: self._resolve_entity_field(m.group(1), m.group(2)),
+                text,
+            )
+        return text
 
     def _enter_node(self, node_id: str) -> None:
         from engine.msg import Tag

@@ -50,6 +50,7 @@ from any room in the current zone.
 
 from __future__ import annotations
 import json
+import random
 import time
 from copy import deepcopy
 from dataclasses import dataclass
@@ -59,6 +60,31 @@ from engine.toml_io import load as toml_load
 
 DATA_DIR        = Path(__file__).parent.parent / "data"
 ZONE_STATE_DIR  = DATA_DIR / "zone_state"
+
+# NPC fields that are normally scalar. If the TOML supplies a list for any of
+# these, _resolve_random_fields() picks one element at random on each spawn.
+# Fields that are intrinsically lists (tags, shop, give_accepts, kill_script,
+# effects, on_hit) are intentionally excluded.
+_RANDOM_FIELDS = frozenset({
+    "name", "desc_short", "desc_long",
+    "hp", "max_hp",
+    "attack", "defense",
+    "style", "style_prof",
+    "xp_reward", "gold_reward",
+})
+
+
+def _resolve_random_fields(inst: dict) -> None:
+    """Replace any list-valued scalar fields with a single random choice.
+
+    Called on a freshly deepcopied NPC instance before it is added to a room.
+    If an author writes e.g. ``max_hp = [18, 22, 28]``, each wolf that spawns
+    will independently roll one of those values.
+    """
+    for field in _RANDOM_FIELDS:
+        val = inst.get(field)
+        if isinstance(val, list) and val:
+            inst[field] = random.choice(val)
 
 
 # ── Zone metadata (always in memory, one line per zone) ───────────────────────
@@ -244,6 +270,7 @@ class World:
             npc_id = spawn if isinstance(spawn, str) else spawn.get("id")
             if npc_id and npc_id in self.npcs:
                 inst = deepcopy(self.npcs[npc_id])
+                _resolve_random_fields(inst)
                 inst.setdefault("hp", inst.get("max_hp", 10))
                 room["_npcs"].append(inst)
 

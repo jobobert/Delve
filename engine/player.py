@@ -149,6 +149,9 @@ class Player:
         # See engine/companion.py for full schema.
         self.companion: dict | None = None
 
+        # Journal entries written by scripts (e.g. wall inscriptions, milestones)
+        self.journal: list[dict] = []   # [{"title": str, "text": str}, ...]
+
     # ── Weight ────────────────────────────────────────────────────────────────
 
     @property
@@ -228,6 +231,7 @@ class Player:
             "status_effects":      self.status_effects,
             "commissions":         self._serialise_commissions(),
             "companion":           self._serialise_companion(),
+            "journal":             self.journal,
         }
         toml_dump(self._save_path, data)
 
@@ -276,7 +280,6 @@ class Player:
         p.banked_gold         = int(data.get("banked_gold", 0))
         p.prestige            = int(data.get("prestige", 0))
         p.prestige_affinities = list(data.get("prestige_affinities", []))
-        p.bank_slots          = int(data.get("bank_slots", 10))
         p.aliases             = dict(data.get("aliases", {}))
         raw_skills            = data.get("skills", {})
         p.skills = skills_mod.default_skills()
@@ -286,6 +289,7 @@ class Player:
         p.status_effects = dict(data.get("status_effects", {}))
         p.commissions = p._deserialise_commissions(data.get("commissions", []))
         p.companion   = p._deserialise_companion(data.get("companion", {}))
+        p.journal     = data.get("journal", [])
         return p
 
     @classmethod

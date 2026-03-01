@@ -49,6 +49,7 @@ class Event:
     OUTPUT       = "output"        # payload: Msg
     PLAYER_DIED  = "player_died"   # payload: (none)
     GAME_OVER    = "game_over"     # payload: reason str
+    LOOK_ROOM    = "look_room"     # payload: (none) — refresh room view after teleport
 
     # Frontend → Engine (available for async/web use; CLI calls engine directly)
     COMMAND_IN   = "command_in"    # payload: raw_input str

@@ -1,6 +1,0 @@
-[[region]]
-id                 = "gloamreach"
-name               = "Gloamreach"
-description        = "A region trapped in perpetual twilight. Light behaves unpredictably, shadows stretch unnaturally, and the malfunctioning device piece has destabilized the boundary between illumination and darkness."
-recommended_level  = 9
-admin_comment      = "Piece Effect: Disrupts light levels, creating deep gloam zones and unpredictable shadow behavior.  Notes: Light manipulation and shadow enemies create unpredictable combat."

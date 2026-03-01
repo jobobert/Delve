@@ -47,6 +47,8 @@ New command checklist (when adding a command):
 """
 
 from __future__ import annotations
+import copy
+import random
 from typing import Callable
 from engine.events import EventBus, Event
 from engine.world import World, _short, _long
@@ -61,6 +63,12 @@ import engine.quests as quests_mod
 from engine.quests import QuestTracker
 from engine.script import GameContext, ScriptRunner
 
+
+# All valid equipment slot names. Used for equip/unequip validation.
+_EQUIPMENT_SLOTS = (
+    "weapon", "head", "chest", "legs", "arms",
+    "armor", "pack", "ring", "shield", "cape",
+)
 
 DIRECTIONS = {
     # Cardinals
@@ -96,6 +104,9 @@ class CommandProcessor:
         # Build GameContext for scripts/dialogues/quests
         self._quests  = QuestTracker(player)
         self._ctx     = GameContext(player=player, world=world, bus=bus, quests=self._quests)
+
+        # Teleport handler: scripts emit LOOK_ROOM after updating player.room_id
+        bus.subscribe(Event.LOOK_ROOM, self._on_look_room)
 
         self._commands: dict[str, Callable] = {
             "look":      self._cmd_look,
@@ -160,11 +171,13 @@ class CommandProcessor:
             "companion":     self._cmd_companion,
             "dismiss":       self._cmd_dismiss,
             "recall":        self._cmd_recall,
+            # Resource collection
+            "mine":          self._cmd_mine,
+            "chop":          self._cmd_chop
         }
         for d in DIRECTIONS:
             self._commands[d] = self._cmd_direction
-        self._commands["mine"]  = self._cmd_mine
-        self._commands["chop"]  = self._cmd_chop
+        
 
     # ── Public API ───────────────────────────────────────────────────────────
 
@@ -249,7 +262,6 @@ class CommandProcessor:
         hostile = [n for n in room.get("_npcs", [])
                    if n.get("hp", 1) > 0 and n.get("hostile", False)]
         for npc in hostile:
-            import random
             n_atk = npc.get("attack", 5)
             p_def = self.player.effective_defense
             dmg   = max(1, n_atk - p_def + random.randint(-2, 4))
@@ -347,25 +359,8 @@ class CommandProcessor:
     # (Defined as a class attribute so it is a stable singleton.)
     _ALREADY_HANDLED: object = object()
 
-    def _resolve_item_bank(self, target: str) -> "dict | None | object":
-        """Find an item in player.bank by partial name. Same semantics as _resolve_item_inv."""
-        matches = [
-            item for item in self.player.bank
-            if target in item.get("name", "").lower()
-        ]
-        if len(matches) == 1:
-            return matches[0]
-        if len(matches) > 1:
-            distinct_ids = {i.get("id", i.get("name", "")) for i in matches}
-            if len(distinct_ids) == 1:
-                return matches[0]
-            names = ", ".join(dict.fromkeys(i["name"] for i in matches))
-            self._out(Tag.AMBIGUOUS, f"Did you mean: {names}?")
-            return self._ALREADY_HANDLED
-        return None
-
-    def _resolve_item_inv(self, target: str) -> "dict | None | object":
-        """Find an item in inventory by partial name.
+    def _resolve_item(self, source: list, target: str) -> "dict | None | object":
+        """Find an item in source list by partial name.
 
         Returns:
           item dict            — unique unambiguous match
@@ -374,7 +369,7 @@ class CommandProcessor:
           None                 — no match at all; caller should emit an error
         """
         matches = [
-            item for item in self.player.inventory
+            item for item in source
             if target in item.get("name", "").lower()
         ]
         if len(matches) == 1:
@@ -390,6 +385,14 @@ class CommandProcessor:
             self._out(Tag.AMBIGUOUS, f"Did you mean: {names}?")
             return self._ALREADY_HANDLED
         return None
+
+    def _resolve_item_bank(self, target: str) -> "dict | None | object":
+        """Find an item in player.bank by partial name."""
+        return self._resolve_item(self.player.bank, target)
+
+    def _resolve_item_inv(self, target: str) -> "dict | None | object":
+        """Find an item in player.inventory by partial name."""
+        return self._resolve_item(self.player.inventory, target)
 
     # ── Commands ─────────────────────────────────────────────────────────────────
 
@@ -464,16 +467,23 @@ class CommandProcessor:
         # Exits — handle plain string targets and door objects
         exits = room.get("exits", {})
         if exits:
+            from engine.script import eval_exit_condition
             exit_parts = []
             for direction, dest in exits.items():
                 if isinstance(dest, dict):
+                    cond = dest.get("show_if")
+                    if cond and not eval_exit_condition(cond, self._ctx):
+                        continue
                     if dest.get("locked", False):
                         exit_parts.append(f"{direction} [locked]")
                     else:
                         exit_parts.append(direction)
                 else:
                     exit_parts.append(direction)
-            self._out(Tag.EXIT, "Exits: " + ", ".join(exit_parts))
+            if exit_parts:
+                self._out(Tag.EXIT, "Exits: " + ", ".join(exit_parts))
+            else:
+                self._out(Tag.EXIT, "There are no obvious exits.")
         else:
             self._out(Tag.EXIT, "There are no obvious exits.")
 
@@ -515,6 +525,13 @@ class CommandProcessor:
         if direction:
             exits = room.get("exits", {})
             exit_val = exits.get(direction)
+            # Conditional exit — invisible if show_if condition fails
+            if isinstance(exit_val, dict):
+                cond = exit_val.get("show_if")
+                if cond:
+                    from engine.script import eval_exit_condition
+                    if not eval_exit_condition(cond, self._ctx):
+                        exit_val = None
             if exit_val is None:
                 self._out(Tag.SYSTEM, f"There is nothing to the {direction}.")
             elif isinstance(exit_val, dict):
@@ -526,6 +543,10 @@ class CommandProcessor:
                 self._out(Tag.DOOR, f"To the {direction}: {desc} [{status}].")
                 if locked and lock_tag:
                     self._out(Tag.DOOR, f"  It requires a key tagged '{lock_tag}'.")
+                on_look = exit_val.get("on_look", [])
+                if on_look:
+                    from engine.script import ScriptRunner
+                    ScriptRunner(self._ctx).run(on_look)
             else:
                 dest_room = self.world.prepare_room(exit_val, self.player)                             or self.world.get_room(exit_val)
                 dest_name = dest_room.get("name", exit_val) if dest_room else exit_val
@@ -577,6 +598,13 @@ class CommandProcessor:
         room = self._current_room()
         exits = room.get("exits", {}) if room else {}
         exit_val = exits.get(direction)
+        # Conditional exit — treat as non-existent if show_if condition fails
+        if isinstance(exit_val, dict):
+            cond = exit_val.get("show_if")
+            if cond:
+                from engine.script import eval_exit_condition
+                if not eval_exit_condition(cond, self._ctx):
+                    exit_val = None
         if not exit_val:
             self._out(Tag.ERROR, f"You can't go {direction} from here.")
             return
@@ -595,6 +623,12 @@ class CommandProcessor:
         if not dest_id:
             self._out(Tag.ERROR, f"You can't go {direction} from here.")
             return
+        # on_exit — fires in the source room before the player moves
+        if isinstance(exit_val, dict):
+            on_exit = exit_val.get("on_exit", [])
+            if on_exit:
+                from engine.script import ScriptRunner
+                ScriptRunner(self._ctx).run(on_exit)
         # prepare_room triggers zone loading if the destination is in an unloaded zone
         dest = self.world.prepare_room(dest_id, self.player)
         if not dest:
@@ -620,10 +654,23 @@ class CommandProcessor:
         self._check_hostile_npcs()
         # Run room on_enter scripts (skill checks, status effects, story beats)
         self._run_room_on_enter(dest)
+        # on_enter — fires in the destination room after the player has arrived
+        if isinstance(exit_val, dict):
+            on_enter = exit_val.get("on_enter", [])
+            if on_enter:
+                from engine.script import ScriptRunner
+                ScriptRunner(self._ctx).run(on_enter)
         # Advance crafting commissions by 1 turn per room move
         self._tick_commissions(1)
         # Handle companion following/waiting based on room restrictions
         self._update_companion_location(dest)
+
+    def _on_look_room(self) -> None:
+        """Handler for Event.LOOK_ROOM — called after a script teleports the player."""
+        dest = self.world.prepare_room(self.player.room_id, self.player)
+        self.do_look()
+        if dest:
+            self._run_room_on_enter(dest)
 
     def _run_room_on_enter(self, room: dict) -> None:
         """Execute the room's on_enter script block, if any.
@@ -645,7 +692,11 @@ class CommandProcessor:
                           f"{npc['name']} eyes you with recognition — and draws a weapon.")
 
     def _tick_status_effects(self) -> None:
-        """Decrement turn-based status effects; remove expired ones."""
+        """Decrement turn-based status effects; remove expired ones.
+
+        Duration -1 is a sentinel for permanent effects (applied via apply_status
+        with no turns value). These are only removed by a clear_status script op.
+        """
         expired = []
         for effect, turns in list(self.player.status_effects.items()):
             if turns == -1:
@@ -860,6 +911,10 @@ class CommandProcessor:
         self.player.remove_item(item)
         self._current_room().setdefault("items", []).append(item)
         self._out(Tag.ITEM, f"You drop {item['name']}.")
+        on_drop = item.get("on_drop", [])
+        if on_drop:
+            from engine.script import ScriptRunner
+            ScriptRunner(self._ctx).run(on_drop)
 
 
     def _maybe_free_npc_attack(self, action: str = "distracted") -> None:
@@ -874,7 +929,6 @@ class CommandProcessor:
 
         Only triggers if there's an active combat session or live hostiles.
         """
-        import random
         room = self._current_room()
         if not room:
             return
@@ -923,8 +977,7 @@ class CommandProcessor:
             self._out(Tag.ERROR, f"You aren't carrying '{args}'.")
             return
         slot = item.get("slot")
-        _VALID_SLOTS = ("weapon", "head", "chest", "legs", "arms", "armor", "pack", "ring", "shield", "cape")
-        if slot not in _VALID_SLOTS:
+        if slot not in _EQUIPMENT_SLOTS:
             self._out(Tag.ERROR, f"{item['name']} cannot be equipped "
                                  f"(no equipment slot; slot='{slot or 'none'}').")
             return
@@ -941,8 +994,7 @@ class CommandProcessor:
 
     def _cmd_unequip(self, verb: str, args: str) -> None:
         target = args.lower()
-        _ALL_SLOTS = ("weapon", "head", "chest", "legs", "arms", "armor", "pack", "ring", "shield", "cape")
-        for slot in _ALL_SLOTS:
+        for slot in _EQUIPMENT_SLOTS:
             eq = self.player.equipped.get(slot)
             if target in slot or (eq and target in eq.get("name", "").lower()):
                 if eq is None:
@@ -1238,11 +1290,6 @@ class CommandProcessor:
                 "  withdraw <item>         — Retrieve item",
                 "  withdraw gold <N>       — Retrieve stored gold",
                 "  upgrade [confirm]       — Expand account capacity for gold",
-                "── Auto-attack (frontend) ────────────────────────────",
-                "  autoattack / aa         — Toggle auto-attack on/off",
-                "  (Auto-attack continues until enemy dies, you drop",
-                "   below the HP threshold, or you leave combat.)",
-                "  Default and HP threshold set in frontend/config.py",
             ],
             "gear": [
                 "── Gear & Inventory ──────────────────────────────────",
@@ -1523,6 +1570,10 @@ class CommandProcessor:
                     ex_val["locked"] = False
         self._out(Tag.DOOR,
                   f"You unlock the door to the {direction} with your {key['name']}.")
+        on_unlock = door.get("on_unlock", [])
+        if on_unlock:
+            from engine.script import ScriptRunner
+            ScriptRunner(self._ctx).run(on_unlock)
 
     def _cmd_lock(self, verb: str, args: str) -> None:
         direction = args.strip().lower() or "north"
@@ -1545,6 +1596,10 @@ class CommandProcessor:
                 if isinstance(ex_val, dict) and ex_val.get("lock_tag") == lock_tag:
                     ex_val["locked"] = True
         self._out(Tag.DOOR, f"You lock the door to the {direction}.")
+        on_lock = door.get("on_lock", [])
+        if on_lock:
+            from engine.script import ScriptRunner
+            ScriptRunner(self._ctx).run(on_lock)
 
     # ─────────────────────────────────────────────────────────────────────────
     # SHOPS — buy / sell / list
@@ -1632,7 +1687,6 @@ class CommandProcessor:
                       f"You can't carry {tmpl['name']} ({w} stones). "
                       f"Already carrying {cur}/{cap}.")
             return
-        import copy
         self.player.gold -= price
         self.player.add_item(copy.deepcopy(tmpl))
         self._out(Tag.SHOP,
@@ -1723,32 +1777,43 @@ class CommandProcessor:
         """Render a fog-of-war ASCII map.
         Shows: visited rooms + rooms directly connected to visited rooms (as ?).
         Rooms with no connection to explored space are invisible.
+
+        Layout constants
+        ────────────────
+        Every cell is exactly CELL_W (5) chars: [XXX], [ @ ], [ ? ], or spaces.
+        Every column slot is COL_W (7) chars: cell (5) + h-connector (2).
+        The vertical connector buffer is n_cols * COL_W chars wide so positions
+        align exactly with the cell row above/below.
+
+        Cell-center char positions in any row: xi * COL_W + 2
+        Diagonal-char positions (in vconn row):
+          SW/NE ('/'): xi * COL_W - 2   (gap between col xi-1 and xi)
+          SE/NW ('\\'): xi * COL_W + 5  (gap between col xi and xi+1)
         """
         from engine.toml_io import load as toml_load
         visited = self.player.visited_rooms
 
-        # Load all room data (coord + exits) from zone files
+        # Load all room data; track which zone each room belongs to
         all_rooms: dict[str, dict] = {}
-        for meta in self.world._zone_index.values():
+        room_zone: dict[str, str]  = {}
+        for zone_id, meta in self.world._zone_index.items():
             for room_file in meta.room_files:
                 for room in toml_load(room_file).get("room", []):
-                    rid = room.get("id","")
+                    rid = room.get("id", "")
                     if rid:
                         all_rooms[rid] = room
+                        room_zone[rid] = zone_id
 
-        # Build set of rooms to show:
-        #   1. All visited rooms
-        #   2. All rooms reachable in ONE exit from a visited room
+        # Visible set: visited rooms + one-exit frontier
         visible_ids: set[str] = set(visited)
         for rid in visited:
-            room = all_rooms.get(rid, {})
-            for exit_val in room.get("exits", {}).values():
-                dest = exit_val.get("to","") if isinstance(exit_val, dict) else exit_val
+            for exit_val in all_rooms.get(rid, {}).get("exits", {}).values():
+                dest = exit_val.get("to", "") if isinstance(exit_val, dict) else exit_val
                 if dest:
                     visible_ids.add(dest)
 
-        # Build coord grid — only visible rooms
-        coords: dict[tuple[int,int], dict] = {}
+        # Build coord grid (only rooms with a coord field)
+        coords: dict[tuple[int, int], dict] = {}
         for rid in visible_ids:
             room = all_rooms.get(rid)
             if not room:
@@ -1757,9 +1822,9 @@ class CommandProcessor:
             if not coord or len(coord) < 2:
                 continue
             x, y = int(coord[0]), int(coord[1])
-            coords[(x,y)] = {
+            coords[(x, y)] = {
                 "id":      rid,
-                "name":    room.get("name","?"),
+                "name":    room.get("name", "?"),
                 "visited": rid in visited,
                 "here":    rid == self.player.room_id,
                 "exits":   room.get("exits", {}),
@@ -1773,74 +1838,141 @@ class CommandProcessor:
         ys = [c[1] for c in coords]
         min_x, max_x = min(xs), max(xs)
         min_y, max_y = min(ys), max(ys)
+        n_cols = max_x - min_x + 1
 
-        lines = []
+        CELL_W = 5          # [XXX] always 5 chars
+        CONN_W = 2          # ── or "  "
+        COL_W  = CELL_W + CONN_W   # 7 chars per column slot
+
+        # ── Helpers ───────────────────────────────────────────────────────────
+
+        def _dest(exits: dict, direction: str) -> str:
+            val = exits.get(direction)
+            if val is None:
+                return ""
+            return val.get("to", "") if isinstance(val, dict) else (val or "")
+
+        def _linked(a: dict | None, b: dict | None,
+                    dir_ab: str, dir_ba: str) -> bool:
+            """True if a↔b are connected in either direction and at least one
+            side is already visited (so the connection is revealed)."""
+            if not a or not b:
+                return False
+            if not (a["visited"] or b["visited"]):
+                return False
+            return (_dest(a["exits"], dir_ab) == b["id"] or
+                    _dest(b["exits"], dir_ba) == a["id"])
+
+        _NOISE = {"of", "the", "a", "an", "in", "at", "to"}
+
+        def _abbr(name: str) -> str:
+            """Three-char abbreviation using initials of significant words."""
+            words = [w for w in name.split() if w.lower() not in _NOISE]
+            if not words:
+                words = name.split()
+            if len(words) == 1:
+                return words[0][:3].upper()
+            initials = [w[0] for w in words if w[0].isalpha()]
+            if initials:
+                return "".join(initials)[:3].upper()
+            return words[0][:3].upper()
+
+        # ── Render ────────────────────────────────────────────────────────────
+
+        map_lines: list[str] = []
+
         for y in range(max_y, min_y - 1, -1):
-            row_cells  = []
-            row_hconns = []
-            for x in range(min_x, max_x + 1):
+
+            # ── Cell row ──────────────────────────────────────────────────────
+            row: list[str] = []
+            for xi, x in enumerate(range(min_x, max_x + 1)):
                 room = coords.get((x, y))
+
+                # Cell — always exactly CELL_W (5) chars
                 if room:
                     if room["here"]:
-                        cell = "[@]"
+                        cell = "[ @ ]"
                     elif room["visited"]:
-                        abbr = room["name"][:3].upper()
-                        cell = f"[{abbr}]"
+                        cell = f"[{_abbr(room['name']).ljust(3)}]"
                     else:
-                        cell = "[?]"
-                    row_cells.append(cell)
-
-                    # East connection: show if both sides are in visible set
-                    east_val  = room["exits"].get("east")
-                    east_dest = east_val.get("to","") if isinstance(east_val, dict) else (east_val or "")
-                    east_room = coords.get((x+1, y))
-                    if east_dest and east_room and (room["visited"] or east_room["visited"]):
-                        row_hconns.append("──")
-                    else:
-                        row_hconns.append("  ")
+                        cell = "[ ? ]"
                 else:
-                    row_cells.append("   ")
-                    row_hconns.append("  ")
+                    cell = " " * CELL_W
+                row.append(cell)
 
-            line = "".join(c + h for c, h in zip(row_cells, row_hconns)).rstrip()
-            lines.append(line)
-
-            # Vertical connectors
-            if y > min_y:
-                vrow = []
-                for x in range(min_x, max_x + 1):
-                    room  = coords.get((x, y))
-                    below = coords.get((x, y-1))
-                    if room and below and (room["visited"] or below["visited"]):
-                        south_val  = room["exits"].get("south")
-                        south_dest = south_val.get("to","") if isinstance(south_val, dict) else (south_val or "")
-                        # Also check north exit of below room
-                        north_val  = below["exits"].get("north")
-                        north_dest = north_val.get("to","") if isinstance(north_val, dict) else (north_val or "")
-                        if south_dest or north_dest:
-                            vrow.append(" | ")
-                        else:
-                            vrow.append("   ")
+                # H-connector (CONN_W chars) — omitted after the last column
+                if x < max_x:
+                    if _linked(room, coords.get((x + 1, y)), "east", "west"):
+                        row.append("──")
                     else:
-                        vrow.append("   ")
-                vline = "  ".join(vrow).rstrip()
+                        row.append("  ")
+
+            map_lines.append("".join(row).rstrip())
+
+            # ── Vertical connector row ────────────────────────────────────────
+            # Buffer is n_cols * COL_W chars so each xi*COL_W+2 aligns exactly
+            # with the cell center in the rows above and below.
+            if y > min_y:
+                buf: list[str] = [" "] * (n_cols * COL_W)
+
+                for xi, x in enumerate(range(min_x, max_x + 1)):
+                    room  = coords.get((x, y))
+                    below = coords.get((x, y - 1))
+                    center = xi * COL_W + 2
+
+                    # North–South: '|' directly under/above cell center
+                    if _linked(room, below, "south", "north"):
+                        buf[center] = "|"
+
+                    # Southwest ↙ / Northeast ↗: '/'
+                    # Connects (x, y) to (x-1, y-1); char goes between col xi-1 and xi
+                    if xi > 0:
+                        bl = coords.get((x - 1, y - 1))
+                        if _linked(room, bl, "southwest", "northeast"):
+                            pos = xi * COL_W - 2   # right edge of col xi-1 gap
+                            if 0 <= pos < len(buf):
+                                buf[pos] = "/"
+
+                    # Southeast ↘ / Northwest ↖: '\'
+                    # Connects (x, y) to (x+1, y-1); char goes between col xi and xi+1
+                    if xi < n_cols - 1:
+                        br = coords.get((x + 1, y - 1))
+                        if _linked(room, br, "southeast", "northwest"):
+                            pos = xi * COL_W + CELL_W   # left edge of col xi+1 gap
+                            if 0 <= pos < len(buf):
+                                buf[pos] = "\\"
+
+                vline = "".join(buf).rstrip()
                 if vline.strip():
-                    lines.append(vline)
+                    map_lines.append(vline)
+
+        # Zone name for header
+        zone_id   = room_zone.get(self.player.room_id, "")
+        zone_name = zone_id.replace("_", " ").title() if zone_id else ""
+        htitle    = f"Map: {zone_name}" if zone_name else "Map"
+        header    = f"── {htitle} " + "─" * max(0, 35 - len(htitle))
+        footer    = "─" * len(header)
 
         self._blank()
-        self._out(Tag.MAP, "── Map ──────────────────────────────")
-        for line in lines:
+        self._out(Tag.MAP, header)
+        for line in map_lines:
             if line.strip():
                 self._out(Tag.MAP, "  " + line)
-        self._out(Tag.MAP, "─────────────────────────────────────")
-        self._out(Tag.MAP, "  [@]=you  [XXX]=visited  [?]=unexplored")
+        self._out(Tag.MAP, footer)
+        self._out(Tag.MAP, "  [ @ ]=you  [XYZ]=visited  [ ? ]=unexplored")
         explored = len(visited)
         total    = len(all_rooms)
         self._out(Tag.MAP, f"  Explored: {explored}/{total} rooms")
 
     def _cmd_journal(self, verb: str, args: str) -> None:
-        """Show quest journal — quests, active crafting commissions, and companion."""
+        """Show quest journal — journal entries, quests, commissions, and companion."""
         self._blank()
+        if self.player.journal:
+            self._out(Tag.SYSTEM, "── Journal Entries " + "─" * 43)
+            for entry in self.player.journal:
+                self._out(Tag.JOURNAL, f"  {entry['title']}")
+                self._out(Tag.ROOM_DESC, f"    {entry['text']}")
+            self._blank()
         for tag, text in self._quests.journal_lines():
             self._out(tag, text)
         self._commissions_journal_section()

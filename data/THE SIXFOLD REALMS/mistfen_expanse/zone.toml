@@ -1,6 +1,0 @@
-[[region]]
-id                 = "mistfen_expanse"
-name               = "Mistfen Expanse"
-description        = "A vast, shifting swamp where thick mists distort distance, sound, and memory. The malfunctioning device piece buried beneath the fen causes terrain loops, unstable paths, and sudden spatial warping."
-recommended_level  = 5
-admin_comment      = "Piece Effect: Creates spatial distortions, looping paths, and unstable terrain.  Notes: Spatial distortions and status effects increase difficulty."

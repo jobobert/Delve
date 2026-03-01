@@ -1,5 +1,5 @@
 """
-script.py — Lightweight script interpreter for Delve.  (37 ops)
+script.py — Lightweight script interpreter for Delve.  (45 ops)
 
 Scripts are arrays of operation tables in TOML data files.  They appear in:
   • NPC dialogue nodes and responses
@@ -20,7 +20,7 @@ GameContext
   ctx.bus     — EventBus (emit messages to the frontend)
   ctx.quests  — QuestTracker (start/advance/complete quests)
 
-Operation reference  (37 ops)
+Operation reference  (45 ops)
 ──────────────────────────────
 Output:
   { op = "say",     text = "..." }                  — DIALOGUE-tagged text
@@ -91,14 +91,33 @@ Flow control:
   { op = "require_tag",  tag = "...",
     fail_message = "..." }                           — abort if player lacks tagged item
 
+Teleport / world movement:
+  { op = "teleport_player", room_id = "...", message = "optional" }
+  { op = "move_npc",  npc_id = "...", to_room = "..." }
+  { op = "move_item", item_id = "...", to_room = "...", from_room = "current_room_id" }
+
+Combat round (round_script on NPCs only):
+  { op = "if_combat_round", min = N, then = [...], else = [...] }
+  { op = "if_npc_hp",       max = N, then = [...], else = [...] }
+  { op = "end_combat" }                             — stop fight; NPC survives at 1 HP
+
+Journal:
+  { op = "journal_entry", title = "...", text = "..." }
+
 Notes:
   - Unknown ops are silently ignored (forward-compatibility).
   - fail and require_tag raise _ScriptAbort, caught by run() — no traceback.
+  - `if` is an alias for `if_flag`; both are valid.
 """
 
 from __future__ import annotations
+import copy
+import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+
+from engine.events import Event
+from engine.msg import Msg, Tag
 
 if TYPE_CHECKING:
     from engine.player import Player
@@ -113,10 +132,50 @@ class GameContext:
     world:  "World"
     bus:    "EventBus"
     quests: "QuestTracker"
+    round:  int = 0              # current combat round (0 = outside combat)
+    npc:    "dict | None" = None # NPC being fought, set by CombatSession
+
+
+def eval_exit_condition(cond: dict, ctx: "GameContext") -> bool:
+    """Evaluate a show_if condition dict against the current player state.
+
+    Returns True (exit is visible/usable) if the condition passes.
+    Unknown op values default to True so future world data doesn't break
+    older engine versions.
+
+    Supported ops:
+      has_flag   flag (str)              — player has the flag set
+      not_flag   flag (str)              — player does NOT have the flag
+      min_level  level (int)             — player.level >= level
+      has_item   item_id (str)           — item in inventory or equipped
+      min_skill  skill (str), value (N)  — player.skills[skill] >= value
+    """
+    op = cond.get("op", "")
+    p  = ctx.player
+    if op == "has_flag":
+        return cond.get("flag", "") in p.flags
+    if op == "not_flag":
+        return cond.get("flag", "") not in p.flags
+    if op == "min_level":
+        return p.level >= int(cond.get("level", 1))
+    if op == "has_item":
+        item_id     = cond.get("item_id", "")
+        in_inv      = any(i.get("id") == item_id for i in p.inventory)
+        in_equipped = any(i.get("id") == item_id for i in p.equipped.values() if i)
+        return in_inv or in_equipped
+    if op == "min_skill":
+        skill = cond.get("skill", "")
+        return p.skills.get(skill, 0.0) >= float(cond.get("value", 0))
+    return True   # unknown op — don't hide the exit
 
 
 class _ScriptAbort(Exception):
-    """Raised by the 'fail' op to abort the current script run."""
+    """Raised by the 'fail' op to abort the current script run.
+
+    Using an exception rather than a return value means deeply-nested branching
+    (conditionals inside conditionals) can abort immediately without threading
+    a flag through every level of _exec recursion.
+    """
 
 
 class ScriptRunner:
@@ -130,11 +189,15 @@ class ScriptRunner:
         except _ScriptAbort:
             pass  # 'fail' op fired — stop silently
 
-    def _exec(self, op: dict) -> None:
-        from engine.events import Event
-        from engine.msg import Msg, Tag
-        import copy
+    def _run_branch(self, condition: bool, op: dict) -> None:
+        """Execute the 'then' or 'else' sub-list of a conditional op."""
+        for sub in op.get("then" if condition else "else", []):
+            self._exec(sub)
 
+    # TODO: _exec() is a 45-branch elif chain (~400 lines). Future refactor
+    #       candidate: dispatch table {op_name: handler_method} to make each
+    #       op independently testable and easier to extend.
+    def _exec(self, op: dict) -> None:
         name = op.get("op", "")
         p    = self.ctx.player
         w    = self.ctx.world
@@ -150,9 +213,8 @@ class ScriptRunner:
             emit(Tag.DIALOGUE, f'  "{op.get("text","")}"  ')
 
         elif name == "message":
-            from engine.msg import Tag as T
             tag_str = op.get("tag", "system")
-            tag = getattr(T, tag_str.upper(), T.SYSTEM)
+            tag = getattr(Tag, tag_str.upper(), Tag.SYSTEM)
             emit(tag, op.get("text", ""))
 
         # ── Player flags ──────────────────────────────────────────────────────
@@ -314,7 +376,6 @@ class ScriptRunner:
                          f"  {skill_id.capitalize()} {int(old_val)} → {int(new_val)}")
 
         elif name == "skill_check":
-            import random
             skill_id = op.get("skill", "")
             dc       = int(op.get("dc", 10))
             grow     = op.get("grow", True)
@@ -340,9 +401,7 @@ class ScriptRunner:
             min_level = int(op.get("min", 0))
             skill_val = p.skills.get(skill_id, 0.0)
             passed    = int(skill_val) >= min_level
-            branch    = op.get("then", []) if passed else op.get("else", [])
-            for sub in branch:
-                self._exec(sub)
+            self._run_branch(passed, op)
 
         # ── Status effects ────────────────────────────────────────────────────
         elif name == "apply_status":
@@ -359,9 +418,7 @@ class ScriptRunner:
         elif name == "if_status":
             effect = op.get("effect", "")
             has_it = effect in p.status_effects
-            branch = op.get("then", []) if has_it else op.get("else", [])
-            for sub in branch:
-                self._exec(sub)
+            self._run_branch(has_it, op)
 
         # ── Prestige ──────────────────────────────────────────────────────────
         elif name == "prestige":
@@ -403,54 +460,40 @@ class ScriptRunner:
             ok      = True
             if min_req is not None and score < int(min_req): ok = False
             if max_req is not None and score > int(max_req): ok = False
-            branch  = op.get("then", []) if ok else op.get("else", [])
-            for sub in branch:
-                self._exec(sub)
+            self._run_branch(ok, op)
 
         elif name == "if_affinity":
             tag    = op.get("tag", "")
             has_it = tag in getattr(p, "prestige_affinities", [])
-            branch = op.get("then", []) if has_it else op.get("else", [])
-            for sub in branch:
-                self._exec(sub)
+            self._run_branch(has_it, op)
 
         # ── Conditionals ──────────────────────────────────────────────────────
         elif name in ("if", "if_flag"):
             # { op = "if"/"if_flag", flag = "...", then = [...], else = [...] }
             flag   = op.get("flag", "")
             passed = flag in p.flags
-            branch = op.get("then", []) if passed else op.get("else", [])
-            for sub in branch:
-                self._exec(sub)
+            self._run_branch(passed, op)
 
         elif name == "if_not_flag":
             flag   = op.get("flag", "")
             passed = flag not in p.flags
-            branch = op.get("then", []) if passed else op.get("else", [])
-            for sub in branch:
-                self._exec(sub)
+            self._run_branch(passed, op)
 
         elif name == "if_item":
             item_id = op.get("item_id", "")
             has_it  = any(i.get("id") == item_id for i in p.inventory)
-            branch  = op.get("then", []) if has_it else op.get("else", [])
-            for sub in branch:
-                self._exec(sub)
+            self._run_branch(has_it, op)
 
         elif name == "if_quest":
             q_id   = op.get("quest_id", "")
             step   = int(op.get("step", 0))
             passed = q.at_step(q_id, step)
-            branch = op.get("then", []) if passed else op.get("else", [])
-            for sub in branch:
-                self._exec(sub)
+            self._run_branch(passed, op)
 
         elif name == "if_quest_complete":
             q_id   = op.get("quest_id", "")
             passed = q.is_complete(q_id)
-            branch = op.get("then", []) if passed else op.get("else", [])
-            for sub in branch:
-                self._exec(sub)
+            self._run_branch(passed, op)
 
         # ── Flow control ──────────────────────────────────────────────────────
         elif name == "fail":
@@ -481,6 +524,87 @@ class ScriptRunner:
             else:
                 emit(Tag.SYSTEM,
                      f"Your account already has {current} slots.")
+
+        # ── Teleport / move ───────────────────────────────────────────────────
+        elif name == "teleport_player":
+            # { op = "teleport_player", room_id = "...", message = "optional" }
+            room_id = op.get("room_id", "")
+            message = op.get("message", "")
+            if message:
+                emit(Tag.SYSTEM, message)
+            dest = ctx.world.prepare_room(room_id, ctx.player)
+            if dest:
+                ctx.player.room_id = room_id
+                ctx.player.visited_rooms.add(room_id)
+                zone = ctx.world.zone_for_room(room_id)
+                if zone:
+                    ctx.world.evict_distant_zones(zone)
+                ctx.bus.emit(Event.LOOK_ROOM)   # CommandProcessor handles look + on_enter
+            else:
+                emit(Tag.ERROR, f"[teleport_player: room '{room_id}' not found]")
+
+        elif name == "move_npc":
+            # { op = "move_npc", npc_id = "...", to_room = "..." }
+            # Finds the first live instance of npc_id in any loaded room and moves it.
+            npc_id  = op.get("npc_id", "")
+            dest_id = op.get("to_room", "")
+            found = None
+            for zone_rooms in ctx.world._loaded_zones.values():
+                for room in zone_rooms.values():
+                    for npc in list(room.get("_npcs") or []):
+                        if npc.get("id") == npc_id:
+                            room["_npcs"].remove(npc)
+                            found = npc
+                            break
+                    if found:
+                        break
+                if found:
+                    break
+            if found:
+                dest = ctx.world.prepare_room(dest_id, ctx.player)
+                if dest:
+                    if dest.get("_npcs") is None:
+                        dest["_npcs"] = []
+                    dest["_npcs"].append(found)
+
+        elif name == "move_item":
+            # { op = "move_item", item_id = "...", to_room = "...", from_room = "current" }
+            item_id   = op.get("item_id", "")
+            from_id   = op.get("from_room", ctx.player.room_id)
+            dest_id   = op.get("to_room", "")
+            src_room  = ctx.world.prepare_room(from_id, ctx.player)
+            dest_room = ctx.world.prepare_room(dest_id, ctx.player)
+            if src_room and dest_room:
+                items = src_room.get("items", [])
+                for item in list(items):
+                    if item.get("id") == item_id:
+                        items.remove(item)
+                        dest_room.setdefault("items", []).append(item)
+                        break
+
+        # ── Combat conditionals ────────────────────────────────────────────────
+        elif name == "if_combat_round":
+            # { op = "if_combat_round", min = N, then = [...], else = [...] }
+            passed = ctx.round >= op.get("min", 0)
+            self._run_branch(passed, op)
+
+        elif name == "if_npc_hp":
+            # { op = "if_npc_hp", max = N, then = [...], else = [...] }
+            npc_hp = ctx.npc.get("hp", 0) if ctx.npc else 0
+            passed = npc_hp <= op.get("max", 0)
+            self._run_branch(passed, op)
+
+        elif name == "end_combat":
+            # Signals the active CombatSession to end the fight after this script run.
+            # CombatSession clears the flag and closes the round.
+            p.flags.add("_end_combat")
+
+        # ── Journal ───────────────────────────────────────────────────────────
+        elif name == "journal_entry":
+            title = op.get("title", "Entry")
+            text  = op.get("text", "")
+            ctx.player.journal.append({"title": title, "text": text})
+            emit(Tag.JOURNAL, f"[Journal] {title} recorded.")
 
         # ── Unknown ops ───────────────────────────────────────────────────────
         # Unknown ops are silently ignored for forward-compatibility.
