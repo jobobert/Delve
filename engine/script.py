@@ -112,7 +112,6 @@ Notes:
 
 from __future__ import annotations
 import copy
-import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -376,24 +375,26 @@ class ScriptRunner:
                          f"  {skill_id.capitalize()} {int(old_val)} → {int(new_val)}")
 
         elif name == "skill_check":
-            skill_id = op.get("skill", "")
-            dc       = int(op.get("dc", 10))
-            grow     = op.get("grow", True)
-            silent   = op.get("silent", False)
+            from engine.skills import roll_check, apply_growth, SKILL_NAMES
+            skill_id  = op.get("skill", "")
+            dc        = int(op.get("dc", 10))
+            grow      = op.get("grow", True)
+            silent    = op.get("silent", False)
             skill_val = p.skills.get(skill_id, 0.0)
-            bonus     = int(skill_val) // 10
-            roll      = random.randint(1, 20) + bonus
-            passed    = roll >= dc
+            passed, roll, bonus = roll_check(skill_val, dc)
             if not silent:
                 result = "success" if passed else "failure"
-                emit(Tag.SYSTEM, f"  [{skill_id.capitalize()} check: {roll} vs DC {dc} — {result}]")
+                emit(Tag.SYSTEM,
+                     f"  [{skill_id.capitalize()} check: {roll + bonus} vs DC {dc} — {result}]")
             branch = op.get("on_pass" if passed else "on_fail", [])
             for sub in branch:
                 self._exec(sub)
-            if grow and not op.get("on_pass"):
-                # grow when no on_pass branch (simple check)
-                if skill_id in p.skills:
-                    p.skills[skill_id] = min(100.0, p.skills[skill_id] + 0.5)
+            if grow and skill_id in p.skills and not op.get("on_pass"):
+                new_val, tier_msg = apply_growth(p.skills[skill_id], passed)
+                p.skills[skill_id] = new_val
+                if tier_msg:
+                    sname = SKILL_NAMES.get(skill_id, skill_id.title())
+                    emit(Tag.SYSTEM, f"  Your {sname} skill reaches {tier_msg}!")
 
         elif name == "if_skill":
             # { op = "if_skill", skill = "mining", min = 5, then = [...], else = [...] }

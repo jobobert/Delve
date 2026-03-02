@@ -26,13 +26,15 @@ The project is extracted as `mud/` in the working directory. The layout is:
 
 ```
 mud/
-├── engine/          Core systems (combat, dialogue, world, script, …)
-├── frontend/        CLI renderer + config
-├── data/            All TOML world data (zones, items, NPCs, quests, dialogues)
-├── tools/           validate.py, map.py, wct_server.py, ai_player.py, clean.py
+├── engine/              Core systems (combat, dialogue, world, script, …)
+├── frontend/            CLI renderer + config
+├── data/                All TOML world data
+│   ├── players/         Cross-world player saves (each save has a world_id field)
+│   └── sixfold_realms/  Current world folder (config.py + zone subfolders)
+├── tools/               validate.py, map.py, wct_server.py, ai_player.py, clean.py
 ├── main.py
-├── README.md        Partial system reference — READ THIS for any system details, and reference the engine/README.md and data/README.md as necessary
-└── HANDOFF.md       This file
+├── README.md            Partial system reference — READ THIS for any system details, and reference the engine/README.md and data/README.md as necessary
+└── HANDOFF.md           This file
 ```
 
 **Always read `README.md` for authoritative details** on any system before
@@ -50,7 +52,7 @@ touching code. It reflects the actual current state of every file.
 | `engine/world.py` | Zone-streaming manager. `world.prepare_room(room_id, player)` loads a zone if needed. `world.npcs` and `world.items` are flat dicts of all known entities (templates). Live room state (including `_npcs` list) lives on the room dict itself. |
 | `engine/commands.py` | ~2500-line command dispatcher. `CommandProcessor.process(raw)` is the main entry point. `_resolve_npc(target)` finds a live NPC in the current room (filters `hp > 0`). |
 | `engine/combat.py` | `CombatSession(player, npc, bus, room, ctx)`. Call `player_attack()` once per turn. Fully instrumented with `engine/log.py` at DEBUG level. |
-| `engine/dialogue.py` | `run_inline(npc, player, quests, ctx, bus, input_fn)`. Loads tree from `data/<zone>/dialogues/<npc_id>.toml` or falls back to `npc["dialogue"]` string or auto-generates a brush-off line. |
+| `engine/dialogue.py` | `run_inline(npc, player, quests, ctx, bus, input_fn)`. Loads tree from `data/<world_id>/<zone>/dialogues/<npc_id>.toml` or falls back to `npc["dialogue"]` string or auto-generates a brush-off line. |
 | `engine/script.py` | `ScriptRunner(ctx).run(ops)`. 37 ops. `fail` aborts cleanly. `require_tag` gates on item tags. |
 | `engine/log.py` | `log.configure(...)` at startup. `log.debug/info/warn(category, msg, **kv)`. `log.section(title)`. `log.enter/exit` for bracketed spans. Writes to `delve.log`. |
 | `engine/player.py` | `Player` dataclass. `player.save()` / `Player.load(name)`. Equipped items in `player.equipped` (10 slots). Bank in `player.bank`. Skills in `player.skills`. Prestige in `player.prestige`. |
@@ -130,36 +132,42 @@ To add logging to a new area: `import engine.log as log` then call
   use them freely, but be aware standard tools won't parse them
 - NPC numbers (Wolf 1, Wolf 2) are assigned at runtime by `_numbered_npcs()` —
   no TOML changes needed for multi-spawn NPCs
-- Zone state (NPC HP, room items) persists in `data/zone_state/<zone_id>.json`
-- Player saves in `data/players/<name>.json`
+- Zone state (NPC HP, room items) persists in `data/<world_id>/zone_state/<zone_id>.json`
+- Player saves in `data/players/<name>.toml` (cross-world; includes `world_id` field)
 - `tools/clean.py --all` resets everything for a fresh test
 
 ---
 
 ## Known state / recent work
 
-The most recent session addressed:
+The most recent session completed **World Modularity Phase 2**:
 
-1. **Engine logging system** (`engine/log.py`) — structured per-category debug
-   logger. Wired into combat (full round-by-round), auto-attack loop, and
-   dialogue resolution. `LOG_ENABLED = True` by default.
+1. **Multi-world data layout** — zone folders moved from `data/<zone>/` into
+   `data/sixfold_realms/<zone>/`. The engine discovers worlds by scanning `data/`
+   for subfolders containing `config.py`. Players stay at `data/players/` with a
+   `world_id` field linking them to their world.
 
-2. **Dialogue fallback brush-offs** (`engine/dialogue.py`) — NPCs with no
-   dialogue tree and no `dialogue` field now emit a random flavoured line instead
-   of a blank. Hostile pool (8 lines) and friendly pool (7 lines). Validator
-   warns for all NPCs lacking any dialogue source.
+2. **World config extended** (`data/sixfold_realms/config.py`) — three new
+   configurable fields: `CURRENCY_NAME`, `DEFAULT_STYLE`, `EQUIPMENT_SLOTS`.
 
-3. **`run_inline` loop fix** — single-line fallback sessions (done=True on init)
-   now always emit their output. Previously the `while not session.done` guard
-   prevented the first output from being emitted when the session was immediately
-   complete.
+3. **`engine/world_config.py`** — `init(world_path)` loads a world's config.py
+   at startup; `list_worlds(data_dir)` and `peek_world_name(world_path)` support
+   world-selection menus.
 
-4. **Room coordinates** — all rooms in `greenhollow` (12) and `millbrook` (14)
-   now have `coord = [x, y]` fields. Validator warns on missing coords.
+4. **`engine/world.py`** — `World(world_path)` parameterized; zone state stored
+   inside the world folder (`world_path/zone_state/`).
 
-5. **Validator enhancements** — warns for missing coords, warns for NPCs without
-   any dialogue source (hostile and friendly separately), TOML file inventory
-   table, dialogue coverage report.
+5. **`engine/player.py`** — `world_id` field; equipped slots and default style
+   read from `wc.EQUIPMENT_SLOTS` / `wc.DEFAULT_STYLE` at creation/load.
+
+6. **`engine/commands.py`** — `_EQUIPMENT_SLOTS` constant removed; all slot/
+   currency references now use `_wc.EQUIPMENT_SLOTS` / `_wc.CURRENCY_NAME`.
+
+7. **`frontend/cli.py`** — `_select_world()` added; `run()` now calls
+   `wc.init()` → `World(path)` → `_login(world_path)` in sequence.
+
+8. **`tools/validate.py`** — discovers all world folders; validates each
+   independently with per-world error/warning summary.
 
 ---
 
@@ -168,8 +176,8 @@ The most recent session addressed:
 ```bash
 python main.py                        # play the game
 python tools/validate.py              # check data integrity (run after every edit)
-python tools/map.py [--zone Z] [--full]   # ASCII map
-python tools/gen_map.py               # interactive HTML map → tools/admin_map.html
+python tools/map.py [--zone Z] [--full]          # ASCII map
+python tools/map.py --html [--world W] [--output F]  # self-contained HTML map
 python tools/wct_server.py            # browser TOML editor → http://localhost:7373
 python tools/ai_player.py play [--goal "..."] [--verbose]
 python tools/clean.py [--all | --cache | --state | --players]

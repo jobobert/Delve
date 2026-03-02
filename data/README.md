@@ -4,6 +4,9 @@ World content lives entirely in TOML files under `data/`. No engine changes are
 needed to add rooms, NPCs, items, quests, or dialogue — drop the files in and
 restart.
 
+A **world** is a subfolder of `data/` that contains a `config.py`. Worlds are
+selected at startup; each player save records which world it belongs to.
+
 For a full authoring reference (TOML formats, all script ops, condition keys,
 etc.) see [WORLD_MANUAL.md](WORLD_MANUAL.md) and [engine/README.md](../engine/README.md).
 
@@ -13,28 +16,32 @@ etc.) see [WORLD_MANUAL.md](WORLD_MANUAL.md) and [engine/README.md](../engine/RE
 
 ```
 data/
-├── <zone_id>/               One folder per zone
-│   ├── zone.toml            Optional zone metadata (display name, start room, …)
-│   ├── rooms.toml           [[room]] entries  (or split across multiple .toml files)
-│   ├── items.toml           [[item]] entries
-│   ├── npcs.toml            [[npc]] entries
-│   ├── dialogues/           <npc_id>.toml  — one file per NPC with a dialogue tree
-│   ├── quests/              <quest_id>.toml — one file per quest
-│   ├── crafting/            <npc_id>.toml  — crafting commission definitions
-│   └── companions/          <companion_id>.toml — companion definitions
+├── players/                   Per-character saves — cross-world (auto-created at runtime)
 │
-├── players/                 Per-character save files (auto-created at runtime)
-├── zone_state/              Live zone snapshots — NPC HP, room items (auto-created)
-└── training/styles/
-    └── styles.toml          All 7 fighting style definitions
+└── <world_id>/                World folder — identified by the presence of config.py
+    ├── config.py              World name, skills, currency, default style, equipment slots
+    ├── zone_state/            Live zone snapshots — NPC HP, room items (auto-created, gitignored)
+    │
+    ├── <zone_id>/             One folder per zone; folder name = zone ID
+    │   ├── zone.toml          Optional zone metadata (display name, start room, …)
+    │   ├── rooms.toml         [[room]] entries  (or split across multiple .toml files)
+    │   ├── items.toml         [[item]] entries
+    │   ├── npcs.toml          [[npc]] entries
+    │   ├── dialogues/         <npc_id>.toml  — one file per NPC with a dialogue tree
+    │   ├── quests/            <quest_id>.toml — one file per quest
+    │   ├── crafting/          <npc_id>.toml  — crafting commission definitions
+    │   ├── companions/        <companion_id>.toml — companion definitions
+    │   └── styles/            <style_id>.toml — fighting style definitions
+    │
+    └── …                      Additional zone folders
 ```
 
-> The engine scans `data/` at startup. No registry to update — drop a new folder
-> in and it will be discovered automatically.
+> The engine discovers worlds by scanning `data/` for subfolders containing `config.py`.
+> Within each world it discovers zones by subfolder presence. No registry to update.
 
 ---
 
-## The Sixfold Realms — current world
+## The Sixfold Realms (`data/sixfold_realms/`)
 
 **65 rooms · 6 zones · 69 NPCs · 126 items · 7 fighting styles ·
 34 dialogue trees · 12 quests · 9 crafting commissions · 3 companions**
@@ -78,7 +85,7 @@ Exit code `0` = passed (warnings are OK). Exit code `1` = errors found.
 
 ### New zone
 
-1. Create `data/my_zone/` with at least a `rooms.toml` containing `[[room]]` entries
+1. Create `data/<world_id>/my_zone/` with at least a `rooms.toml` containing `[[room]]` entries
 2. Add `coord = [x, y]` to every room so it appears on generated maps
 3. Connect it to the world by adding an exit in an existing room that points to
    one of the new zone's room IDs
@@ -132,7 +139,7 @@ dialogue    = "Go away."      # fallback if no dialogues/<npc_id>.toml exists
 
 - Hostile NPCs with no `dialogue` field and no dialogue file get an
   auto-generated brush-off line. The validator warns about both cases.
-- For branching dialogue → create `data/<zone>/dialogues/<npc_id>.toml`
+- For branching dialogue → create `data/<world_id>/<zone>/dialogues/<npc_id>.toml`
 - For quest item acceptance → add `give_accepts = [...]`
 - For kill rewards → add `kill_script = [...]`
 - For mid-combat reactions → add `round_script = [...]` (see below)
@@ -251,7 +258,7 @@ on_get = [
 
 ### New quest
 
-Create `data/<zone>/quests/<quest_id>.toml`:
+Create `data/<world_id>/<zone>/quests/<quest_id>.toml`:
 
 ```toml
 id      = "the_lost_ring"
@@ -277,7 +284,7 @@ Advance quest progress via script ops in dialogue or kill scripts:
 
 ### New dialogue tree
 
-Create `data/<zone>/dialogues/<npc_id>.toml`. Every tree needs a node with
+Create `data/<world_id>/<zone>/dialogues/<npc_id>.toml`. Every tree needs a node with
 `id = "root"`.
 
 **Nested format** (responses inside the node block):
@@ -342,7 +349,7 @@ line = "Find {guard_captain.name} at the garrison. Their {iron_sword.name} is le
 
 ### New crafting commission
 
-Create `data/<zone>/crafting/<npc_id>.toml`:
+Create `data/<world_id>/<zone>/crafting/<npc_id>.toml`:
 
 ```toml
 [[commission]]
@@ -362,7 +369,7 @@ materials = [
 
 ### New companion
 
-Create `data/<zone>/companions/<companion_id>.toml`. See existing companion
+Create `data/<world_id>/<zone>/companions/<companion_id>.toml`. See existing companion
 files for the full format. Three tiers: `narrative`, `utility`, `combat`.
 Grant via `{ op = "give_companion", companion_id = "..." }` in a dialogue script.
 
@@ -429,19 +436,20 @@ exits = { north = {
 
 ## Runtime data
 
-### Zone state (`data/zone_state/`)
+### Zone state (`data/<world_id>/zone_state/`)
 
 When a zone is evicted from memory, live NPC HP and current room item lists are
-written to `data/zone_state/<zone_id>.json`. On next load the sidecar is applied
-over fresh TOML so the world remembers what the player did.
+written to `data/<world_id>/zone_state/<zone_id>.json`. On next load the sidecar
+is applied over fresh TOML so the world remembers what the player did.
 
 Delete these files (or run `python tools/clean.py --state`) to reset the world
 to its authored state.
 
 ### Player saves (`data/players/`)
 
-Each character is a `<name>.json` file written by `player.save()`. Delete or
-run `python tools/clean.py --players` to wipe characters.
+Each character is a `<name>.toml` file written by `player.save()`. Player saves
+are cross-world — each save records a `world_id` field so the engine knows which
+world to load. Delete or run `python tools/clean.py --players` to wipe characters.
 
 ---
 
@@ -455,7 +463,9 @@ python tools/validate.py
 python tools/map.py                          # ASCII map, all zones
 python tools/map.py --zone <zone_id>         # single zone
 python tools/map.py --full                   # with NPC/item counts
-python tools/gen_map.py                      # interactive HTML → tools/admin_map.html
+python tools/map.py --html                   # HTML map → tools/admin_map.html
+python tools/map.py --html --output my.html  # HTML map to custom path
+python tools/map.py --world <name>           # select world by folder name
 
 # World Creation Tool — browser-based TOML editor with dialogue node graph
 python tools/wct_server.py                   # → http://localhost:7373

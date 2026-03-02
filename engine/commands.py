@@ -62,13 +62,10 @@ import engine.crafting  as crafting_mod
 import engine.quests as quests_mod
 from engine.quests import QuestTracker
 from engine.script import GameContext, ScriptRunner
+import engine.world_config as _wc
 
-
-# All valid equipment slot names. Used for equip/unequip validation.
-_EQUIPMENT_SLOTS = (
-    "weapon", "head", "chest", "legs", "arms",
-    "armor", "pack", "ring", "shield", "cape",
-)
+# Equipment slot names and currency name come from world_config (set by init()).
+# Access _wc.EQUIPMENT_SLOTS and _wc.CURRENCY_NAME at call time, not import time.
 
 DIRECTIONS = {
     # Cardinals
@@ -744,7 +741,7 @@ class CommandProcessor:
         filled = int(hp_bar_len * p.hp / max(p.max_hp, 1))
         bar    = "█" * filled + "░" * (hp_bar_len - filled)
         self._out(Tag.STATS, f"  HP  [{bar}] {p.hp}/{p.max_hp}")
-        self._out(Tag.STATS, f"  XP  {p.xp}/{p.xp_next}   Gold: {p.gold}g")
+        self._out(Tag.STATS, f"  XP  {p.xp}/{p.xp_next}   {_wc.CURRENCY_NAME.title()}: {p.gold}")
 
         # ── Combat stats ─────────────────────────────────────────────
         self._out(Tag.STATS, ruler)
@@ -783,23 +780,12 @@ class CommandProcessor:
         # ── Equipment ────────────────────────────────────────────────
         self._out(Tag.STATS, ruler)
         self._out(Tag.STATS, "  Equipment:")
-        SLOT_DISPLAY = [
-            ("weapon", "Weapon "),
-            ("head",   "Head   "),
-            ("chest",  "Chest  "),
-            ("arms",   "Arms   "),
-            ("legs",   "Legs   "),
-            ("armor",  "Body   "),   # legacy full-body slot
-            ("shield", "Shield "),
-            ("ring",   "Ring   "),
-            ("cape",   "Cape   "),
-            ("pack",   "Pack   "),
-        ]
-        for slot, label in SLOT_DISPLAY:
-            eq = p.equipped.get(slot)
+        for slot in _wc.EQUIPMENT_SLOTS:
+            label = slot.replace("_", " ").title().ljust(7)
+            eq    = p.equipped.get(slot)
             if eq:
                 self._out(Tag.ITEM_EQUIP,
-                          f"  {label}◄ {eq['name']} — {_short(eq)}")
+                          f"  {label}< {eq['name']} — {_short(eq)}")
             else:
                 self._out(Tag.SYSTEM, f"  {label}  (empty)")
 
@@ -977,7 +963,7 @@ class CommandProcessor:
             self._out(Tag.ERROR, f"You aren't carrying '{args}'.")
             return
         slot = item.get("slot")
-        if slot not in _EQUIPMENT_SLOTS:
+        if slot not in _wc.EQUIPMENT_SLOTS:
             self._out(Tag.ERROR, f"{item['name']} cannot be equipped "
                                  f"(no equipment slot; slot='{slot or 'none'}').")
             return
@@ -994,7 +980,7 @@ class CommandProcessor:
 
     def _cmd_unequip(self, verb: str, args: str) -> None:
         target = args.lower()
-        for slot in _EQUIPMENT_SLOTS:
+        for slot in _wc.EQUIPMENT_SLOTS:
             eq = self.player.equipped.get(slot)
             if target in slot or (eq and target in eq.get("name", "").lower()):
                 if eq is None:
@@ -1633,7 +1619,7 @@ class CommandProcessor:
                 w_str = f" {w}st" if w else ""
                 self._out(Tag.SHOP,
                           f"  {tmpl['name']:<22} {price:>5}g  {_short(tmpl)}{w_str}")
-        self._out(Tag.SHOP, f"  (You have {self.player.gold} gold)")
+        self._out(Tag.SHOP, f"  (You have {self.player.gold} {_wc.CURRENCY_NAME})")
 
     def _cmd_buy(self, verb: str, args: str) -> None:
         if not args:

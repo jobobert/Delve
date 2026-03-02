@@ -32,13 +32,52 @@ def data_root() -> Path:
     return _ROOT / "data"
 
 
+# ── World discovery ───────────────────────────────────────────────────────────
+
+def find_worlds(root: Path | None = None) -> list[Path]:
+    """Return sorted world Paths — subfolders of data_root() containing config.py."""
+    root = root or data_root()
+    return sorted(p for p in root.iterdir()
+                  if p.is_dir() and (p / "config.py").exists())
+
+
+def pick_world(world_arg: str | None, root: Path | None = None) -> Path:
+    """Return the world Path matching world_arg, or the first world if None."""
+    worlds = find_worlds(root)
+    if not worlds:
+        print("No worlds found in data/.", file=sys.stderr)
+        sys.exit(1)
+    if world_arg is None:
+        return worlds[0]
+    for w in worlds:
+        if w.name == world_arg:
+            return w
+    names = ", ".join(w.name for w in worlds)
+    print(f"World '{world_arg}' not found.  Available: {names}", file=sys.stderr)
+    sys.exit(1)
+
+
+def peek_world_name(world_path: Path) -> str:
+    """Read WORLD_NAME from a world's config.py without full engine init."""
+    cfg = world_path / "config.py"
+    if not cfg.exists():
+        return world_path.name
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("_wc_peek", cfg)
+        mod  = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return getattr(mod, "WORLD_NAME", world_path.name)
+    except Exception:
+        return world_path.name
+
+
 # ── File discovery ────────────────────────────────────────────────────────────
 
-def find_dialogue_files(root: Path | None = None) -> dict[str, Path]:
-    """Return {npc_id: path} for every dialogue TOML found under data/."""
-    root = root or data_root()
+def find_dialogue_files(world_path: Path) -> dict[str, Path]:
+    """Return {npc_id: path} for every dialogue TOML in the given world folder."""
     result: dict[str, Path] = {}
-    for zone in sorted(root.iterdir()):
+    for zone in sorted(world_path.iterdir()):
         if not zone.is_dir() or zone.name in _SKIP_DIRS:
             continue
         d = zone / "dialogues"
@@ -50,11 +89,10 @@ def find_dialogue_files(root: Path | None = None) -> dict[str, Path]:
     return result
 
 
-def find_quest_files(root: Path | None = None) -> dict[str, Path]:
+def find_quest_files(world_path: Path) -> dict[str, Path]:
     """Return {quest_id: path} keyed by the file stem."""
-    root = root or data_root()
     result: dict[str, Path] = {}
-    for zone in sorted(root.iterdir()):
+    for zone in sorted(world_path.iterdir()):
         if not zone.is_dir() or zone.name in _SKIP_DIRS:
             continue
         d = zone / "quests"

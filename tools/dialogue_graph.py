@@ -57,6 +57,7 @@ sys.path.insert(0, str(_root))
 sys.path.insert(0, str(_tools))
 
 from graph_common import (          # noqa: E402
+    find_worlds, pick_world, peek_world_name,
     find_dialogue_files, load_dialogue_tree, reachable_nodes,
     node_header_color, wrap_html, h, dot_id, dot_attr,
     format_condition, format_script_ops,
@@ -138,7 +139,7 @@ def _node_label(node_id: str, node: dict, reachable: set[str]) -> str:
 _END_ID  = "__END__"
 
 
-def build_dialogue_dot(npc_id: str, path: Path) -> str:
+def build_dialogue_dot(npc_id: str, path: Path, world_name: str = "") -> str:
     """Return a complete DOT digraph string for one NPC's dialogue tree."""
     nodes = load_dialogue_tree(path)
     if not nodes:
@@ -148,9 +149,12 @@ def build_dialogue_dot(npc_id: str, path: Path) -> str:
     lines: list[str] = []
     w = lines.append
 
+    title = f"{npc_id} — dialogue tree"
+    if world_name:
+        title += f"\n{world_name}"
     w(f'digraph {dot_id(f"dialogue_{npc_id}")} {{')
     w(f'  // Source: {path}')
-    w(f'  label={dot_attr(f"{npc_id} — dialogue tree")}')
+    w(f'  label={dot_attr(title)}')
     w( '  labelloc=t labeljust=l')
     w( '  rankdir=TB')
     w( '  node [fontname="Courier" fontsize=10 shape=none margin=0]')
@@ -250,12 +254,15 @@ def main() -> None:
     )
     ap.add_argument("--npc",    metavar="NPC_ID", help="Visualise a single NPC")
     ap.add_argument("--zone",   metavar="ZONE",   help="Only NPCs in this zone folder")
+    ap.add_argument("--world",  metavar="WORLD",  help="World folder name (default: first found)")
     ap.add_argument("--out",    metavar="FILE",   help="Output .dot path (single NPC only)")
     ap.add_argument("--render", choices=["svg", "pdf"],
                     help="Auto-render via graphviz dot CLI")
     args = ap.parse_args()
 
-    all_files = find_dialogue_files()
+    world_path  = pick_world(args.world)
+    world_name  = peek_world_name(world_path)
+    all_files   = find_dialogue_files(world_path)
 
     # Filter
     if args.npc:
@@ -283,7 +290,7 @@ def main() -> None:
 
     print(f"Writing {len(files)} dialogue graph(s) -> {out_dir}/")
     for npc_id, path in sorted(files.items()):
-        dot_str = build_dialogue_dot(npc_id, path)
+        dot_str = build_dialogue_dot(npc_id, path, world_name)
         if not dot_str:
             print(f"  {npc_id}: empty tree, skipped")
             continue

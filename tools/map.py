@@ -2,19 +2,26 @@
 """
 tools/map.py — Admin map utility for Delve.
 
-Renders the world as either an ASCII terminal map or an interactive HTML file.
+Renders the world as either an ASCII terminal map or a self-contained HTML file.
+
+Rooms without an explicit coord = [x, y] field are placed automatically on the
+map using exit topology (BFS from their neighbours). They appear with a dashed
+border in HTML and a ~ marker in ASCII. Add coord = [x, y] to a room in TOML
+to fix its position permanently.
 
 Usage:
-  python tools/map.py                        # ASCII map, all zones
-  python tools/map.py --zone NAME            # ASCII map, one zone
-  python tools/map.py --full                 # ASCII map with item/NPC counts
-  python tools/map.py --html                 # Generate HTML map → tools/admin_map.html
+  python tools/map.py                          # ASCII map, all zones
+  python tools/map.py --zone NAME              # ASCII map, one zone
+  python tools/map.py --full                   # ASCII map with item/NPC counts
+  python tools/map.py --html                   # HTML map -> tools/admin_map.html
   python tools/map.py --html --output my.html  # HTML map to custom path
+  python tools/map.py --world NAME             # select world by folder name
   python tools/map.py --help
 """
 
 import json
 import sys
+from collections import deque
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -22,7 +29,8 @@ sys.path.insert(0, str(ROOT))
 
 from engine.toml_io import load as toml_load
 
-DATA_DIR = ROOT / "data"
+DATA_DIR  = ROOT / "data"
+SKIP_DIRS = {"zone_state", "players"}
 
 # ── Colours (ASCII output only) ───────────────────────────────────────────────
 
@@ -32,51 +40,52 @@ DIM    = "\033[2m"
 
 def _fg(r, g, b): return f"\033[38;2;{r};{g};{b}m"
 
-C_ROOM   = BOLD  + _fg(255, 220, 100)
-C_CONN   = DIM   + _fg(100, 180, 100)
-C_LOCKED = BOLD  + _fg(255, 100,  80)
-C_ZONE   = DIM   + _fg(140, 140, 200)
-C_DETAIL = DIM   + _fg(160, 160, 160)
-C_HEADER =         _fg(180, 200, 255)
+C_ROOM   = BOLD + _fg(255, 220, 100)
+C_CONN   = DIM  + _fg(100, 180, 100)
+C_LOCKED = BOLD + _fg(255, 100,  80)
+C_ZONE   = DIM  + _fg(140, 140, 200)
+C_DETAIL = DIM  + _fg(160, 160, 160)
+C_AUTO   = DIM  + _fg(200, 140,  60)
+C_HEADER =        _fg(180, 200, 255)
 
-SKIP_DIRS = {"zone_state", "players"}
+# ── World / zone discovery ────────────────────────────────────────────────────
 
-# ── Shared world loader (ASCII path — doesn't need the full World engine) ─────
+def _discover_worlds() -> list[Path]:
+    """Return sorted world folder Paths — subfolders of DATA_DIR with config.py."""
+    if not DATA_DIR.is_dir():
+        return []
+    return sorted(
+        p for p in DATA_DIR.iterdir()
+        if p.is_dir() and (p / "config.py").exists()
+    )
 
-def load_world() -> dict:
-    """Load all rooms, items, and NPCs from zone folders into a flat catalogue."""
-    world = {"rooms": {}, "items": {}, "npcs": {}, "zone_rooms": {}}
 
-    for zone_folder in sorted(DATA_DIR.iterdir()):
-        if not zone_folder.is_dir() or zone_folder.name in SKIP_DIRS:
-            continue
-        zone_id = zone_folder.name
+def _pick_world(world_arg: str | None) -> Path:
+    worlds = _discover_worlds()
+    if not worlds:
+        print(
+            "[error] No world folders found in data/ "
+            "(subfolders must contain config.py).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if world_arg:
+        for w in worlds:
+            if w.name == world_arg:
+                return w
+        names = [w.name for w in worlds]
+        print(f"[error] World '{world_arg}' not found. Available: {names}", file=sys.stderr)
+        sys.exit(1)
+    return worlds[0]
 
-        for path in sorted(zone_folder.glob("*.toml")):
-            try:
-                d = toml_load(path)
-            except Exception:
-                continue
 
-            for item in d.get("item", []):
-                iid = item.get("id", "")
-                if iid and iid not in world["items"]:
-                    world["items"][iid] = item
+def _zone_dirs(world_path: Path) -> list[Path]:
+    return sorted(
+        p for p in world_path.iterdir()
+        if p.is_dir() and p.name not in SKIP_DIRS
+    )
 
-            for npc in d.get("npc", []):
-                nid = npc.get("id", "")
-                if nid and nid not in world["npcs"]:
-                    world["npcs"][nid] = npc
-
-            for room in d.get("room", []):
-                rid = room.get("id", "")
-                if not rid:
-                    continue
-                world["zone_rooms"].setdefault(zone_id, []).append(rid)
-                world["rooms"][rid] = {**room, "_zone": zone_id}
-
-    return world
-
+# ── Exit helpers ──────────────────────────────────────────────────────────────
 
 def exit_dest(exit_val) -> str:
     if isinstance(exit_val, dict):
@@ -88,37 +97,178 @@ def exit_locked(exit_val) -> bool:
     return isinstance(exit_val, dict) and exit_val.get("locked", False)
 
 
-# ── ASCII renderer ─────────────────────────────────────────────────────────────
+# ── Auto-layout via exit topology ────────────────────────────────────────────
+
+_DIR_DELTA: dict[str, tuple[int, int]] = {
+    "north": (0, 1),   "south": (0, -1),
+    "east":  (1, 0),   "west":  (-1, 0),
+    "northeast": (1, 1),   "northwest": (-1, 1),
+    "southeast": (1, -1),  "southwest": (-1, -1),
+    "up":   (0, 2),    "down":  (0, -2),
+    "n": (0, 1), "s": (0, -1), "e": (1, 0), "w": (-1, 0),
+    "ne": (1, 1), "nw": (-1, 1), "se": (1, -1), "sw": (-1, -1),
+    "u": (0, 2), "d": (0, -2),
+}
+
+
+def _nearest_free(grid: dict, pos: tuple) -> tuple:
+    """Spiral outward from pos until an unoccupied grid cell is found."""
+    if pos not in grid:
+        return pos
+    for radius in range(1, 40):
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                if abs(dx) == radius or abs(dy) == radius:
+                    p = (pos[0] + dx, pos[1] + dy)
+                    if p not in grid:
+                        return p
+    return (pos[0] + 50, pos[1] + 50)
+
+
+def _apply_auto_layout(rooms: dict) -> None:
+    """
+    Compute a display position for every room and store it in room["_display_coord"].
+
+    Rooms with an explicit coord field use that value (authoritative).
+    All other rooms are placed via BFS from their neighbours using exit directions,
+    with _nearest_free() resolving any grid collisions.  Rooms with no path to any
+    placed room are placed at the nearest free cell near the origin.
+
+    Also sets room["_auto_placed"] = True for rooms without an explicit coord.
+    """
+    pos_of: dict[str, tuple] = {}
+    grid:   dict[tuple, str]  = {}
+
+    # Seed grid from explicit coords
+    for rid, room in rooms.items():
+        c = room.get("coord")
+        if c and len(c) >= 2:
+            p = (int(c[0]), int(c[1]))
+            pos_of[rid] = p
+            grid[p] = rid
+
+    unplaced: set[str] = {rid for rid in rooms if rid not in pos_of}
+    if not unplaced:
+        for rid in rooms:
+            rooms[rid]["_display_coord"] = list(pos_of[rid])
+        return
+
+    queue:    deque[tuple[str, tuple]] = deque()
+    in_queue: set[str] = set()
+
+    def enqueue_neighbors(rid: str, p: tuple) -> None:
+        for direction, ev in rooms[rid].get("exits", {}).items():
+            dest = exit_dest(ev)
+            if dest in unplaced and dest not in in_queue:
+                dx, dy = _DIR_DELTA.get(direction, (0, 0))
+                if dx or dy:
+                    queue.append((dest, (p[0] + dx, p[1] + dy)))
+                    in_queue.add(dest)
+
+    # Seed BFS from all rooms that already have positions
+    for rid, p in pos_of.items():
+        enqueue_neighbors(rid, p)
+
+    # If no explicit-coord rooms at all, start from the start room (or first room)
+    if not queue:
+        seed = next(
+            (rid for rid, r in rooms.items() if r.get("start")),
+            next(iter(rooms), None),
+        )
+        if seed and seed in unplaced:
+            p = (0, 0)
+            pos_of[seed] = p
+            grid[p] = seed
+            unplaced.discard(seed)
+            in_queue.add(seed)
+            enqueue_neighbors(seed, p)
+
+    while queue:
+        rid, expected = queue.popleft()
+        if rid not in unplaced:
+            continue
+        p = _nearest_free(grid, expected)
+        pos_of[rid] = p
+        grid[p] = rid
+        unplaced.discard(rid)
+        enqueue_neighbors(rid, p)
+
+    # Any still-unplaced rooms (disconnected islands with no cardinal path)
+    for rid in list(unplaced):
+        p = _nearest_free(grid, (0, 0))
+        pos_of[rid] = p
+        grid[p] = rid
+
+    # Write results
+    for rid, room in rooms.items():
+        p = pos_of.get(rid)
+        if p:
+            room["_display_coord"] = list(p)
+            if not room.get("coord"):
+                room["_auto_placed"] = True
+
+
+# ── World loader ──────────────────────────────────────────────────────────────
+
+def load_world(world_path: Path) -> dict:
+    """Load all rooms, items, and NPCs from a world's zone folders."""
+    world = {
+        "rooms":      {},
+        "items":      {},
+        "npcs":       {},
+        "zone_rooms": {},
+        "zone_list":  [],
+    }
+    for zone_folder in _zone_dirs(world_path):
+        zone_id   = zone_folder.name
+        has_rooms = False
+        for path in sorted(zone_folder.glob("*.toml")):
+            try:
+                d = toml_load(path)
+            except Exception:
+                continue
+            for item in d.get("item", []):
+                iid = item.get("id", "")
+                if iid and iid not in world["items"]:
+                    world["items"][iid] = item
+            for npc in d.get("npc", []):
+                nid = npc.get("id", "")
+                if nid and nid not in world["npcs"]:
+                    world["npcs"][nid] = npc
+            for room in d.get("room", []):
+                rid = room.get("id", "")
+                if not rid:
+                    continue
+                world["zone_rooms"].setdefault(zone_id, []).append(rid)
+                world["rooms"][rid] = {**room, "_zone": zone_id}
+                has_rooms = True
+        if has_rooms and zone_id not in world["zone_list"]:
+            world["zone_list"].append(zone_id)
+
+    _apply_auto_layout(world["rooms"])
+    return world
+
+
+# ── ASCII renderer ────────────────────────────────────────────────────────────
 
 def render_ascii(world: dict, zone_filter: str = "", full: bool = False) -> None:
     rooms = {
         rid: r for rid, r in world["rooms"].items()
         if not zone_filter or r.get("_zone") == zone_filter
     }
-
     if not rooms:
         print(f"No rooms found" + (f" for zone '{zone_filter}'" if zone_filter else "") + ".")
         return
 
-    with_coords    = {rid: r for rid, r in rooms.items() if r.get("coord")}
-    without_coords = {rid: r for rid, r in rooms.items() if not r.get("coord")}
+    _render_grid(world, rooms, full)
 
-    if with_coords:
-        _render_grid(world, with_coords, full)
-
-    if without_coords:
+    auto_rooms = {rid: r for rid, r in rooms.items() if r.get("_auto_placed")}
+    if auto_rooms:
         print()
-        print(C_ZONE + "── Rooms without coordinates ─────" + RESET)
-        for rid, room in sorted(without_coords.items()):
-            zone = room.get("_zone", "")
-            locked_exits = [
-                f"{d}→{exit_dest(v)} [LOCKED]"
-                for d, v in room.get("exits", {}).items()
-                if exit_locked(v)
-            ]
-            print(f"  {C_ROOM}{room.get('name','?')}{RESET} {C_DETAIL}[{rid}] zone={zone}{RESET}")
-            if locked_exits:
-                print(f"    {C_LOCKED}Locked: {', '.join(locked_exits)}{RESET}")
+        print(C_AUTO + f"  {len(auto_rooms)} room(s) auto-placed (add coord = [x, y] for a fixed position):" + RESET)
+        for rid, room in sorted(auto_rooms.items()):
+            dc = room.get("_display_coord", [])
+            print(C_DETAIL + f"    [{rid}]  {room.get('name','?')}  auto-placed at {dc}" + RESET)
 
     total = len(rooms)
     zones = sorted({r["_zone"] for r in rooms.values()})
@@ -128,30 +278,33 @@ def render_ascii(world: dict, zone_filter: str = "", full: bool = False) -> None
 
 
 def _render_grid(world: dict, rooms: dict, full: bool) -> None:
+    # Build coord map using _display_coord (set by auto-layout for all rooms)
     coords: dict[tuple, dict] = {}
     for rid, room in rooms.items():
-        c = room.get("coord", [])
-        if len(c) >= 2:
-            coords[(int(c[0]), int(c[1]))] = room
+        dc = room.get("_display_coord")
+        if dc and len(dc) >= 2:
+            coords[(int(dc[0]), int(dc[1]))] = room
+
+    if not coords:
+        print("No rooms to display.")
+        return
 
     xs = [c[0] for c in coords]
     ys = [c[1] for c in coords]
     min_x, max_x = min(xs), max(xs)
     min_y, max_y = min(ys), max(ys)
 
-    zone_colors: dict[str, str] = {}
-    zone_list = sorted({r.get("_zone", "") for r in coords.values()})
-    palette = [
+    zone_list   = sorted({r.get("_zone", "") for r in coords.values()})
+    palette     = [
         _fg(255, 200, 100), _fg(100, 220, 255), _fg(200, 100, 255),
-        _fg(100, 255, 180), _fg(255, 140, 100),
+        _fg(100, 255, 180), _fg(255, 140, 100), _fg(255, 100, 200),
     ]
-    for i, z in enumerate(zone_list):
-        zone_colors[z] = palette[i % len(palette)]
+    zone_colors = {z: palette[i % len(palette)] for i, z in enumerate(zone_list)}
 
     print()
-    print(C_HEADER + "═" * 60 + RESET)
+    print(C_HEADER + "=" * 60 + RESET)
     print(C_HEADER + "  DELVE Admin Map" + RESET)
-    print(C_HEADER + "═" * 60 + RESET)
+    print(C_HEADER + "=" * 60 + RESET)
     print()
 
     for y in range(max_y, min_y - 1, -1):
@@ -161,25 +314,27 @@ def _render_grid(world: dict, rooms: dict, full: bool) -> None:
         for x in range(min_x, max_x + 1):
             room = coords.get((x, y))
             if room:
-                rid   = room.get("id", "")
-                zone  = room.get("_zone", "")
-                zc    = zone_colors.get(zone, "")
-                abbr  = rid[:4].upper()
-                start = "★" if room.get("start") else " "
+                rid  = room.get("id", "")
+                zone = room.get("_zone", "")
+                zc   = zone_colors.get(zone, "")
+                abbr = rid[:4].upper()
+                start = "*" if room.get("start") else " "
+                auto  = "~" if room.get("_auto_placed") else " "
 
                 if full:
                     ni   = len([i for i in room.get("items",  []) if isinstance(i, str)])
                     ns   = len(room.get("spawns", []))
                     cell = f"{zc}[{abbr}{start}]{RESET}{C_DETAIL}i{ni}n{ns}{RESET}"
                 else:
-                    cell = f"{zc}[{abbr}{start}]{RESET}"
+                    cell = f"{zc}[{abbr}{start}]{auto}{RESET}"
 
                 row_cells.append(cell)
 
                 east      = room.get("exits", {}).get("east")
                 east_dest = exit_dest(east)
-                if east_dest and coords.get((x + 1, y)):
-                    hconn = C_LOCKED + "─✗─" + RESET if exit_locked(east) else C_CONN + "───" + RESET
+                has_east  = coords.get((x + 1, y)) is not None
+                if east_dest and has_east:
+                    hconn = C_LOCKED + "-x-" + RESET if exit_locked(east) else C_CONN + "---" + RESET
                 else:
                     hconn = "   "
                 row_hconns.append(hconn)
@@ -201,7 +356,7 @@ def _render_grid(world: dict, rooms: dict, full: bool) -> None:
                     south  = room.get("exits", {}).get("south")
                     s_dest = exit_dest(south)
                     if s_dest:
-                        vline += C_LOCKED + "  ✗   " + RESET if exit_locked(south) else C_CONN + "  │   " + RESET
+                        vline += C_LOCKED + "  x   " + RESET if exit_locked(south) else C_CONN + "  |   " + RESET
                     else:
                         vline += "      "
                 else:
@@ -209,8 +364,7 @@ def _render_grid(world: dict, rooms: dict, full: bool) -> None:
             print("  " + vline)
 
     print()
-    print(C_DETAIL + "  Legend:  [ABCD] room id   ★ = start room   "
-          "─✗─ = locked door" + RESET)
+    print(C_DETAIL + "  Legend:  [ABCD] room-id   * = start room   ~ = auto-placed   -x- = locked" + RESET)
     if full:
         print(C_DETAIL + "           i# = items   n# = NPCs" + RESET)
     print()
@@ -219,100 +373,350 @@ def _render_grid(world: dict, rooms: dict, full: bool) -> None:
         print(C_HEADER + "  Zones:" + RESET)
         for z in zone_list:
             rids = [rid for rid, r in rooms.items() if r.get("_zone") == z]
-            print(f"    {zone_colors[z]}■{RESET} {z}  ({len(rids)} rooms)")
+            print(f"    {zone_colors[z]}#{RESET} {z}  ({len(rids)} rooms)")
 
 
-# ── HTML generator ─────────────────────────────────────────────────────────────
+# ── HTML generator ────────────────────────────────────────────────────────────
 
-def build_html_data() -> dict:
-    """Load world data via the engine for the HTML map (richer than load_world())."""
-    from engine.world import World
+_ZONE_COLORS = [
+    "#4a7fd4", "#7db87d", "#c27a3a", "#a05090",
+    "#5bb8c4", "#c44f4f", "#c4a83a", "#7a7aaa",
+]
 
-    w = World()
 
-    all_rooms: dict[str, dict] = {}
-    for meta in w._zone_index.values():
-        for room_file in meta.room_files:
-            for room in toml_load(room_file).get("room", []):
-                rid = room.get("id", "")
-                if not rid:
-                    continue
-                exits: dict[str, str] = {}
-                exit_locks: dict[str, bool] = {}
-                for direction, val in room.get("exits", {}).items():
-                    if isinstance(val, dict):
-                        exits[direction]      = val.get("to", "")
-                        exit_locks[direction] = val.get("locked", False)
-                    else:
-                        exits[direction]      = val or ""
-                all_rooms[rid] = {
-                    "id":           rid,
-                    "name":         room.get("name", "?"),
-                    "description":  room.get("description", ""),
-                    "zone":         meta.zone_id,
-                    "coord":        room.get("coord"),
-                    "flags":        room.get("flags", []),
-                    "exits":        exits,
-                    "exit_locks":   exit_locks,
-                    "items":        room.get("items", []),
-                    "spawns":       room.get("spawns", []),
-                    "start":        room.get("start", False),
-                    "admin_comment": room.get("admin_comment", ""),
-                }
+def generate_html(world: dict, world_name: str, output_path: Path) -> None:
+    rooms      = world["rooms"]
+    zone_list  = world["zone_list"]
+    zone_color = {zid: _ZONE_COLORS[i % len(_ZONE_COLORS)]
+                  for i, zid in enumerate(zone_list)}
 
-    all_npcs = {
-        nid: {
-            "name":          n["name"],
-            "hostile":       n.get("hostile", False),
-            "tags":          n.get("tags", []),
-            "admin_comment": n.get("admin_comment", ""),
+    placed      = {rid: r for rid, r in rooms.items() if r.get("_display_coord")}
+    auto_placed = {rid: r for rid, r in placed.items() if r.get("_auto_placed")}
+
+    # Grid bounds (using _display_coord)
+    if placed:
+        xs = [r["_display_coord"][0] for r in placed.values()]
+        ys = [r["_display_coord"][1] for r in placed.values()]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+    else:
+        min_x = max_x = min_y = max_y = 0
+
+    CELL_W, CELL_H = 140, 80
+    PAD_X,  PAD_Y  = 60,  60
+    grid_w = (max_x - min_x + 1) * CELL_W + 2 * PAD_X
+    grid_h = (max_y - min_y + 1) * CELL_H + 2 * PAD_Y
+
+    def cell_center(x, y):
+        cx = PAD_X + (x - min_x) * CELL_W + CELL_W // 2
+        cy = PAD_Y + (max_y - y) * CELL_H + CELL_H // 2   # SVG Y inverted
+        return cx, cy
+
+    # Build room detail data passed to JS
+    room_data: dict[str, dict] = {}
+    for rid, room in rooms.items():
+        items_list = [
+            world["items"].get(i, {}).get("name", i) if isinstance(i, str) else "?"
+            for i in room.get("items", [])
+        ]
+        npcs_list = [
+            world["npcs"].get(n, {}).get("name", n) if isinstance(n, str) else "?"
+            for n in room.get("spawns", [])
+        ]
+        exits_info: dict[str, dict] = {}
+        for direction, ev in room.get("exits", {}).items():
+            exits_info[direction] = {
+                "dest":   exit_dest(ev),
+                "locked": exit_locked(ev),
+            }
+        room_data[rid] = {
+            "id":            rid,
+            "name":          room.get("name", rid),
+            "zone":          room.get("_zone", ""),
+            "description":   room.get("description", ""),
+            "flags":         room.get("flags", []),
+            "items":         items_list,
+            "npcs":          npcs_list,
+            "exits":         exits_info,
+            "start":         bool(room.get("start")),
+            "coord":         room.get("coord"),
+            "auto_placed":   bool(room.get("_auto_placed")),
+            "admin_comment": room.get("admin_comment", ""),
         }
-        for nid, n in w.npcs.items()
-    }
 
-    all_items = {
-        iid: {
-            "name":          i["name"],
-            "slot":          i.get("slot", ""),
-            "no_drop":       i.get("no_drop", False),
-            "desc_short":    i.get("desc_short", ""),
-            "admin_comment": i.get("admin_comment", ""),
-        }
-        for iid, i in w.items.items()
-    }
+    # SVG: connection lines between placed rooms
+    drawn_pairs: set[tuple] = set()
+    svg_lines:   list[str]  = []
+    for rid, room in placed.items():
+        dc1 = room["_display_coord"]
+        cx1, cy1 = cell_center(dc1[0], dc1[1])
+        for direction, ev in room.get("exits", {}).items():
+            dest = exit_dest(ev)
+            if not dest or dest not in placed:
+                continue
+            pair = tuple(sorted([rid, dest]))
+            if pair in drawn_pairs:
+                continue
+            drawn_pairs.add(pair)
+            dc2 = placed[dest]["_display_coord"]
+            cx2, cy2 = cell_center(dc2[0], dc2[1])
+            locked = exit_locked(ev)
+            color  = "#e05050" if locked else "#444"
+            dash   = 'stroke-dasharray="6,4"' if locked else ""
+            svg_lines.append(
+                f'<line x1="{cx1}" y1="{cy1}" x2="{cx2}" y2="{cy2}" '
+                f'stroke="{color}" stroke-width="2" {dash}/>'
+            )
 
-    return {"rooms": all_rooms, "npcs": all_npcs, "items": all_items}
+    # SVG: room nodes
+    svg_nodes: list[str] = []
+    for rid, room in placed.items():
+        dc     = room["_display_coord"]
+        cx, cy = cell_center(dc[0], dc[1])
+        zone   = room.get("_zone", "")
+        color  = zone_color.get(zone, "#888")
+        flags  = room.get("flags", [])
+        label  = room.get("name", rid)[:16]
+        is_start = room.get("start", False)
+        is_auto  = room.get("_auto_placed", False)
+        border   = "#fff" if is_start else color
+        bw       = 3 if is_start else 1.5
+        sdash    = 'stroke-dasharray="5,3"' if is_auto else ""
 
+        badges = ""
+        if "no_combat" in flags:
+            badges += '<text x="4" y="12" font-size="9" fill="#999">nc</text>'
+        if "town" in flags:
+            badges += '<text x="4" y="22" font-size="9" fill="#88f">T</text>'
+        if "safe_combat" in flags:
+            badges += '<text x="4" y="22" font-size="9" fill="#4f4">SC</text>'
 
-def generate_html(output_path: Path) -> None:
-    template_path = Path(__file__).parent / "map.html"
-    if not template_path.exists():
-        print(f"[error] HTML template not found: {template_path}", file=sys.stderr)
-        sys.exit(1)
+        ni = len(room.get("items", []))
+        ns = len(room.get("spawns", []))
+        counts = ""
+        if ni:
+            counts += f'<text x="{CELL_W-6}" y="12" font-size="9" fill="#fa0" text-anchor="end">i:{ni}</text>'
+        if ns:
+            counts += f'<text x="{CELL_W-6}" y="24" font-size="9" fill="#f88" text-anchor="end">n:{ns}</text>'
 
-    css_path = Path(__file__).parent / "map.css"
-    if not css_path.exists():
-        print(f"[error] CSS file not found: {css_path}", file=sys.stderr)
-        sys.exit(1)
+        svg_nodes.append(f'''
+  <g class="room-node" data-id="{rid}"
+     transform="translate({cx - CELL_W//2},{cy - CELL_H//2})"
+     onclick="selectRoom('{rid}')" style="cursor:pointer">
+    <rect width="{CELL_W-6}" height="{CELL_H-6}" rx="6" x="3" y="3"
+          fill="{color}22" stroke="{border}" stroke-width="{bw}" {sdash}/>
+    {badges}{counts}
+    <text x="{CELL_W//2}" y="{CELL_H//2 - 4}" text-anchor="middle"
+          font-size="10" font-weight="bold" fill="#eee">{label}</text>
+    <text x="{CELL_W//2}" y="{CELL_H//2 + 10}" text-anchor="middle"
+          font-size="9" fill="#aaa">{rid[:20]}</text>
+  </g>''')
 
-    print("Loading world data...", end=" ", flush=True)
-    data = build_html_data()
-    print(f"{len(data['rooms'])} rooms, {len(data['npcs'])} NPCs, {len(data['items'])} items")
+    # Zone legend
+    legend_html = ""
+    for zid in zone_list:
+        c = zone_color.get(zid, "#888")
+        n = len(world["zone_rooms"].get(zid, []))
+        legend_html += (
+            f'<span style="display:inline-flex;align-items:center;margin:0 10px 4px 0;'
+            f'cursor:pointer" onclick="filterTo(\'{zid}\')">'
+            f'<span style="background:{c};width:12px;height:12px;border-radius:2px;'
+            f'display:inline-block;margin-right:5px"></span>'
+            f'<span style="color:#ccc;font-size:11px">{zid} ({n})</span></span>'
+        )
 
-    template = template_path.read_text(encoding="utf-8")
-    json_blob = json.dumps(data, ensure_ascii=False)
-    html = template.replace("WORLD_DATA_PLACEHOLDER", json_blob)
+    # Auto-placed rooms sidebar section
+    auto_sidebar = ""
+    if auto_placed:
+        rows = "".join(
+            f"<li onclick=\"selectRoom('{rid}')\" "
+            f"style='cursor:pointer;padding:2px 4px;border-radius:3px'"
+            f" onmouseover=\"this.style.background='#222'\""
+            f" onmouseout=\"this.style.background=''\">"
+            f"{room.get('name', rid)} "
+            f"<span style='color:#555'>({rid})</span></li>"
+            for rid, room in sorted(auto_placed.items())
+        )
+        auto_sidebar = (
+            f"<h3 style='color:#f80;font-size:11px;margin:16px 0 5px'>"
+            f"Auto-placed ({len(auto_placed)}) — no coord field</h3>"
+            f"<ul style='list-style:none;color:#888;font-size:11px'>{rows}</ul>"
+        )
 
-    # Inline CSS so the output is truly self-contained (no external file dependency)
-    css = css_path.read_text(encoding="utf-8")
-    html = html.replace(
-        '<link rel="stylesheet" href="map.css">',
-        f'<style>\n{css}\n</style>',
-    )
+    room_data_json = json.dumps(room_data, ensure_ascii=False)
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{world_name} — Admin Map</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ background: #1a1a2e; color: #eee; font-family: monospace;
+          display: flex; height: 100vh; overflow: hidden; }}
+
+  #sidebar {{ width: 300px; min-width: 220px; background: #16213e;
+              border-right: 1px solid #2a2a4a;
+              display: flex; flex-direction: column; overflow: hidden; }}
+  #sidebar-header {{ padding: 12px 14px; background: #0f3460;
+                     border-bottom: 1px solid #2a2a4a; flex-shrink: 0; }}
+  #sidebar-header h2 {{ font-size: 13px; color: #88aaff; }}
+  #sidebar-header p  {{ font-size: 10px; color: #555; margin-top: 3px; }}
+  #sidebar-body {{ flex: 1; overflow-y: auto; padding: 12px; }}
+
+  #room-detail h3 {{ color: #88aaff; font-size: 13px; margin-bottom: 3px; }}
+  .room-id  {{ color: #555; font-size: 10px; margin-bottom: 10px; }}
+  .section  {{ margin-top: 10px; }}
+  .section h4 {{ color: #888; font-size: 10px; text-transform: uppercase;
+                letter-spacing: 1px; margin-bottom: 3px; }}
+  .desc   {{ color: #bbb; font-size: 11px; line-height: 1.5; white-space: pre-wrap; }}
+  .tag    {{ display: inline-block; background: #2a2a4a; color: #aaa;
+             font-size: 10px; padding: 1px 5px; border-radius: 3px; margin: 1px; }}
+  .tag.town       {{ color: #88f; }}
+  .tag.no_combat  {{ color: #f88; }}
+  .tag.safe_combat {{ color: #8f8; }}
+  .exit   {{ font-size: 11px; color: #ccc; margin: 1px 0; }}
+  .exit .locked {{ color: #e05050; font-size: 10px; }}
+  .item   {{ font-size: 11px; color: #fa0; margin: 1px 0; }}
+  .npc    {{ font-size: 11px; color: #f88; margin: 1px 0; }}
+  .auto-badge {{ font-size: 10px; color: #f80; background: #332;
+                 padding: 1px 5px; border-radius: 3px; margin-left: 6px; }}
+  .comment    {{ color: #f80; font-size: 10px; font-style: italic;
+                 margin-top: 6px; }}
+  .placeholder {{ color: #444; font-size: 12px; margin-top: 40px;
+                  text-align: center; }}
+
+  #main {{ flex: 1; display: flex; flex-direction: column; overflow: hidden; }}
+  #toolbar {{ padding: 7px 12px; background: #0f3460;
+              border-bottom: 1px solid #2a2a4a;
+              display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }}
+  #toolbar input {{ background: #1a1a2e; border: 1px solid #444;
+                    color: #eee; padding: 3px 7px; border-radius: 4px;
+                    font-size: 11px; width: 130px; }}
+  #toolbar label {{ color: #888; font-size: 11px; }}
+  #map-container {{ flex: 1; overflow: auto; }}
+
+  .room-node rect {{ transition: fill 0.1s, stroke 0.1s; }}
+  .room-node:hover rect  {{ fill: rgba(255,255,255,0.07) !important; }}
+  .room-node.selected rect {{
+    stroke: #fff !important; stroke-width: 2.5 !important;
+    fill: rgba(255,255,255,0.12) !important;
+  }}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h2>{world_name} — Admin Map</h2>
+    <p>{len(rooms)} rooms &middot; {len(world['npcs'])} NPCs &middot; {len(world['items'])} items</p>
+  </div>
+  <div id="sidebar-body">
+    <div id="room-detail"><div class="placeholder">Click a room to inspect it</div></div>
+    {auto_sidebar}
+  </div>
+</div>
+
+<div id="main">
+  <div id="toolbar">
+    <label>Filter: <input type="text" id="search"
+      placeholder="id, name or zone..."
+      oninput="filterRooms(this.value)"/></label>
+    <div>{legend_html}</div>
+    <span style="color:#444;font-size:10px;margin-left:auto">
+      dashed border = no coord &nbsp; dashed line = locked exit
+    </span>
+  </div>
+  <div id="map-container">
+    <svg id="map-svg" width="{grid_w}" height="{grid_h}">
+      {''.join(svg_lines)}
+      {''.join(svg_nodes)}
+    </svg>
+  </div>
+</div>
+
+<script>
+const ROOMS = {room_data_json};
+
+function selectRoom(rid) {{
+  const r = ROOMS[rid];
+  if (!r) return;
+
+  document.querySelectorAll('.room-node').forEach(n => n.classList.remove('selected'));
+  const node = document.querySelector('.room-node[data-id="' + rid + '"]');
+  if (node) {{
+    node.classList.add('selected');
+    node.scrollIntoView({{ behavior: 'smooth', block: 'nearest' }});
+  }}
+
+  const flags = (r.flags || []).map(f =>
+    '<span class="tag ' + f + '">' + f + '</span>'
+  ).join('') || '<span style="color:#444">none</span>';
+
+  const exits = Object.entries(r.exits || {{}}).map(([dir, info]) => {{
+    const dest  = ROOMS[info.dest];
+    const dname = dest ? dest.name : (info.dest || '?');
+    const lock  = info.locked ? ' <span class="locked">[locked]</span>' : '';
+    return '<div class="exit">&#8594; <b>' + dir + '</b>: ' + dname +
+           ' <span style="color:#444">(' + info.dest + ')</span>' + lock + '</div>';
+  }}).join('') || '<span style="color:#444">none</span>';
+
+  const items = (r.items || []).length
+    ? r.items.map(i => '<div class="item">&#9632; ' + i + '</div>').join('')
+    : '<span style="color:#444">none</span>';
+
+  const npcs = (r.npcs || []).length
+    ? r.npcs.map(n => '<div class="npc">&#9632; ' + n + '</div>').join('')
+    : '<span style="color:#444">none</span>';
+
+  const startBadge = r.start
+    ? ' <span style="color:#fff;background:#333;padding:1px 5px;border-radius:3px;font-size:10px">START</span>'
+    : '';
+  const autoBadge = r.auto_placed
+    ? '<span class="auto-badge">auto-placed</span>'
+    : '';
+  const coord   = r.coord ? '[' + r.coord[0] + ', ' + r.coord[1] + ']' : 'no coord';
+  const comment = r.admin_comment
+    ? '<div class="comment">&#9650; ' + r.admin_comment + '</div>'
+    : '';
+
+  document.getElementById('room-detail').innerHTML =
+    '<h3>' + r.name + startBadge + autoBadge + '</h3>' +
+    '<div class="room-id">' + r.id + ' &middot; ' + r.zone + ' &middot; ' + coord + '</div>' +
+    comment +
+    '<div class="section"><h4>Description</h4><div class="desc">' + (r.description || '<i>none</i>') + '</div></div>' +
+    '<div class="section"><h4>Flags</h4>' + flags + '</div>' +
+    '<div class="section"><h4>Exits (' + Object.keys(r.exits || {{}}).length + ')</h4>' + exits + '</div>' +
+    '<div class="section"><h4>Items (' + (r.items || []).length + ')</h4>' + items + '</div>' +
+    '<div class="section"><h4>NPC Spawns (' + (r.npcs || []).length + ')</h4>' + npcs + '</div>';
+}}
+
+function filterRooms(q) {{
+  q = (q || '').toLowerCase().trim();
+  document.querySelectorAll('.room-node').forEach(node => {{
+    const rid = node.getAttribute('data-id');
+    const r   = ROOMS[rid];
+    if (!r) return;
+    const match = !q || rid.includes(q) || r.name.toLowerCase().includes(q) || r.zone.includes(q);
+    node.style.opacity       = match ? '1' : '0.1';
+    node.style.pointerEvents = match ? '' : 'none';
+  }});
+}}
+
+function filterTo(zone) {{
+  const inp = document.getElementById('search');
+  inp.value = zone;
+  filterRooms(zone);
+}}
+</script>
+</body>
+</html>"""
 
     output_path.write_text(html, encoding="utf-8")
-    print(f"Written → {output_path}")
-    print(f"Open in your browser: file:///{output_path.resolve()}")
+    n_auto = len(auto_placed)
+    auto_note = f", {n_auto} auto-placed" if n_auto else ""
+    print(f"Written -> {output_path}  [{len(rooms)} rooms{auto_note}, {len(world['zone_list'])} zones]")
+    print(f"Open in browser: file:///{output_path.resolve()}")
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
@@ -324,21 +728,43 @@ def main() -> None:
         print(__doc__)
         return
 
-    html_mode = "--html" in args
+    # --world / -w
+    world_arg = None
+    for flag in ("--world", "-w"):
+        if flag in args:
+            idx = args.index(flag)
+            if idx + 1 < len(args):
+                world_arg = args[idx + 1]
 
-    # --output / -o  (HTML only)
-    output_path = ROOT / "tools" / "admin_map.html"
-    if "--output" in args:
-        idx = args.index("--output")
-        if idx + 1 < len(args):
-            output_path = Path(args[idx + 1])
-    elif "-o" in args:
-        idx = args.index("-o")
-        if idx + 1 < len(args):
-            output_path = Path(args[idx + 1])
+    world_path = _pick_world(world_arg)
+    html_mode  = "--html" in args
+
+    print(f"Loading '{world_path.name}'...", end=" ", flush=True)
+    world = load_world(world_path)
+    n_auto = sum(1 for r in world["rooms"].values() if r.get("_auto_placed"))
+    auto_note = f", {n_auto} auto-placed" if n_auto else ""
+    print(f"{len(world['rooms'])} rooms{auto_note}, {len(world['npcs'])} NPCs, {len(world['items'])} items")
 
     if html_mode:
-        generate_html(output_path)
+        output_path = ROOT / "tools" / "admin_map.html"
+        for flag in ("--output", "-o"):
+            if flag in args:
+                idx = args.index(flag)
+                if idx + 1 < len(args):
+                    output_path = Path(args[idx + 1])
+
+        # Read world name from config.py
+        world_name = world_path.name
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("_wc", world_path / "config.py")
+            mod  = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            world_name = getattr(mod, "WORLD_NAME", world_path.name)
+        except Exception:
+            pass
+
+        generate_html(world, world_name, output_path)
         return
 
     # ASCII mode
@@ -349,14 +775,8 @@ def main() -> None:
             zone_filter = args[idx + 1]
 
     full = "--full" in args or "-f" in args
-
-    world = load_world()
     render_ascii(world, zone_filter=zone_filter, full=full)
 
 
 if __name__ == "__main__":
     main()
-
-
-
-

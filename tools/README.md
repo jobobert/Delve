@@ -66,10 +66,16 @@ python tools/map.py --zone ashwood           # ASCII map, one zone
 python tools/map.py --full                   # ASCII map with item/NPC counts per room
 python tools/map.py --html                   # HTML map -> tools/admin_map.html
 python tools/map.py --html --output my.html  # HTML map to a custom path
+python tools/map.py --world <name>           # select world by folder name
 ```
 
 The HTML output (`admin_map.html`) is self-contained — open it directly in any
-browser.  It shows rooms as nodes, exits as edges, with room details on hover.
+browser.  It shows rooms as nodes, exits as edges, with room details on click.
+
+Rooms without an explicit `coord = [x, y]` field are placed automatically using
+exit topology (BFS from coordinated neighbours).  They appear with a dashed
+border in HTML and a `~` marker in ASCII.  Add `coord = [x, y]` to a room's
+TOML to fix its position permanently.
 
 ---
 
@@ -90,6 +96,9 @@ python tools/dialogue_graph.py --npc garrison_ghost --render svg
 
 # All NPCs in one zone
 python tools/dialogue_graph.py --zone ashwood
+
+# Select a specific world (default: first world found)
+python tools/dialogue_graph.py --world sixfold_realms
 
 # Custom output file
 python tools/dialogue_graph.py --npc elder_mira --out elder.dot
@@ -153,6 +162,9 @@ python tools/quest_graph.py
 
 # Single quest, auto-render to SVG
 python tools/quest_graph.py --quest ashwood_contract --render svg
+
+# Select a specific world (default: first world found)
+python tools/quest_graph.py --world sixfold_realms
 
 # Custom output file
 python tools/quest_graph.py --quest ashwood_contract --out ashwood.dot
@@ -229,9 +241,7 @@ python tools/wct_server.py --port 8080
 | File | Role |
 |------|------|
 | `graph_common.py` | Shared library for `dialogue_graph.py` and `quest_graph.py` |
-| `gen_map.py` | HTML map data builder (called internally by `map.py --html`) |
-| `map_html.py` | HTML template renderer for the admin map |
-| `map.html` / `map.css` / `wct.html` | Static frontend assets |
+| `wct.html` | Static frontend asset for the World Creation Tool |
 | `dialog_parser.py` | Legacy dialogue DOT generator (superseded by `dialogue_graph.py`) |
 | `admin_map.html` | Generated output — not committed |
 | `ai_sessions/` | AI playtester logs — not committed |

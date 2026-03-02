@@ -37,10 +37,11 @@ touch Python to create content. Rooms, NPCs, items, dialogue, and quests are all
 in TOML files under `data/`. The engine loads them at runtime.
 
 **Key facts:**
-- Zones are folders under `data/`. Each zone streams in/out of memory independently.
+- A **world** is a subfolder of `data/` that contains a `config.py` (e.g. `data/sixfold_realms/`).
+- **Zones** are subfolders of the world folder. Each zone streams in/out of memory independently.
 - All NPC and item state is lazy — NPCs spawn on first player visit, not at startup.
-- Zone state (NPC HP, moved items) persists to `data/zone_state/<zone_id>.json`.
-- Zero external dependencies. Run with `python play.py`.
+- Zone state (NPC HP, moved items) persists to `data/<world_id>/zone_state/<zone_id>.json`.
+- Zero external dependencies. Run with `python main.py`.
 
 **Test your work** with `python tools/validate.py` before playing.
 
@@ -48,24 +49,45 @@ in TOML files under `data/`. The engine loads them at runtime.
 
 ## 2. Zone Structure & File Layout
 
-A zone is a folder under `data/` whose name becomes the zone's ID.
+A **world** is a subfolder of `data/` identified by a `config.py` inside it. **Zones** are
+subfolders of the world. The zone folder's name becomes the zone ID.
 
 ```
 data/
-  <zone_id>/
-    zone.toml           # Optional: display name and description
-    rooms.toml          # [[room]] entries
-    items.toml          # [[item]] entries
-    npcs.toml           # [[npc]] entries
-    dialogues/
-      <npc_id>.toml     # Dialogue tree for one NPC
-    quests/
-      <quest_id>.toml   # Quest definition
-    crafting/
-      <npc_id>.toml     # Commission defs for one NPC
-    companions/
-      <companion_id>.toml
+  players/                     # Cross-world player saves (gitignored)
+  <world_id>/                  # World folder — identified by config.py
+    config.py                  # World name, skills, currency, default style, slots
+    zone_state/                # Live zone snapshots — auto-created at runtime (gitignored)
+    <zone_id>/                 # One folder per zone; folder name = zone ID
+      zone.toml                # Optional: display name and description
+      rooms.toml               # [[room]] entries
+      items.toml               # [[item]] entries
+      npcs.toml                # [[npc]] entries
+      dialogues/
+        <npc_id>.toml          # Dialogue tree for one NPC
+      quests/
+        <quest_id>.toml        # Quest definition
+      crafting/
+        <npc_id>.toml          # Commission defs for one NPC
+      companions/
+        <companion_id>.toml
 ```
+
+### World configuration (config.py)
+
+Every world folder must contain a `config.py`. The engine reads it at startup and uses
+its values to configure world-specific behaviour:
+
+| Setting | Type | Description |
+|---------|------|-------------|
+| `WORLD_NAME` | str | Display name shown in menus and the map header |
+| `SKILLS` | dict | `{ "skill_id": "Display Name", … }` — skills available in this world |
+| `NEW_CHAR_HP` | int | Starting HP for every new character (default `100`) |
+| `CURRENCY_NAME` | str | Display name for gold (e.g. `"credits"`, `"marks"`) |
+| `DEFAULT_STYLE` | str | Fighting style ID every new character starts with |
+| `EQUIPMENT_SLOTS` | tuple | Ordered list of valid equipment slot names |
+
+The engine falls back to built-in defaults if any field is absent.
 
 ### zone.toml (optional)
 
@@ -84,8 +106,8 @@ The engine discovers zones by folder presence. The zone.toml is advisory/flavor 
 1. Zones load on demand when the player first enters a room in that zone.
 2. Only the current zone and directly adjacent zones remain in RAM.
 3. Zones evict from memory when the player moves away.
-4. **Delete `data/zone_state/` files** (or run `tools/clean.py --state`) to reset world
-   state to its authored values.
+4. **Delete `data/<world_id>/zone_state/` files** (or run `tools/clean.py --state`) to reset
+   world state to its authored values.
 
 ---
 
@@ -928,7 +950,7 @@ Displays the companion's `join_message`. Replaces any existing companion.
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `skill` | string | — | Skill name: `perception`, `stealth`, `athletics`, `survival`, `social`, `arcana`, `mining` |
+| `skill` | string | — | A skill ID defined in the world's `config.py` (e.g. `perception`, `stealth`, `mining`) |
 | `dc` | int | `10` | Difficulty class (roll ≥ dc to pass) |
 | `on_pass` | array | `[]` | Script ops on success |
 | `on_fail` | array | `[]` | Script ops on failure |
@@ -1309,7 +1331,7 @@ Journal entries persist to the save file and display in the `j` / `journal` comm
 
 ### 8.1 File Layout
 
-Each NPC with dialogue has a file at `data/<zone>/dialogues/<npc_id>.toml`.
+Each NPC with dialogue has a file at `data/<world_id>/<zone>/dialogues/<npc_id>.toml`.
 The filename must exactly match the NPC's `id` field.
 
 ### 8.2 Node Structure
@@ -1476,7 +1498,7 @@ line = "There's a key in the ruins. Look for the castellan's old office — nort
 
 ### 9.1 File Layout
 
-Quests live at `data/<zone>/quests/<quest_id>.toml`. The filename is the quest ID.
+Quests live at `data/<world_id>/<zone>/quests/<quest_id>.toml`. The filename is the quest ID.
 
 ### 9.2 Quest Format
 
@@ -1563,7 +1585,10 @@ condition = { not_quest = "ashwood_contract" }
 
 ## 10. Skills
 
-### 10.1 The Seven Skills
+Skills are **world-configurable** — the full list is defined in `SKILLS` inside the world's
+`config.py`. The engine uses whatever skills are listed there; no engine code changes are needed.
+
+### 10.1 Skills in The Sixfold Realms
 
 | Skill ID | Display Name | Used for |
 |----------|-------------|----------|
@@ -1734,8 +1759,9 @@ Fighting styles define how a character (player or NPC) fights. Each style has
 passives that unlock at proficiency thresholds, preferred gear, and a matchup
 system (some styles counter others).
 
-Styles are defined in `data/<zone>/styles/<style_id>.toml` (engine-level, not per zone).
+Styles are defined in `data/<world_id>/<zone>/styles/<style_id>.toml`.
 Players learn styles via `teach_style` scripts; NPCs have a fixed style at spawn.
+The starting style for new characters is set by `DEFAULT_STYLE` in the world's `config.py`.
 
 **Current built-in styles** (community content can add more):
 `brawling`, `swordplay`, `iron_root`, `flowing_water`, `shadowstrike`, `wardancer`, `spear_work`
@@ -1756,7 +1782,7 @@ Crafting lets NPCs produce custom gear when given materials.
 
 ### 14.1 File Layout
 
-`data/<zone>/crafting/<npc_id>.toml` — The filename must match the crafter NPC's `id`.
+`data/<world_id>/<zone>/crafting/<npc_id>.toml` — The filename must match the crafter NPC's `id`.
 
 ### 14.2 Commission Format
 
@@ -1845,7 +1871,7 @@ Companions travel with the player and optionally assist in combat.
 
 ### 15.2 Companion File Format
 
-`data/<zone>/companions/<companion_id>.toml`:
+`data/<world_id>/<zone>/companions/<companion_id>.toml`:
 
 ```toml
 id              = "ranger_mira"
@@ -1962,6 +1988,10 @@ flags = ["town", "no_combat", "healing"]
 ---
 
 ## Appendix B — Equipment Slots
+
+Equipment slots are **world-configurable** via `EQUIPMENT_SLOTS` in `config.py`. The table
+below lists the default slots for The Sixfold Realms. A world can add, remove, or rename slots
+freely — `item.slot` values must match an entry in the world's slot list.
 
 | Slot | Items that use it |
 |------|-------------------|

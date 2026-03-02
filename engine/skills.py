@@ -5,15 +5,10 @@ Skills are separate from fighting styles. They represent general adventuring
 competencies that grow through use and affect skill checks against room events,
 dialogue conditions, and scripted encounters.
 
-The seven skills
-────────────────
-  stealth    — Moving quietly, hiding, avoiding detection
-  survival   — Wilderness navigation, avoiding natural hazards, foraging
-  perception — Noticing hidden things, reading situations
-  athletics  — Climbing, swimming, feats of strength and endurance
-  social     — Persuasion, deception, reading people
-  arcana     — Knowledge of magic, identifying enchantments, resisting spells
-  mining     — Extracting ore from rock seams; used by ore-node on_get scripts
+Skill definitions (IDs and display names) are set in data/config.py so that
+different worlds can use world-appropriate skills without changing engine code.
+The engine reads them via engine/world_config.py and falls back to a single
+built-in default skill ("perception") if no world config is present.
 
 Skill values
 ────────────
@@ -51,7 +46,7 @@ Usage in TOML scripts
     on_pass = [...],   on_fail = [...] }
 
   op             required  — must be "skill_check"
-  skill          required  — one of the six skill names
+  skill          required  — a skill id defined in data/<world>/config.py
   dc             required  — difficulty class (integer)
   on_pass        optional  — script ops to run on success
   on_fail        optional  — script ops to run on failure
@@ -67,17 +62,11 @@ Usage in dialogue conditions
 from __future__ import annotations
 import random
 
-SKILLS: list[str] = ["stealth", "survival", "perception", "athletics", "social", "arcana", "mining"]
+import engine.world_config as _wc
 
-SKILL_NAMES: dict[str, str] = {
-    "stealth":    "Stealth",
-    "survival":   "Survival",
-    "perception": "Perception",
-    "athletics":  "Athletics",
-    "social":     "Social",
-    "arcana":     "Arcana",
-    "mining":     "Mining",
-}
+# SKILLS and SKILL_NAMES are served dynamically from engine/world_config.py via
+# module __getattr__ (see bottom of file). Do NOT cache them at module level —
+# world_config.init() may be called after this module is first imported.
 
 TIERS: list[tuple[int, str]] = [
     (100, "Legendary"),
@@ -157,8 +146,16 @@ def check_condition(condition: dict, player) -> bool:
 
 
 def default_skills() -> dict[str, float]:
-    return {s: 0.0 for s in SKILLS}
+    return {s: 0.0 for s in _wc.SKILLS.keys()}
 
 
+# ── Dynamic module attributes ──────────────────────────────────────────────────
+# SKILLS and SKILL_NAMES are NOT cached at module level. They delegate to
+# engine/world_config at access time so they always reflect the active world.
 
-
+def __getattr__(name: str):
+    if name == "SKILLS":
+        return list(_wc.SKILLS.keys())
+    if name == "SKILL_NAMES":
+        return dict(_wc.SKILLS)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

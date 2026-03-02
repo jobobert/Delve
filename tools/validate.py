@@ -27,15 +27,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from engine.toml_io import load as toml_load
 
-DATA_DIR  = Path(__file__).parent.parent / "data"
-SKIP_DIRS = {"zone_state", "players"}
+DATA_DIR = Path(__file__).parent.parent / "data"
+
+# Set by main() before each world's validation pass.
+# zone_dirs() reads this to find zones inside the active world folder.
+_CURRENT_WORLD: Path | None = None
 
 errors:   list[str] = []
 warnings: list[str] = []
 
 
-def err(msg: str)  -> None: errors.append(f"  ✗ {msg}")
-def warn(msg: str) -> None: warnings.append(f"  ⚠ {msg}")
+def err(msg: str)  -> None: errors.append(f"  [ERROR] {msg}")
+def warn(msg: str) -> None: warnings.append(f"  [WARN]  {msg}")
 
 
 def load_safe(path: Path) -> dict | None:
@@ -46,9 +49,19 @@ def load_safe(path: Path) -> dict | None:
         return None
 
 
+def world_dirs() -> list[Path]:
+    """Return world folder Paths — subfolders of DATA_DIR that contain config.py."""
+    return sorted(
+        p for p in DATA_DIR.iterdir()
+        if p.is_dir() and (p / "config.py").exists()
+    )
+
+
 def zone_dirs() -> list[Path]:
-    return sorted(p for p in DATA_DIR.iterdir()
-                  if p.is_dir() and p.name not in SKIP_DIRS)
+    """Return zone folder Paths inside the current world, skipping runtime dirs."""
+    base  = _CURRENT_WORLD if _CURRENT_WORLD else DATA_DIR
+    _SKIP = {"zone_state", "players"}
+    return sorted(p for p in base.iterdir() if p.is_dir() and p.name not in _SKIP)
 
 
 # ── Collect all records of a given type, tracking source zone ────────────────
@@ -430,11 +443,13 @@ def validate_toml_syntax() -> None:
     toml_files: list[Path] = []
     for zone_folder in zone_dirs():
         toml_files.extend(sorted(zone_folder.rglob("*.toml")))
-    toml_files.extend(sorted(DATA_DIR.glob("*.toml")))
+    # Also pick up any .toml files at the world root (not inside zone folders)
+    world_root = _CURRENT_WORLD if _CURRENT_WORLD else DATA_DIR
+    toml_files.extend(sorted(world_root.glob("*.toml")))
     toml_files = sorted(set(toml_files))
 
     print()
-    print("── TOML File Inventory ─────────────────────────────────────────────")
+    print("-- TOML File Inventory " + "-" * 45)
     print(f"  {'FILE':<52}  {'BYTES':>6}  {'MODIFIED':<19}  STATUS")
     print(f"  {'-'*52}  {'-'*6}  {'-'*19}  ------")
 
@@ -476,7 +491,7 @@ def validate_toml_syntax() -> None:
     if bad:
         print(f"TOML syntax: {bad} file(s) with errors out of {count}")
     else:
-        print(f"TOML syntax: {count} file(s) checked — all valid")
+        print(f"TOML syntax: {count} file(s) checked - all valid")
 
 
 # ── Dialogue integrity validation ─────────────────────────────────────────────
@@ -489,7 +504,7 @@ def validate_dialogues(known_npcs: dict) -> None:
     """
     import re
 
-    print("── Dialogue File Report ────────────────────────────────────────────")
+    print("-- Dialogue File Report " + "-" * 44)
     print(f"  {'FILE':<42}  {'NPC IN WORLD':^12}  {'NODES':>5}  {'RESP':>5}  ISSUES")
     print(f"  {'-'*42}  {'-'*12}  {'-'*5}  {'-'*5}  ------")
 
@@ -608,22 +623,83 @@ def _print_dialogue_row(path: Path, npc_id: str, npc_known: bool,
     """Print one row of the dialogue report table."""
     rel       = str(path.relative_to(DATA_DIR.parent))
     rel_short = rel if len(rel) <= 42 else "..." + rel[-39:]
-    npc_col   = "✓ found" if npc_known else "✗ MISSING"
-    issues_str = "; ".join(issues) if issues else "—"
+    npc_col   = "found" if npc_known else "MISSING"
+    issues_str = "; ".join(issues) if issues else "-"
     if len(issues_str) > 60:
         issues_str = issues_str[:57] + "..."
     print(f"  {rel_short:<42}  {npc_col:^12}  {node_count:>5}  {resp_count:>5}  {issues_str}")
 
 
-def main():
-    print("Delve Data Validator")
-    print("=" * 40)
+def validate_world_config() -> None:
+    """Load and validate the active world's config.py for correct format and fields."""
+    import importlib.util
+    world_path  = _CURRENT_WORLD or DATA_DIR
+    config_path = world_path / "config.py"
+    cfg_label   = str(config_path.relative_to(DATA_DIR.parent))
 
-    rooms   = collect_rooms()
+    if not config_path.exists():
+        warn(f"{cfg_label} not found — engine will use built-in defaults")
+        return
+
+    spec = importlib.util.spec_from_file_location("_val_world_cfg", config_path)
+    mod  = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)
+    except Exception as e:
+        err(f"{cfg_label}: failed to load — {e}")
+        return
+
+    if not getattr(mod, "WORLD_NAME", "").strip():
+        warn(f"{cfg_label}: WORLD_NAME is not set")
+
+    skills = getattr(mod, "SKILLS", None)
+    if not skills:
+        warn(f"{cfg_label}: SKILLS is empty or missing — "
+             "engine default (perception) will be available")
+    elif not isinstance(skills, dict):
+        err(f"{cfg_label}: SKILLS must be a dict mapping skill_id to display name")
+    else:
+        for k, v in skills.items():
+            if not isinstance(k, str) or not isinstance(v, str):
+                err(f"{cfg_label}: SKILLS entry {k!r}: {v!r} — "
+                    "both key and value must be strings")
+
+    hp = getattr(mod, "NEW_CHAR_HP", None)
+    if hp is not None and (not isinstance(hp, int) or hp <= 0):
+        err(f"{cfg_label}: NEW_CHAR_HP must be a positive integer (got {hp!r})")
+
+    currency = getattr(mod, "CURRENCY_NAME", None)
+    if currency is not None and not isinstance(currency, str):
+        err(f"{cfg_label}: CURRENCY_NAME must be a string (got {currency!r})")
+
+    style = getattr(mod, "DEFAULT_STYLE", None)
+    if style is not None and not isinstance(style, str):
+        err(f"{cfg_label}: DEFAULT_STYLE must be a string (got {style!r})")
+
+    slots = getattr(mod, "EQUIPMENT_SLOTS", None)
+    if slots is not None:
+        if not isinstance(slots, (list, tuple)) or not slots:
+            err(f"{cfg_label}: EQUIPMENT_SLOTS must be a non-empty list/tuple of strings")
+        else:
+            for s in slots:
+                if not isinstance(s, str):
+                    err(f"{cfg_label}: EQUIPMENT_SLOTS entry {s!r} must be a string")
+
+
+def _validate_world(world_path: Path) -> None:
+    """Run all validation checks for one world folder."""
+    global _CURRENT_WORLD
+    _CURRENT_WORLD = world_path
+
+    print("-- World Config " + "-" * 52)
+    validate_world_config()
+    print()
+
+    rooms     = collect_rooms()
     items, _  = collect_typed("item")
     npcs,  _  = collect_typed("npc")
-    styles  = collect_styles()
-    quests  = collect_quests()
+    styles    = collect_styles()
+    quests    = collect_quests()
 
     print(f"Loaded: {len(rooms)} rooms, {len(items)} items, {len(npcs)} NPCs, "
           f"{len(styles)} styles, {len(quests)} quests")
@@ -634,7 +710,7 @@ def main():
     validate_npcs(npcs, items, styles)
     validate_quests(quests, npcs)
 
-    # Collect zone ids that actually have rooms (to avoid warning on dialogue-only folders)
+    # Collect zone ids that actually have rooms
     zones_with_rooms = set()
     for zone_folder in zone_dirs():
         for path in sorted(zone_folder.glob("*.toml")):
@@ -648,9 +724,7 @@ def main():
     print(f"Loaded: {len(commissions)} commission(s) across all crafters")
     validate_commissions(commissions, items, npcs)
 
-    # Companion validation
     validate_companions()
-
     validate_toml_syntax()
     validate_dialogues(npcs)
     print()
@@ -661,18 +735,47 @@ def main():
     elif len(starts) > 1:
         warn(f"Multiple start rooms: {[r['id'] for r in starts]}")
 
-    if warnings:
-        print("Warnings:")
-        for w in warnings: print(w)
-        print()
-    if errors:
-        print("Errors:")
-        for e in errors: print(e)
-        print()
-        print(f"FAILED: {len(errors)} error(s), {len(warnings)} warning(s).")
+
+def main():
+    print("Delve Data Validator")
+    print("=" * 40)
+
+    worlds = world_dirs()
+    if not worlds:
+        print("[WARN]  No world folders found in data/ (no subfolders with config.py)")
+        sys.exit(1)
+
+    total_errors   = 0
+    total_warnings = 0
+
+    for world_path in worlds:
+        errors.clear()
+        warnings.clear()
+        print(f"\n== World: {world_path.name} " + "=" * 48)
+        _validate_world(world_path)
+
+        if warnings:
+            print("Warnings:")
+            for w in warnings: print(w)
+            print()
+        if errors:
+            print("Errors:")
+            for e in errors: print(e)
+            print()
+            print(f"  FAILED: {len(errors)} error(s), {len(warnings)} warning(s).")
+        else:
+            print(f"  PASSED  ({len(warnings)} warning(s))")
+
+        total_errors   += len(errors)
+        total_warnings += len(warnings)
+
+    print()
+    print("=" * 40)
+    if total_errors:
+        print(f"FAILED: {total_errors} error(s), {total_warnings} warning(s) across {len(worlds)} world(s).")
         sys.exit(1)
     else:
-        print(f"PASSED ✓  ({len(warnings)} warning(s))")
+        print(f"PASSED  ({total_warnings} warning(s) across {len(worlds)} world(s))")
 
 
 if __name__ == "__main__":

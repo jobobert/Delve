@@ -51,6 +51,7 @@ sys.path.insert(0, str(_root))
 sys.path.insert(0, str(_tools))
 
 from graph_common import (          # noqa: E402
+    find_worlds, pick_world, peek_world_name,
     find_dialogue_files, find_quest_files,
     load_dialogue_tree, load_quest,
     h, wrap_html, dot_id, dot_attr,
@@ -105,13 +106,13 @@ def _split_script(ops: list) -> tuple[list[str], list[str]]:
 
 # ── Cross-reference builder ───────────────────────────────────────────────────
 
-def build_transitions(quest_id: str) -> list[Transition]:
+def build_transitions(quest_id: str, world_path: Path) -> list[Transition]:
     """
     Scan all dialogue files and collect every point where quest_id is
     advanced or completed.  Checks both node-level and response-level scripts.
     """
     transitions: list[Transition] = []
-    all_files = find_dialogue_files()
+    all_files = find_dialogue_files(world_path)
 
     for npc_id, path in sorted(all_files.items()):
         try:
@@ -190,7 +191,8 @@ _T_OPEN  = ('<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"'
 _T_CLOSE = "</TABLE>"
 
 
-def build_quest_dot(quest_id: str, quest: dict) -> str:
+def build_quest_dot(quest_id: str, quest: dict, world_path: Path,
+                    world_name: str = "") -> str:
     title   = quest.get("title", quest_id)
     summary = quest.get("summary", "")
     giver   = quest.get("giver", "")
@@ -207,7 +209,7 @@ def build_quest_dot(quest_id: str, quest: dict) -> str:
     reward_line = ", ".join(reward_parts) if reward_parts else "no rewards"
 
     # Collect transitions
-    transitions  = build_transitions(quest_id)
+    transitions  = build_transitions(quest_id, world_path)
     by_to: dict[int | None, list[Transition]] = {}
     for t in transitions:
         by_to.setdefault(t.to_step, []).append(t)
@@ -218,8 +220,12 @@ def build_quest_dot(quest_id: str, quest: dict) -> str:
     w = lines.append
 
     w(f'digraph {dot_id(f"quest_{quest_id}")} {{')
-    title_line = f"{title}\n{summary}"
-    w(f'  label={dot_attr(title_line)}')
+    title_parts = [title]
+    if summary:
+        title_parts.append(summary)
+    if world_name:
+        title_parts.append(world_name)
+    w(f'  label={dot_attr(chr(10).join(title_parts))}')
     w( '  labelloc=t labeljust=l')
     w( '  rankdir=TB')
     w( '  node [fontname="Courier" fontsize=10]')
@@ -328,12 +334,15 @@ def main() -> None:
         ),
     )
     ap.add_argument("--quest",  metavar="QUEST_ID", help="Visualise a single quest")
+    ap.add_argument("--world",  metavar="WORLD",    help="World folder name (default: first found)")
     ap.add_argument("--out",    metavar="FILE",      help="Output .dot path (single quest only)")
     ap.add_argument("--render", choices=["svg", "pdf"],
                     help="Auto-render via graphviz dot CLI")
     args = ap.parse_args()
 
-    quest_files = find_quest_files()
+    world_path  = pick_world(args.world)
+    world_name  = peek_world_name(world_path)
+    quest_files = find_quest_files(world_path)
     if not quest_files:
         print("No quest files found.", file=sys.stderr)
         sys.exit(1)
@@ -362,7 +371,7 @@ def main() -> None:
             print(f"  {quest_id}: load error — {e}", file=sys.stderr)
             continue
 
-        dot_str = build_quest_dot(quest_id, quest)
+        dot_str = build_quest_dot(quest_id, quest, world_path, world_name)
         out_path = Path(args.out) if (args.out and len(targets) == 1) \
                    else out_dir / f"quest_{quest_id}.dot"
 

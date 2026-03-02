@@ -43,6 +43,7 @@ from __future__ import annotations
 from pathlib import Path
 from engine.toml_io import load as toml_load, dump as toml_dump
 import engine.skills as skills_mod
+import engine.world_config as wc
 
 PLAYERS_DIR = Path(__file__).parent.parent / "data" / "players"
 BASE_CARRY   = 10   # stones — base before pack bonuses
@@ -95,18 +96,12 @@ class Player:
         self.xp_next:  int  = 100
         self.gold:     int  = 0
         self.inventory: list[dict]             = []
-        self.equipped:  dict[str, dict | None] = {
-            "weapon": None,
-            "head":   None, "chest": None, "legs": None, "arms": None,
-            "armor":  None,
-            "pack":   None, "ring":  None,
-            "shield": None, "cape":  None,
-        }
+        self.equipped:  dict[str, dict | None] = {s: None for s in wc.EQUIPMENT_SLOTS}
 
         # Style system
-        self.active_style: str              = "brawling"
-        self.known_styles: list[str]        = ["brawling"]
-        self.style_prof:   dict[str, float] = {"brawling": 0.0}
+        self.active_style: str              = wc.DEFAULT_STYLE
+        self.known_styles: list[str]        = [wc.DEFAULT_STYLE]
+        self.style_prof:   dict[str, float] = {wc.DEFAULT_STYLE: 0.0}
 
         # Item tracking
         self.looted_items:  set[str] = set()
@@ -119,6 +114,9 @@ class Player:
         self.completed_quests: set[str]        = set()
         # Dialogue cycle tracking (npc_id:node_id → cycle index)
         self.npc_dialogue_index: dict[str, int] = {}
+
+        # World membership
+        self.world_id: str = ""      # folder name of the world this player belongs to
 
         # Death / respawn
         self.bind_room: str = ""     # room to respawn at (auto-set on town entry)
@@ -219,6 +217,7 @@ class Player:
             "active_quests":       self.active_quests,
             "completed_quests":    sorted(self.completed_quests),
             "npc_dialogue_index":  self.npc_dialogue_index,
+            "world_id":            self.world_id,
             "bind_room":           self.bind_room,
             "xp_debt":             self.xp_debt,
             "bank":                self.bank,
@@ -252,21 +251,19 @@ class Player:
         p.xp_next       = data.get("xp_next", 100)
         p.gold          = data.get("gold", 0)
         p.inventory     = data.get("inventory", [])
-        equipped        = data.get("equipped", {})
-        _ALL_SLOTS = ("weapon", "armor", "pack", "ring", "shield", "cape")
-        p.equipped  = {slot: (item if item else None)
-                       for slot, item in equipped.items()
-                       if slot in _ALL_SLOTS}
-        for slot in _ALL_SLOTS:
+        equipped       = data.get("equipped", {})
+        all_slots      = wc.EQUIPMENT_SLOTS
+        p.equipped     = {slot: (item if item else None)
+                          for slot, item in equipped.items()
+                          if slot in all_slots}
+        for slot in all_slots:
             p.equipped.setdefault(slot, None)
-        # Migrate: ensure new armor slots exist for old saves
-        for _new_slot in ("head", "chest", "legs", "arms"):
-            p.equipped.setdefault(_new_slot, None)
-        p.active_style  = data.get("active_style", "brawling")
-        p.known_styles  = data.get("known_styles", ["brawling"])
+        p.world_id      = data.get("world_id", "")
+        p.active_style  = data.get("active_style", wc.DEFAULT_STYLE)
+        p.known_styles  = data.get("known_styles", [wc.DEFAULT_STYLE])
         raw_prof        = data.get("style_prof", {})
         p.style_prof    = {k: float(v) for k, v in raw_prof.items()} \
-                          if isinstance(raw_prof, dict) else {"brawling": 0.0}
+                          if isinstance(raw_prof, dict) else {wc.DEFAULT_STYLE: 0.0}
         p.looted_items  = set(data.get("looted_items",  []))
         p.visited_rooms       = set(data.get("visited_rooms", []))
         p.flags               = set(data.get("flags", []))
@@ -290,6 +287,30 @@ class Player:
         p.commissions = p._deserialise_commissions(data.get("commissions", []))
         p.companion   = p._deserialise_companion(data.get("companion", {}))
         p.journal     = data.get("journal", [])
+        return p
+
+    @classmethod
+    def create_new(cls, name: str) -> "Player":
+        """Create a new player with world-configured starting stats.
+
+        Rolls attack (3d6-drop-lowest) and defense (half that, min 1).
+        HP is taken from data/config.py NEW_CHAR_HP (default 100).
+
+        The caller is responsible for setting room_id and calling save()
+        before the session begins.
+        """
+        import random
+        import engine.world_config as wc
+
+        def _roll3d6_drop_low() -> int:
+            dice = sorted([random.randint(1, 6) for _ in range(3)])
+            return sum(dice[1:])
+
+        p         = cls(name)
+        p.max_hp  = wc.NEW_CHAR_HP
+        p.hp      = wc.NEW_CHAR_HP
+        p.attack  = _roll3d6_drop_low()
+        p.defense = max(1, _roll3d6_drop_low() // 2)
         return p
 
     @classmethod

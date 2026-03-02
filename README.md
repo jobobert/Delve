@@ -32,16 +32,18 @@ Type `help` in-game for a full command list.
 
 ```
 mud/
-├── engine/          Core systems — see engine/README.md for full details
-├── frontend/        CLI renderer and configuration
-├── data/            All TOML world data — see data/README.md for full details
-├── tools/           Authoring and maintenance utilities
-├── main.py          Entry point — selects and launches a frontend
-├── config.py        Root-level re-export of frontend/config.py
-├── requirements.txt (empty — zero external dependencies)
-├── README.md        This file
-├── engine/README.md Engine architecture and system reference
-└── data/README.md   World data organisation and authoring guide
+├── engine/              Core systems — see engine/README.md for full details
+├── frontend/            CLI renderer and configuration
+├── data/                All TOML world data — see data/README.md for full details
+│   ├── players/         Cross-world player saves
+│   └── <world_id>/      World folder (contains config.py + zone subfolders)
+├── tools/               Authoring and maintenance utilities
+├── main.py              Entry point — selects and launches a frontend
+├── config.py            Root-level re-export of frontend/config.py
+├── requirements.txt     (empty — zero external dependencies)
+├── README.md            This file
+├── engine/README.md     Engine architecture and system reference
+└── data/README.md       World data organisation and authoring guide
 ```
 
 ---
@@ -74,9 +76,11 @@ handlers, item `on_get` arrays, and room `on_enter` arrays. Covers output,
 player state, inventory, quests, styles, world state, skills, status effects,
 prestige, companions, bank, conditionals, and flow control.
 
-### Skills (7)
-`stealth` · `survival` · `perception` · `athletics` · `social` · `arcana` ·
-`mining`. Each 0–100, growing through use. Bonus = `skill ÷ 10` on a d20 vs DC.
+### Skills
+Skills are world-configurable — defined per-world in `data/<world_id>/config.py`.
+The Sixfold Realms ships with seven: `stealth` · `survival` · `perception` · `athletics` ·
+`social` · `arcana` · `mining`. Each 0–100, growing through use. Bonus = `skill ÷ 10`
+on a d20 vs DC.
 
 ### Prestige
 Signed integer (−999…+999) representing reputation. Moves through story events.
@@ -177,7 +181,9 @@ python tools/validate.py
 python tools/map.py                          # ASCII map, all zones
 python tools/map.py --zone <zone_id>         # single zone
 python tools/map.py --full                   # with NPC/item counts
-python tools/gen_map.py                      # interactive HTML → tools/admin_map.html
+python tools/map.py --html                   # HTML map → tools/admin_map.html
+python tools/map.py --html --output my.html  # HTML map to custom path
+python tools/map.py --world <name>           # select world by folder name
 
 # World Creation Tool — browser-based TOML editor with dialogue graph
 python tools/wct_server.py                   # → http://localhost:7373

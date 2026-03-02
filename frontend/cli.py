@@ -8,7 +8,6 @@ Configuration is in frontend/config.py (word wrap, auto-attack, colors, aliases)
 """
 
 from __future__ import annotations
-import random
 import re
 import textwrap
 import sys
@@ -20,6 +19,10 @@ from engine.player import Player
 from engine.commands import CommandProcessor
 from engine.msg import Msg, Tag
 from engine.room_flags import RoomFlags
+import engine.world_config as _wc
+from engine.world_config import list_worlds, peek_world_name
+
+_DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 # ── Load config ───────────────────────────────────────────────────────────────
@@ -180,7 +183,7 @@ PROMPT = _fg(80, 160, 255) + BOLD + "\n> " + RESET
 class CLIFrontend:
     def __init__(self):
         self.bus       = EventBus()
-        self.world     = World()
+        self.world:     World | None           = None   # set in run() after world selection
         self.player:    Player | None          = None
         self.processor: CommandProcessor | None = None
 
@@ -234,9 +237,41 @@ class CLIFrontend:
         )
         self.processor.process("look")
 
+    # ── World selection ───────────────────────────────────────────────────────
+
+    @staticmethod
+    def _select_world() -> Path:
+        """Find and return the selected world folder path.
+
+        Auto-selects when only one world exists. Shows a numbered menu
+        when multiple worlds are found.
+        """
+        worlds = list_worlds(_DATA_DIR)
+        if not worlds:
+            raise SystemExit(
+                "No worlds found in data/. "
+                "Create a world subfolder with a config.py to get started."
+            )
+        if len(worlds) == 1:
+            return worlds[0]
+        # Multiple worlds — show selection menu
+        label = _fg(200, 200, 200)
+        print(label + "\nAvailable worlds:" + RESET)
+        for i, w in enumerate(worlds, 1):
+            print(label + f"  {i}. {peek_world_name(w)}  ({w.name})" + RESET)
+        while True:
+            choice = (input(label + "Select a world [1]: " + RESET).strip() or "1")
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(worlds):
+                    return worlds[idx]
+            except ValueError:
+                pass
+            print("  Invalid selection — enter a number from the list.")
+
     # ── Login / Character creation ────────────────────────────────────────────
 
-    def _login(self) -> Player:
+    def _login(self, world_path: Path) -> Player:
         print(BANNER)
         label = _fg(200, 200, 200)
         bold  = BOLD + _fg(255, 255, 255)
@@ -247,21 +282,17 @@ class CLIFrontend:
                 continue
             if Player.exists(name):
                 player = Player.load(name)
+                if not player.world_id:
+                    player.world_id = world_path.name   # migrate old save
                 print(bold + f"\nWelcome back, {player.name}!\n" + RESET)
                 return player
             confirm = input(
                 label + f"'{name}' is a new character. Create? [y/n]: " + RESET
             ).strip().lower()
             if confirm == "y":
-                player = Player(name)
-                player.room_id = self.world.start_room
-                # Roll random starting stats: 3d6 drop lowest
-                def roll3d6_drop_low() -> int:
-                    dice = sorted([random.randint(1, 6) for _ in range(3)])
-                    return sum(dice[1:])
-                player.attack  = roll3d6_drop_low()
-                player.defense = max(1, roll3d6_drop_low() // 2)
-                player.hp      = player.max_hp
+                player = Player.create_new(name)
+                player.world_id = world_path.name
+                player.room_id  = self.world.start_room
                 print(bold + f"\nWelcome to the world, {player.name}!\n" + RESET)
                 print(dim + f"  Starting stats rolled:  ATK {player.attack}  DEF {player.defense}  HP {player.hp}" + RESET)
                 print(dim + "  (Stats grow through combat and equipment.)\n" + RESET)
@@ -398,7 +429,10 @@ class CLIFrontend:
     # ── Main loop ─────────────────────────────────────────────────────────────
 
     def run(self) -> None:
-        self.player    = self._login()
+        world_path     = self._select_world()
+        _wc.init(world_path)
+        self.world     = World(world_path)
+        self.player    = self._login(world_path)
         self.processor = CommandProcessor(self.world, self.player, self.bus)
 
         # Apply startup aliases from config (character aliases take priority)

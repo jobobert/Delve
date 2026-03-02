@@ -6,10 +6,13 @@ tools/ai_sessions/*
 *.pdf
 */__pycache__
 config.py
+!data/*/config.py
 config - Copy.py
 data/players/*
 data/zone_state/*
+data/*/zone_state/*
 .claude
 output/
 *.dot
 *.svg
+data/sixfold_realms/world_overview.md

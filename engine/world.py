@@ -58,8 +58,9 @@ from pathlib import Path
 from engine.toml_io import load as toml_load
 
 
-DATA_DIR        = Path(__file__).parent.parent / "data"
-ZONE_STATE_DIR  = DATA_DIR / "zone_state"
+# DATA_DIR and ZONE_STATE_DIR are no longer module-level constants; they are
+# instance variables on World (set in __init__) so each World instance can
+# point at its own world folder.  See World.__init__.
 
 # NPC fields that are normally scalar. If the TOML supplies a list for any of
 # these, _resolve_random_fields() picks one element at random on each spawn.
@@ -117,16 +118,7 @@ def _exit_dest(exit_val) -> str:
     return exit_val or ""
 
 
-def _zone_dirs() -> list:
-    """
-    Return sorted zone folder Paths from data/, skipping runtime-only dirs.
-    Zones are discovered purely by folder presence — no manifest needed.
-    """
-    _SKIP = {"zone_state", "players"}
-    return sorted(
-        p for p in DATA_DIR.iterdir()
-        if p.is_dir() and p.name not in _SKIP
-    )
+# _zone_dirs() is now an instance method on World — see World._zone_dirs().
 
 
 def _records_from_folder(zone_folder, key: str) -> list:
@@ -155,7 +147,11 @@ def _records_from_folder(zone_folder, key: str) -> list:
 # ── World ─────────────────────────────────────────────────────────────────────
 
 class World:
-    def __init__(self):
+    def __init__(self, world_path: Path):
+        self._world_path     = world_path
+        self._zone_state_dir = world_path / "zone_state"
+        self._zone_state_dir.mkdir(parents=True, exist_ok=True)
+
         # Global lightweight catalogues — always in memory
         self.items: dict[str, dict] = {}   # item templates
         self.npcs:  dict[str, dict] = {}   # npc templates
@@ -167,11 +163,20 @@ class World:
         # Live zone data — only loaded zones
         self._loaded_zones: dict[str, dict[str, dict]] = {}  # zone_id → {room_id → room}
 
-        ZONE_STATE_DIR.mkdir(parents=True, exist_ok=True)
         # Corpse dict: room_id → list of corpse dicts
         # Each corpse: {owner, items, equipped, expires_at}
         self._corpses: dict[str, list[dict]] = {}
         self._build_index()
+
+    # ── Zone discovery ────────────────────────────────────────────────────────
+
+    def _zone_dirs(self) -> list:
+        """Return sorted zone folder Paths inside the world folder, skipping runtime dirs."""
+        _SKIP = {"zone_state", "players"}
+        return sorted(
+            p for p in self._world_path.iterdir()
+            if p.is_dir() and p.name not in _SKIP
+        )
 
     # ── Index construction (startup — fast, no room data loaded) ─────────────
 
@@ -187,7 +192,7 @@ class World:
         for .toml files containing [[room]] blocks. Any number of room files per
         zone is supported.
         """
-        for zone_folder in _zone_dirs():
+        for zone_folder in self._zone_dirs():
             zone_id = zone_folder.name
 
             # ── Items and NPCs: first-definition-wins ─────────────────────────
@@ -306,7 +311,7 @@ class World:
     # ── Zone state persistence ────────────────────────────────────────────────
 
     def _state_path(self, zone_id: str) -> Path:
-        return ZONE_STATE_DIR / f"{zone_id}.json"
+        return self._zone_state_dir / f"{zone_id}.json"
 
     def _save_zone_state(self, zone_id: str) -> None:
         """Persist live NPC HP and room item lists to a JSON sidecar."""
