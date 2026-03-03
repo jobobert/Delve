@@ -16,11 +16,13 @@ etc.) see [WORLD_MANUAL.md](WORLD_MANUAL.md) and [engine/README.md](../engine/RE
 
 ```
 data/
-├── players/                   Per-character saves — cross-world (auto-created at runtime)
+├── players/                   Per-character folders (auto-created at runtime)
+│   └── <name>/                One folder per character
+│       ├── player.toml        Character save (cross-world; includes world_id field)
+│       └── zone_state/        This player's live zone snapshots (gitignored)
 │
 └── <world_id>/                World folder — identified by the presence of config.py
     ├── config.py              World name, skills, currency, default style, equipment slots
-    ├── zone_state/            Live zone snapshots — NPC HP, room items (auto-created, gitignored)
     │
     ├── <zone_id>/             One folder per zone; folder name = zone ID
     │   ├── zone.toml          Optional zone metadata (display name, start room, …)
@@ -41,26 +43,28 @@ data/
 
 ---
 
-## The Sixfold Realms (`data/sixfold_realms/`)
+## First World (`data/first_world/`)
 
-**65 rooms · 6 zones · 69 NPCs · 126 items · 7 fighting styles ·
+The original development/test world. Used for engine development and testing.
+
+**~57 rooms · 6 zones · 69 NPCs · 123 items · 7 fighting styles ·
 34 dialogue trees · 12 quests · 9 crafting commissions · 3 companions**
 
-| Zone | Rooms | NPCs | Items | Description |
-|------|------:|-----:|------:|-------------|
-| `millhaven` | 8 | 10 | 23 | Starter hub — market town with bank, crafters, and inn |
-| `training` | 3 | 4 | 5 | Barracks and training yard — spar system and style trainers |
-| `greenhollow` | 12 | 17 | 25 | Valley with mining nodes and the Flowing Water trainer |
-| `millbrook` | 14 | 17 | 31 | Farming village — ruffian quests and ore mining |
-| `ashwood` | 10 | 8 | 14 | Forest quest zone with garrison ruins |
-| `blackfen` | 18 | 13 | 28 | Swamp adventure — skill checks and multi-part mystery quest |
+| Zone | Description |
+|------|-------------|
+| `millhaven` | Starter hub — market town with bank, crafters, and inn |
+| `training` | Barracks and training yard — spar system and style trainers |
+| `greenhollow` | Valley with mining nodes and the Flowing Water trainer |
+| `millbrook` | Farming village — ruffian quests and ore mining |
+| `ashwood` | Forest quest zone with garrison ruins |
+| `blackfen` | Swamp adventure — skill checks and multi-part mystery quest |
 
-### Zone connectivity
+---
 
-```
-training ── millhaven ── millbrook ── greenhollow
-                 └────── ashwood  ── blackfen
-```
+## The Sixfold Realms (`data/sixfold_realms/`)
+
+New world — currently under construction. See `world_overview.md` in that
+folder for the full backstory and design document.
 
 ---
 
@@ -74,8 +78,8 @@ python tools/validate.py
 
 Checks: required fields, exit targets, item refs in shops/scripts/rooms, NPC
 styles, dialogue integrity (orphan nodes, dangling `next=` refs, NPC existence),
-TOML syntax, `give_item`/`spawn_item` script refs, missing `coord` fields,
-dialogue coverage (warns for NPCs without any dialogue source).
+TOML syntax, `give_item`/`spawn_item` script refs, dialogue coverage (warns for
+NPCs without any dialogue source).
 
 Exit code `0` = passed (warnings are OK). Exit code `1` = errors found.
 
@@ -86,10 +90,9 @@ Exit code `0` = passed (warnings are OK). Exit code `1` = errors found.
 ### New zone
 
 1. Create `data/<world_id>/my_zone/` with at least a `rooms.toml` containing `[[room]]` entries
-2. Add `coord = [x, y]` to every room so it appears on generated maps
-3. Connect it to the world by adding an exit in an existing room that points to
+2. Connect it to the world by adding an exit in an existing room that points to
    one of the new zone's room IDs
-4. Run `python tools/validate.py` to confirm everything resolves
+3. Run `python tools/validate.py` to confirm everything resolves
 
 No registry to update — the engine finds the new folder at next startup.
 
@@ -103,7 +106,6 @@ zone folder that the engine scans):
 id          = "old_mill"
 name        = "The Old Mill"
 description = "A crumbling watermill. The wheel still turns."
-coord       = [3, 2]
 flags       = ["no_combat"]
 spawns      = ["miller_ghost"]
 items       = ["rusty_key"]
@@ -112,7 +114,6 @@ on_enter    = [{ op = "message", tag = "system", text = "The air smells of damp 
 ```
 
 **Required:** `id`, `name`, `description`
-**Recommended:** `coord = [x, y]` (east = +x, north = +y) — validator warns if missing
 
 ### New NPC
 
@@ -278,8 +279,8 @@ objective = "Return the ring to the hermit."
 Advance quest progress via script ops in dialogue or kill scripts:
 
 ```toml
-{ op = "advance_quest",  quest = "the_lost_ring" }
-{ op = "complete_quest", quest = "the_lost_ring" }
+{ op = "advance_quest",  quest_id = "the_lost_ring", step = 1 }
+{ op = "complete_quest", quest_id = "the_lost_ring" }
 ```
 
 ### New dialogue tree
@@ -436,20 +437,24 @@ exits = { north = {
 
 ## Runtime data
 
-### Zone state (`data/<world_id>/zone_state/`)
+### Zone state (`data/players/<name>/zone_state/`)
 
-When a zone is evicted from memory, live NPC HP and current room item lists are
-written to `data/<world_id>/zone_state/<zone_id>.json`. On next load the sidecar
-is applied over fresh TOML so the world remembers what the player did.
+Zone state is per-player. When a zone is evicted from memory, live NPC HP and
+current room item lists are written to `data/players/<name>/zone_state/<zone_id>.json`.
+On next load the sidecar is applied over fresh TOML so the world remembers what
+that player did — independently of any other player session.
 
-Delete these files (or run `python tools/clean.py --state`) to reset the world
-to its authored state.
+Delete these files (or run `python tools/clean.py --state`) to reset a player's
+world state to its authored state.
 
-### Player saves (`data/players/`)
+### Player saves (`data/players/<name>/`)
 
-Each character is a `<name>.toml` file written by `player.save()`. Player saves
-are cross-world — each save records a `world_id` field so the engine knows which
-world to load. Delete or run `python tools/clean.py --players` to wipe characters.
+Each character occupies a folder. `player.toml` is written by `player.save()`.
+Saves are cross-world — each records a `world_id` field so the engine knows which
+world to load. On first run after an upgrade, old flat `data/players/<name>.toml`
+files are automatically migrated into the new folder layout.
+
+Delete a player folder (or run `python tools/clean.py --players`) to wipe characters.
 
 ---
 
@@ -467,8 +472,9 @@ python tools/map.py --html                   # HTML map → tools/admin_map.html
 python tools/map.py --html --output my.html  # HTML map to custom path
 python tools/map.py --world <name>           # select world by folder name
 
-# World Creation Tool — browser-based TOML editor with dialogue node graph
-python tools/wct_server.py                   # → http://localhost:7373
+# World Creation Tool — browser-based TOML editor with map and dialogue graph
+python tools/wct_server.py                   # → http://localhost:7373  (no auto-open)
+python tools/wct_server.py --browser         # also open browser
 
 # Reset
 python tools/clean.py --all                  # wipe players, zone state, and caches

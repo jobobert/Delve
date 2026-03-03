@@ -41,7 +41,7 @@ _DEFAULTS: dict = {
     "DEFAULT_STYLE":   "brawling",
     "EQUIPMENT_SLOTS": (
         "weapon", "head", "chest", "legs", "arms",
-        "armor",  "pack", "ring", "shield", "cape",
+        "pack", "ring", "shield", "cape",
     ),
 }
 

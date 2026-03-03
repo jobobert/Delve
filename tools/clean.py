@@ -13,8 +13,8 @@ Usage:
 What gets cleaned
 ─────────────────
   __pycache__     Compiled .pyc bytecode in engine/, frontend/, tools/, root
-  zone_state      data/zone_state/*.json  (live NPC HP / item state snapshots)
-  players         data/players/*.toml     (character saves) — requires --all or
+  zone_state      data/players/<name>/zone_state/*.json  (live NPC HP / item state)
+  players         data/players/<name>/   (entire player folder) — requires --all or
                   --players flag, OR confirmation prompt in interactive mode
 """
 
@@ -31,11 +31,25 @@ def _cache_dirs() -> list[Path]:
     return list(ROOT.rglob("__pycache__"))
 
 def _zone_state_files() -> list[Path]:
-    return [p for p in (ROOT / "data" / "zone_state").glob("*.json")
-            if p.name != ".gitkeep"]
+    """Return all zone state JSON files across all player folders."""
+    players_dir = ROOT / "data" / "players"
+    files: list[Path] = []
+    if players_dir.exists():
+        for folder in players_dir.iterdir():
+            if folder.is_dir():
+                files.extend(folder.glob("zone_state/*.json"))
+    return [f for f in files if f.name != ".gitkeep"]
 
 def _player_files() -> list[Path]:
-    return [p for p in (ROOT / "data" / "players").glob("*.toml")]
+    """Return the player.toml path for every player folder."""
+    players_dir = ROOT / "data" / "players"
+    if not players_dir.exists():
+        return []
+    return sorted(
+        p / "player.toml"
+        for p in players_dir.iterdir()
+        if p.is_dir() and (p / "player.toml").exists()
+    )
 
 
 # ── Clean actions ─────────────────────────────────────────────────────────────
@@ -57,24 +71,28 @@ def clean_zone_state(verbose: bool = True) -> int:
     return len(files)
 
 def clean_players(verbose: bool = True) -> int:
-    files = _player_files()
-    for f in files:
-        f.unlink()
+    """Remove all player folders (player.toml + zone_state/)."""
+    players_dir = ROOT / "data" / "players"
+    folders = sorted(p for p in players_dir.iterdir() if p.is_dir()) \
+              if players_dir.exists() else []
+    for folder in folders:
+        shutil.rmtree(folder, ignore_errors=True)
         if verbose:
-            print(f"  removed  {f.relative_to(ROOT)}")
-    return len(files)
+            print(f"  removed  {folder.relative_to(ROOT)}/")
+    return len(folders)
 
 
 # ── Summary helpers ───────────────────────────────────────────────────────────
 
 def _summarise() -> None:
-    cache  = _cache_dirs()
-    state  = _zone_state_files()
+    cache   = _cache_dirs()
+    state   = _zone_state_files()
     players = _player_files()
     print(f"  __pycache__ dirs : {len(cache)}")
     print(f"  zone state files : {len(state)}")
+    player_names = ", ".join(f.parent.name for f in players) if players else ""
     print(f"  player saves     : {len(players)}"
-          + (f"  ({', '.join(f.stem for f in players)})" if players else ""))
+          + (f"  ({player_names})" if player_names else ""))
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -105,7 +123,7 @@ def main() -> None:
         # Running interactively with no flags — ask about players
         player_files = _player_files()
         if player_files:
-            names = ", ".join(f.stem for f in player_files)
+            names = ", ".join(f.parent.name for f in player_files)
             answer = input(f"Also delete player saves ({names})? [y/N] ").strip().lower()
             if answer == "y":
                 do_players = True

@@ -9,7 +9,8 @@ Usage:
     python tools/wct_server.py            # starts on http://localhost:7373
     python tools/wct_server.py --port 8080
 
-The WCT opens automatically in your default browser.
+The WCT does NOT open a browser automatically. Navigate to the URL shown on startup,
+or use --browser to open it automatically.
 """
 
 from __future__ import annotations
@@ -22,26 +23,205 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+import queue
+import threading
+from socketserver import ThreadingMixIn
 
-ROOT     = Path(__file__).parent.parent
-DATA_DIR = ROOT / "data"
-TOOLS_DIR = Path(__file__).parent
+ROOT         = Path(__file__).parent.parent
+DATA_DIR     = ROOT / "data"
+TOOLS_DIR    = Path(__file__).parent
+FRONTEND_DIR = ROOT / "frontend"
 
 sys.path.insert(0, str(ROOT))
 from engine.toml_io import load as toml_load, dump as toml_dump
+import engine.world_config as wc
+
+
+# ── Threading HTTP server ─────────────────────────────────────────────────────
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    """HTTP server that handles each connection in a dedicated thread."""
+    daemon_threads = True
+
+
+# ── Game session ──────────────────────────────────────────────────────────────
+
+_game_session: "GameSession | None" = None
+_session_lock = threading.Lock()
+
+
+class GameSession:
+    """Runs the Delve engine in a background thread and bridges it to HTTP.
+
+    Input (browser → engine): call ``send(cmd)`` to push a command string.
+    Output (engine → browser): read SSE events from ``output_queue``.
+
+    Event dicts pushed to ``output_queue``:
+      {"type": "msg",         "tag": str, "text": str}   — engine Msg
+      {"type": "prompt",      "text": str}                — blocking input prompt
+      {"type": "player_died"}                             — player HP reached 0
+      {"type": "error",       "text": str}                — engine crash
+      {"type": "quit"}                                    — session ended
+    """
+
+    def __init__(self, world_path: Path, player_name: str) -> None:
+        self.world_path   = world_path
+        self.player_name  = player_name
+        self.input_queue  = queue.Queue()
+        self.output_queue = queue.Queue()
+        self.alive        = True
+        self._player      = None   # set once engine initialises in _run
+        self._processor   = None   # set once engine initialises in _run
+        self._thread = threading.Thread(
+            target=self._run, daemon=True, name=f"game-{player_name}"
+        )
+        self._thread.start()
+
+    # ── Engine thread ─────────────────────────────────────────────────────────
+
+    def _run(self) -> None:
+        try:
+            import engine.world_config as wc
+            from engine.events import EventBus, Event
+            from engine.world import World
+            from engine.player import Player
+            from engine.commands import CommandProcessor
+
+            bus = EventBus()
+            bus.subscribe(Event.OUTPUT,      self._on_output)
+            bus.subscribe(Event.PLAYER_DIED, self._on_player_died)
+
+            wc.init(self.world_path)
+            world = World(self.world_path)
+
+            player = Player.load(self.player_name)
+            if player is None:
+                player = Player.create_new(self.player_name)
+                player.world_id = self.world_path.name
+                player.room_id  = world.start_room
+                player.save()
+
+            world.attach_player(player)
+            self._player    = player
+            self._processor = CommandProcessor(world, player, bus,
+                                               input_fn=self._input_fn)
+            self._processor.do_look()
+            self._emit_room_snapshot(world, player)
+
+            while not self._processor.quit_requested:
+                try:
+                    cmd = self.input_queue.get(timeout=0.5)
+                except queue.Empty:
+                    continue
+                self._processor.process(cmd)
+                self._emit_room_snapshot(world, player)
+
+        except Exception as exc:
+            import traceback
+            self.output_queue.put({
+                "type": "error",
+                "text": f"Engine error: {exc}\n{traceback.format_exc()}",
+            })
+        finally:
+            self.alive = False
+            self.output_queue.put({"type": "quit"})
+
+    def _input_fn(self, prompt: str = "", choices=None) -> str:
+        """Called by the engine when blocking input is needed (dialogue, crafting).
+
+        Queues a ``prompt`` event so the browser can display the prompt, then
+        blocks until the client sends a response via POST /game/command.
+        """
+        if prompt and prompt.strip():
+            self.output_queue.put({"type": "prompt", "text": prompt.strip()})
+        return self.input_queue.get()   # blocks until the client responds
+
+    def _emit_room_snapshot(self, world, player) -> None:
+        """Push a room_snapshot event so the browser can update the sidebar."""
+        try:
+            room = world.prepare_room(player.room_id, player)
+            if not room:
+                return
+            exits = []
+            for direction, v in room.get("exits", {}).items():
+                if isinstance(v, dict):
+                    exits.append({
+                        "dir":    direction,
+                        "target": v.get("to", ""),
+                        "locked": bool(v.get("locked", False)),
+                    })
+                else:
+                    exits.append({"dir": direction, "target": v, "locked": False})
+
+            npcs = []
+            for npc in (room.get("_npcs") or []):
+                if npc.get("hp", 1) <= 0:
+                    continue
+                npcs.append({
+                    "id":      npc.get("id", ""),
+                    "name":    npc.get("name", ""),
+                    "hostile": bool(npc.get("hostile", False)),
+                })
+
+            items = []
+            for item in (room.get("items") or []):
+                items.append({
+                    "id":   item.get("id", ""),
+                    "name": item.get("name", item.get("id", "")),
+                })
+
+            self.output_queue.put({
+                "type":  "room_snapshot",
+                "exits": exits,
+                "npcs":  npcs,
+                "items": items,
+            })
+        except Exception:
+            pass   # non-critical; sidebar just won't refresh
+
+    def _on_output(self, msg) -> None:
+        self.output_queue.put({"type": "msg", "tag": msg.tag, "text": msg.text})
+
+    def _on_player_died(self) -> None:
+        self.output_queue.put({"type": "player_died"})
+        # Mirror what the CLI does: show the room at the respawn point.
+        if self._processor:
+            self._processor.process("look")
+
+    # ── Public interface ──────────────────────────────────────────────────────
+
+    def send(self, cmd: str) -> None:
+        """Push a command string into the engine's input queue."""
+        self.input_queue.put(cmd)
+
+    @property
+    def status(self) -> dict:
+        p = self._player
+        return {
+            "alive":  self.alive,
+            "world":  self.world_path.name,
+            "player": p.name    if p else "",
+            "hp":     p.hp      if p else 0,
+            "max_hp": p.max_hp  if p else 0,
+            "room":   p.room_id if p else "",
+        }
 
 
 # ── TOML helpers ──────────────────────────────────────────────────────────────
 
-def _load_world() -> dict:
-    """Load the entire world into a JSON-serialisable structure."""
+def _load_world(world_id: str) -> dict:
+    """Load a world's zones into a JSON-serialisable structure."""
+    world_base = DATA_DIR / world_id
+    if not world_base.is_dir():
+        return {"error": f"World '{world_id}' not found", "zones": {}}
     world = {
         "zones":  {},   # zone_id → {rooms, items, npcs, quests, dialogues, companions, crafting}
     }
-    skip = {"zone_state", "players"}
-    for zone_dir in sorted(DATA_DIR.iterdir()):
+    skip = {"zone_state", "players", "__pycache__"}
+    for zone_dir in sorted(world_base.iterdir()):
         if not zone_dir.is_dir() or zone_dir.name in skip:
             continue
+        # Skip non-zone dirs (config.py is a file, not a dir)
         zid = zone_dir.name
         zone: dict = {
             "id":         zid,
@@ -201,6 +381,40 @@ class WCTHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length) if length else b""
         return json.loads(raw) if raw else {}
 
+    def _stream_game(self) -> None:
+        """Server-Sent Events stream — pushes engine output to the browser."""
+        session = _game_session
+        self.send_response(200)
+        self.send_header("Content-Type",         "text/event-stream")
+        self.send_header("Cache-Control",        "no-cache")
+        self.send_header("Connection",           "keep-alive")
+        self.send_header("X-Accel-Buffering",    "no")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+
+        if not session:
+            self.wfile.write(b'data: {"type":"no_session"}\n\n')
+            self.wfile.flush()
+            return
+
+        while True:
+            try:
+                event = session.output_queue.get(timeout=15)
+                data  = json.dumps(event, ensure_ascii=False, default=str)
+                self.wfile.write(f"data: {data}\n\n".encode())
+                self.wfile.flush()
+                if event.get("type") == "quit":
+                    break
+            except queue.Empty:
+                # Keepalive comment line (not a data event; browser ignores it)
+                try:
+                    self.wfile.write(b": ping\n\n")
+                    self.wfile.flush()
+                except OSError:
+                    break
+            except OSError:
+                break
+
     # ── GET ───────────────────────────────────────────────────────────────────
 
     def do_GET(self):
@@ -215,7 +429,32 @@ class WCTHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": "wct.html not found"}, 404)
 
         elif path == "/api/world":
-            self._send_json(_load_world())
+            qs = parse_qs(parsed.query)
+            world_id = (qs.get("world_id") or [""])[0].strip()
+            if not world_id:
+                self._send_json({"error": "world_id query param required"}, 400)
+                return
+            self._send_json(_load_world(world_id))
+
+        elif path == "/api/world_config":
+            qs = parse_qs(parsed.query)
+            world_id = (qs.get("world_id") or [""])[0].strip()
+            if not world_id:
+                self._send_json({"error": "world_id query param required"}, 400)
+                return
+            world_path = DATA_DIR / world_id
+            if not (world_path / "config.py").exists():
+                self._send_json({"error": f"World '{world_id}' not found"}, 404)
+                return
+            wc.init(world_path)
+            self._send_json({
+                "world_name":      wc.WORLD_NAME,
+                "skills":          wc.SKILLS,
+                "new_char_hp":     wc.NEW_CHAR_HP,
+                "currency_name":   wc.CURRENCY_NAME,
+                "default_style":   wc.DEFAULT_STYLE,
+                "equipment_slots": list(wc.EQUIPMENT_SLOTS),
+            })
 
         elif path == "/api/validate":
             # Run the validator and return its output
@@ -230,6 +469,51 @@ class WCTHandler(BaseHTTPRequestHandler):
                 "stderr": result.stderr,
                 "ok":     result.returncode == 0,
             })
+
+        # ── Game routes ───────────────────────────────────────────────────────
+
+        elif path == "/game":
+            html_path = FRONTEND_DIR / "game.html"
+            if html_path.exists():
+                self._send_html(html_path.read_text(encoding="utf-8"))
+            else:
+                self._send_json({"error": "game.html not found"}, 404)
+
+        elif path == "/game/worlds":
+            from engine.world_config import list_worlds, peek_world_name
+            worlds = [
+                {"id": w.name, "name": peek_world_name(w)}
+                for w in list_worlds(DATA_DIR)
+            ]
+            self._send_json({"worlds": worlds})
+
+        elif path == "/game/players":
+            players_dir = DATA_DIR / "players"
+            players = []
+            if players_dir.exists():
+                for d in sorted(players_dir.iterdir()):
+                    if d.is_dir() and (d / "player.toml").exists():
+                        try:
+                            pdata = toml_load(d / "player.toml")
+                            players.append({
+                                "name":     pdata.get("name", d.name),
+                                "world_id": pdata.get("world_id", ""),
+                                "hp":       pdata.get("hp", 0),
+                                "max_hp":   pdata.get("max_hp", 0),
+                            })
+                        except Exception:
+                            pass
+            self._send_json({"players": players})
+
+        elif path == "/game/status":
+            gs = _game_session
+            if gs and gs.alive:
+                self._send_json({"session": True, **gs.status})
+            else:
+                self._send_json({"session": False})
+
+        elif path == "/game/stream":
+            self._stream_game()
 
         else:
             self._send_json({"error": f"Not found: {path}"}, 404)
@@ -263,13 +547,13 @@ class WCTHandler(BaseHTTPRequestHandler):
             self._send_json({"ok": ok, "error": err})
 
         elif path == "/api/create_room":
-            zone_id  = body.get("zone_id", "")
+            world_id  = body.get("world_id", "")
+            zone_id   = body.get("zone_id", "")
             room_data = body.get("room", {})
-            if not zone_id or not room_data.get("id"):
-                self._send_json({"ok": False, "error": "zone_id and room.id required"})
+            if not world_id or not zone_id or not room_data.get("id"):
+                self._send_json({"ok": False, "error": "world_id, zone_id and room.id required"})
                 return
-            # Append to zone's rooms.toml (or create it)
-            file_path = DATA_DIR / zone_id / "rooms.toml"
+            file_path = DATA_DIR / world_id / zone_id / "rooms.toml"
             try:
                 existing = toml_load(file_path) if file_path.exists() else {}
             except Exception:
@@ -279,12 +563,13 @@ class WCTHandler(BaseHTTPRequestHandler):
             self._send_json({"ok": ok, "error": err})
 
         elif path == "/api/create_npc":
+            world_id = body.get("world_id", "")
             zone_id  = body.get("zone_id", "")
             npc_data = body.get("npc", {})
-            if not zone_id or not npc_data.get("id"):
-                self._send_json({"ok": False, "error": "zone_id and npc.id required"})
+            if not world_id or not zone_id or not npc_data.get("id"):
+                self._send_json({"ok": False, "error": "world_id, zone_id and npc.id required"})
                 return
-            file_path = DATA_DIR / zone_id / "npcs.toml"
+            file_path = DATA_DIR / world_id / zone_id / "npcs.toml"
             try:
                 existing = toml_load(file_path) if file_path.exists() else {}
             except Exception:
@@ -294,12 +579,13 @@ class WCTHandler(BaseHTTPRequestHandler):
             self._send_json({"ok": ok, "error": err})
 
         elif path == "/api/create_item":
+            world_id  = body.get("world_id", "")
             zone_id   = body.get("zone_id", "")
             item_data = body.get("item", {})
-            if not zone_id or not item_data.get("id"):
-                self._send_json({"ok": False, "error": "zone_id and item.id required"})
+            if not world_id or not zone_id or not item_data.get("id"):
+                self._send_json({"ok": False, "error": "world_id, zone_id and item.id required"})
                 return
-            file_path = DATA_DIR / zone_id / "items.toml"
+            file_path = DATA_DIR / world_id / zone_id / "items.toml"
             try:
                 existing = toml_load(file_path) if file_path.exists() else {}
             except Exception:
@@ -309,20 +595,61 @@ class WCTHandler(BaseHTTPRequestHandler):
             self._send_json({"ok": ok, "error": err})
 
         elif path == "/api/create_zone":
-            zone_id = body.get("zone_id", "").strip().lower().replace(" ", "_")
-            if not zone_id:
-                self._send_json({"ok": False, "error": "zone_id required"})
+            world_id = body.get("world_id", "")
+            zone_id  = body.get("zone_id", "").strip().lower().replace(" ", "_")
+            if not world_id or not zone_id:
+                self._send_json({"ok": False, "error": "world_id and zone_id required"})
                 return
-            zone_dir = DATA_DIR / zone_id
+            zone_dir = DATA_DIR / world_id / zone_id
             if zone_dir.exists():
                 self._send_json({"ok": False, "error": f"Zone '{zone_id}' already exists"})
                 return
             zone_dir.mkdir(parents=True)
-            # Create stub files
             (zone_dir / "rooms.toml").write_text(f"# {zone_id} rooms\n")
             (zone_dir / "items.toml").write_text(f"# {zone_id} items\n")
             (zone_dir / "npcs.toml").write_text(f"# {zone_id} NPCs\n")
             self._send_json({"ok": True, "zone_id": zone_id})
+
+        # ── Game routes ───────────────────────────────────────────────────────
+
+        elif path == "/game/login":
+            world_id    = body.get("world_id", "").strip()
+            player_name = body.get("player_name", "").strip()
+            if not world_id or not player_name:
+                self._send_json({"ok": False, "error": "world_id and player_name required"})
+                return
+            world_path = DATA_DIR / world_id
+            if not (world_path / "config.py").exists():
+                self._send_json({"ok": False, "error": f"World '{world_id}' not found"})
+                return
+            with _session_lock:
+                global _game_session
+                if _game_session and _game_session.alive:
+                    self._send_json({
+                        "ok": False,
+                        "error": "A session is already active — quit it first",
+                    })
+                    return
+                _game_session = GameSession(world_path, player_name)
+            self._send_json({"ok": True})
+
+        elif path == "/game/command":
+            cmd = body.get("cmd", "").strip()
+            if not cmd:
+                self._send_json({"ok": False, "error": "cmd required"})
+                return
+            gs = _game_session
+            if not gs or not gs.alive:
+                self._send_json({"ok": False, "error": "No active session"})
+                return
+            gs.send(cmd)
+            self._send_json({"ok": True})
+
+        elif path == "/game/quit":
+            gs = _game_session
+            if gs and gs.alive:
+                gs.send("quit")
+            self._send_json({"ok": True})
 
         else:
             self._send_json({"error": f"Unknown endpoint: {path}"}, 404)
@@ -333,14 +660,15 @@ class WCTHandler(BaseHTTPRequestHandler):
 def main():
     parser = argparse.ArgumentParser(description="Delve World Creation Tool server")
     parser.add_argument("--port", type=int, default=7373)
-    parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--browser", action="store_true", help="Open the WCT in your browser automatically")
     args = parser.parse_args()
 
-    server = HTTPServer(("localhost", args.port), WCTHandler)
+    server = ThreadingHTTPServer(("localhost", args.port), WCTHandler)
     url    = f"http://localhost:{args.port}"
-    print(f"Delve WCT  →  {url}")
+    print(f"Delve WCT   →  {url}")
+    print(f"Delve Game  →  {url}/game")
     print("Press Ctrl+C to stop.\n")
-    if not args.no_browser:
+    if args.browser:
         webbrowser.open(url)
     try:
         server.serve_forever()

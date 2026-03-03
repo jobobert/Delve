@@ -1,0 +1,3679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World Manual</title>
+<style>
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  max-width: 860px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  line-height: 1.7;
+  color: #222;
+  background: #fafaf8;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Palatino Linotype', Palatino, serif;
+  margin-top: 2rem;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: .25rem;
+}
+h1 { font-size: 2em; }
+h2 { font-size: 1.5em; }
+h3 { font-size: 1.2em; border-bottom: none; }
+code {
+  background: #eee;
+  padding: .1em .35em;
+  border-radius: 3px;
+  font-size: .9em;
+}
+pre {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 1rem 1.2rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+pre code {
+  background: none;
+  padding: 0;
+  font-size: .88em;
+  color: inherit;
+}
+blockquote {
+  border-left: 4px solid #aaa;
+  margin: 1rem 0;
+  padding: .5rem 1rem;
+  color: #555;
+  background: #f3f3f0;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: .45rem .75rem;
+  text-align: left;
+}
+th { background: #eee; font-weight: bold; }
+tr:nth-child(even) { background: #f7f7f5; }
+hr { border: none; border-top: 1px solid #ccc; margin: 2rem 0; }
+img { max-width: 100%; }
+a { color: #3a6fa0; }
+
+</style>
+</head>
+<body>
+<h1 id="delve-world-programming-manual">Delve — World Programming Manual</h1>
+<blockquote>
+<p><strong>Audience:</strong> World authors building zones, rooms, NPCs, items, dialogue, and quests. No Python knowledge required. Everything is TOML data files.</p>
+
+</blockquote>
+<hr>
+<h2 id="contents">Contents</h2>
+<ol>
+  <li><a href="#1-project-overview">Project Overview</a></li>
+  <li><a href="#2-zone-structure--file-layout">Zone Structure &amp; File Layout</a></li>
+  <li><a href="#3-rooms">Rooms</a></li>
+  <li><a href="#4-exits--doors">Exits &amp; Doors</a></li>
+  <li><a href="#5-npcs">NPCs</a></li>
+  <li><a href="#6-items">Items</a></li>
+  <li><a href="#7-the-script-engine">The Script Engine</a></li>
+  <li><a href="#8-the-dialogue-system">The Dialogue System</a></li>
+  <li><a href="#9-the-quest-system">The Quest System</a></li>
+  <li><a href="#10-skills">Skills</a></li>
+  <li><a href="#11-status-effects">Status Effects</a></li>
+  <li><a href="#12-prestige--reputation">Prestige &amp; Reputation</a></li>
+  <li><a href="#13-fighting-styles">Fighting Styles</a></li>
+  <li><a href="#14-crafting--commissions">Crafting &amp; Commissions</a></li>
+  <li><a href="#15-companions">Companions</a></li>
+  <li><a href="#16-validation-tool">Validation Tool</a></li>
+  <li><a href="#appendix-a--room-flags">Appendix A — Room Flags</a></li>
+  <li><a href="#appendix-b--equipment-slots">Appendix B — Equipment Slots</a></li>
+  <li><a href="#appendix-c--all-script-ops-quick-reference">Appendix C — All Script Ops (Quick Reference)</a></li>
+  <li><a href="#appendix-d--player-fields-for-substitution">Appendix D — Player Fields for Substitution</a></li>
+</ol>
+<hr>
+<h2 id="1-project-overview">1. Project Overview</h2>
+<p>Delve is a text MUD engine built around one principle: <strong>everything is data</strong>. You never touch Python to create content. Rooms, NPCs, items, dialogue, and quests are all defined in TOML files under <code>data/</code>. The engine loads them at runtime.</p>
+
+<p><strong>Key facts:</strong></p>
+
+<ul>
+  <li>A <strong>world</strong> is a subfolder of <code>data/</code> that contains a <code>config.py</code> (e.g. <code>data/sixfold_realms/</code>).</li>
+  <li><strong>Zones</strong> are subfolders of the world folder. Each zone streams in/out of memory independently.</li>
+  <li>All NPC and item state is lazy — NPCs spawn on first player visit, not at startup.</li>
+  <li>Zone state (NPC HP, moved items) persists to <code>data/&lt;world<em>id&gt;/zone</em>state/&lt;zone_id&gt;.json</code>.</li>
+  <li>Zero external dependencies. Run with <code>python main.py</code>.</li>
+</ul>
+<p><strong>Test your work</strong> with <code>python tools/validate.py</code> before playing.</p>
+
+<hr>
+<h2 id="2-zone-structure-file-layout">2. Zone Structure &amp; File Layout</h2>
+<p>A <strong>world</strong> is a subfolder of <code>data/</code> identified by a <code>config.py</code> inside it. <strong>Zones</strong> are subfolders of the world. The zone folder's name becomes the zone ID.</p>
+
+<pre><code>data/
+  players/                     # Cross-world player saves (gitignored)
+  &lt;world_id&gt;/                  # World folder — identified by config.py
+    config.py                  # World name, skills, currency, default style, slots
+    zone_state/                # Live zone snapshots — auto-created at runtime (gitignored)
+    &lt;zone_id&gt;/                 # One folder per zone; folder name = zone ID
+      zone.toml                # Optional: display name and description
+      rooms.toml               # [[room]] entries
+      items.toml               # [[item]] entries
+      npcs.toml                # [[npc]] entries
+      dialogues/
+        &lt;npc_id&gt;.toml          # Dialogue tree for one NPC
+      quests/
+        &lt;quest_id&gt;.toml        # Quest definition
+      crafting/
+        &lt;npc_id&gt;.toml          # Commission defs for one NPC
+      companions/
+        &lt;companion_id&gt;.toml</code></pre>
+<h3 id="world-configuration-config-py">World configuration (config.py)</h3>
+<p>Every world folder must contain a <code>config.py</code>. The engine reads it at startup and uses its values to configure world-specific behaviour:</p>
+
+<table>
+<thead>
+<tr>
+  <th>Setting</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>WORLD_NAME</code></td>
+  <td>str</td>
+  <td>Display name shown in menus and the map header</td>
+</tr>
+<tr>
+  <td><code>SKILLS</code></td>
+  <td>dict</td>
+  <td><code>{ "skill_id": "Display Name", … }</code> — skills available in this world</td>
+</tr>
+<tr>
+  <td><code>NEW<em>CHAR</em>HP</code></td>
+  <td>int</td>
+  <td>Starting HP for every new character (default <code>100</code>)</td>
+</tr>
+<tr>
+  <td><code>CURRENCY_NAME</code></td>
+  <td>str</td>
+  <td>Display name for gold (e.g. <code>"credits"</code>, <code>"marks"</code>)</td>
+</tr>
+<tr>
+  <td><code>DEFAULT_STYLE</code></td>
+  <td>str</td>
+  <td>Fighting style ID every new character starts with</td>
+</tr>
+<tr>
+  <td><code>EQUIPMENT_SLOTS</code></td>
+  <td>tuple</td>
+  <td>Ordered list of valid equipment slot names</td>
+</tr>
+</tbody>
+</table>
+<p>The engine falls back to built-in defaults if any field is absent.</p>
+
+<h3 id="zone-toml-optional">zone.toml (optional)</h3>
+<pre><code class="language-toml">id          = &quot;blackfen&quot;
+name        = &quot;Blackfen Mire&quot;
+description = &quot;&quot;&quot;
+A vast, poisonous wetland stretching south of the Millhaven road...
+&quot;&quot;&quot;</code></pre>
+<p>The engine discovers zones by folder presence. The zone.toml is advisory/flavor only.</p>
+
+<h3 id="zone-loading-rules">Zone loading rules</h3>
+<ol>
+  <li>Zones load on demand when the player first enters a room in that zone.</li>
+  <li>Only the current zone and directly adjacent zones remain in RAM.</li>
+  <li>Zones evict from memory when the player moves away.</li>
+  <li><strong>Delete <code>data/&lt;world<em>id&gt;/zone</em>state/</code> files</strong> (or run <code>tools/clean.py --state</code>) to reset</li>
+</ol>
+<p>world state to its authored values.</p>
+
+<hr>
+<h2 id="3-rooms">3. Rooms</h2>
+<p>Rooms are defined in <code>[[room]]</code> blocks inside a zone's <code>rooms.toml</code>.</p>
+
+<h3 id="3-1-all-room-fields">3.1 All Room Fields</h3>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>id</code></td>
+  <td>string</td>
+  <td><strong>Yes</strong></td>
+  <td>—</td>
+  <td>Unique room identifier across the entire world</td>
+</tr>
+<tr>
+  <td><code>name</code></td>
+  <td>string</td>
+  <td><strong>Yes</strong></td>
+  <td>—</td>
+  <td>Short display name (shown as room title)</td>
+</tr>
+<tr>
+  <td><code>description</code></td>
+  <td>string</td>
+  <td><strong>Yes</strong></td>
+  <td>—</td>
+  <td>Room description shown on entry and <code>look</code></td>
+</tr>
+<tr>
+  <td><code>desc_long</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>falls back to <code>description</code></td>
+  <td>Extended description; shown with <code>examine room</code></td>
+</tr>
+<tr>
+  <td><code>coord</code></td>
+  <td>[x, y]</td>
+  <td>Recommended</td>
+  <td>—</td>
+  <td>Map coordinates: east = +x, north = +y. Required for map generation.</td>
+</tr>
+<tr>
+  <td><code>exits</code></td>
+  <td>dict</td>
+  <td>No</td>
+  <td><code>{}</code></td>
+  <td>See <a href="#4-exits--doors">Section 4</a></td>
+</tr>
+<tr>
+  <td><code>items</code></td>
+  <td>list</td>
+  <td>No</td>
+  <td><code>[]</code></td>
+  <td>Item IDs present in the room on zone load</td>
+</tr>
+<tr>
+  <td><code>spawns</code></td>
+  <td>list</td>
+  <td>No</td>
+  <td><code>[]</code></td>
+  <td>NPC IDs (or spawn dicts) to populate on first visit</td>
+</tr>
+<tr>
+  <td><code>flags</code></td>
+  <td>list</td>
+  <td>No</td>
+  <td><code>[]</code></td>
+  <td>Room behaviour flags — see <a href="#appendix-a--room-flags">Appendix A</a></td>
+</tr>
+<tr>
+  <td><code>start</code></td>
+  <td>bool</td>
+  <td>Zone needs one</td>
+  <td><code>false</code></td>
+  <td>Marks the starting room; validator requires exactly one per world</td>
+</tr>
+<tr>
+  <td><code>on_enter</code></td>
+  <td>array</td>
+  <td>No</td>
+  <td><code>[]</code></td>
+  <td>Script ops run each time the player enters the room</td>
+</tr>
+<tr>
+  <td><code>heal_rate</code></td>
+  <td>int</td>
+  <td>No</td>
+  <td><code>5</code></td>
+  <td>HP restored per command (only when <code>healing</code> flag set)</td>
+</tr>
+<tr>
+  <td><code>hazard_damage</code></td>
+  <td>int</td>
+  <td>No</td>
+  <td><code>2</code></td>
+  <td>Passive HP damage per command (only when <code>hazard</code> flag set)</td>
+</tr>
+<tr>
+  <td><code>hazard_message</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td><code>"The environment bites at you."</code></td>
+  <td>Flavour text for each hazard tick</td>
+</tr>
+<tr>
+  <td><code>hazard<em>exempt</em>flag</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td><code>""</code></td>
+  <td>Player flag that bypasses hazard damage (e.g. <code>"has<em>mining</em>gear"</code>)</td>
+</tr>
+<tr>
+  <td><code>admin_comment</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>—</td>
+  <td>Developer notes — ignored by the engine</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-2-minimal-room-example">3.2 Minimal Room Example</h3>
+<pre><code class="language-toml">[[room]]
+id          = &quot;town_square&quot;
+name        = &quot;Millhaven Town Square&quot;
+description = &quot;A cobbled square ringed by timber-framed buildings.&quot;
+coord       = [0, 0]
+flags       = [&quot;town&quot;, &quot;no_combat&quot;]
+exits       = { north = &quot;barracks&quot;, east = &quot;market_row&quot;, south = &quot;south_gate&quot; }
+spawns      = [&quot;town_guard&quot;, &quot;wandering_merchant&quot;]
+items       = [&quot;notice_board&quot;]</code></pre>
+<h3 id="3-3-room-with-scripts-and-flags">3.3 Room with Scripts and Flags</h3>
+<pre><code class="language-toml">[[room]]
+id             = &quot;poison_swamp&quot;
+name           = &quot;Murk Fens&quot;
+description    = &quot;Thick, rotten-smelling water comes up to your shins.&quot;
+coord          = [3, -2]
+flags          = [&quot;hazard&quot;]
+hazard_damage  = 3
+hazard_message = &quot;The caustic water bites at your legs.&quot;
+hazard_exempt_flag = &quot;has_waders&quot;
+exits          = { north = &quot;dry_causeway&quot; }
+on_enter       = [
+  { op = &quot;if_not_flag&quot;, flag = &quot;swamp_warned&quot;, then = [
+    { op = &quot;message&quot;, tag = &quot;system&quot;,
+      text = &quot;A local warning: &#x27;Don&#x27;t linger in the water.&#x27;&quot; },
+    { op = &quot;set_flag&quot;, flag = &quot;swamp_warned&quot; },
+  ] },
+]</code></pre>
+<h3 id="3-4-spawn-definitions">3.4 Spawn Definitions</h3>
+<p>Spawns can be simple NPC ID strings or dicts with options:</p>
+
+<pre><code class="language-toml"># Simple: one instance of each
+spawns = [&quot;goblin_scout&quot;, &quot;goblin_archer&quot;]
+
+# Dict form: options per spawn
+spawns = [
+  { id = &quot;goblin_scout&quot;,  count = 3 },
+  { id = &quot;goblin_chief&quot;,  spawn_chance = 0.5 },   # 50% chance to appear
+]</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Spawn field</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>id</code></td>
+  <td>string</td>
+  <td><strong>required</strong></td>
+  <td>NPC template ID</td>
+</tr>
+<tr>
+  <td><code>count</code></td>
+  <td>int</td>
+  <td><code>1</code></td>
+  <td>Number of copies to spawn</td>
+</tr>
+<tr>
+  <td><code>spawn_chance</code></td>
+  <td>float</td>
+  <td><code>1.0</code></td>
+  <td>Probability 0–1 that this NPC spawns</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4-exits-doors">4. Exits &amp; Doors</h2>
+<p>Exits connect rooms. Each entry in <code>exits</code> maps a direction name to a destination.</p>
+
+<h3 id="4-1-plain-string-exit-simplest">4.1 Plain-string Exit (simplest)</h3>
+<pre><code class="language-toml">exits = { north = &quot;town_square&quot;, east = &quot;market_row&quot; }</code></pre>
+<p>The value is the destination room's <code>id</code>. Any string is a valid direction name (<code>north</code>, <code>south</code>, <code>east</code>, <code>west</code>, <code>up</code>, <code>down</code>, <code>northeast</code>, <code>enter</code>, <code>climb</code>, etc.).</p>
+
+<h3 id="4-2-door-object-dict-exit">4.2 Door Object (dict exit)</h3>
+<p>Use a dict when you need locking, scripts, or a conditional:</p>
+
+<pre><code class="language-toml">exits = {
+  east = {
+    to        = &quot;barracks_storeroom&quot;,
+    locked    = true,
+    lock_tag  = &quot;barracks_lock&quot;,
+    desc      = &quot;a heavy iron door&quot;,
+  }
+}</code></pre>
+<h3 id="4-3-all-exit-dict-fields">4.3 All Exit Dict Fields</h3>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>to</code></td>
+  <td>string</td>
+  <td><strong>required</strong></td>
+  <td>Destination room ID</td>
+</tr>
+<tr>
+  <td><code>desc</code></td>
+  <td>string</td>
+  <td><code>""</code></td>
+  <td>Door description shown when player examines the exit</td>
+</tr>
+<tr>
+  <td><code>locked</code></td>
+  <td>bool</td>
+  <td><code>false</code></td>
+  <td>Whether the door starts locked</td>
+</tr>
+<tr>
+  <td><code>lock_tag</code></td>
+  <td>string</td>
+  <td><code>""</code></td>
+  <td>Tag matched against item <code>key_tag</code> field for unlock</td>
+</tr>
+<tr>
+  <td><code>show_if</code></td>
+  <td>condition dict</td>
+  <td>none</td>
+  <td>Exit is invisible and impassable unless condition passes</td>
+</tr>
+<tr>
+  <td><code>on_look</code></td>
+  <td>script array</td>
+  <td><code>[]</code></td>
+  <td>Script run when player examines this exit (<code>look north</code>)</td>
+</tr>
+<tr>
+  <td><code>on_exit</code></td>
+  <td>script array</td>
+  <td><code>[]</code></td>
+  <td>Script run in the <strong>source</strong> room before the player leaves</td>
+</tr>
+<tr>
+  <td><code>on_enter</code></td>
+  <td>script array</td>
+  <td><code>[]</code></td>
+  <td>Script run in the <strong>destination</strong> room after the player arrives</td>
+</tr>
+<tr>
+  <td><code>on_unlock</code></td>
+  <td>script array</td>
+  <td><code>[]</code></td>
+  <td>Script run when a player successfully unlocks this door</td>
+</tr>
+<tr>
+  <td><code>on_lock</code></td>
+  <td>script array</td>
+  <td><code>[]</code></td>
+  <td>Script run when a player successfully locks this door</td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-4-full-door-example">4.4 Full Door Example</h3>
+<pre><code class="language-toml">exits = {
+  north = {
+    to        = &quot;great_hall&quot;,
+    locked    = true,
+    lock_tag  = &quot;hall_key&quot;,
+    desc      = &quot;a towering oak door banded with iron&quot;,
+    on_unlock = [{ op = &quot;say&quot;, text = &quot;The lock clicks with a resonant boom.&quot; }],
+    on_lock   = [{ op = &quot;say&quot;, text = &quot;The bolt slides home.&quot; }],
+    on_exit   = [{ op = &quot;message&quot;, tag = &quot;system&quot;, text = &quot;You step through the archway.&quot; }],
+    on_enter  = [{ op = &quot;set_flag&quot;, flag = &quot;entered_great_hall&quot; }],
+    on_look   = [{ op = &quot;say&quot;, text = &quot;Through the gap you glimpse a vast torchlit hall.&quot; }],
+  }
+}</code></pre>
+<h3 id="4-5-conditional-exits-show-if">4.5 Conditional Exits (<code>show_if</code>)</h3>
+<p>A conditional exit is <strong>completely invisible</strong> to the player unless the condition passes. The exit does not appear in the "Exits:" list, cannot be traversed, and returns "There is nothing to the…" when examined.</p>
+
+<pre><code class="language-toml">exits = {
+  east = {
+    to      = &quot;hidden_grotto&quot;,
+    show_if = { op = &quot;min_skill&quot;, skill = &quot;perception&quot;, value = 70 },
+  }
+}</code></pre>
+<p><strong>Supported <code>show_if</code> ops:</strong></p>
+
+<table>
+<thead>
+<tr>
+  <th>op</th>
+  <th>Required fields</th>
+  <th>Passes when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>has_flag</code></td>
+  <td><code>flag</code></td>
+  <td>player has the named flag</td>
+</tr>
+<tr>
+  <td><code>not_flag</code></td>
+  <td><code>flag</code></td>
+  <td>player does NOT have the named flag</td>
+</tr>
+<tr>
+  <td><code>min_level</code></td>
+  <td><code>level</code></td>
+  <td>player.level ≥ level</td>
+</tr>
+<tr>
+  <td><code>has_item</code></td>
+  <td><code>item_id</code></td>
+  <td>item is in inventory or equipped</td>
+</tr>
+<tr>
+  <td><code>min_skill</code></td>
+  <td><code>skill</code>, <code>value</code></td>
+  <td>player.skills[skill] ≥ value</td>
+</tr>
+</tbody>
+</table>
+<p>Unknown <code>op</code> values default to <strong>true</strong> (visible), so old world data is forward-compatible.</p>
+
+<p><strong>Examples:</strong></p>
+
+<pre><code class="language-toml"># Revealed when a quest flag is set
+show_if = { op = &quot;has_flag&quot;, flag = &quot;spoke_to_watchman&quot; }
+
+# Hidden from low-level players
+show_if = { op = &quot;min_level&quot;, level = 10 }
+
+# Requires item in inventory or equipped
+show_if = { op = &quot;has_item&quot;, item_id = &quot;royal_seal&quot; }
+
+# High-perception secret passage
+show_if = { op = &quot;min_skill&quot;, skill = &quot;perception&quot;, value = 60 }</code></pre>
+<hr>
+<h2 id="5-npcs">5. NPCs</h2>
+<p>NPCs are defined in <code>[[npc]]</code> blocks in a zone's <code>npcs.toml</code>.</p>
+
+<h3 id="5-1-all-npc-fields">5.1 All NPC Fields</h3>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Randomizable</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>id</code></td>
+  <td>string</td>
+  <td><strong>Yes</strong></td>
+  <td>No</td>
+  <td>Unique NPC identifier</td>
+</tr>
+<tr>
+  <td><code>name</code></td>
+  <td>string / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>Display name</td>
+</tr>
+<tr>
+  <td><code>desc_short</code></td>
+  <td>string / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>One-line description (shown in room)</td>
+</tr>
+<tr>
+  <td><code>desc_long</code></td>
+  <td>string / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>Full description (shown with <code>examine &lt;npc&gt;</code>)</td>
+</tr>
+<tr>
+  <td><code>tags</code></td>
+  <td>list</td>
+  <td><strong>Yes</strong></td>
+  <td>No</td>
+  <td>Gameplay tags; see <a href="#54-npc-tags">Section 5.4</a></td>
+</tr>
+<tr>
+  <td><code>style</code></td>
+  <td>string / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>Fighting style ID</td>
+</tr>
+<tr>
+  <td><code>style_prof</code></td>
+  <td>float / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>Style proficiency 0–100</td>
+</tr>
+<tr>
+  <td><code>hp</code></td>
+  <td>int / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>Starting HP (syncs to <code>max_hp</code> at spawn if omitted)</td>
+</tr>
+<tr>
+  <td><code>max_hp</code></td>
+  <td>int / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>Maximum HP</td>
+</tr>
+<tr>
+  <td><code>attack</code></td>
+  <td>int / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>Base attack stat</td>
+</tr>
+<tr>
+  <td><code>defense</code></td>
+  <td>int / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>Base defense stat</td>
+</tr>
+<tr>
+  <td><code>xp_reward</code></td>
+  <td>int / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>XP given to player on NPC death</td>
+</tr>
+<tr>
+  <td><code>gold_reward</code></td>
+  <td>int / list</td>
+  <td><strong>Yes</strong></td>
+  <td><strong>Yes</strong></td>
+  <td>Gold given to player on NPC death</td>
+</tr>
+<tr>
+  <td><code>hostile</code></td>
+  <td>bool</td>
+  <td><strong>Yes</strong></td>
+  <td>No</td>
+  <td>If <code>true</code>, NPC attacks player on sight</td>
+</tr>
+<tr>
+  <td><code>dialogue</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Fallback line if no dialogue tree file exists</td>
+</tr>
+<tr>
+  <td><code>shop</code></td>
+  <td>list</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Shop inventory; see <a href="#55-shops">Section 5.5</a></td>
+</tr>
+<tr>
+  <td><code>rest_cost</code></td>
+  <td>int</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Gold cost for player to rest here (innkeeper behaviour)</td>
+</tr>
+<tr>
+  <td><code>give_accepts</code></td>
+  <td>list</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Items the NPC accepts; see <a href="#56-item-acceptance-give_accepts">Section 5.6</a></td>
+</tr>
+<tr>
+  <td><code>kill_script</code></td>
+  <td>array</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Script ops run when NPC HP reaches 0</td>
+</tr>
+<tr>
+  <td><code>round_script</code></td>
+  <td>array</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Script ops run after each combat round</td>
+</tr>
+<tr>
+  <td><code>admin_comment</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Developer notes; ignored by engine</td>
+</tr>
+</tbody>
+</table>
+<h3 id="5-2-random-spawn-variation">5.2 Random Spawn Variation</h3>
+<p>Any <strong>scalar</strong> field in the Randomizable column can be written as a TOML array. Each NPC <strong>instance</strong> rolls randomly from the list at spawn time. This creates variety within a species without duplicating templates.</p>
+
+<pre><code class="language-toml">[[npc]]
+id         = &quot;river_wolf&quot;
+name       = [&quot;Lean River Wolf&quot;, &quot;Grey River Wolf&quot;, &quot;Black River Wolf&quot;]
+max_hp     = [18, 22, 26]
+attack     = [6, 7, 8]
+xp_reward  = [30, 35, 40]
+gold_reward = 0          # scalar — all instances get 0 gold</code></pre>
+<blockquote>
+<p><strong>Rule:</strong> <code>hp</code> should usually match <code>max<em>hp</code>. List them both, or omit <code>hp</code> and the engine will sync it to the rolled <code>max</em>hp</code> at spawn.</p>
+
+</blockquote>
+<blockquote>
+<p><strong>Not randomizable:</strong> <code>tags</code>, <code>shop</code>, <code>give<em>accepts</code>, <code>kill</em>script</code>, <code>round_script</code>.</p>
+
+</blockquote>
+<h3 id="5-3-minimal-and-full-npc-examples">5.3 Minimal and Full NPC Examples</h3>
+<p><strong>Minimal hostile NPC:</strong></p>
+
+<pre><code class="language-toml">[[npc]]
+id          = &quot;goblin_scout&quot;
+name        = &quot;Goblin Scout&quot;
+desc_short  = &quot;A wiry goblin in a patched leather vest.&quot;
+desc_long   = &quot;Its yellow eyes dart between you and the nearest exit.&quot;
+tags        = [&quot;humanoid&quot;, &quot;small&quot;, &quot;fast&quot;]
+style       = &quot;brawling&quot;
+style_prof  = 20
+hp          = 14
+max_hp      = 14
+attack      = 6
+defense     = 3
+xp_reward   = 25
+gold_reward = 5
+hostile     = true</code></pre>
+<p><strong>NPC with death script, dialogue, and shop:</strong></p>
+
+<pre><code class="language-toml">[[npc]]
+id          = &quot;bandit_chief&quot;
+name        = &quot;Bandit Chief Gorrath&quot;
+desc_short  = &quot;A scarred human with a chip on his shoulder and a blade on his hip.&quot;
+desc_long   = &quot;Gorrath has been running this crew for three years, which is two more than...&quot;
+tags        = [&quot;humanoid&quot;, &quot;armored&quot;, &quot;slow&quot;]
+style       = &quot;swordplay&quot;
+style_prof  = 55
+hp          = 90
+max_hp      = 90
+attack      = 16
+defense     = 10
+xp_reward   = 200
+gold_reward = 40
+hostile     = true
+kill_script = [
+  { op = &quot;set_flag&quot;,       flag = &quot;bandit_chief_slain&quot; },
+  { op = &quot;advance_quest&quot;,  quest_id = &quot;bandit_problem&quot;, step = 3 },
+  { op = &quot;message&quot;,        tag = &quot;combat_kill&quot;,
+    text = &quot;Gorrath crumples with a look of surprise.&quot; },
+  { op = &quot;spawn_item&quot;,     item_id = &quot;bandit_chiefs_key&quot; },
+]</code></pre>
+<p><strong>NPC with <code>round_script</code> (surrenders mid-fight):</strong></p>
+
+<pre><code class="language-toml">[[npc]]
+id           = &quot;smuggler_boss&quot;
+...
+round_script = [
+  { op = &quot;if_combat_round&quot;, min = 5, then = [
+    { op = &quot;if_npc_hp&quot;, max = 20, then = [
+      { op = &quot;say&quot;, text = &quot;Alright! Alright — I yield! The vault code is &#x27;MIDNIGHT&#x27;!&quot; },
+      { op = &quot;set_flag&quot;, flag = &quot;vault_code_known&quot; },
+      { op = &quot;end_combat&quot; },
+    ] },
+  ] },
+]</code></pre>
+<h3 id="5-4-npc-tags">5.4 NPC Tags</h3>
+<p>Tags are plain strings. The engine uses them for:</p>
+
+<table>
+<thead>
+<tr>
+  <th>Tag</th>
+  <th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>humanoid</code></td>
+  <td>Style proficiency gains apply in full</td>
+</tr>
+<tr>
+  <td><code>beast</code></td>
+  <td>Some dialogue conditions can filter by type</td>
+</tr>
+<tr>
+  <td><code>armored</code></td>
+  <td>Advisory (style affinity checks)</td>
+</tr>
+<tr>
+  <td><code>large</code></td>
+  <td>Blocked by <code>no<em>large</em>companion</code> room flag</td>
+</tr>
+<tr>
+  <td><code>slow</code></td>
+  <td>Advisory</td>
+</tr>
+<tr>
+  <td><code>fast</code></td>
+  <td>Advisory</td>
+</tr>
+<tr>
+  <td><code>prestige_neutral</code></td>
+  <td>Prestige score does not affect NPC attitude</td>
+</tr>
+<tr>
+  <td><code>criminal</code></td>
+  <td>Goes hostile at prestige ≥ +100 (high-honour players)</td>
+</tr>
+<tr>
+  <td><code>guard</code></td>
+  <td>Goes hostile at prestige ≤ −50</td>
+</tr>
+<tr>
+  <td><code>coward</code></td>
+  <td>Flees first (extra free attack) at prestige ≥ +60</td>
+</tr>
+<tr>
+  <td><code>spar</code></td>
+  <td>NPC cannot be killed; HP floors at 1</td>
+</tr>
+</tbody>
+</table>
+<p>Custom tags (any string) work too — style affinity configs reference custom tags.</p>
+
+<h3 id="5-5-shops">5.5 Shops</h3>
+<p>An NPC with a <code>shop</code> field becomes a merchant. Players buy with <code>buy &lt;item&gt;</code>.</p>
+
+<pre><code class="language-toml">shop = [
+  { item_id = &quot;iron_sword&quot;,     price = 30 },
+  { item_id = &quot;health_potion&quot;,  price = 12 },
+  { item_id = &quot;torch&quot;,          price = 2  },
+]</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>item_id</code></td>
+  <td>string</td>
+  <td>Item template ID to sell</td>
+</tr>
+<tr>
+  <td><code>price</code></td>
+  <td>int</td>
+  <td>Price in gold</td>
+</tr>
+</tbody>
+</table>
+<h3 id="5-6-item-acceptance-give-accepts">5.6 Item Acceptance (<code>give_accepts</code>)</h3>
+<p>NPCs can accept items from the player (quest hand-ins, material deposits):</p>
+
+<pre><code class="language-toml">give_accepts = [
+  {
+    item_id = &quot;dragon_fang&quot;,
+    message = &quot;The elder examines the fang, eyes wide. &#x27;This... this is real.&#x27;&quot;,
+    script  = [
+      { op = &quot;set_flag&quot;,       flag = &quot;dragon_proof_delivered&quot; },
+      { op = &quot;advance_quest&quot;,  quest_id = &quot;the_dragon_hunt&quot;, step = 4 },
+      { op = &quot;give_gold&quot;,      amount = 200 },
+      { op = &quot;give_xp&quot;,        amount = 500 },
+      { op = &quot;prestige&quot;,       amount = 5, reason = &quot;slew the Ashwood Drake&quot; },
+    ],
+  },
+]</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>item_id</code></td>
+  <td>string</td>
+  <td>Which item the NPC accepts</td>
+</tr>
+<tr>
+  <td><code>message</code></td>
+  <td>string</td>
+  <td>Narrative text shown on hand-in</td>
+</tr>
+<tr>
+  <td><code>script</code></td>
+  <td>array</td>
+  <td>Script ops (rewards, quest advances, flags)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="6-items">6. Items</h2>
+<p>Items are defined in <code>[[item]]</code> blocks in a zone's <code>items.toml</code>.</p>
+
+<h3 id="6-1-all-item-fields">6.1 All Item Fields</h3>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>id</code></td>
+  <td>string</td>
+  <td><strong>Yes</strong></td>
+  <td>Unique item identifier</td>
+</tr>
+<tr>
+  <td><code>name</code></td>
+  <td>string</td>
+  <td><strong>Yes</strong></td>
+  <td>Display name</td>
+</tr>
+<tr>
+  <td><code>desc_short</code></td>
+  <td>string</td>
+  <td>Recommended</td>
+  <td>One-line description</td>
+</tr>
+<tr>
+  <td><code>desc_long</code></td>
+  <td>string</td>
+  <td>Recommended</td>
+  <td>Full description (shown with <code>examine &lt;item&gt;</code>)</td>
+</tr>
+<tr>
+  <td><code>slot</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>Equipment slot; <code>""</code> = non-equippable — see <a href="#appendix-b--equipment-slots">Appendix B</a></td>
+</tr>
+<tr>
+  <td><code>weight</code></td>
+  <td>int</td>
+  <td>No</td>
+  <td>Carry weight in stones (0 = weightless)</td>
+</tr>
+<tr>
+  <td><code>tags</code></td>
+  <td>list</td>
+  <td>No</td>
+  <td>Item tags checked by <code>require_tag</code> script op and style affinity</td>
+</tr>
+<tr>
+  <td><code>weapon_tags</code></td>
+  <td>list</td>
+  <td>No</td>
+  <td>Tags for fighting-style weapon affinity matching</td>
+</tr>
+<tr>
+  <td><code>armor_tags</code></td>
+  <td>list</td>
+  <td>No</td>
+  <td>Tags for fighting-style armor affinity matching</td>
+</tr>
+<tr>
+  <td><code>key_tag</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>Unlocks any door with a matching <code>lock_tag</code></td>
+</tr>
+<tr>
+  <td><code>respawn</code></td>
+  <td>bool</td>
+  <td>No</td>
+  <td><code>false</code> = removed after pickup, tracked in player's looted set</td>
+</tr>
+<tr>
+  <td><code>no_drop</code></td>
+  <td>bool</td>
+  <td>No</td>
+  <td><code>true</code> = cannot be dropped; stays with player on death</td>
+</tr>
+<tr>
+  <td><code>scenery</code></td>
+  <td>bool</td>
+  <td>No</td>
+  <td><code>true</code> = visible but cannot be picked up</td>
+</tr>
+<tr>
+  <td><code>gold_value</code></td>
+  <td>int</td>
+  <td>No</td>
+  <td>Selling price to NPC merchants</td>
+</tr>
+<tr>
+  <td><code>effects</code></td>
+  <td>list</td>
+  <td>No</td>
+  <td>Passive or triggered effects — see <a href="#62-item-effects">Section 6.2</a></td>
+</tr>
+<tr>
+  <td><code>on_get</code></td>
+  <td>array</td>
+  <td>No</td>
+  <td>Script run when player picks up this item</td>
+</tr>
+<tr>
+  <td><code>on_drop</code></td>
+  <td>array</td>
+  <td>No</td>
+  <td>Script run when player drops this item</td>
+</tr>
+</tbody>
+</table>
+<h3 id="6-2-item-effects">6.2 Item Effects</h3>
+<p>Effects are objects in the <code>effects</code> array. Each has a <code>type</code> field.</p>
+
+<h4 id="stat-bonus-passive-equipment-bonus"><code>stat_bonus</code> — Passive equipment bonus</h4>
+<pre><code class="language-toml">{ type = &quot;stat_bonus&quot;, stat = &quot;attack&quot;,          amount = 8  }
+{ type = &quot;stat_bonus&quot;, stat = &quot;defense&quot;,         amount = 4  }
+{ type = &quot;stat_bonus&quot;, stat = &quot;max_hp&quot;,          amount = 20 }
+{ type = &quot;stat_bonus&quot;, stat = &quot;carry_capacity&quot;,  amount = 5  }</code></pre>
+<p>Active while the item is equipped. Amount can be negative (penalty items).</p>
+
+<h4 id="on-equip-flavour-text-on-equip"><code>on_equip</code> — Flavour text on equip</h4>
+<pre><code class="language-toml">{ type = &quot;on_equip&quot;, message = &quot;The spikes bite pleasantly into your palm.&quot; }</code></pre>
+<h4 id="on-hit-combat-proc-on-successful-hit"><code>on_hit</code> — Combat proc on successful hit</h4>
+<pre><code class="language-toml">{ type = &quot;on_hit&quot;, ability = &quot;stun&quot;,  chance = 0.12, magnitude = 1 }
+{ type = &quot;on_hit&quot;, ability = &quot;bleed&quot;, chance = 0.20, magnitude = 3 }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Values</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>ability</code></td>
+  <td><code>"stun"</code>, <code>"bleed"</code></td>
+  <td>Which proc fires</td>
+</tr>
+<tr>
+  <td><code>chance</code></td>
+  <td>0.0 – 1.0</td>
+  <td>Probability per hit</td>
+</tr>
+<tr>
+  <td><code>magnitude</code></td>
+  <td>int</td>
+  <td>Stun: turns; Bleed: damage per tick</td>
+</tr>
+</tbody>
+</table>
+<h4 id="on-use-consumable-healing"><code>on_use</code> — Consumable healing</h4>
+<pre><code class="language-toml">{ type = &quot;on_use&quot;, heal = 30 }
+{ type = &quot;on_use&quot;, heal = 30, message = &quot;The tonic floods your limbs with warmth.&quot; }</code></pre>
+<h3 id="6-3-item-examples">6.3 Item Examples</h3>
+<p><strong>Weapon:</strong></p>
+
+<pre><code class="language-toml">[[item]]
+id          = &quot;spiked_knuckles&quot;
+name        = &quot;Spiked Knuckles&quot;
+desc_short  = &quot;Iron knuckles with short brutal spikes.&quot;
+desc_long   = &quot;Four iron rings connected by a crossbar...&quot;
+slot        = &quot;weapon&quot;
+weight      = 1
+weapon_tags = [&quot;fist&quot;, &quot;brawling&quot;]
+respawn     = false
+effects     = [
+  { type = &quot;stat_bonus&quot;, stat = &quot;attack&quot;, amount = 7 },
+  { type = &quot;on_hit&quot;,     ability = &quot;stun&quot;, chance = 0.12, magnitude = 1 },
+  { type = &quot;on_equip&quot;,   message = &quot;The spikes bite into your palm. Good.&quot; },
+]</code></pre>
+<p><strong>Consumable:</strong></p>
+
+<pre><code class="language-toml">[[item]]
+id          = &quot;health_potion&quot;
+name        = &quot;Health Potion&quot;
+desc_short  = &quot;A thumb-sized vial of glowing red liquid.&quot;
+slot        = &quot;&quot;
+weight      = 0
+respawn     = true
+effects     = [{ type = &quot;on_use&quot;, heal = 30, message = &quot;Warmth floods through you.&quot; }]</code></pre>
+<p><strong>Key:</strong></p>
+
+<pre><code class="language-toml">[[item]]
+id          = &quot;barracks_key&quot;
+name        = &quot;Barracks Key&quot;
+desc_short  = &quot;A heavy iron key stamped with the town crest.&quot;
+slot        = &quot;&quot;
+weight      = 0
+key_tag     = &quot;barracks_lock&quot;
+respawn     = false</code></pre>
+<p><strong>Scenery / Mining node:</strong></p>
+
+<pre><code class="language-toml">[[item]]
+id       = &quot;iron_vein&quot;
+name     = &quot;Iron Ore Vein&quot;
+desc_short = &quot;A seam of dark iron ore running through the wall.&quot;
+slot     = &quot;&quot;
+scenery  = true
+respawn  = true
+on_get   = [
+  { op = &quot;require_tag&quot;, tag = &quot;pickaxe&quot;,
+    fail_message = &quot;You need a pickaxe to mine this.&quot; },
+  { op = &quot;skill_check&quot;, skill = &quot;mining&quot;, dc = 8,
+    on_pass = [
+      { op = &quot;give_item&quot;,  item_id = &quot;iron_ore&quot; },
+      { op = &quot;skill_grow&quot;, skill = &quot;mining&quot;, amount = 2 },
+    ],
+    on_fail = [
+      { op = &quot;give_item&quot;,  item_id = &quot;iron_ore&quot; },
+      { op = &quot;message&quot;, tag = &quot;system&quot;, text = &quot;You chip out a rough piece.&quot; },
+    ],
+  },
+]</code></pre>
+<hr>
+<h2 id="7-the-script-engine">7. The Script Engine</h2>
+<h3 id="7-1-what-scripts-are">7.1 What Scripts Are</h3>
+<p>A <strong>script</strong> is a TOML array of operation dicts. Scripts are run synchronously, top-to-bottom. Branching is done with conditional ops that have <code>then</code>/<code>else</code> lists. Scripts can be nested to any depth.</p>
+
+<pre><code class="language-toml">kill_script = [
+  { op = &quot;set_flag&quot;,  flag = &quot;wolf_slain&quot; },
+  { op = &quot;give_item&quot;, item_id = &quot;wolf_pelt&quot; },
+]</code></pre>
+<h3 id="7-2-where-scripts-appear">7.2 Where Scripts Appear</h3>
+<table>
+<thead>
+<tr>
+  <th>Location</th>
+  <th>Field</th>
+  <th>Fired when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>NPC</td>
+  <td><code>kill_script</code></td>
+  <td>NPC HP reaches 0</td>
+</tr>
+<tr>
+  <td>NPC</td>
+  <td><code>give_accepts[].script</code></td>
+  <td>Player gives the item to the NPC</td>
+</tr>
+<tr>
+  <td>NPC</td>
+  <td><code>round_script</code></td>
+  <td>After each combat round (both alive)</td>
+</tr>
+<tr>
+  <td>Item</td>
+  <td><code>on_get</code></td>
+  <td>Player picks up item</td>
+</tr>
+<tr>
+  <td>Item</td>
+  <td><code>on_drop</code></td>
+  <td>Player drops item</td>
+</tr>
+<tr>
+  <td>Room</td>
+  <td><code>on_enter</code></td>
+  <td>Player enters the room</td>
+</tr>
+<tr>
+  <td>Exit dict</td>
+  <td><code>on_exit</code></td>
+  <td>Player leaves via this exit (source room)</td>
+</tr>
+<tr>
+  <td>Exit dict</td>
+  <td><code>on_enter</code></td>
+  <td>Player arrives via this exit (destination room)</td>
+</tr>
+<tr>
+  <td>Exit dict</td>
+  <td><code>on_look</code></td>
+  <td>Player examines the exit direction</td>
+</tr>
+<tr>
+  <td>Exit dict</td>
+  <td><code>on_unlock</code></td>
+  <td>Player unlocks this door</td>
+</tr>
+<tr>
+  <td>Exit dict</td>
+  <td><code>on_lock</code></td>
+  <td>Player locks this door</td>
+</tr>
+<tr>
+  <td>Dialogue node</td>
+  <td><code>script</code></td>
+  <td>Player enters this dialogue node</td>
+</tr>
+<tr>
+  <td>Dialogue response</td>
+  <td><code>script</code></td>
+  <td>Player selects this response</td>
+</tr>
+</tbody>
+</table>
+<h3 id="7-3-gamecontext">7.3 GameContext</h3>
+<p>Every script runs with access to the current state:</p>
+
+<ul>
+  <li><code>player</code> — mutable player state (HP, gold, inventory, flags, skills…)</li>
+  <li><code>world</code> — rooms, item templates, NPC templates</li>
+  <li><code>quests</code> — quest tracker (start/advance/complete)</li>
+  <li><code>round</code> — current combat round number (0 outside combat)</li>
+  <li><code>npc</code> — the NPC being fought (set by <code>round_script</code> context)</li>
+</ul>
+<h3 id="7-4-script-abort">7.4 Script Abort</h3>
+<p><code>{ op = "fail" }</code> aborts the entire script run immediately with no error. <code>require_tag</code> also aborts if the player lacks the required item tag. Both are caught cleanly — no exception reaches the player.</p>
+
+<h3 id="7-5-all-script-operations-45-ops">7.5 All Script Operations (45 ops)</h3>
+<hr>
+<h4 id="output">OUTPUT</h4>
+<p><strong><code>say</code></strong> — Emit dialogue-tagged text (shown in warm parchment colour)</p>
+
+<pre><code class="language-toml">{ op = &quot;say&quot;, text = &quot;Greetings, traveller. The road ahead is not safe.&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>text</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>Text to display</td>
+</tr>
+</tbody>
+</table>
+<p><em>Usable in:</em> all script contexts. <em>Example from world:</em> NPC surrender message in <code>round_script</code>.</p>
+
+<hr>
+<p><strong><code>message</code></strong> — Emit text with any message tag</p>
+
+<pre><code class="language-toml">{ op = &quot;message&quot;, text = &quot;The cave wall groans ominously.&quot;, tag = &quot;system&quot; }
+{ op = &quot;message&quot;, text = &quot;You gain 100 XP!&quot;, tag = &quot;reward_xp&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>text</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>—</td>
+  <td>Text to display</td>
+</tr>
+<tr>
+  <td><code>tag</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td><code>"system"</code></td>
+  <td>Any Tag name: <code>system</code>, <code>combat<em>hit</code>, <code>reward</em>xp</code>, <code>reward_gold</code>, <code>item</code>, <code>error</code>, <code>dialogue</code>, <code>quest</code>, <code>door</code>, <code>shop</code>, <code>stats</code>, <code>journal</code>, etc.</td>
+</tr>
+</tbody>
+</table>
+<p><em>Usable in:</em> all script contexts.</p>
+
+<hr>
+<h4 id="player-flags">PLAYER FLAGS</h4>
+<p><strong><code>set_flag</code></strong> — Add an arbitrary flag to the player's flag set</p>
+
+<pre><code class="language-toml">{ op = &quot;set_flag&quot;, flag = &quot;met_the_elder&quot; }</code></pre>
+<p>Flags are persistent strings that track story state. Use them to gate dialogue, control spawn sequences, and enable conditional exits.</p>
+
+<p><em>From world:</em> <code>{ op = "set<em>flag", flag = "ashwood</em>drake<em>slain" }</code> in <code>kill</em>script</code>.</p>
+
+<hr>
+<p><strong><code>clear_flag</code></strong> — Remove a flag from the player's flag set</p>
+
+<pre><code class="language-toml">{ op = &quot;clear_flag&quot;, flag = &quot;is_wanted&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>flag</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>Flag name to remove (no-ops if not set)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="gold-xp-hp">GOLD / XP / HP</h4>
+<p><strong><code>give_gold</code></strong> — Add gold to the player; displays a reward message</p>
+
+<pre><code class="language-toml">{ op = &quot;give_gold&quot;, amount = 80 }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>amount</code></td>
+  <td>int</td>
+  <td>Yes</td>
+  <td>Gold to give (non-zero triggers reward display)</td>
+</tr>
+</tbody>
+</table>
+<p><em>From world:</em> <code>{ op = "give<em>gold", amount = 80 }</code> in <code>give</em>accepts</code> script.</p>
+
+<hr>
+<p><strong><code>take_gold</code></strong> — Deduct gold; fails with an error if balance is insufficient</p>
+
+<pre><code class="language-toml">{ op = &quot;take_gold&quot;, amount = 50 }
+{ op = &quot;take_gold&quot;, amount = 50, silent = true }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>amount</code></td>
+  <td>int</td>
+  <td>—</td>
+  <td>Gold to deduct</td>
+</tr>
+<tr>
+  <td><code>silent</code></td>
+  <td>bool</td>
+  <td><code>false</code></td>
+  <td>Suppress the "You pay…" message</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><strong><code>give_xp</code></strong> — Award XP; triggers level-up message if threshold is crossed</p>
+
+<pre><code class="language-toml">{ op = &quot;give_xp&quot;, amount = 200 }
+{ op = &quot;give_xp&quot;, amount = 200, silent = true }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>amount</code></td>
+  <td>int</td>
+  <td>—</td>
+  <td>XP to award</td>
+</tr>
+<tr>
+  <td><code>silent</code></td>
+  <td>bool</td>
+  <td><code>false</code></td>
+  <td>Suppress XP gain message (level-up always shows)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><strong><code>heal</code></strong> — Restore HP; capped at <code>max_hp</code></p>
+
+<pre><code class="language-toml">{ op = &quot;heal&quot;, amount = 30 }</code></pre>
+<hr>
+<p><strong><code>set<em>hp</code></strong> — Set HP to an exact value (clamped 0 – max</em>hp)</p>
+
+<pre><code class="language-toml">{ op = &quot;set_hp&quot;, amount = 1 }   # leave at death&#x27;s door</code></pre>
+<hr>
+<p><strong><code>damage</code></strong> — Deal direct damage, bypassing combat calculations</p>
+
+<pre><code class="language-toml">{ op = &quot;damage&quot;, amount = 10 }
+{ op = &quot;damage&quot;, amount = 10, message = &quot;The trap springs!&quot;, silent = true }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>amount</code></td>
+  <td>int</td>
+  <td>—</td>
+  <td>HP to remove</td>
+</tr>
+<tr>
+  <td><code>message</code></td>
+  <td>string</td>
+  <td><code>""</code></td>
+  <td>Optional flavour text before the HP-loss line</td>
+</tr>
+<tr>
+  <td><code>silent</code></td>
+  <td>bool</td>
+  <td><code>false</code></td>
+  <td>Suppress the HP-loss line</td>
+</tr>
+</tbody>
+</table>
+<p><em>From world:</em> Triggered by hazard traps in <code>on_enter</code> scripts.</p>
+
+<hr>
+<h4 id="inventory">INVENTORY</h4>
+<p><strong><code>give_item</code></strong> — Deep-copy an item template into the player's inventory</p>
+
+<pre><code class="language-toml">{ op = &quot;give_item&quot;, item_id = &quot;vault_key&quot; }</code></pre>
+<p>Displays "You receive: [item name]" and displays the item in the ITEM colour.</p>
+
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>item_id</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>Item template ID (from items.toml)</td>
+</tr>
+</tbody>
+</table>
+<p><em>From world:</em> <code>{ op = "give<em>item", item</em>id = "drakes<em>fang" }</code> in <code>kill</em>script</code>.</p>
+
+<hr>
+<p><strong><code>take_item</code></strong> — Remove the first matching item from inventory (un-equips if needed)</p>
+
+<pre><code class="language-toml">{ op = &quot;take_item&quot;, item_id = &quot;tribute_chest&quot; }</code></pre>
+<p>Silent if item not found.</p>
+
+<hr>
+<p><strong><code>spawn_item</code></strong> — Place an item in the current room (or player inventory if room missing)</p>
+
+<pre><code class="language-toml">{ op = &quot;spawn_item&quot;, item_id = &quot;mysterious_orb&quot; }</code></pre>
+<p>Displays "A [name] falls to the ground."</p>
+
+<p><em>From world:</em> <code>{ op = "spawn<em>item", item</em>id = "groundhog<em>trophy" }</code> in <code>kill</em>script</code>.</p>
+
+<hr>
+<h4 id="quests">QUESTS</h4>
+<p><strong><code>advance_quest</code></strong> — Move an active quest to the given step, or start it at step 1</p>
+
+<pre><code class="language-toml">{ op = &quot;advance_quest&quot;, quest_id = &quot;the_dragon_hunt&quot;, step = 3 }</code></pre>
+<p>If the quest is not yet active, it is started automatically at step 1 first. Displays the new objective text.</p>
+
+<hr>
+<p><strong><code>complete_quest</code></strong> — Mark a quest as complete and award its rewards</p>
+
+<pre><code class="language-toml">{ op = &quot;complete_quest&quot;, quest_id = &quot;the_dragon_hunt&quot; }</code></pre>
+<p>Awards all <code>[[reward]]</code> entries (gold, XP, items) and moves the quest to <code>completed_quests</code>. Displays a completion banner.</p>
+
+<hr>
+<h4 id="styles">STYLES</h4>
+<p><strong><code>teach_style</code></strong> — Add a fighting style to the player's known styles</p>
+
+<pre><code class="language-toml">{ op = &quot;teach_style&quot;, style_id = &quot;swordplay&quot; }</code></pre>
+<p>Has no effect if the player already knows the style. Displays a learn message.</p>
+
+<hr>
+<h4 id="world">WORLD</h4>
+<p><strong><code>unlock_exit</code></strong> — Unlock a door in any loaded room</p>
+
+<pre><code class="language-toml">{ op = &quot;unlock_exit&quot;, room_id = &quot;dungeon_gate&quot;, direction = &quot;north&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>room_id</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>Room containing the door</td>
+</tr>
+<tr>
+  <td><code>direction</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>Direction of the exit to unlock</td>
+</tr>
+</tbody>
+</table>
+<p>Silently no-ops if the room or exit is not found.</p>
+
+<hr>
+<p><strong><code>lock_exit</code></strong> — Lock a door in any loaded room</p>
+
+<pre><code class="language-toml">{ op = &quot;lock_exit&quot;, room_id = &quot;dungeon_gate&quot;, direction = &quot;north&quot; }</code></pre>
+<hr>
+<h4 id="companions">COMPANIONS</h4>
+<p><strong><code>give_companion</code></strong> — Assign a companion to the player</p>
+
+<pre><code class="language-toml">{ op = &quot;give_companion&quot;, companion_id = &quot;ranger_mira&quot; }</code></pre>
+<p>Displays the companion's <code>join_message</code>. Replaces any existing companion.</p>
+
+<hr>
+<p><strong><code>dismiss_companion</code></strong> — Remove the player's current companion</p>
+
+<pre><code class="language-toml">{ op = &quot;dismiss_companion&quot;, message = &quot;Your companion nods and parts ways.&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>message</code></td>
+  <td>string</td>
+  <td><code>""</code></td>
+  <td>Flavour text shown on dismissal</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="skills">SKILLS</h4>
+<p><strong><code>skill_check</code></strong> — Roll d20 + skill bonus against a DC; branch on result</p>
+
+<pre><code class="language-toml">{ op = &quot;skill_check&quot;, skill = &quot;perception&quot;, dc = 12,
+  on_pass = [
+    { op = &quot;message&quot;, tag = &quot;system&quot;, text = &quot;You spot a hidden catch in the wall.&quot; },
+    { op = &quot;give_item&quot;, item_id = &quot;hidden_gem&quot; },
+  ],
+  on_fail = [
+    { op = &quot;message&quot;, tag = &quot;system&quot;, text = &quot;You miss anything unusual.&quot; },
+  ],
+}</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>skill</code></td>
+  <td>string</td>
+  <td>—</td>
+  <td>A skill ID defined in the world's <code>config.py</code> (e.g. <code>perception</code>, <code>stealth</code>, <code>mining</code>)</td>
+</tr>
+<tr>
+  <td><code>dc</code></td>
+  <td>int</td>
+  <td><code>10</code></td>
+  <td>Difficulty class (roll ≥ dc to pass)</td>
+</tr>
+<tr>
+  <td><code>on_pass</code></td>
+  <td>array</td>
+  <td><code>[]</code></td>
+  <td>Script ops on success</td>
+</tr>
+<tr>
+  <td><code>on_fail</code></td>
+  <td>array</td>
+  <td><code>[]</code></td>
+  <td>Script ops on failure</td>
+</tr>
+<tr>
+  <td><code>silent</code></td>
+  <td>bool</td>
+  <td><code>false</code></td>
+  <td>Suppress the "[Skill check: N vs DC M — result]" line</td>
+</tr>
+<tr>
+  <td><code>grow</code></td>
+  <td>bool</td>
+  <td><code>true</code></td>
+  <td>Apply small passive skill growth (when no <code>on_pass</code> branch)</td>
+</tr>
+</tbody>
+</table>
+<p>The roll is <code>d20 + (skill_value // 10)</code>. Skill bonus ranges 0–10.</p>
+
+<hr>
+<p><strong><code>if_skill</code></strong> — Branch on whether skill value meets a minimum (no roll, no growth)</p>
+
+<pre><code class="language-toml">{ op = &quot;if_skill&quot;, skill = &quot;mining&quot;, min = 1,
+  then = [{ op = &quot;message&quot;, tag = &quot;system&quot;, text = &quot;You know how to mine.&quot; }],
+  else = [{ op = &quot;message&quot;, tag = &quot;error&quot;,  text = &quot;You have no mining skill.&quot; }],
+}</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>skill</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>Skill name</td>
+</tr>
+<tr>
+  <td><code>min</code></td>
+  <td>int</td>
+  <td><code>0</code></td>
+  <td>Minimum skill value to pass</td>
+</tr>
+<tr>
+  <td><code>then</code></td>
+  <td>array</td>
+  <td><code>[]</code></td>
+  <td>Run if skill ≥ min</td>
+</tr>
+<tr>
+  <td><code>else</code></td>
+  <td>array</td>
+  <td><code>[]</code></td>
+  <td>Run if skill &lt; min</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><strong><code>skill_grow</code></strong> — Directly increase a skill value</p>
+
+<pre><code class="language-toml">{ op = &quot;skill_grow&quot;, skill = &quot;mining&quot;, amount = 2 }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>skill</code></td>
+  <td>string</td>
+  <td>—</td>
+  <td>Skill name</td>
+</tr>
+<tr>
+  <td><code>amount</code></td>
+  <td>float</td>
+  <td><code>1</code></td>
+  <td>Amount to add (capped at 100)</td>
+</tr>
+</tbody>
+</table>
+<p>Displays "Mining 5 → 7" when the integer part increases.</p>
+
+<hr>
+<h4 id="status-effects">STATUS EFFECTS</h4>
+<p><strong><code>apply_status</code></strong> — Apply a named status effect for N turns</p>
+
+<pre><code class="language-toml">{ op = &quot;apply_status&quot;, effect = &quot;poisoned&quot;, duration = 5 }
+{ op = &quot;apply_status&quot;, effect = &quot;blinded&quot;,  duration = -1 }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>effect</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td><code>poisoned</code>, <code>blinded</code>, <code>weakened</code>, <code>slowed</code>, <code>protected</code></td>
+</tr>
+<tr>
+  <td><code>duration</code></td>
+  <td>int</td>
+  <td>—</td>
+  <td>Turns remaining; <code>-1</code> = permanent until cleared</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="#11-status-effects">Section 11</a> for what each effect does.</p>
+
+<hr>
+<p><strong><code>clear_status</code></strong> — Remove a status effect</p>
+
+<pre><code class="language-toml">{ op = &quot;clear_status&quot;, effect = &quot;poisoned&quot; }</code></pre>
+<hr>
+<p><strong><code>if_status</code></strong> — Branch on whether an effect is currently active</p>
+
+<pre><code class="language-toml">{ op = &quot;if_status&quot;, effect = &quot;protected&quot;,
+  then = [{ op = &quot;say&quot;, text = &quot;Your ward deflects the attack.&quot; }],
+  else = [{ op = &quot;damage&quot;, amount = 15 }],
+}</code></pre>
+<hr>
+<h4 id="prestige">PRESTIGE</h4>
+<p><strong><code>prestige</code></strong> — Adjust the player's prestige score</p>
+
+<pre><code class="language-toml">{ op = &quot;prestige&quot;, amount = 3,  reason = &quot;cleared the infestation&quot; }
+{ op = &quot;prestige&quot;, amount = -5, reason = &quot;attacked a town guard&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>amount</code></td>
+  <td>int</td>
+  <td>—</td>
+  <td>Positive = good, negative = bad</td>
+</tr>
+<tr>
+  <td><code>reason</code></td>
+  <td>string</td>
+  <td><code>""</code></td>
+  <td>Short flavour note shown in the output</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="#12-prestige--reputation">Section 12</a> for tier thresholds.</p>
+
+<hr>
+<p><strong><code>add_affinity</code></strong> — Grant a named prestige affinity tag</p>
+
+<pre><code class="language-toml">{ op = &quot;add_affinity&quot;, tag = &quot;verdant_hero&quot; }</code></pre>
+<hr>
+<p><strong><code>remove_affinity</code></strong> — Remove a prestige affinity tag</p>
+
+<pre><code class="language-toml">{ op = &quot;remove_affinity&quot;, tag = &quot;verdant_hero&quot; }</code></pre>
+<hr>
+<p><strong><code>if_prestige</code></strong> — Branch on prestige score range</p>
+
+<pre><code class="language-toml"># Requires score ≥ 20
+{ op = &quot;if_prestige&quot;, min = 20,
+  then = [{ op = &quot;say&quot;, text = &quot;I&#x27;ve heard of you — a genuine hero.&quot; }],
+  else = [{ op = &quot;say&quot;, text = &quot;I don&#x27;t know you. Move along.&quot; }],
+}
+
+# Requires score ≤ -10 (disgraced)
+{ op = &quot;if_prestige&quot;, max = -10,
+  then = [{ op = &quot;message&quot;, tag = &quot;system&quot;, text = &quot;The guard eyes you with open hostility.&quot; }],
+}</code></pre>
+<p><code>min</code> and <code>max</code> can be combined. Both omitted = always passes.</p>
+
+<hr>
+<p><strong><code>if_affinity</code></strong> — Branch on whether player has a prestige affinity tag</p>
+
+<pre><code class="language-toml">{ op = &quot;if_affinity&quot;, tag = &quot;verdant_hero&quot;,
+  then = [{ op = &quot;say&quot;, text = &quot;Ah, the one who saved the forest!&quot; }],
+  else = [{ op = &quot;say&quot;, text = &quot;A stranger.&quot; }],
+}</code></pre>
+<hr>
+<h4 id="bank">BANK</h4>
+<p><strong><code>bank_expand</code></strong> — Expand the player's bank slot count (never shrinks)</p>
+
+<pre><code class="language-toml">{ op = &quot;bank_expand&quot;, tier = 20 }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>tier</code></td>
+  <td>int</td>
+  <td>New slot count; only applied if greater than current</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="conditionals">CONDITIONALS</h4>
+<p>All conditional ops support <code>then</code> (runs if condition passes) and <code>else</code> (runs if not). Both are optional — omit whichever branch you don't need.</p>
+
+<hr>
+<p><strong><code>if_flag</code></strong> (also: <strong><code>if</code></strong>) — Branch on whether player has a flag</p>
+
+<pre><code class="language-toml">{ op = &quot;if_flag&quot;, flag = &quot;met_the_elder&quot;,
+  then = [{ op = &quot;say&quot;, text = &quot;Back again so soon?&quot; }],
+  else = [{ op = &quot;say&quot;, text = &quot;I don&#x27;t think we&#x27;ve met.&quot; }],
+}</code></pre>
+<hr>
+<p><strong><code>if<em>not</em>flag</code></strong> — Branch on whether player does NOT have a flag</p>
+
+<pre><code class="language-toml">{ op = &quot;if_not_flag&quot;, flag = &quot;bridge_warned&quot;, then = [
+  { op = &quot;message&quot;, tag = &quot;system&quot;, text = &quot;A sign reads: &#x27;Bridge unsafe.&#x27;&quot; },
+  { op = &quot;set_flag&quot;, flag = &quot;bridge_warned&quot; },
+] }</code></pre>
+<hr>
+<p><strong><code>if_item</code></strong> — Branch on whether player has an item in inventory</p>
+
+<pre><code class="language-toml">{ op = &quot;if_item&quot;, item_id = &quot;royal_seal&quot;,
+  then = [{ op = &quot;say&quot;,      text = &quot;The seal! You found it.&quot; }],
+  else = [{ op = &quot;say&quot;,      text = &quot;You&#x27;ll need proof of your identity.&quot; }],
+}</code></pre>
+<hr>
+<p><strong><code>if_quest</code></strong> — Branch on whether a quest is active at a specific step</p>
+
+<pre><code class="language-toml">{ op = &quot;if_quest&quot;, quest_id = &quot;the_dragon_hunt&quot;, step = 2,
+  then = [{ op = &quot;say&quot;, text = &quot;You&#x27;re looking for the dragon&#x27;s lair?&quot; }],
+}</code></pre>
+<hr>
+<p><strong><code>if<em>quest</em>complete</code></strong> — Branch on whether a quest has been completed</p>
+
+<pre><code class="language-toml">{ op = &quot;if_quest_complete&quot;, quest_id = &quot;the_dragon_hunt&quot;,
+  then = [{ op = &quot;say&quot;, text = &quot;I heard you slew the beast. Well done.&quot; }],
+  else = [{ op = &quot;say&quot;, text = &quot;The dragon still threatens us.&quot; }],
+}</code></pre>
+<hr>
+<h4 id="flow-control">FLOW CONTROL</h4>
+<p><strong><code>fail</code></strong> — Abort the entire current script immediately</p>
+
+<pre><code class="language-toml">{ op = &quot;fail&quot; }</code></pre>
+<p>Nothing after <code>fail</code> in the same script (or any parent script) will run. Used to gate content: check a condition, fail if not met, continue only if met.</p>
+
+<pre><code class="language-toml">on_get = [
+  { op = &quot;if_not_flag&quot;, flag = &quot;mine_cleared&quot;, then = [
+    { op = &quot;message&quot;, tag = &quot;error&quot;, text = &quot;The mine is too dangerous.&quot; },
+    { op = &quot;fail&quot; },
+  ] },
+  # Script only reaches here if mine_cleared is set
+  { op = &quot;require_tag&quot;, tag = &quot;pickaxe&quot;, fail_message = &quot;You need a pickaxe.&quot; },
+  ...
+]</code></pre>
+<hr>
+<p><strong><code>require_tag</code></strong> — Abort if player has no item with a given tag</p>
+
+<pre><code class="language-toml">{ op = &quot;require_tag&quot;, tag = &quot;pickaxe&quot;,
+  fail_message = &quot;You need a pickaxe equipped or in your pack.&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>tag</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>Tag to search for in all inventory + equipped items</td>
+</tr>
+<tr>
+  <td><code>fail_message</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>Error message shown before abort</td>
+</tr>
+</tbody>
+</table>
+<p>Checks <code>tags</code> array on every inventory and equipped item.</p>
+
+<hr>
+<h4 id="teleport-world-movement">TELEPORT / WORLD MOVEMENT</h4>
+<p><strong><code>teleport_player</code></strong> — Move the player to any room (even in another zone)</p>
+
+<pre><code class="language-toml">{ op = &quot;teleport_player&quot;, room_id = &quot;throne_room&quot;, message = &quot;The portal flares and you are elsewhere.&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>room_id</code></td>
+  <td>string</td>
+  <td>—</td>
+  <td>Destination room ID</td>
+</tr>
+<tr>
+  <td><code>message</code></td>
+  <td>string</td>
+  <td><code>""</code></td>
+  <td>Optional system-tagged message before teleport</td>
+</tr>
+</tbody>
+</table>
+<p>After teleportation the destination room's description and <code>on_enter</code> script run automatically.</p>
+
+<p><em>Use case:</em> Portals, boss arenas, trap rooms, quest teleporters.</p>
+
+<hr>
+<p><strong><code>move_npc</code></strong> — Move a live NPC instance from its current room to another</p>
+
+<pre><code class="language-toml">{ op = &quot;move_npc&quot;, npc_id = &quot;dragon_boss&quot;, to_room = &quot;battle_arena&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>npc_id</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>NPC instance ID to find and move</td>
+</tr>
+<tr>
+  <td><code>to_room</code></td>
+  <td>string</td>
+  <td>Yes</td>
+  <td>Destination room ID</td>
+</tr>
+</tbody>
+</table>
+<p>Searches all loaded zones. No-ops silently if NPC not found.</p>
+
+<hr>
+<p><strong><code>move_item</code></strong> — Move a ground item from one room to another</p>
+
+<pre><code class="language-toml">{ op = &quot;move_item&quot;, item_id = &quot;ancient_chest&quot;,
+  from_room = &quot;vault_antechamber&quot;, to_room = &quot;vault_inner&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>item_id</code></td>
+  <td>string</td>
+  <td>—</td>
+  <td>Item ID to find</td>
+</tr>
+<tr>
+  <td><code>from_room</code></td>
+  <td>string</td>
+  <td>player's current room</td>
+  <td>Source room ID</td>
+</tr>
+<tr>
+  <td><code>to_room</code></td>
+  <td>string</td>
+  <td>—</td>
+  <td>Destination room ID</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="combat-conditionals-round-script-only">COMBAT CONDITIONALS (round_script only)</h4>
+<p>These ops are only meaningful inside an NPC's <code>round_script</code>.</p>
+
+<p><strong><code>if<em>combat</em>round</code></strong> — Branch on the current combat round number</p>
+
+<pre><code class="language-toml">{ op = &quot;if_combat_round&quot;, min = 5,
+  then = [{ op = &quot;say&quot;, text = &quot;You&#x27;ve held on longer than expected.&quot; }],
+}</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>min</code></td>
+  <td>int</td>
+  <td>Passes when <code>round &gt;= min</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><strong><code>if<em>npc</em>hp</code></strong> — Branch on the NPC's current HP</p>
+
+<pre><code class="language-toml">{ op = &quot;if_npc_hp&quot;, max = 25,
+  then = [{ op = &quot;say&quot;, text = &quot;I&#x27;m... not finished yet!&quot; }],
+}</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>max</code></td>
+  <td>int</td>
+  <td>Passes when <code>npc.hp &lt;= max</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><strong><code>end_combat</code></strong> — End the current fight without killing the NPC</p>
+
+<pre><code class="language-toml">{ op = &quot;end_combat&quot; }</code></pre>
+<p>The NPC's HP is set to at least 1, its <code>hostile</code> flag is cleared for this session, and <code>player_won = true</code>. The player receives XP and gold as if they won normally.</p>
+
+<p><em>Typical usage:</em> NPC surrender — check round + HP conditions, emit surrender text, give a reward, then call <code>end_combat</code>.</p>
+
+<hr>
+<h4 id="journal">JOURNAL</h4>
+<p><strong><code>journal_entry</code></strong> — Append a named entry to the player's journal</p>
+
+<pre><code class="language-toml">{ op = &quot;journal_entry&quot;,
+  title = &quot;The Wall Inscription&quot;,
+  text  = &quot;Carved in old runes: &#x27;Only the worthy may pass the gate of flame.&#x27;&quot; }</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>title</code></td>
+  <td>string</td>
+  <td><code>"Entry"</code></td>
+  <td>Short header for the entry (shown in the journal list)</td>
+</tr>
+<tr>
+  <td><code>text</code></td>
+  <td>string</td>
+  <td><code>""</code></td>
+  <td>Full text of the entry</td>
+</tr>
+</tbody>
+</table>
+<p>Journal entries persist to the save file and display in the <code>j</code> / <code>journal</code> command. <em>Use case:</em> Found inscriptions, discovered lore, crafting milestones, solved puzzles.</p>
+
+<hr>
+<h2 id="8-the-dialogue-system">8. The Dialogue System</h2>
+<h3 id="8-1-file-layout">8.1 File Layout</h3>
+<p>Each NPC with dialogue has a file at <code>data/&lt;world<em>id&gt;/&lt;zone&gt;/dialogues/&lt;npc</em>id&gt;.toml</code>. The filename must exactly match the NPC's <code>id</code> field.</p>
+
+<h3 id="8-2-node-structure">8.2 Node Structure</h3>
+<p>Conversations are trees of <code>[[node]]</code> blocks. Every tree <strong>must</strong> have a node with <code>id = "root"</code>.</p>
+
+<pre><code class="language-toml">[[node]]
+id        = &quot;root&quot;                           # Required on root node
+line      = &quot;Hello, traveller.&quot;              # Single fixed line
+# OR:
+lines     = [&quot;Hello!&quot;, &quot;Back again?&quot;, &quot;...&quot;] # Randomly chosen each visit
+# OR with cycling:
+lines     = [&quot;First visit.&quot;, &quot;Second visit.&quot;, &quot;Third visit...&quot;]
+cycle     = true                             # Cycles sequentially instead of random
+condition = { flag = &quot;met_the_elder&quot; }       # Optional: skip node if false
+script    = [{ op = &quot;set_flag&quot;, flag = &quot;...&quot; }]  # Optional: run on node entry</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>id</code></td>
+  <td>string</td>
+  <td>Node identifier; <code>"root"</code> starts every conversation</td>
+</tr>
+<tr>
+  <td><code>line</code></td>
+  <td>string</td>
+  <td>Single text line</td>
+</tr>
+<tr>
+  <td><code>lines</code></td>
+  <td>list</td>
+  <td>Multiple lines: random pick or cycling sequence</td>
+</tr>
+<tr>
+  <td><code>cycle</code></td>
+  <td>bool</td>
+  <td>If <code>true</code>, cycle through <code>lines</code> sequentially per visit</td>
+</tr>
+<tr>
+  <td><code>condition</code></td>
+  <td>dict</td>
+  <td>If condition fails, this node is skipped and fallback dialogue shows</td>
+</tr>
+<tr>
+  <td><code>script</code></td>
+  <td>array</td>
+  <td>Script ops executed when this node is entered</td>
+</tr>
+</tbody>
+</table>
+<h3 id="8-3-response-structure">8.3 Response Structure</h3>
+<p>Responses are options the player chooses from. They can be defined inline under a node or in flat <code>[[response]]</code> blocks:</p>
+
+<pre><code class="language-toml"># Inline under node
+[[node.response]]
+text      = &quot;What do you know about the forest?&quot;
+next      = &quot;about_forest&quot;
+condition = { flag = &quot;heard_of_forest&quot; }
+script    = [{ op = &quot;set_flag&quot;, flag = &quot;asked_about_forest&quot; }]
+
+# Or flat format (equivalent)
+[[response]]
+node      = &quot;root&quot;              # Which node this belongs to
+text      = &quot;What do you know about the forest?&quot;
+next      = &quot;about_forest&quot;
+condition = { flag = &quot;heard_of_forest&quot; }
+script    = [{ op = &quot;set_flag&quot;, flag = &quot;asked_about_forest&quot; }]</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>node</code></td>
+  <td>string</td>
+  <td>(flat format) Which node this response belongs to</td>
+</tr>
+<tr>
+  <td><code>text</code></td>
+  <td>string</td>
+  <td>Response option shown to player</td>
+</tr>
+<tr>
+  <td><code>next</code></td>
+  <td>string</td>
+  <td>Node ID to jump to; <code>""</code> ends the conversation</td>
+</tr>
+<tr>
+  <td><code>condition</code></td>
+  <td>dict</td>
+  <td>Optional: response hidden if condition fails</td>
+</tr>
+<tr>
+  <td><code>script</code></td>
+  <td>array</td>
+  <td>Script ops run when this response is selected</td>
+</tr>
+</tbody>
+</table>
+<h3 id="8-4-dialogue-conditions">8.4 Dialogue Conditions</h3>
+<p>Conditions control whether a node or response is visible.</p>
+
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Passes when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>flag</code></td>
+  <td>string</td>
+  <td>player has this flag</td>
+</tr>
+<tr>
+  <td><code>not_flag</code></td>
+  <td>string</td>
+  <td>player does NOT have this flag</td>
+</tr>
+<tr>
+  <td><code>item</code></td>
+  <td>string</td>
+  <td>player has this item ID in inventory</td>
+</tr>
+<tr>
+  <td><code>quest</code></td>
+  <td>string + <code>step</code></td>
+  <td>quest is active at this step</td>
+</tr>
+<tr>
+  <td><code>quest_complete</code></td>
+  <td>string</td>
+  <td>quest is complete</td>
+</tr>
+<tr>
+  <td><code>not_quest</code></td>
+  <td>string</td>
+  <td>quest is NOT active</td>
+</tr>
+<tr>
+  <td><code>level_gte</code></td>
+  <td>int</td>
+  <td>player.level ≥ N</td>
+</tr>
+<tr>
+  <td><code>skill</code></td>
+  <td>string + <code>min</code></td>
+  <td>player.skills[skill] ≥ min</td>
+</tr>
+<tr>
+  <td><code>gold</code></td>
+  <td>int</td>
+  <td>player has ≥ N gold</td>
+</tr>
+<tr>
+  <td><code>prestige_min</code></td>
+  <td>int</td>
+  <td>prestige ≥ N</td>
+</tr>
+<tr>
+  <td><code>prestige_max</code></td>
+  <td>int</td>
+  <td>prestige ≤ N</td>
+</tr>
+<tr>
+  <td><code>affinity</code></td>
+  <td>string</td>
+  <td>player has this prestige affinity</td>
+</tr>
+<tr>
+  <td><code>no_affinity</code></td>
+  <td>string</td>
+  <td>player lacks this prestige affinity</td>
+</tr>
+<tr>
+  <td><code>no_companion</code></td>
+  <td>bool (<code>true</code>)</td>
+  <td>player has no active companion</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-toml"># Multiple conditions can be combined as a list (all must pass — AND logic)
+condition = [
+  { flag = &quot;heard_the_rumour&quot; },
+  { level_gte = 5 },
+]</code></pre>
+<h3 id="8-5-text-substitution">8.5 Text Substitution</h3>
+<p>Use <code>{token}</code> placeholders in <code>line</code>, <code>lines</code>, or <code>text</code> strings.</p>
+
+<p><strong>Built-in tokens:</strong></p>
+
+<table>
+<thead>
+<tr>
+  <th>Token</th>
+  <th>Resolves to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>{player}</code> or <code>{player_name}</code></td>
+  <td>Player's character name</td>
+</tr>
+<tr>
+  <td><code>{npc}</code> or <code>{npc_name}</code></td>
+  <td>This NPC's name</td>
+</tr>
+<tr>
+  <td><code>{gold}</code></td>
+  <td>Player's current gold</td>
+</tr>
+<tr>
+  <td><code>{hp}</code></td>
+  <td>Player's current HP</td>
+</tr>
+<tr>
+  <td><code>{level}</code></td>
+  <td>Player's current level</td>
+</tr>
+<tr>
+  <td><code>{zone}</code></td>
+  <td>Current zone ID</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Entity field tokens</strong> — any NPC, item, or quest template field:</p>
+
+<pre><code class="language-toml">line = &quot;Speak with {guard_captain.name} — his {iron_sword.name} is legendary.&quot;
+# → &quot;Speak with Commander Aldric — his Steel Sword is legendary.&quot;</code></pre>
+<p>Format: <code>{entity<em>id.field</em>name}</code>. Resolution checks NPCs first, then items, then quests. Returns empty string if not found.</p>
+
+<h3 id="8-6-fallback-dialogue">8.6 Fallback Dialogue</h3>
+<p>If no dialogue tree file exists for an NPC, the engine falls back to:</p>
+
+<ol>
+  <li>The NPC's <code>dialogue</code> field (plain text)</li>
+  <li>Auto-generated lines based on hostility and tags</li>
+</ol>
+<h3 id="8-7-complete-dialogue-example">8.7 Complete Dialogue Example</h3>
+<pre><code class="language-toml">[[node]]
+id = &quot;root&quot;
+lines = [
+  &quot;You picked a bad week to go east.&quot;,
+  &quot;The road gets worse the further you go.&quot;,
+]
+
+[[response]]
+node      = &quot;root&quot;
+condition = { not_flag = &quot;ranger_briefed&quot; }
+text      = &quot;What can you tell me about the road ahead?&quot;
+next      = &quot;briefing&quot;
+
+[[response]]
+node = &quot;root&quot;
+text = &quot;Nothing. Goodbye.&quot;
+next = &quot;&quot;
+
+[[node]]
+id     = &quot;briefing&quot;
+line   = &quot;The east road leads to the old garrison ruins. Wolves patrol it — corrupted ones.&quot;
+script = [{ op = &quot;set_flag&quot;, flag = &quot;ranger_briefed&quot; }]
+
+[[response]]
+node = &quot;briefing&quot;
+text = &quot;How do I get into the armory?&quot;
+next = &quot;armory_hint&quot;
+
+[[response]]
+node = &quot;briefing&quot;
+text = &quot;Thank you. Farewell.&quot;
+next = &quot;&quot;
+
+[[node]]
+id   = &quot;armory_hint&quot;
+line = &quot;There&#x27;s a key in the ruins. Look for the castellan&#x27;s old office — northwest corner.&quot;</code></pre>
+<hr>
+<h2 id="9-the-quest-system">9. The Quest System</h2>
+<h3 id="9-1-file-layout">9.1 File Layout</h3>
+<p>Quests live at <code>data/&lt;world<em>id&gt;/&lt;zone&gt;/quests/&lt;quest</em>id&gt;.toml</code>. The filename is the quest ID.</p>
+
+<h3 id="9-2-quest-format">9.2 Quest Format</h3>
+<pre><code class="language-toml">id      = &quot;ashwood_contract&quot;
+title   = &quot;The Ashwood Contract&quot;
+giver   = &quot;elder_mira&quot;               # Informational only
+summary = &quot;Investigate the corruption in Ashwood Forest and slay the Drake.&quot;
+
+[[step]]
+index     = 1
+objective = &quot;Speak with Sergeant Vorn in the Barracks.&quot;
+hint      = &quot;Head north from the Town Square.&quot;
+
+[[step]]
+index     = 2
+objective = &quot;Travel to the Ashwood Gate.&quot;
+hint      = &quot;Head south then east past the deep forest.&quot;
+
+[[step]]
+index     = 6
+objective = &quot;Return to Elder Mira with proof of the Drake&#x27;s death.&quot;
+hint      = &quot;The Fang should convince her.&quot;
+
+[[reward]]
+type    = &quot;gold&quot;
+amount  = 150
+
+[[reward]]
+type    = &quot;xp&quot;
+amount  = 400
+
+[[reward]]
+type    = &quot;item&quot;
+item_id = &quot;millhaven_commendation&quot;</code></pre>
+<h3 id="9-3-quest-fields">9.3 Quest Fields</h3>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>id</code></td>
+  <td>string</td>
+  <td>Unique quest identifier</td>
+</tr>
+<tr>
+  <td><code>title</code></td>
+  <td>string</td>
+  <td>Display name</td>
+</tr>
+<tr>
+  <td><code>giver</code></td>
+  <td>string</td>
+  <td>Informational NPC ID (not enforced)</td>
+</tr>
+<tr>
+  <td><code>summary</code></td>
+  <td>string</td>
+  <td>Long description shown in journal</td>
+</tr>
+<tr>
+  <td><code>[[step]]</code></td>
+  <td>—</td>
+  <td>One or more objective steps</td>
+</tr>
+<tr>
+  <td><code>step.index</code></td>
+  <td>int</td>
+  <td>Step number (must be ≥ 1); gaps are fine</td>
+</tr>
+<tr>
+  <td><code>step.objective</code></td>
+  <td>string</td>
+  <td>What the player must do</td>
+</tr>
+<tr>
+  <td><code>step.hint</code></td>
+  <td>string</td>
+  <td>Optional hint shown in journal</td>
+</tr>
+<tr>
+  <td><code>[[reward]]</code></td>
+  <td>—</td>
+  <td>Awards given when quest is completed</td>
+</tr>
+<tr>
+  <td><code>reward.type</code></td>
+  <td><code>"gold"</code>, <code>"xp"</code>, <code>"item"</code></td>
+  <td>Reward type</td>
+</tr>
+<tr>
+  <td><code>reward.amount</code></td>
+  <td>int</td>
+  <td>For gold/xp</td>
+</tr>
+<tr>
+  <td><code>reward.item_id</code></td>
+  <td>string</td>
+  <td>For item rewards</td>
+</tr>
+</tbody>
+</table>
+<h3 id="9-4-script-integration">9.4 Script Integration</h3>
+<p>Start, advance, and complete quests from any script context:</p>
+
+<pre><code class="language-toml"># NPC dialogue kicks off the quest (step 1)
+script = [{ op = &quot;advance_quest&quot;, quest_id = &quot;ashwood_contract&quot;, step = 1 }]
+
+# Kill script advances on NPC death
+kill_script = [{ op = &quot;advance_quest&quot;, quest_id = &quot;ashwood_contract&quot;, step = 6 }]
+
+# give_accepts completes the quest on item hand-in
+script = [{ op = &quot;complete_quest&quot;, quest_id = &quot;ashwood_contract&quot; }]</code></pre>
+<h3 id="9-5-quest-conditions-in-dialogue">9.5 Quest Conditions in Dialogue</h3>
+<pre><code class="language-toml"># Show response only when quest is at step 2
+condition = { quest = &quot;ashwood_contract&quot;, step = 2 }
+
+# Show response only when quest is complete
+condition = { quest_complete = &quot;ashwood_contract&quot; }
+
+# Show only if quest is NOT active
+condition = { not_quest = &quot;ashwood_contract&quot; }</code></pre>
+<hr>
+<h2 id="10-skills">10. Skills</h2>
+<p>Skills are <strong>world-configurable</strong> — the full list is defined in <code>SKILLS</code> inside the world's <code>config.py</code>. The engine uses whatever skills are listed there; no engine code changes are needed.</p>
+
+<h3 id="10-1-skills-in-the-sixfold-realms">10.1 Skills in The Sixfold Realms</h3>
+<table>
+<thead>
+<tr>
+  <th>Skill ID</th>
+  <th>Display Name</th>
+  <th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>perception</code></td>
+  <td>Perception</td>
+  <td>Noticing hidden exits, items, traps</td>
+</tr>
+<tr>
+  <td><code>stealth</code></td>
+  <td>Stealth</td>
+  <td>Moving quietly, avoiding detection</td>
+</tr>
+<tr>
+  <td><code>survival</code></td>
+  <td>Survival</td>
+  <td>Wilderness hazards, foraging, navigation</td>
+</tr>
+<tr>
+  <td><code>athletics</code></td>
+  <td>Athletics</td>
+  <td>Climbing, swimming, feats of strength</td>
+</tr>
+<tr>
+  <td><code>social</code></td>
+  <td>Social</td>
+  <td>Persuasion, reading people, negotiation</td>
+</tr>
+<tr>
+  <td><code>arcana</code></td>
+  <td>Arcana</td>
+  <td>Magic knowledge, identifying enchantments</td>
+</tr>
+<tr>
+  <td><code>mining</code></td>
+  <td>Mining</td>
+  <td>Extracting ore; required for mining nodes</td>
+</tr>
+</tbody>
+</table>
+<p>All skills start at <code>0.0</code> and cap at <code>100.0</code>.</p>
+
+<h3 id="10-2-skill-tiers">10.2 Skill Tiers</h3>
+<table>
+<thead>
+<tr>
+  <th>Value range</th>
+  <th>Tier name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0 – 9</td>
+  <td>Untrained</td>
+</tr>
+<tr>
+  <td>10 – 24</td>
+  <td>Novice</td>
+</tr>
+<tr>
+  <td>25 – 49</td>
+  <td>Practiced</td>
+</tr>
+<tr>
+  <td>50 – 74</td>
+  <td>Skilled</td>
+</tr>
+<tr>
+  <td>75 – 89</td>
+  <td>Expert</td>
+</tr>
+<tr>
+  <td>90 – 99</td>
+  <td>Master</td>
+</tr>
+<tr>
+  <td>100</td>
+  <td>Legendary</td>
+</tr>
+</tbody>
+</table>
+<h3 id="10-3-skill-checks">10.3 Skill Checks</h3>
+<p><code>skill_check</code> rolls <code>d20 + bonus</code> vs a DC:</p>
+
+<ul>
+  <li><strong>bonus</strong> = <code>int(skill_value) // 10</code> — so skill 50 gives +5, skill 100 gives +10.</li>
+  <li><strong>DC guideline:</strong> 8 = easy, 12 = moderate, 15 = hard, 18 = very hard.</li>
+</ul>
+<h3 id="10-4-using-skills-in-world-content">10.4 Using Skills in World Content</h3>
+<p><strong>Gate content on skill level (no roll):</strong></p>
+
+<pre><code class="language-toml">{ op = &quot;if_skill&quot;, skill = &quot;perception&quot;, min = 40,
+  then = [{ op = &quot;message&quot;, tag = &quot;system&quot;, text = &quot;You notice a crack in the wall.&quot; }],
+}</code></pre>
+<p><strong>Randomised skill check:</strong></p>
+
+<pre><code class="language-toml">{ op = &quot;skill_check&quot;, skill = &quot;athletics&quot;, dc = 12,
+  on_pass = [{ op = &quot;message&quot;, tag = &quot;system&quot;, text = &quot;You haul yourself over the wall.&quot; }],
+  on_fail = [{ op = &quot;damage&quot;, amount = 5, message = &quot;You slip and fall.&quot; }],
+}</code></pre>
+<p><strong>Grow a skill manually:</strong></p>
+
+<pre><code class="language-toml">{ op = &quot;skill_grow&quot;, skill = &quot;mining&quot;, amount = 3 }</code></pre>
+<p><strong>Gate dialogue responses on skill:</strong></p>
+
+<pre><code class="language-toml">[[response]]
+condition = { skill = &quot;social&quot;, min = 40 }
+text      = &quot;Let me negotiate a better deal.&quot;
+next      = &quot;negotiation_branch&quot;</code></pre>
+<p><strong>Gate conditional exits on skill:</strong></p>
+
+<pre><code class="language-toml">show_if = { op = &quot;min_skill&quot;, skill = &quot;perception&quot;, value = 60 }</code></pre>
+<hr>
+<h2 id="11-status-effects">11. Status Effects</h2>
+<p>Status effects are applied via script and expire after a set number of turns (or are permanent until cleared).</p>
+
+<table>
+<thead>
+<tr>
+  <th>Effect</th>
+  <th>Applied by</th>
+  <th>In-combat</th>
+  <th>Per-move</th>
+  <th>Expiry message</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>poisoned</code></td>
+  <td>script</td>
+  <td>—</td>
+  <td>3 HP damage</td>
+  <td>"The poison runs its course."</td>
+</tr>
+<tr>
+  <td><code>blinded</code></td>
+  <td>script</td>
+  <td>−4 attack</td>
+  <td>—</td>
+  <td>"Your vision clears."</td>
+</tr>
+<tr>
+  <td><code>weakened</code></td>
+  <td>script</td>
+  <td>−4 attack</td>
+  <td>—</td>
+  <td>"Your strength returns."</td>
+</tr>
+<tr>
+  <td><code>slowed</code></td>
+  <td>script</td>
+  <td>—</td>
+  <td>—</td>
+  <td>"The sluggishness lifts."</td>
+</tr>
+<tr>
+  <td><code>protected</code></td>
+  <td>script</td>
+  <td>+3 defense</td>
+  <td>—</td>
+  <td>"The protective ward fades."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Duration:</strong> Turns remaining (one per command). <code>-1</code> = permanent until <code>clear_status</code>.</p>
+
+<pre><code class="language-toml"># Apply for 5 turns
+{ op = &quot;apply_status&quot;, effect = &quot;poisoned&quot;, duration = 5 }
+
+# Permanent until cleared
+{ op = &quot;apply_status&quot;, effect = &quot;protected&quot;, duration = -1 }
+
+# Remove immediately
+{ op = &quot;clear_status&quot;, effect = &quot;poisoned&quot; }
+
+# Branch on effect presence
+{ op = &quot;if_status&quot;, effect = &quot;protected&quot;,
+  then = [{ op = &quot;say&quot;, text = &quot;Your ward glows briefly.&quot; }],
+}</code></pre>
+<p><em>Common world uses:</em> Poison traps in <code>on<em>enter</code> or item <code>on</em>get</code>; protective amulets via <code>on<em>equip</code>; weakening bosses apply to the player via <code>round</em>script</code>.</p>
+
+<hr>
+<h2 id="12-prestige-reputation">12. Prestige &amp; Reputation</h2>
+<p>Prestige is a score from −999 to +999 that reflects the player's moral standing. High prestige opens heroic dialogue options and discounts. Low prestige makes guards hostile and closes off legitimate quests.</p>
+
+<h3 id="12-1-prestige-tiers">12.1 Prestige Tiers</h3>
+<table>
+<thead>
+<tr>
+  <th>Score</th>
+  <th>Tier</th>
+  <th>NPC attitude</th>
+  <th>Shop modifier</th>
+  <th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>≥ 200</td>
+  <td>Legend</td>
+  <td>Friendly</td>
+  <td>−10%</td>
+  <td>Criminal NPCs go hostile</td>
+</tr>
+<tr>
+  <td>100 – 199</td>
+  <td>Champion</td>
+  <td>Friendly</td>
+  <td>−10%</td>
+  <td></td>
+</tr>
+<tr>
+  <td>50 – 99</td>
+  <td>Hero</td>
+  <td>Friendly</td>
+  <td>−10%</td>
+  <td></td>
+</tr>
+<tr>
+  <td>20 – 49</td>
+  <td>Honoured</td>
+  <td>Neutral</td>
+  <td>Normal</td>
+  <td></td>
+</tr>
+<tr>
+  <td>5 – 19</td>
+  <td>Respected</td>
+  <td>Neutral</td>
+  <td>Normal</td>
+  <td></td>
+</tr>
+<tr>
+  <td>−4 to +4</td>
+  <td>Neutral</td>
+  <td>Neutral</td>
+  <td>Normal</td>
+  <td></td>
+</tr>
+<tr>
+  <td>−5 to −19</td>
+  <td>Suspicious</td>
+  <td>Wary</td>
+  <td>+10%</td>
+  <td></td>
+</tr>
+<tr>
+  <td>−20 to −49</td>
+  <td>Wanted</td>
+  <td>Wary</td>
+  <td>+10%</td>
+  <td></td>
+</tr>
+<tr>
+  <td>−50 to −99</td>
+  <td>Villain</td>
+  <td>Hostile</td>
+  <td>+20%</td>
+  <td>Guards go hostile at −50</td>
+</tr>
+<tr>
+  <td>≤ −100</td>
+  <td>Outlaw</td>
+  <td>Hostile</td>
+  <td>+20%</td>
+  <td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-2-typical-prestige-deltas">12.2 Typical Prestige Deltas</h3>
+<table>
+<thead>
+<tr>
+  <th>Event</th>
+  <th>Delta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Small good deed</td>
+  <td>+1</td>
+</tr>
+<tr>
+  <td>Completing a community quest</td>
+  <td>+2</td>
+</tr>
+<tr>
+  <td>Major heroic act</td>
+  <td>+5</td>
+</tr>
+<tr>
+  <td>Petty theft / deliberate harm</td>
+  <td>−1</td>
+</tr>
+<tr>
+  <td>Attacking a non-hostile NPC</td>
+  <td>−3</td>
+</tr>
+<tr>
+  <td>Killing an innocent</td>
+  <td>−5</td>
+</tr>
+<tr>
+  <td>Atrocity</td>
+  <td>−10</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-3-script-usage">12.3 Script Usage</h3>
+<pre><code class="language-toml"># Reward good behaviour
+{ op = &quot;prestige&quot;, amount = 3, reason = &quot;cleared the infestation&quot; }
+
+# Penalise bad behaviour
+{ op = &quot;prestige&quot;, amount = -5, reason = &quot;betrayed the refugees&quot; }
+
+# Gate dialogue on prestige
+{ op = &quot;if_prestige&quot;, min = 50, then = [
+  { op = &quot;say&quot;, text = &quot;A Hero! It&#x27;s an honour to meet you.&quot; },
+] }
+
+# Gate dialogue on being disgraced
+{ op = &quot;if_prestige&quot;, max = -20, then = [
+  { op = &quot;say&quot;, text = &quot;I&#x27;ve heard of you. Get out of my sight.&quot; },
+] }
+
+# Award and check affinities
+{ op = &quot;add_affinity&quot;,  tag = &quot;greenhollow_defender&quot; }
+{ op = &quot;if_affinity&quot;,   tag = &quot;greenhollow_defender&quot;, then = [...] }
+{ op = &quot;remove_affinity&quot;, tag = &quot;greenhollow_defender&quot; }</code></pre>
+<hr>
+<h2 id="13-fighting-styles">13. Fighting Styles</h2>
+<p>Fighting styles define how a character (player or NPC) fights. Each style has passives that unlock at proficiency thresholds, preferred gear, and a matchup system (some styles counter others).</p>
+
+<p>Styles are defined in <code>data/&lt;world<em>id&gt;/&lt;zone&gt;/styles/&lt;style</em>id&gt;.toml</code>. Players learn styles via <code>teach<em>style</code> scripts; NPCs have a fixed style at spawn. The starting style for new characters is set by <code>DEFAULT</em>STYLE</code> in the world's <code>config.py</code>.</p>
+
+<p><strong>Current built-in styles</strong> (community content can add more): <code>brawling</code>, <code>swordplay</code>, <code>iron<em>root</code>, <code>flowing</em>water</code>, <code>shadowstrike</code>, <code>wardancer</code>, <code>spear_work</code></p>
+
+<p>Players gain proficiency by fighting enemies that use that style. NPCs have a fixed <code>style_prof</code> and never improve.</p>
+
+<p><strong>In world authoring</strong>, styles matter for:</p>
+
+<ul>
+  <li>Setting <code>style</code> and <code>style_prof</code> on NPCs to control difficulty</li>
+  <li>Using <code>{ op = "teach<em>style", style</em>id = "..." }</code> to teach the player</li>
+  <li>Equipping items with the right <code>weapon<em>tags</code> or <code>armor</em>tags</code> for style affinity</li>
+</ul>
+<hr>
+<h2 id="14-crafting-commissions">14. Crafting &amp; Commissions</h2>
+<p>Crafting lets NPCs produce custom gear when given materials.</p>
+
+<h3 id="14-1-file-layout">14.1 File Layout</h3>
+<p><code>data/&lt;world<em>id&gt;/&lt;zone&gt;/crafting/&lt;npc</em>id&gt;.toml</code> — The filename must match the crafter NPC's <code>id</code>.</p>
+
+<h3 id="14-2-commission-format">14.2 Commission Format</h3>
+<pre><code class="language-toml">[[commission]]
+id             = &quot;war_sword&quot;
+npc_id         = &quot;town_blacksmith&quot;
+label          = &quot;War Sword&quot;
+desc           = &quot;A heavy fighting sword, well-balanced for sustained combat.&quot;
+slot           = &quot;weapon&quot;
+weapon_tags    = [&quot;sword&quot;, &quot;heavy&quot;]
+materials      = [&quot;iron_ore&quot;, &quot;iron_ore&quot;, &quot;coal_chunk&quot;]
+turns_required = 30
+gold_cost      = 0
+xp_reward      = 50
+
+[[quality]]
+tier         = &quot;poor&quot;
+weight       = 20       # Probability weight
+attack_bonus = 2
+equip_msg    = &quot;The blade is rough but serviceable.&quot;
+name_prefix  = &quot;Rough &quot;
+
+[[quality]]
+tier         = &quot;standard&quot;
+weight       = 55
+attack_bonus = 5
+equip_msg    = &quot;A solid, workmanlike blade.&quot;
+
+[[quality]]
+tier         = &quot;exceptional&quot;
+weight       = 20
+attack_bonus = 8
+special      = &quot;sharp&quot;  # Tag appended to weapon_tags on finished item
+equip_msg    = &quot;The edge is remarkably fine.&quot;
+name_prefix  = &quot;Fine &quot;
+
+[[quality]]
+tier         = &quot;masterwork&quot;
+weight       = 5
+attack_bonus = 12
+special      = &quot;sharp&quot;
+equip_msg    = &quot;This is a masterwork piece.&quot;
+name_prefix  = &quot;Masterwork &quot;</code></pre>
+<h3 id="14-3-commission-fields">14.3 Commission Fields</h3>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>id</code></td>
+  <td>string</td>
+  <td>Commission identifier</td>
+</tr>
+<tr>
+  <td><code>npc_id</code></td>
+  <td>string</td>
+  <td>Must match the crafter NPC's <code>id</code></td>
+</tr>
+<tr>
+  <td><code>label</code></td>
+  <td>string</td>
+  <td>Item name base (quality prefix prepended)</td>
+</tr>
+<tr>
+  <td><code>desc</code></td>
+  <td>string</td>
+  <td>Item description</td>
+</tr>
+<tr>
+  <td><code>slot</code></td>
+  <td>string</td>
+  <td>Equipment slot for finished item</td>
+</tr>
+<tr>
+  <td><code>weapon<em>tags</code> / <code>armor</em>tags</code></td>
+  <td>list</td>
+  <td>Tags on finished item</td>
+</tr>
+<tr>
+  <td><code>materials</code></td>
+  <td>list</td>
+  <td>Item IDs the player must provide (may repeat)</td>
+</tr>
+<tr>
+  <td><code>turns_required</code></td>
+  <td>int</td>
+  <td>Player moves before commission is ready</td>
+</tr>
+<tr>
+  <td><code>gold_cost</code></td>
+  <td>int</td>
+  <td>Upfront gold deposit</td>
+</tr>
+<tr>
+  <td><code>xp_reward</code></td>
+  <td>int</td>
+  <td>XP awarded on collection</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-4-quality-fields">14.4 Quality Fields</h3>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>tier</code></td>
+  <td>string</td>
+  <td><code>"poor"</code>, <code>"standard"</code>, <code>"exceptional"</code>, <code>"masterwork"</code></td>
+</tr>
+<tr>
+  <td><code>weight</code></td>
+  <td>int</td>
+  <td>Probability weight (higher = more common)</td>
+</tr>
+<tr>
+  <td><code>attack<em>bonus</code> / <code>defense</em>bonus</code> / <code>max<em>hp</em>bonus</code> / <code>carry_bonus</code></td>
+  <td>int</td>
+  <td>Stat bonuses added as effects</td>
+</tr>
+<tr>
+  <td><code>special</code></td>
+  <td>string</td>
+  <td>Extra tag added to weapon/armor_tags</td>
+</tr>
+<tr>
+  <td><code>equip_msg</code></td>
+  <td>string</td>
+  <td>Message shown when item is equipped</td>
+</tr>
+<tr>
+  <td><code>name_prefix</code></td>
+  <td>string</td>
+  <td>Prepended to <code>label</code> for final item name</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="15-companions">15. Companions</h2>
+<p>Companions travel with the player and optionally assist in combat.</p>
+
+<h3 id="15-1-three-companion-tiers">15.1 Three Companion Tiers</h3>
+<table>
+<thead>
+<tr>
+  <th>Tier</th>
+  <th>Carries items?</th>
+  <th>Fights?</th>
+  <th>Enters all rooms?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>narrative</code></td>
+  <td>No</td>
+  <td>No</td>
+  <td>Yes</td>
+</tr>
+<tr>
+  <td><code>utility</code></td>
+  <td>Yes (carry bonus)</td>
+  <td>No</td>
+  <td>No (blocked by <code>no<em>large</em>companion</code>)</td>
+</tr>
+<tr>
+  <td><code>combat</code></td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>No (blocked by <code>no<em>large</em>companion</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="15-2-companion-file-format">15.2 Companion File Format</h3>
+<p><code>data/&lt;world<em>id&gt;/&lt;zone&gt;/companions/&lt;companion</em>id&gt;.toml</code>:</p>
+
+<pre><code class="language-toml">id              = &quot;ranger_mira&quot;
+name            = &quot;Ranger Mira&quot;
+type            = &quot;combat&quot;
+desc_short      = &quot;A capable scout with a hunter&#x27;s eye.&quot;
+attack          = 10
+defense         = 6
+hp              = 50
+max_hp          = 50
+carry_bonus     = 0
+style           = &quot;shadowstrike&quot;
+style_prof      = 40.0
+restrictions    = [&quot;no_large_companion&quot;]
+join_message    = &quot;Mira nods. &#x27;Lead the way.&#x27;&quot;
+wait_message    = &quot;Mira waits at the entrance.&quot;
+rejoin_message  = &quot;Mira rejoins you.&quot;
+downed_message  = &quot;Mira is too injured to continue. She will recover with rest.&quot;</code></pre>
+<h3 id="15-3-companion-lifecycle">15.3 Companion Lifecycle</h3>
+<ul>
+  <li><strong>Active</strong> — travels, carries, fights</li>
+  <li><strong>Downed</strong> — HP reached 0; rests at an inn to recover</li>
+  <li><strong>Waiting</strong> — blocked by room restriction; rejoins when player returns to valid room</li>
+  <li><strong>Dismissed</strong> — removed; can be re-acquired through dialogue</li>
+</ul>
+<h3 id="15-4-script-usage">15.4 Script Usage</h3>
+<pre><code class="language-toml"># Give companion via dialogue
+{ op = &quot;give_companion&quot;, companion_id = &quot;ranger_mira&quot; }
+
+# Dismiss companion
+{ op = &quot;dismiss_companion&quot;, message = &quot;She nods once and walks away.&quot; }</code></pre>
+<hr>
+<h2 id="16-validation-tool">16. Validation Tool</h2>
+<p>Run <code>tools/validate.py</code> after editing data files to catch problems before playing.</p>
+
+<pre><code>python tools/validate.py</code></pre>
+<h3 id="what-it-checks">What It Checks</h3>
+<p><strong>Rooms:</strong></p>
+
+<ul>
+  <li>Every room has <code>id</code>, <code>name</code>, <code>description</code></li>
+  <li>All exit targets are valid room IDs</li>
+  <li>All item references in <code>items</code> are valid IDs</li>
+  <li>All spawn references are valid NPC IDs</li>
+  <li>Warns if <code>coord</code> is missing</li>
+</ul>
+<p><strong>Items:</strong></p>
+
+<ul>
+  <li>Every item has <code>id</code> and <code>name</code></li>
+</ul>
+<p><strong>NPCs:</strong></p>
+
+<ul>
+  <li>Required fields: <code>id</code>, <code>name</code>, <code>hp</code>, <code>max<em>hp</code>, <code>attack</code>, <code>defense</code>, <code>xp</em>reward</code>,</li>
+</ul>
+<p><code>gold<em>reward</code>, <code>hostile</code>, <code>tags</code>, <code>style</code>, <code>style</em>prof</code>, <code>desc<em>short</code>, <code>desc</em>long</code></p>
+
+<ul>
+  <li>All shop item IDs exist</li>
+  <li>All <code>give_accepts</code> item IDs exist</li>
+  <li>All style references exist</li>
+</ul>
+<p><strong>Dialogue:</strong></p>
+
+<ul>
+  <li>Every tree has a <code>root</code> node</li>
+  <li>All <code>next = "..."</code> values point to existing nodes</li>
+  <li>No orphan nodes unreachable from root</li>
+</ul>
+<p><strong>Quests:</strong></p>
+
+<ul>
+  <li>Quest files are valid TOML</li>
+  <li>Referenced item IDs exist</li>
+</ul>
+<p><strong>World:</strong></p>
+
+<ul>
+  <li>Exactly one room has <code>start = true</code></li>
+  <li>At least one room per zone has the <code>town</code> flag (warning)</li>
+</ul>
+<h3 id="interpreting-output">Interpreting Output</h3>
+<pre><code>✓  millhaven   — 8 rooms, 10 NPCs, 23 items
+✗  greenhollow — room &#x27;secret_cave&#x27;: exit &#x27;east&#x27; → &#x27;missing_room&#x27; not found
+⚠  blackfen    — room &#x27;fog_trail&#x27;: no coord (won&#x27;t appear on map)</code></pre>
+<ul>
+  <li><code>✓</code> = zone passed all checks</li>
+  <li><code>✗</code> = error (game may break)</li>
+  <li><code>⚠</code> = warning (game still works, but something may be wrong)</li>
+</ul>
+<hr>
+<h2 id="appendix-a-room-flags">Appendix A — Room Flags</h2>
+<p>Add any of these string values to a room's <code>flags</code> array.</p>
+
+<table>
+<thead>
+<tr>
+  <th>Flag</th>
+  <th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>town</code></td>
+  <td>Auto-updates player's respawn point (<code>bind<em>room</code>) on entry. Use on inns, squares, safe shelters. Combine with <code>no</em>combat</code> in most cases.</td>
+</tr>
+<tr>
+  <td><code>no_combat</code></td>
+  <td>Blocks the <code>attack</code> command entirely. Use in social spaces, inns, council halls.</td>
+</tr>
+<tr>
+  <td><code>safe_combat</code></td>
+  <td>Player takes zero damage, but XP and gold are awarded normally. Use for training rooms.</td>
+</tr>
+<tr>
+  <td><code>healing</code></td>
+  <td>Player regains <code>heal<em>rate</code> HP per command (default 5). Combine with <code>heal</em>rate</code> field.</td>
+</tr>
+<tr>
+  <td><code>reduced_stats</code></td>
+  <td>All combatants fight with half attack and defense. Use for sparring rings or dampened magic areas.</td>
+</tr>
+<tr>
+  <td><code>sleep</code></td>
+  <td>Player can <code>sleep</code>/<code>rest</code> here without an innkeeper NPC. Use for campsites, player homes.</td>
+</tr>
+<tr>
+  <td><code>hazard</code></td>
+  <td>Deals <code>hazard<em>damage</code> HP per command (default 2). Use for poison, fire, or caustic areas. Combine with <code>hazard</em>damage</code>, <code>hazard<em>message</code>, <code>hazard</em>exempt_flag</code>.</td>
+</tr>
+<tr>
+  <td><code>no<em>large</em>companion</code></td>
+  <td>Blocks utility and combat companions. Use for tight caves, cliff faces, or crawl spaces. Narrative companions always enter.</td>
+</tr>
+</tbody>
+</table>
+<p>Multiple flags can be combined:</p>
+
+<pre><code class="language-toml">flags = [&quot;town&quot;, &quot;no_combat&quot;, &quot;healing&quot;]</code></pre>
+<hr>
+<h2 id="appendix-b-equipment-slots">Appendix B — Equipment Slots</h2>
+<p>Equipment slots are <strong>world-configurable</strong> via <code>EQUIPMENT_SLOTS</code> in <code>config.py</code>. The table below lists the default slots for The Sixfold Realms. A world can add, remove, or rename slots freely — <code>item.slot</code> values must match an entry in the world's slot list.</p>
+
+<table>
+<thead>
+<tr>
+  <th>Slot</th>
+  <th>Items that use it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>weapon</code></td>
+  <td>Swords, axes, knuckles, staves</td>
+</tr>
+<tr>
+  <td><code>head</code></td>
+  <td>Helmets, hoods, caps</td>
+</tr>
+<tr>
+  <td><code>chest</code></td>
+  <td>Breastplates, robes, shirts</td>
+</tr>
+<tr>
+  <td><code>legs</code></td>
+  <td>Greaves, trousers</td>
+</tr>
+<tr>
+  <td><code>arms</code></td>
+  <td>Bracers, vambraces, gloves</td>
+</tr>
+<tr>
+  <td><code>armor</code></td>
+  <td>Full-body armour (older slot; prefer chest/legs for new content)</td>
+</tr>
+<tr>
+  <td><code>shield</code></td>
+  <td>Bucklers, tower shields</td>
+</tr>
+<tr>
+  <td><code>cape</code></td>
+  <td>Cloaks, mantles</td>
+</tr>
+<tr>
+  <td><code>ring</code></td>
+  <td>Rings, bracelets</td>
+</tr>
+<tr>
+  <td><code>pack</code></td>
+  <td>Bags, satchels — adds <code>carry_capacity</code> bonus</td>
+</tr>
+<tr>
+  <td><code>""</code></td>
+  <td>Non-equippable (consumables, quest items, materials)</td>
+</tr>
+</tbody>
+</table>
+<p>Items with <code>slot = ""</code> can only be used via the <code>use</code> command (consumables) or given to NPCs. Equipping an item into a slot replaces the previous item in that slot.</p>
+
+<hr>
+<h2 id="appendix-c-all-script-ops-quick-reference">Appendix C — All Script Ops (Quick Reference)</h2>
+<table>
+<thead>
+<tr>
+  <th>Op</th>
+  <th>Key attributes</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>say</code></td>
+  <td><code>text</code></td>
+  <td>Dialogue-tagged text</td>
+</tr>
+<tr>
+  <td><code>message</code></td>
+  <td><code>text</code>, <code>tag</code></td>
+  <td>Text with any tag</td>
+</tr>
+<tr>
+  <td><code>set_flag</code></td>
+  <td><code>flag</code></td>
+  <td>Add flag</td>
+</tr>
+<tr>
+  <td><code>clear_flag</code></td>
+  <td><code>flag</code></td>
+  <td>Remove flag</td>
+</tr>
+<tr>
+  <td><code>give_gold</code></td>
+  <td><code>amount</code></td>
+  <td>Award gold</td>
+</tr>
+<tr>
+  <td><code>take_gold</code></td>
+  <td><code>amount</code>, <code>silent</code></td>
+  <td>Deduct gold (fails if short)</td>
+</tr>
+<tr>
+  <td><code>give_xp</code></td>
+  <td><code>amount</code>, <code>silent</code></td>
+  <td>Award XP</td>
+</tr>
+<tr>
+  <td><code>heal</code></td>
+  <td><code>amount</code></td>
+  <td>Restore HP (capped)</td>
+</tr>
+<tr>
+  <td><code>set_hp</code></td>
+  <td><code>amount</code></td>
+  <td>Set HP exactly</td>
+</tr>
+<tr>
+  <td><code>damage</code></td>
+  <td><code>amount</code>, <code>message</code>, <code>silent</code></td>
+  <td>Deal direct damage</td>
+</tr>
+<tr>
+  <td><code>give_item</code></td>
+  <td><code>item_id</code></td>
+  <td>Copy item to inventory</td>
+</tr>
+<tr>
+  <td><code>take_item</code></td>
+  <td><code>item_id</code></td>
+  <td>Remove item from inventory</td>
+</tr>
+<tr>
+  <td><code>spawn_item</code></td>
+  <td><code>item_id</code></td>
+  <td>Place item in current room</td>
+</tr>
+<tr>
+  <td><code>advance_quest</code></td>
+  <td><code>quest_id</code>, <code>step</code></td>
+  <td>Start or advance quest</td>
+</tr>
+<tr>
+  <td><code>complete_quest</code></td>
+  <td><code>quest_id</code></td>
+  <td>Complete quest and award rewards</td>
+</tr>
+<tr>
+  <td><code>teach_style</code></td>
+  <td><code>style_id</code></td>
+  <td>Teach fighting style</td>
+</tr>
+<tr>
+  <td><code>unlock_exit</code></td>
+  <td><code>room_id</code>, <code>direction</code></td>
+  <td>Unlock a door</td>
+</tr>
+<tr>
+  <td><code>lock_exit</code></td>
+  <td><code>room_id</code>, <code>direction</code></td>
+  <td>Lock a door</td>
+</tr>
+<tr>
+  <td><code>give_companion</code></td>
+  <td><code>companion_id</code></td>
+  <td>Assign companion</td>
+</tr>
+<tr>
+  <td><code>dismiss_companion</code></td>
+  <td><code>message</code></td>
+  <td>Remove companion</td>
+</tr>
+<tr>
+  <td><code>skill_check</code></td>
+  <td><code>skill</code>, <code>dc</code>, <code>on<em>pass</code>, <code>on</em>fail</code>, <code>silent</code>, <code>grow</code></td>
+  <td>d20 skill roll</td>
+</tr>
+<tr>
+  <td><code>if_skill</code></td>
+  <td><code>skill</code>, <code>min</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on skill value</td>
+</tr>
+<tr>
+  <td><code>skill_grow</code></td>
+  <td><code>skill</code>, <code>amount</code></td>
+  <td>Directly increase skill</td>
+</tr>
+<tr>
+  <td><code>apply_status</code></td>
+  <td><code>effect</code>, <code>duration</code></td>
+  <td>Apply status effect</td>
+</tr>
+<tr>
+  <td><code>clear_status</code></td>
+  <td><code>effect</code></td>
+  <td>Remove status effect</td>
+</tr>
+<tr>
+  <td><code>if_status</code></td>
+  <td><code>effect</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on effect presence</td>
+</tr>
+<tr>
+  <td><code>prestige</code></td>
+  <td><code>amount</code>, <code>reason</code></td>
+  <td>Adjust prestige score</td>
+</tr>
+<tr>
+  <td><code>add_affinity</code></td>
+  <td><code>tag</code></td>
+  <td>Grant affinity tag</td>
+</tr>
+<tr>
+  <td><code>remove_affinity</code></td>
+  <td><code>tag</code></td>
+  <td>Remove affinity tag</td>
+</tr>
+<tr>
+  <td><code>if_prestige</code></td>
+  <td><code>min</code>, <code>max</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on prestige range</td>
+</tr>
+<tr>
+  <td><code>if_affinity</code></td>
+  <td><code>tag</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on affinity</td>
+</tr>
+<tr>
+  <td><code>bank_expand</code></td>
+  <td><code>tier</code></td>
+  <td>Expand bank slots</td>
+</tr>
+<tr>
+  <td><code>if_flag</code> / <code>if</code></td>
+  <td><code>flag</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on flag</td>
+</tr>
+<tr>
+  <td><code>if<em>not</em>flag</code></td>
+  <td><code>flag</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on flag absence</td>
+</tr>
+<tr>
+  <td><code>if_item</code></td>
+  <td><code>item_id</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on inventory item</td>
+</tr>
+<tr>
+  <td><code>if_quest</code></td>
+  <td><code>quest_id</code>, <code>step</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on quest step</td>
+</tr>
+<tr>
+  <td><code>if<em>quest</em>complete</code></td>
+  <td><code>quest_id</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on quest completion</td>
+</tr>
+<tr>
+  <td><code>fail</code></td>
+  <td>—</td>
+  <td>Abort script immediately</td>
+</tr>
+<tr>
+  <td><code>require_tag</code></td>
+  <td><code>tag</code>, <code>fail_message</code></td>
+  <td>Abort if no item with tag</td>
+</tr>
+<tr>
+  <td><code>teleport_player</code></td>
+  <td><code>room_id</code>, <code>message</code></td>
+  <td>Move player to any room</td>
+</tr>
+<tr>
+  <td><code>move_npc</code></td>
+  <td><code>npc<em>id</code>, <code>to</em>room</code></td>
+  <td>Move NPC between rooms</td>
+</tr>
+<tr>
+  <td><code>move_item</code></td>
+  <td><code>item<em>id</code>, <code>to</em>room</code>, <code>from_room</code></td>
+  <td>Move room item</td>
+</tr>
+<tr>
+  <td><code>if<em>combat</em>round</code></td>
+  <td><code>min</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on round number</td>
+</tr>
+<tr>
+  <td><code>if<em>npc</em>hp</code></td>
+  <td><code>max</code>, <code>then</code>, <code>else</code></td>
+  <td>Branch on NPC HP</td>
+</tr>
+<tr>
+  <td><code>end_combat</code></td>
+  <td>—</td>
+  <td>End fight; NPC survives</td>
+</tr>
+<tr>
+  <td><code>journal_entry</code></td>
+  <td><code>title</code>, <code>text</code></td>
+  <td>Add player journal entry</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Unknown op names are <strong>silently ignored</strong> — future-proofing for new ops.</p>
+
+</blockquote>
+<hr>
+<h2 id="appendix-d-player-fields-for-substitution">Appendix D — Player Fields for Substitution</h2>
+<p>These fields can be referenced in dialogue substitutions as <code>{player.field}</code> or via script conditionals.</p>
+
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>name</code></td>
+  <td>string</td>
+  <td>Character name</td>
+</tr>
+<tr>
+  <td><code>hp</code></td>
+  <td>int</td>
+  <td>Current HP</td>
+</tr>
+<tr>
+  <td><code>max_hp</code></td>
+  <td>int</td>
+  <td>Maximum HP</td>
+</tr>
+<tr>
+  <td><code>attack</code></td>
+  <td>int</td>
+  <td>Base attack stat</td>
+</tr>
+<tr>
+  <td><code>defense</code></td>
+  <td>int</td>
+  <td>Base defense stat</td>
+</tr>
+<tr>
+  <td><code>level</code></td>
+  <td>int</td>
+  <td>Character level</td>
+</tr>
+<tr>
+  <td><code>xp</code></td>
+  <td>int</td>
+  <td>Current XP toward next level</td>
+</tr>
+<tr>
+  <td><code>gold</code></td>
+  <td>int</td>
+  <td>Gold on hand</td>
+</tr>
+<tr>
+  <td><code>room_id</code></td>
+  <td>string</td>
+  <td>Current room ID</td>
+</tr>
+<tr>
+  <td><code>flags</code></td>
+  <td>set</td>
+  <td>All active flag strings</td>
+</tr>
+<tr>
+  <td><code>active_quests</code></td>
+  <td>dict</td>
+  <td><code>{quest<em>id: step</em>number}</code></td>
+</tr>
+<tr>
+  <td><code>completed_quests</code></td>
+  <td>set</td>
+  <td>Finished quest IDs</td>
+</tr>
+<tr>
+  <td><code>skills</code></td>
+  <td>dict</td>
+  <td><code>{skill<em>id: value</em>0-100}</code></td>
+</tr>
+<tr>
+  <td><code>prestige</code></td>
+  <td>int</td>
+  <td>Prestige score (−999 to +999)</td>
+</tr>
+<tr>
+  <td><code>prestige_affinities</code></td>
+  <td>list</td>
+  <td>Earned affinity tag strings</td>
+</tr>
+<tr>
+  <td><code>status_effects</code></td>
+  <td>dict</td>
+  <td><code>{effect: turns_remaining}</code></td>
+</tr>
+<tr>
+  <td><code>inventory</code></td>
+  <td>list</td>
+  <td>All carried item dicts</td>
+</tr>
+<tr>
+  <td><code>equipped</code></td>
+  <td>dict</td>
+  <td>Slot → item dict (or None)</td>
+</tr>
+<tr>
+  <td><code>journal</code></td>
+  <td>list</td>
+  <td><code>[{"title": str, "text": str}]</code></td>
+</tr>
+<tr>
+  <td><code>companion</code></td>
+  <td>dict</td>
+  <td>Active companion state (or None)</td>
+</tr>
+<tr>
+  <td><code>bind_room</code></td>
+  <td>string</td>
+  <td>Respawn room ID</td>
+</tr>
+<tr>
+  <td><code>bank_slots</code></td>
+  <td>int</td>
+  <td>Bank capacity</td>
+</tr>
+<tr>
+  <td><code>banked_gold</code></td>
+  <td>int</td>
+  <td>Gold in bank</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Shorthand tokens</strong> for dialogue <code>{token}</code>: <code>{player}</code>, <code>{gold}</code>, <code>{hp}</code>, <code>{level}</code>, <code>{zone}</code>, <code>{npc}</code>, <code>{entity_id.field}</code></p>
+
+</body>
+</html>

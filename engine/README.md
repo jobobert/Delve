@@ -9,7 +9,7 @@ main.py
   └─ CLIFrontend()
        ├─ EventBus()                         subscribe OUTPUT → _on_output
        │                                     subscribe PLAYER_DIED → _on_player_died
-       ├─ World()                            scan data/ — build zone index, load all
+       ├─ World(world_path)                  scan world folder — build zone index, load all
        │                                     item and NPC templates into flat dicts
        ├─ _login()                           prompt for name → Player.load() or Player()
        └─ CommandProcessor(world, player, bus)
@@ -97,7 +97,7 @@ _cmd_attack(verb, args)
 _cmd_talk(verb, args)
   └─ _resolve_npc(target)
   └─ dialogue.run_inline(npc, player, quests, ctx, bus, input_fn)
-       ├─ load data/<zone>/dialogues/<npc_id>.toml   (or npc["dialogue"] string,
+       ├─ load data/<world_id>/<zone>/dialogues/<npc_id>.toml  (or npc["dialogue"] string,
        │                                              or auto brush-off line)
        ├─ evaluate node conditions (flags, quests, items, skills, prestige, …)
        ├─ emit Tag.DIALOGUE lines
@@ -144,6 +144,7 @@ ScriptRunner(ctx).run(ops)
 | `styles.py` | 7 fighting styles with matchup tables, gear affinity, and passive abilities unlocking at proficiency thresholds. |
 | `toml_io.py` | **Custom TOML parser** — superset of spec. Supports multi-line inline tables and triple-quoted strings. Standard `tomllib` will fail on these files. **Always use `from engine.toml_io import load`.** |
 | `world.py` | Zone-streaming manager. `prepare_room(room_id, player)` loads a zone if needed and returns the live room dict. Evicts zones no longer adjacent to the player. |
+| `map_builder.py` | Topology-aware map data builder. `apply_auto_layout(rooms)` places all rooms on a grid using exit-direction BFS. `build_map_data(rooms, visited, current)` returns a renderer-agnostic `{(x,y): cell_dict}` grid consumed by the in-game `map` command, `tools/map.py`, and any future HTML/web frontend. |
 
 ---
 
@@ -185,10 +186,13 @@ Override colours for any tag in `frontend/config.py → COLOR_OVERRIDES`.
 Each zone is a folder under `data/`. The engine scans `data/` at startup; no
 registry to update. Only the player's current zone and immediate neighbours live
 in RAM. Zones load on approach and evict on departure. Live NPC HP and room item
-lists persist to `data/zone_state/<zone_id>.json` between sessions.
+lists persist to `data/players/<name>/zone_state/<zone_id>.json` between sessions
+(per-player — isolated from other characters).
 
-All rooms should have a `coord = [x, y]` field (east = +x, north = +y).
-The validator warns for any room missing coordinates — they won't appear on maps.
+All rooms are auto-placed on maps by both the in-game `map` command and
+`tools/map.py` using exit topology (BFS from neighbours). An optional
+`coord = [x, y]` field (east = +x, north = +y) can pin a room's position
+on the admin map permanently; it is not required or validated.
 
 **Zone eviction policy:** Keep current zone + all directly adjacent zones in RAM.
 Evict everything else. "Adjacent" = any zone reachable by a single exit from any
@@ -202,9 +206,9 @@ up are suppressed via `player.looted_items` (a set of `"room_id:item_id"` keys).
 
 ### Dialogue system (dialogue.py)
 
-Branching trees in `data/<zone>/dialogues/<npc_id>.toml`. Resolution order:
+Branching trees in `data/<world_id>/<zone>/dialogues/<npc_id>.toml`. Resolution order:
 
-1. `data/<zone>/dialogues/<npc_id>.toml`
+1. `data/<world_id>/<zone>/dialogues/<npc_id>.toml`
 2. `npc["dialogue"]` plain string
 3. Auto-generated brush-off line (hostile or friendly pool)
 

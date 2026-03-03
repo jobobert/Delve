@@ -21,13 +21,13 @@ Usage:
 
 import json
 import sys
-from collections import deque
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
-from engine.toml_io import load as toml_load
+from engine.toml_io    import load as toml_load
+from engine.map_builder import apply_auto_layout, exit_dest
 
 DATA_DIR  = ROOT / "data"
 SKIP_DIRS = {"zone_state", "players"}
@@ -85,127 +85,11 @@ def _zone_dirs(world_path: Path) -> list[Path]:
         if p.is_dir() and p.name not in SKIP_DIRS
     )
 
-# ── Exit helpers ──────────────────────────────────────────────────────────────
-
-def exit_dest(exit_val) -> str:
-    if isinstance(exit_val, dict):
-        return exit_val.get("to", "")
-    return exit_val or ""
-
+# ── Exit helpers (rendering-only) ─────────────────────────────────────────────
+# exit_dest is imported from engine.map_builder above.
 
 def exit_locked(exit_val) -> bool:
     return isinstance(exit_val, dict) and exit_val.get("locked", False)
-
-
-# ── Auto-layout via exit topology ────────────────────────────────────────────
-
-_DIR_DELTA: dict[str, tuple[int, int]] = {
-    "north": (0, 1),   "south": (0, -1),
-    "east":  (1, 0),   "west":  (-1, 0),
-    "northeast": (1, 1),   "northwest": (-1, 1),
-    "southeast": (1, -1),  "southwest": (-1, -1),
-    "up":   (0, 2),    "down":  (0, -2),
-    "n": (0, 1), "s": (0, -1), "e": (1, 0), "w": (-1, 0),
-    "ne": (1, 1), "nw": (-1, 1), "se": (1, -1), "sw": (-1, -1),
-    "u": (0, 2), "d": (0, -2),
-}
-
-
-def _nearest_free(grid: dict, pos: tuple) -> tuple:
-    """Spiral outward from pos until an unoccupied grid cell is found."""
-    if pos not in grid:
-        return pos
-    for radius in range(1, 40):
-        for dx in range(-radius, radius + 1):
-            for dy in range(-radius, radius + 1):
-                if abs(dx) == radius or abs(dy) == radius:
-                    p = (pos[0] + dx, pos[1] + dy)
-                    if p not in grid:
-                        return p
-    return (pos[0] + 50, pos[1] + 50)
-
-
-def _apply_auto_layout(rooms: dict) -> None:
-    """
-    Compute a display position for every room and store it in room["_display_coord"].
-
-    Rooms with an explicit coord field use that value (authoritative).
-    All other rooms are placed via BFS from their neighbours using exit directions,
-    with _nearest_free() resolving any grid collisions.  Rooms with no path to any
-    placed room are placed at the nearest free cell near the origin.
-
-    Also sets room["_auto_placed"] = True for rooms without an explicit coord.
-    """
-    pos_of: dict[str, tuple] = {}
-    grid:   dict[tuple, str]  = {}
-
-    # Seed grid from explicit coords
-    for rid, room in rooms.items():
-        c = room.get("coord")
-        if c and len(c) >= 2:
-            p = (int(c[0]), int(c[1]))
-            pos_of[rid] = p
-            grid[p] = rid
-
-    unplaced: set[str] = {rid for rid in rooms if rid not in pos_of}
-    if not unplaced:
-        for rid in rooms:
-            rooms[rid]["_display_coord"] = list(pos_of[rid])
-        return
-
-    queue:    deque[tuple[str, tuple]] = deque()
-    in_queue: set[str] = set()
-
-    def enqueue_neighbors(rid: str, p: tuple) -> None:
-        for direction, ev in rooms[rid].get("exits", {}).items():
-            dest = exit_dest(ev)
-            if dest in unplaced and dest not in in_queue:
-                dx, dy = _DIR_DELTA.get(direction, (0, 0))
-                if dx or dy:
-                    queue.append((dest, (p[0] + dx, p[1] + dy)))
-                    in_queue.add(dest)
-
-    # Seed BFS from all rooms that already have positions
-    for rid, p in pos_of.items():
-        enqueue_neighbors(rid, p)
-
-    # If no explicit-coord rooms at all, start from the start room (or first room)
-    if not queue:
-        seed = next(
-            (rid for rid, r in rooms.items() if r.get("start")),
-            next(iter(rooms), None),
-        )
-        if seed and seed in unplaced:
-            p = (0, 0)
-            pos_of[seed] = p
-            grid[p] = seed
-            unplaced.discard(seed)
-            in_queue.add(seed)
-            enqueue_neighbors(seed, p)
-
-    while queue:
-        rid, expected = queue.popleft()
-        if rid not in unplaced:
-            continue
-        p = _nearest_free(grid, expected)
-        pos_of[rid] = p
-        grid[p] = rid
-        unplaced.discard(rid)
-        enqueue_neighbors(rid, p)
-
-    # Any still-unplaced rooms (disconnected islands with no cardinal path)
-    for rid in list(unplaced):
-        p = _nearest_free(grid, (0, 0))
-        pos_of[rid] = p
-        grid[p] = rid
-
-    # Write results
-    for rid, room in rooms.items():
-        p = pos_of.get(rid)
-        if p:
-            room["_display_coord"] = list(p)
-            if not room.get("coord"):
-                room["_auto_placed"] = True
 
 
 # ── World loader ──────────────────────────────────────────────────────────────
@@ -245,7 +129,7 @@ def load_world(world_path: Path) -> dict:
         if has_rooms and zone_id not in world["zone_list"]:
             world["zone_list"].append(zone_id)
 
-    _apply_auto_layout(world["rooms"])
+    apply_auto_layout(world["rooms"])
     return world
 
 

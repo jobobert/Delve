@@ -27,8 +27,9 @@ iterated internally (adjacency checks, state persistence, etc.).
 Live state persistence
 ──────────────────────
 On zone eviction, live NPC HP and current room item lists are written to
-data/zone_state/<zone_id>.json. On next load the sidecar is applied over
-the fresh TOML so the world remembers what the player did.
+data/players/<name>/zone_state/<zone_id>.json (per-player). On next load
+the sidecar is applied over the fresh TOML so the world remembers what
+that player did, independently of any other player session.
 
 NPC spawning
 ────────────
@@ -94,11 +95,14 @@ def _resolve_random_fields(inst: dict) -> None:
 class ZoneMeta:
     zone_id:    str
     folder:     Path              # data/<zone_id>/
+    name:       str               = ""    # display name from zone.toml; falls back to zone_id
     room_files: list              = None   # .toml files containing [[room]] blocks
     room_ids:   set               = None
     loaded:     bool              = False
 
     def __post_init__(self):
+        if not self.name:
+            self.name = self.zone_id.replace("_", " ").title()
         if self.room_files is None: self.room_files = []
         if self.room_ids   is None: self.room_ids   = set()
 
@@ -147,9 +151,9 @@ def _records_from_folder(zone_folder, key: str) -> list:
 # ── World ─────────────────────────────────────────────────────────────────────
 
 class World:
-    def __init__(self, world_path: Path):
+    def __init__(self, world_path: Path, zone_state_dir: Path | None = None):
         self._world_path     = world_path
-        self._zone_state_dir = world_path / "zone_state"
+        self._zone_state_dir = zone_state_dir or (world_path / "zone_state")
         self._zone_state_dir.mkdir(parents=True, exist_ok=True)
 
         # Global lightweight catalogues — always in memory
@@ -167,6 +171,15 @@ class World:
         # Each corpse: {owner, items, equipped, expires_at}
         self._corpses: dict[str, list[dict]] = {}
         self._build_index()
+
+    def attach_player(self, player) -> None:
+        """Switch to this player's personal zone state directory.
+
+        Call after login and before any zones are loaded.  Safe because
+        _build_index() only reads TOML files and never accesses _zone_state_dir.
+        """
+        self._zone_state_dir = player.zone_state_dir
+        self._zone_state_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Zone discovery ────────────────────────────────────────────────────────
 
@@ -213,8 +226,15 @@ class World:
             if not room_files:
                 continue   # folder has no room data (e.g. a dialogues-only zone)
 
+            zone_toml = zone_folder / "zone.toml"
+            zone_name = ""
+            if zone_toml.exists():
+                try:
+                    zone_name = toml_load(zone_toml).get("name", "")
+                except Exception:
+                    pass
             meta = ZoneMeta(zone_id=zone_id, folder=zone_folder,
-                            room_files=room_files)
+                            name=zone_name, room_files=room_files)
             for room in room_records:
                 rid = room.get("id", "")
                 if rid:

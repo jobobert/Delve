@@ -71,10 +71,11 @@ Multi-step, tracked per-character. Quest flags, script ops, and dialogue
 conditions interact to gate content and reward completion.
 
 ### Script engine
-37 ops embedded in dialogue responses, NPC kill scripts, `give_accepts`
-handlers, item `on_get` arrays, and room `on_enter` arrays. Covers output,
-player state, inventory, quests, styles, world state, skills, status effects,
-prestige, companions, bank, conditionals, and flow control.
+45 ops embedded in dialogue responses, NPC kill scripts, round scripts,
+`give_accepts` handlers, item `on_get`/`on_drop` arrays, room `on_enter`
+arrays, and door event arrays. Covers output, player state, inventory, quests,
+styles, world state, skills, status effects, prestige, companions, bank,
+conditionals, and flow control.
 
 ### Skills
 Skills are world-configurable — defined per-world in `data/<world_id>/config.py`.
@@ -185,10 +186,10 @@ python tools/map.py --html                   # HTML map → tools/admin_map.html
 python tools/map.py --html --output my.html  # HTML map to custom path
 python tools/map.py --world <name>           # select world by folder name
 
-# World Creation Tool — browser-based TOML editor with dialogue graph
+# World Creation Tool — browser-based TOML editor with map, dialogue graph
 python tools/wct_server.py                   # → http://localhost:7373
 python tools/wct_server.py --port 8080
-python tools/wct_server.py --no-browser
+python tools/wct_server.py --browser         # also open browser automatically
 
 # AI playtester (requires ANTHROPIC_API_KEY)
 python tools/ai_player.py play

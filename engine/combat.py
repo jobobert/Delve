@@ -44,6 +44,7 @@ from engine.msg import Msg, Tag
 from engine.room_flags import RoomFlags
 import engine.styles as styles_mod
 import engine.log as log
+import engine.world_config as wc
 
 
 def _clamp(v: int, lo: int, hi: int) -> int:
@@ -673,7 +674,7 @@ class CombatSession:
 
         p.inventory = no_drop_inv
         p.equipped  = {slot: no_drop_equip.get(slot)
-                       for slot in ("weapon", "armor", "pack")}
+                       for slot in wc.EQUIPMENT_SLOTS}
 
         # ── 4. Lose carried gold ───────────────────────────────────────────────
         p.gold = 0

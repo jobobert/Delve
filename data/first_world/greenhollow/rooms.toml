@@ -4,7 +4,6 @@
 
 [[room]]
 id          = "greenhollow_path"
-coord       = [0, 1]
 name        = "The Downward Path"
 description = "A clay road drops away from the ridge into the valley below. Greenhollow sits in the bowl beneath you — three dozen buildings around a mill wheel you can hear from here. The air smells of cut grain and creek water. A hand-lettered sign at the road's edge reads GREENHOLLOW — KEEP THE PACE. Children are small bright shapes at the bottom of the hill."
 desc_long   = "The path was cut wide enough for two carts to pass side by side. Someone has planted hedgerows along both verges, and they've grown in thick over the years. Sparrows are doing their business in the hawthorn. You can see the whole valley spread below you — the mill, the smoke from the smithy, the long flat geometry of the fields, a glint of pond water to the east."
@@ -16,7 +15,6 @@ admin_comment = "Zone entry from north. Connects to Millhaven via the ridge road
 
 [[room]]
 id          = "greenhollow_lane"
-coord       = [0, 0]
 name        = "Main Lane"
 description = "The main lane runs through the heart of Greenhollow between two rows of close-packed houses. Washing lines cross overhead. A dog is asleep in the middle of the road. Children dart between the buildings calling names. The mill is audible to the west, a smithy's ring to the south-east, and the lane continues north toward the valley entrance and south toward the fields."
 desc_long   = "Greenhollow's houses are built in the same grey stone, as if the whole village were quarried from a single hillside. Most have kitchen gardens behind them and flower boxes at the windows. The cobbles underfoot are worn smooth and slightly dipped in the middle by fifty years of cart traffic. Someone has propped a broom against the corner building and forgotten it."
@@ -28,7 +26,6 @@ admin_comment = "Hub room. All main quest NPCs pass through or originate here."
 
 [[room]]
 id          = "greenhollow_mill"
-coord       = [-1, 0]
 name        = "The Water Mill"
 description = "The mill sits at the stream's edge, wheel turning with a steady wooden rhythm. Flour dust coats every surface in a thin white film. Sacks line the walls, some full and some waiting. The millstone makes the floor vibrate gently. It smells of grain and damp wood and old machinery."
 desc_long   = "The wheel is oak wrapped in iron brackets — old but well-maintained. Water comes off the tail race and drops into the stream beyond. Inside, the gearing is exposed wood and iron, turning the millstone in slow deliberate circles. The miller has a small desk wedged in the corner covered in accounts written in pencil. A cat sits on top of a flour sack and ignores everything."
@@ -40,7 +37,6 @@ admin_comment = "Miller Owain is here. He knows about the mine situation and can
 
 [[room]]
 id          = "greenhollow_fields_edge"
-coord       = [0, -1]
 name        = "Field's Edge"
 description = "The lane ends and the fields begin here — long rows of wheat stretching south toward the valley wall. The crop looks good except for a string of collapsed sections nearest the hedgerow where something has been burrowing up from below. Deep half-moon holes in the earth, dirt thrown wide, root systems pulled out. The damage has been getting worse each week."
 desc_long   = "The furrows run straight as surveyor's lines to the south wall of the valley. The undamaged crop is heavy with grain — this would be a good harvest if the burrows don't spread. You can see at least a dozen of them from here, each one three or four hands across. Some have fresh dirt around the edges. Something is still active down there."
@@ -52,7 +48,6 @@ admin_comment = "Two groundhog scouts here. Mine entrance is to the west. Ruffia
 
 [[room]]
 id          = "greenhollow_pond"
-coord       = [1, 0]
 name        = "The Mill Pond"
 description = "A broad dark pond fed by the hill stream. Willows drape their branches into the water along the near bank. Ducks move in a slow circuit near the rushes. The water is clear enough to see bottom in the shallows — stones and waterweed and the occasional flash of a fish. Someone has tied a rope to the willow overhanging the swimming hole."
 desc_long   = "The pond has been here longer than the village. The stone wall along the east bank is old enough to have moss several inches deep. Two moorhens are working the margin with the particular focus of birds who are pretending not to notice you. A large snapping turtle is visible just below the surface near the centre of the pond, barely moving."
@@ -64,7 +59,6 @@ admin_comment = "Peaceful encounter area. Pond turtle is a mild combat. Forest e
 
 [[room]]
 id          = "greenhollow_smithy"
-coord       = [1, -1]
 name        = "Brynn's Smithy"
 description = "A wide open-fronted building with a forge at the back wall. The fire is banked but warm — Brynn works methodical hours and doesn't waste fuel. Finished ironwork hangs from the ceiling: brackets, hinges, tools, a few weapons. The floor is packed earth and the ceiling is black with old smoke. It smells of iron and charcoal and sweat."
 desc_long   = "Everything in here is organised by someone who uses it daily. Tools hung at arm-reach by the forge. Stock metal in sorted bundles against the wall. A small anvil for fine work and a large one for heavy. On the workbench a pickaxe head is being fitted to a new haft — several more are queued beside it. A sign over the forge door says: MINING KEEPS EVERYONE WARM. ASK BRYNN."
@@ -76,7 +70,6 @@ admin_comment = "Brynn teaches Flowing Water (level 5+). She also sells picks an
 
 [[room]]
 id          = "greenhollow_practice_yard"
-coord       = [0, -2]
 name        = "The Practice Yard"
 description = "A flat patch of bare earth behind the southernmost houses, walled in on two sides by old stone. A straw-stuffed dummy has been hung from the post in the corner — it's been hit so many times it's mostly stuffing and spite. Three teenage boys are here, circling it with the intent focus of people who have nowhere better to be."
 desc_long   = "This used to be a garden. Someone paved it over in frustration decades ago. The stone wall is scrawled with tallies and names. The dummy has been given a face at some point — badly drawn, slightly mocking. The boys have kicked a clear ring in the dirt that marks their territory as effectively as any fence. They turn when you arrive."
@@ -88,7 +81,6 @@ admin_comment = "Ruffian encounter room. Both paths available: spar (non-lethal)
 
 [[room]]
 id          = "greenhollow_forest_edge"
-coord       = [1, 1]
 name        = "Oak Edge"
 description = "The cultivated land gives out here and old oak begins. The transition is clean — field to treeline in twenty feet, as if the two zones have agreed to leave each other alone. The forest is darker than it looks from the village, and older. The trees are not the tidy managed oak of a coppice — they're ancient, wide-spaced, and indifferent."
 desc_long   = "The first line of oaks has exposed root systems where the soil has eroded back from the field edge. Their roots are as thick as a person's waist. Acorns in the leaf litter. Squirrels moving in the canopy. Somewhere deeper in, a woodpecker is working a dead tree. The air changes here — cooler, mushroom-scented, quieter."
@@ -100,7 +92,6 @@ admin_comment = "Transition to forest. Light wildlife encounters. Shrine is nort
 
 [[room]]
 id          = "greenhollow_forest_shrine"
-coord       = [1, 2]
 name        = "The Hollow Shrine"
 description = "Deep enough in the forest that the village sounds have faded completely. An ancient oak has grown around a stone marker until the two are inseparable — the stone is visible only as a grey rectangle within the trunk's embrace. Someone still tends this place: there are fresh flowers on the roots, a small oil lamp burning, a woven grass ring hung from the lowest branch."
 desc_long   = "The marker predates Greenhollow. The inscription is worn smooth except for two words: KEEP WATCH. The flowers are wildflowers tied with grass — whoever leaves them, they do it weekly. The lamp is clean and filled. Under the roots there is a hollow big enough to crouch in; inside it, wrapped in oilcloth, is a small packet of something. It has been there long enough that the oilcloth has started to rot."
@@ -112,7 +103,6 @@ admin_comment = "Quiet/safe area. Wrapped bundle is a discoverable item with min
 
 [[room]]
 id          = "greenhollow_mine_entrance"
-coord       = [-1, -1]
 name        = "Mine Entrance"
 description = "A timber-framed portal cut into the valley's west wall. The frame is solid — this isn't a recent dig. Cart tracks lead in from the fields. A rack of tools stands outside: picks, shovels, a hand cart. Mine tallow lanterns hang from the frame. Inside, the shaft drops at a gentle angle into darkness. Something has been digging parallel tunnels alongside the main shaft — you can see the fresh earthworks."
 desc_long   = "The mine has been worked for thirty years or more. The ore seam runs through iron-bearing greenstone peculiar to this valley — the same stone that gives Greenhollow its name. The main shaft is wide enough for two miners walking abreast. The parallel burrows are animal work — round-sided, dirt-smelling, the right size for something the weight of a large dog."
@@ -124,7 +114,6 @@ admin_comment = "Mine foreman Osric is here (non-hostile, worried). Gives Osric'
 
 [[room]]
 id          = "greenhollow_mine_level1"
-coord       = [-1, -2]
 name        = "Mine Level One"
 description = "The first level of the mine opens into a worked cavern. Greenstone walls sheened with ground water. Timber shoring along the central corridor. The cart tracks split here — one branch going deeper, one looping back to the surface. In the side passages, ore veins are visible: grey stone threaded with reddish iron lines. There are burrows in the floor. Fresh ones."
 desc_long   = "The side passages are the mine's productive areas — small chambers where the ore seam runs accessible. The main shaft goes deeper. The burrows here are more numerous than at the entrance; in some places they've undermined the floor enough to make the planking creak. There's a smell underneath the usual mine smell — something animal, musky, territorial."
@@ -136,7 +125,6 @@ admin_comment = "Three groundhog workers. Iron and coal ore nodes with on_get sc
 
 [[room]]
 id          = "greenhollow_mine_level2"
-coord       = [-1, -3]
 name        = "The Deep Chamber"
 description = "The bottom of the mine opens into a natural chamber — the tunnellers hit a void in the greenstone and widened it. The walls here are different: darker, denser, showing a narrow vein of something darker than iron ore. But the chamber belongs to something else now. Burrows honeycomb the floor and walls. A pile of chewed timbers suggests the thing that lives here has been busy. A low, throbbing sound comes from the deepest burrow."
 desc_long   = "The natural chamber is roughly circular, thirty feet across, the ceiling just high enough to stand upright. The greenstone ore here is richer than the upper level — if this chamber were cleared it would be the best mining in the valley. But clearing it first requires evicting the current occupant. The burrows radiate from a central den — a wide depression packed with compressed earth and chewed wood. The den smells strongly."

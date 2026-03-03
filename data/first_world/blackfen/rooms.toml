@@ -44,7 +44,6 @@ than either.
 A scrawny lizard-person sits on a wobbly stool outside a low hovel, rocking
 contentedly. A painted wooden plaque hangs from his neck.
 """
-coord  = [0, 0]
 flags  = ["town"]
 exits  = { northeast = "forest_path", east = "blackfen_trail" }
 items  = []
@@ -68,7 +67,6 @@ died here recently.
 Aonn Tesk's rough map shows the dead dragon lying to the west of this point —
 but the direct route would take you off the path entirely.
 """
-coord  = [1, 0]
 exits  = { west = "blackfen_gate", north = "blackfen_thorn_path", east = "blackfen_clearing", south = "blackfen_boulderring" }
 items  = []
 spawns = []
@@ -89,7 +87,6 @@ You refill your waterskin — Aonn said such springs run clean. Nearby, a
 massive old stump sits off the trail. Something has carved a low door in its
 side, and the hollow within looks very dark.
 """
-coord  = [1, 1]
 exits  = { south = "blackfen_trail", east = "blackfen_stump_exterior" }
 items  = []
 spawns = []
@@ -118,7 +115,6 @@ original fire or something more deliberate you cannot say.
 
 The door is locked with a simple mechanism.
 """
-coord  = [2, 1]
 exits  = { west = "blackfen_thorn_path", east = "blackfen_stump_interior" }
 items  = []
 spawns = []
@@ -136,7 +132,6 @@ Notes in a cramped, unreadable hand are pinned to every surface. Whoever
 worked here has been gone for years — maybe decades. One shelf holds a single
 vial of purplish liquid, conspicuously labelled in clear block lettering.
 """
-coord  = [3, 1]
 exits  = { west = "blackfen_stump_exterior" }
 items  = ["blade_polish_vial"]
 spawns = []
@@ -155,7 +150,6 @@ unsuccessfully.
 Two trails lead on from here: one continues east through flower-fringed reeds,
 the other winds downhill into darker country.
 """
-coord  = [2, 0]
 exits  = { west = "blackfen_trail", east = "blackfen_flower_path", south = "blackfen_boulderring", down = "blackfen_boulderring" }
 items  = []
 spawns = ["redbelly_patrol"]
@@ -189,7 +183,6 @@ gently in air that, here at least, smells of something alive and growing.
 
 Grimwick would know exactly what to do with these plants.
 """
-coord  = [3, 0]
 exits  = { west = "blackfen_clearing", south = "blackfen_wading" }
 items  = []
 spawns = []
@@ -221,7 +214,6 @@ Redbelly, perhaps older. The water is knee-deep and smells of iron.
 You've heard the Redbellies leave valuables on such altars. You've also heard
 they leave traps.
 """
-coord  = [2, -1]
 exits  = { north = "blackfen_clearing", south = "blackfen_wading" }
 items  = []
 spawns = []
@@ -248,7 +240,6 @@ your leg below the surface and you choose not to investigate.
 The water smells of old blood and wet rot. Somewhere ahead the tall stones of
 the Blacklake shoreline are visible through the grey trees.
 """
-coord  = [2, -2]
 exits  = { north = "blackfen_boulderring", west = "blackfen_north_shore", south = "blackfen_blacklake_shore", east = "blackfen_stump" }
 items  = []
 spawns = []
@@ -284,7 +275,6 @@ hang very still even when there is wind. Other trees give it space.
 
 The dead dragon's location should be south and west of here.
 """
-coord  = [3, -2]
 exits  = { west = "blackfen_wading" }
 items  = []
 spawns = []
@@ -318,7 +308,6 @@ than a fish does the same.
 
 The lake curves south. A bone-littered trail runs along the western shore.
 """
-coord  = [1, -3]
 exits  = { east = "blackfen_wading", south = "blackfen_witchs_cottage", southeast = "blackfen_blacklake_shore" }
 items  = []
 spawns = []
@@ -355,7 +344,6 @@ this ground without exposing your skin to the swarm.
 The bone trail and the witch's cottage lie south and west. The dragon clearing
 lies further south along the lake.
 """
-coord  = [2, -3]
 exits  = { northwest = "blackfen_north_shore", west = "blackfen_witchs_cottage", south = "blackfen_bone_trail" }
 items  = []
 spawns = []
@@ -393,7 +381,6 @@ no apparent source. A cot, a table, three chairs. Neat, lived-in, strange.
 This is the home of Maren Thornbury, a woman with a great deal of power and
 no patience whatsoever for nonsense.
 """
-coord  = [1, -4]
 flags  = ["no_combat"]
 exits  = { north = "blackfen_north_shore", east = "blackfen_blacklake_shore", south = "blackfen_bone_trail" }
 items  = ["fen_antitoxin"]
@@ -422,7 +409,6 @@ is the path to where the dead serpent fell.
 
 A rope bridge to the east leads to Fanghelm's camp. It is padlocked.
 """
-coord  = [1, -5]
 exits  = {
   north = "blackfen_witchs_cottage",
   south = "blackfen_dragon_clearing",
@@ -465,7 +451,6 @@ Fanghelm himself stands near the largest fire, wearing leather fashioned from
 serpent hide, a fanged helmet tucked under one arm. His face is a ruin of
 old acid scarring. He looks at you with something like delight.
 """
-coord  = [2, -5]
 exits  = { west = { to = "blackfen_bone_trail", locked = false }, east = "blackfen_dragon_clearing" }
 items  = []
 spawns = ["durath_ironteeth", "redbelly_brute", "redbelly_brute"]
@@ -486,7 +471,6 @@ The dead serpent dragon hangs in the canopy a dozen yards overhead, its long
 body tangled in the high branches. Its eyes are white and dead. Its jaws are
 open. A drip of acidic blood falls and hisses in a puddle at your feet.
 """
-coord  = [1, -6]
 exits  = { north = "blackfen_bone_trail", east = "blackfen_serpent_temple", south = "blackfen_dragon_belly", west = "blackfen_slaughter_camp" }
 items  = []
 spawns = []
@@ -538,7 +522,6 @@ are old — older than the Redbellies, older than the mire.
 Something about this place makes the air tight, as though the atmosphere
 itself is holding its breath.
 """
-coord  = [2, -6]
 exits  = { west = "blackfen_dragon_clearing" }
 items  = ["sacrificial_knife"]
 spawns = ["anurus_the_returned"]
@@ -574,7 +557,6 @@ Your grandfather is in there. So is what he was carrying.
 The jaws are open at your feet. The belly is before you. You take out your
 sharpest weapon.
 """
-coord  = [1, -7]
 exits  = { north = "blackfen_dragon_clearing" }
 items  = []
 spawns = []

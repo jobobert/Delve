@@ -26,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from engine.toml_io import load as toml_load
+import engine.world_config as wc
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -173,8 +174,6 @@ def validate_rooms(rooms, items, npcs, styles):
         for f in ("id", "name", "description"):
             if f not in room:
                 err(f"Room '{rid}' missing field '{f}'")
-        if "coord" not in room:
-            warn(f"Room '{rid}' has no 'coord' field — won't appear on maps")
         for direction, exit_val in room.get("exits", {}).items():
             target = exit_val.get("to", "") if isinstance(exit_val, dict) else exit_val
             if target and target not in rooms:
@@ -410,11 +409,12 @@ def validate_commissions(commissions: list[dict], items: dict, npcs: dict) -> No
         if not c.get("qualities") and not c.get("quality"):
             warn(f"Commission '{cid}': no [[quality]] tiers defined")
 
-        # Slot must be valid
+        # Slot must be valid (uses the active world's EQUIPMENT_SLOTS)
         slot = c.get("slot", "")
-        valid_slots = {"weapon", "armor", "pack", "ring", "shield", "cape", ""}
+        valid_slots = set(wc.EQUIPMENT_SLOTS) | {""}
         if slot not in valid_slots:
-            err(f"Commission '{cid}': unknown slot '{slot}'")
+            err(f"Commission '{cid}': unknown slot '{slot}' "
+                f"(valid: {sorted(wc.EQUIPMENT_SLOTS)})")
 
 
 # ── TOML syntax validation ────────────────────────────────────────────────────
@@ -690,6 +690,7 @@ def _validate_world(world_path: Path) -> None:
     """Run all validation checks for one world folder."""
     global _CURRENT_WORLD
     _CURRENT_WORLD = world_path
+    wc.init(world_path)   # load EQUIPMENT_SLOTS and other tunables for this world
 
     print("-- World Config " + "-" * 52)
     validate_world_config()

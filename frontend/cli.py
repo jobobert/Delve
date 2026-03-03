@@ -431,8 +431,9 @@ class CLIFrontend:
     def run(self) -> None:
         world_path     = self._select_world()
         _wc.init(world_path)
-        self.world     = World(world_path)
+        self.world     = World(world_path)           # zone_state_dir set after login
         self.player    = self._login(world_path)
+        self.world.attach_player(self.player)        # switch to player-specific state dir
         self.processor = CommandProcessor(self.world, self.player, self.bus)
 
         # Apply startup aliases from config (character aliases take priority)

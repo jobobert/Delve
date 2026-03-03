@@ -63,6 +63,7 @@ import engine.quests as quests_mod
 from engine.quests import QuestTracker
 from engine.script import GameContext, ScriptRunner
 import engine.world_config as _wc
+from engine.map_builder import build_map_data, exit_dest as _map_exit_dest
 
 # Equipment slot names and currency name come from world_config (set by init()).
 # Access _wc.EQUIPMENT_SLOTS and _wc.CURRENCY_NAME at call time, not import time.
@@ -1760,9 +1761,11 @@ class CommandProcessor:
     # ─────────────────────────────────────────────────────────────────────────
 
     def _cmd_map(self, verb: str, args: str) -> None:
-        """Render a fog-of-war ASCII map.
-        Shows: visited rooms + rooms directly connected to visited rooms (as ?).
-        Rooms with no connection to explored space are invisible.
+        """Render a fog-of-war ASCII map scoped to the current zone.
+        Shows visited rooms in the current zone plus the one-exit frontier
+        (rooms directly reachable from visited rooms, including cross-zone
+        exits which appear as [ ? ]).  Rooms with no connection to explored
+        space are invisible.
 
         Layout constants
         ────────────────
@@ -1790,31 +1793,30 @@ class CommandProcessor:
                         all_rooms[rid] = room
                         room_zone[rid] = zone_id
 
-        # Visible set: visited rooms + one-exit frontier
-        visible_ids: set[str] = set(visited)
-        for rid in visited:
-            for exit_val in all_rooms.get(rid, {}).get("exits", {}).values():
-                dest = exit_val.get("to", "") if isinstance(exit_val, dict) else exit_val
-                if dest:
-                    visible_ids.add(dest)
+        # Scope to the current zone so cross-zone coord collisions don't overlap.
+        # Frontier rooms (one exit away, different zone) are included so they
+        # appear as [ ? ] nodes at zone boundaries.
+        current_zone  = room_zone.get(self.player.room_id, "")
+        zone_room_ids = {rid for rid, z in room_zone.items() if z == current_zone}
+        zone_rooms    = {rid: r for rid, r in all_rooms.items()
+                         if rid in zone_room_ids}
 
-        # Build coord grid (only rooms with a coord field)
-        coords: dict[tuple[int, int], dict] = {}
-        for rid in visible_ids:
-            room = all_rooms.get(rid)
-            if not room:
-                continue
-            coord = room.get("coord")
-            if not coord or len(coord) < 2:
-                continue
-            x, y = int(coord[0]), int(coord[1])
-            coords[(x, y)] = {
-                "id":      rid,
-                "name":    room.get("name", "?"),
-                "visited": rid in visited,
-                "here":    rid == self.player.room_id,
-                "exits":   room.get("exits", {}),
-            }
+        for rid in zone_room_ids:
+            for ev in all_rooms.get(rid, {}).get("exits", {}).values():
+                dest = _map_exit_dest(ev)
+                if dest and dest not in zone_rooms and dest in all_rooms:
+                    # Strip coord: frontier rooms belong to another zone whose
+                    # coordinate system may not align with this one. Let the
+                    # auto-layout place them relative to the local zone.
+                    frontier = dict(all_rooms[dest])
+                    frontier.pop("coord", None)
+                    zone_rooms[dest] = frontier
+
+        visited_in_zone = set(visited) & zone_room_ids
+
+        # Build fog-of-war display grid (auto-layout for rooms without coords)
+        coords = build_map_data(zone_rooms, visited=visited_in_zone,
+                                current=self.player.room_id)
 
         if not coords:
             self._out(Tag.MAP, "No map data yet. Explore to reveal the world.")
@@ -1946,9 +1948,10 @@ class CommandProcessor:
                 self._out(Tag.MAP, "  " + line)
         self._out(Tag.MAP, footer)
         self._out(Tag.MAP, "  [ @ ]=you  [XYZ]=visited  [ ? ]=unexplored")
-        explored = len(visited)
-        total    = len(all_rooms)
-        self._out(Tag.MAP, f"  Explored: {explored}/{total} rooms")
+        zone_name = self.world._zone_index[current_zone].name if current_zone else current_zone
+        explored  = len(visited_in_zone)
+        total     = len(zone_room_ids)
+        self._out(Tag.MAP, f"  Explored: {explored}/{total} rooms in {zone_name}")
 
     def _cmd_journal(self, verb: str, args: str) -> None:
         """Show quest journal — journal entries, quests, commissions, and companion."""

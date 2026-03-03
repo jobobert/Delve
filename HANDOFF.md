@@ -15,8 +15,12 @@ A terminal MUD engine with zero external dependencies. Two core principles:
 2. **Engine/frontend decoupled** — the engine never calls `print()`. All output
    is `Msg(tag, text)` objects on an `EventBus`. The CLI subscribes and renders.
 
-**Current world stats:** 57 rooms · 6 zones · 69 NPCs · 123 items · 7 fighting
-styles · 34 dialogue trees · 12 quests · 9 crafting commissions · 3 companions.
+**Two worlds currently exist:**
+- `first_world` — original dev/test world (57 rooms · 6 zones · 69 NPCs · 123
+  items · 7 styles · 34 dialogue trees · 12 quests · 9 crafting commissions · 3
+  companions). Zones: millhaven, training, greenhollow, millbrook, ashwood, blackfen.
+- `sixfold_realms` — new world under active construction. See
+  `data/sixfold_realms/world_overview.md` for full backstory and design.
 
 ---
 
@@ -27,10 +31,11 @@ The project is extracted as `mud/` in the working directory. The layout is:
 ```
 mud/
 ├── engine/              Core systems (combat, dialogue, world, script, …)
-├── frontend/            CLI renderer + config
+├── frontend/            CLI renderer + config + game.html + FRONTEND_MANUAL.md
 ├── data/                All TOML world data
-│   ├── players/         Cross-world player saves (each save has a world_id field)
-│   └── sixfold_realms/  Current world folder (config.py + zone subfolders)
+│   ├── players/         Per-character folders — <name>/player.toml + <name>/zone_state/
+│   ├── first_world/     Original dev/test world (6 zones, full content)
+│   └── sixfold_realms/  New world under construction (config.py + world_overview.md)
 ├── tools/               validate.py, map.py, wct_server.py, ai_player.py, clean.py
 ├── main.py
 ├── README.md            Partial system reference — READ THIS for any system details, and reference the engine/README.md and data/README.md as necessary
@@ -53,7 +58,7 @@ touching code. It reflects the actual current state of every file.
 | `engine/commands.py` | ~2500-line command dispatcher. `CommandProcessor.process(raw)` is the main entry point. `_resolve_npc(target)` finds a live NPC in the current room (filters `hp > 0`). |
 | `engine/combat.py` | `CombatSession(player, npc, bus, room, ctx)`. Call `player_attack()` once per turn. Fully instrumented with `engine/log.py` at DEBUG level. |
 | `engine/dialogue.py` | `run_inline(npc, player, quests, ctx, bus, input_fn)`. Loads tree from `data/<world_id>/<zone>/dialogues/<npc_id>.toml` or falls back to `npc["dialogue"]` string or auto-generates a brush-off line. |
-| `engine/script.py` | `ScriptRunner(ctx).run(ops)`. 37 ops. `fail` aborts cleanly. `require_tag` gates on item tags. |
+| `engine/script.py` | `ScriptRunner(ctx).run(ops)`. 45 ops. `fail` aborts cleanly. `require_tag` gates on item tags. |
 | `engine/log.py` | `log.configure(...)` at startup. `log.debug/info/warn(category, msg, **kv)`. `log.section(title)`. `log.enter/exit` for bracketed spans. Writes to `delve.log`. |
 | `engine/player.py` | `Player` dataclass. `player.save()` / `Player.load(name)`. Equipped items in `player.equipped` (10 slots). Bank in `player.bank`. Skills in `player.skills`. Prestige in `player.prestige`. |
 | `engine/prestige.py` | Score −999…+999, 10 tiers. `apply_delta`, `tier_name`, `shop_modifier`, `hostile_on_sight`. |
@@ -71,7 +76,7 @@ touching code. It reflects the actual current state of every file.
 
 **Rooms** (`rooms.toml`):
 - Must have `id`, `name`, `description`
-- Should have `coord = [x, y]` (east=+x, north=+y) — validator warns if missing
+- Optional: `coord = [x, y]` (east=+x, north=+y) — pins position on admin map; not required, not validated
 - `spawns = ["npc_id", ...]` — NPCs spawned when zone loads
 - `items = ["item_id", ...]` — items present at load
 - `flags = ["safe_combat", "no_combat", "healing", "town", ...]`
@@ -132,8 +137,8 @@ To add logging to a new area: `import engine.log as log` then call
   use them freely, but be aware standard tools won't parse them
 - NPC numbers (Wolf 1, Wolf 2) are assigned at runtime by `_numbered_npcs()` —
   no TOML changes needed for multi-spawn NPCs
-- Zone state (NPC HP, room items) persists in `data/<world_id>/zone_state/<zone_id>.json`
-- Player saves in `data/players/<name>.toml` (cross-world; includes `world_id` field)
+- Zone state (NPC HP, room items) persists in `data/players/<name>/zone_state/<zone_id>.json`
+- Player saves in `data/players/<name>/player.toml` (cross-world; includes `world_id` field)
 - `tools/clean.py --all` resets everything for a fresh test
 
 ---
@@ -154,8 +159,10 @@ The most recent session completed **World Modularity Phase 2**:
    at startup; `list_worlds(data_dir)` and `peek_world_name(world_path)` support
    world-selection menus.
 
-4. **`engine/world.py`** — `World(world_path)` parameterized; zone state stored
-   inside the world folder (`world_path/zone_state/`).
+4. **`engine/world.py`** — `World(world_path)` parameterized; `World.__init__`
+   accepts an optional `zone_state_dir` parameter (defaults to `world_path/zone_state/`
+   for backward compat). `world.attach_player(player)` switches zone state dir to the
+   player's personal folder after login.
 
 5. **`engine/player.py`** — `world_id` field; equipped slots and default style
    read from `wc.EQUIPMENT_SLOTS` / `wc.DEFAULT_STYLE` at creation/load.
@@ -169,6 +176,72 @@ The most recent session completed **World Modularity Phase 2**:
 8. **`tools/validate.py`** — discovers all world folders; validates each
    independently with per-world error/warning summary.
 
+The session after that completed **Per-Player Zone State**:
+
+9. **Per-player zone state** — zone state moved from `data/<world_id>/zone_state/`
+   into `data/players/<name>/zone_state/`. Each player session is fully isolated;
+   killing a wolf for one player doesn't affect another player's zone. Designed to
+   support future concurrent server sessions.
+
+10. **`engine/player.py`** — `player_dir` and `zone_state_dir` properties added.
+    `_save_path` now returns `player_dir / "player.toml"`. `save()` creates the
+    folder before writing. `load()` auto-migrates old flat `data/players/<name>.toml`
+    saves into the new folder layout on first run. `exists()` checks both paths.
+
+11. **`frontend/cli.py`** — `run()` calls `world.attach_player(player)` after login
+    to switch the World's zone_state_dir to the player's personal folder.
+
+12. **`tools/clean.py`** — `_zone_state_files()` and `_player_files()` updated to
+    scan player subfolders. `clean_players()` removes entire player folders.
+
+13. **`tools/dialogue_graph.py` / `tools/quest_graph.py`** — multi-world support
+    added: `--world` flag, world name shown in DOT graph labels. Discovery functions
+    in `tools/graph_common.py` updated to take `world_path` and scan zone subfolders.
+
+14. **`tools/map.py`** — rewritten with `--world` flag and `--html` output (self-
+    contained). Old `gen_map.py` and `map_html.py` deleted.
+
+15. **World reorganization** — existing zones moved from `data/sixfold_realms/`
+    into `data/first_world/` (the original dev/test world, `WORLD_NAME = "Delve"`).
+    `data/sixfold_realms/` is now a fresh world shell (`config.py` +
+    `world_overview.md`) for the new Sixfold Realms content under construction.
+
+The session after that completed **Coordinate Removal + Web Frontend**:
+
+16. **`engine/map_builder.py`** (new) — topology-aware map data builder extracted
+    from `tools/map.py`. Public API: `DIR_DELTA`, `exit_dest()`,
+    `apply_auto_layout(rooms)`, `build_map_data(rooms, visited, current)`.
+    Returns a renderer-agnostic `{(x,y): cell}` grid usable by CLI, HTML, or
+    future graphical clients.
+
+17. **Zone-scoped in-game map** — `_cmd_map` in `engine/commands.py` now scopes
+    the map to the current zone only. Cross-zone frontier rooms appear as `[ ? ]`.
+    Zone display name comes from `ZoneMeta.name` (read from `zone.toml`,
+    falls back to title-cased zone_id). `engine/world.py` `ZoneMeta` dataclass
+    now carries a `name` field.
+
+18. **Coordinate removal** — all 65 explicit `coord` fields stripped from
+    `data/first_world/*.toml`. Rooms are placed automatically by BFS auto-layout.
+    Validator no longer warns about missing coords. `data/WORLD_MANUAL.md` and
+    all READMEs updated.
+
+19. **`tools/md2html.py`** (new) — stdlib-only Markdown→HTML converter.
+    Usage: `python tools/md2html.py <input.md> [output.html] [--stdout]`.
+
+20. **Web frontend** — `tools/wct_server.py` extended with a threading HTTP
+    server (`ThreadingMixIn`) and a `GameSession` class that runs the engine in
+    a background thread. New endpoints: `GET /game`, `/game/worlds`,
+    `/game/players`, `/game/status`, `/game/stream` (SSE), `POST /game/login`,
+    `/game/command`, `/game/quit`.
+
+21. **`tools/game.html`** (new) — single-page webapp game client. Login panel
+    (world/character select), scrollable colored output area, command input with
+    history (↑/↓), status bar (HP + room), SSE-driven output, map buffering.
+
+22. **`frontend/FRONTEND_MANUAL.md`** (new) — programmer's manual covering engine
+    embedding, Tag reference, HTTP API, SSE event format, map data, dialogue
+    handling, CLI color palette, and step-by-step frontend guide.
+
 ---
 
 ## Tools reference
@@ -178,7 +251,8 @@ python main.py                        # play the game
 python tools/validate.py              # check data integrity (run after every edit)
 python tools/map.py [--zone Z] [--full]          # ASCII map
 python tools/map.py --html [--world W] [--output F]  # self-contained HTML map
-python tools/wct_server.py            # browser TOML editor → http://localhost:7373
+python tools/wct_server.py            # WCT → http://localhost:7373  |  Game → /game
 python tools/ai_player.py play [--goal "..."] [--verbose]
 python tools/clean.py [--all | --cache | --state | --players]
+python tools/md2html.py <input.md>    # convert Markdown to HTML
 ```

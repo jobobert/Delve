@@ -40,7 +40,7 @@ in TOML files under `data/`. The engine loads them at runtime.
 - A **world** is a subfolder of `data/` that contains a `config.py` (e.g. `data/sixfold_realms/`).
 - **Zones** are subfolders of the world folder. Each zone streams in/out of memory independently.
 - All NPC and item state is lazy — NPCs spawn on first player visit, not at startup.
-- Zone state (NPC HP, moved items) persists to `data/<world_id>/zone_state/<zone_id>.json`.
+- Zone state (NPC HP, moved items) persists per-player to `data/players/<name>/zone_state/<zone_id>.json`.
 - Zero external dependencies. Run with `python main.py`.
 
 **Test your work** with `python tools/validate.py` before playing.
@@ -54,10 +54,13 @@ subfolders of the world. The zone folder's name becomes the zone ID.
 
 ```
 data/
-  players/                     # Cross-world player saves (gitignored)
+  players/                     # Per-character folders (gitignored)
+    <name>/
+      player.toml              # Character save (cross-world; records world_id)
+      zone_state/              # Live zone snapshots — per-player (gitignored)
+        <zone_id>.json
   <world_id>/                  # World folder — identified by config.py
     config.py                  # World name, skills, currency, default style, slots
-    zone_state/                # Live zone snapshots — auto-created at runtime (gitignored)
     <zone_id>/                 # One folder per zone; folder name = zone ID
       zone.toml                # Optional: display name and description
       rooms.toml               # [[room]] entries
@@ -106,8 +109,8 @@ The engine discovers zones by folder presence. The zone.toml is advisory/flavor 
 1. Zones load on demand when the player first enters a room in that zone.
 2. Only the current zone and directly adjacent zones remain in RAM.
 3. Zones evict from memory when the player moves away.
-4. **Delete `data/<world_id>/zone_state/` files** (or run `tools/clean.py --state`) to reset
-   world state to its authored values.
+4. **Delete `data/players/<name>/zone_state/` files** (or run `tools/clean.py --state`) to reset
+   a player's world state to its authored values.
 
 ---
 
@@ -123,7 +126,7 @@ Rooms are defined in `[[room]]` blocks inside a zone's `rooms.toml`.
 | `name` | string | **Yes** | — | Short display name (shown as room title) |
 | `description` | string | **Yes** | — | Room description shown on entry and `look` |
 | `desc_long` | string | No | falls back to `description` | Extended description; shown with `examine room` |
-| `coord` | [x, y] | Recommended | — | Map coordinates: east = +x, north = +y. Required for map generation. |
+| `coord` | [x, y] | No | — | Optional map hint: east = +x, north = +y. If present, pins the room's position on the admin map. If absent, the engine auto-places the room using exit topology. Not required and not validated. |
 | `exits` | dict | No | `{}` | See [Section 4](#4-exits--doors) |
 | `items` | list | No | `[]` | Item IDs present in the room on zone load |
 | `spawns` | list | No | `[]` | NPC IDs (or spawn dicts) to populate on first visit |
@@ -143,7 +146,6 @@ Rooms are defined in `[[room]]` blocks inside a zone's `rooms.toml`.
 id          = "town_square"
 name        = "Millhaven Town Square"
 description = "A cobbled square ringed by timber-framed buildings."
-coord       = [0, 0]
 flags       = ["town", "no_combat"]
 exits       = { north = "barracks", east = "market_row", south = "south_gate" }
 spawns      = ["town_guard", "wandering_merchant"]
@@ -157,7 +159,6 @@ items       = ["notice_board"]
 id             = "poison_swamp"
 name           = "Murk Fens"
 description    = "Thick, rotten-smelling water comes up to your shins."
-coord          = [3, -2]
 flags          = ["hazard"]
 hazard_damage  = 3
 hazard_message = "The caustic water bites at your legs."
@@ -1926,8 +1927,6 @@ python tools/validate.py
 - All exit targets are valid room IDs
 - All item references in `items` are valid IDs
 - All spawn references are valid NPC IDs
-- Warns if `coord` is missing
-
 **Items:**
 - Every item has `id` and `name`
 
@@ -1956,7 +1955,7 @@ python tools/validate.py
 ```
 ✓  millhaven   — 8 rooms, 10 NPCs, 23 items
 ✗  greenhollow — room 'secret_cave': exit 'east' → 'missing_room' not found
-⚠  blackfen    — room 'fog_trail': no coord (won't appear on map)
+⚠  blackfen    — NPC 'fog_wraith': no dialogue source
 ```
 
 - `✓` = zone passed all checks

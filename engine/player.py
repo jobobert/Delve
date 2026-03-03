@@ -188,10 +188,21 @@ class Player:
     # ── Persistence ───────────────────────────────────────────────────────────
 
     @property
+    def player_dir(self) -> Path:
+        """Per-player folder: data/players/<name>/"""
+        return PLAYERS_DIR / self.name.lower()
+
+    @property
+    def zone_state_dir(self) -> Path:
+        """Per-player zone state: data/players/<name>/zone_state/"""
+        return self.player_dir / "zone_state"
+
+    @property
     def _save_path(self) -> Path:
-        return PLAYERS_DIR / f"{self.name.lower()}.toml"
+        return self.player_dir / "player.toml"
 
     def save(self) -> None:
+        self.player_dir.mkdir(parents=True, exist_ok=True)
         data = {
             "name":          self.name,
             "room_id":       self.room_id,
@@ -236,10 +247,15 @@ class Player:
 
     @classmethod
     def load(cls, name: str) -> "Player | None":
-        path = PLAYERS_DIR / f"{name.lower()}.toml"
-        if not path.exists():
+        new_path = PLAYERS_DIR / name.lower() / "player.toml"
+        old_path = PLAYERS_DIR / f"{name.lower()}.toml"
+        if not new_path.exists() and old_path.exists():
+            # Migrate flat save file into the new player folder layout.
+            new_path.parent.mkdir(parents=True, exist_ok=True)
+            old_path.rename(new_path)
+        if not new_path.exists():
             return None
-        data = toml_load(path)
+        data = toml_load(new_path)
         p = cls(data["name"])
         p.room_id       = data.get("room_id", "")
         p.hp            = data.get("hp", 100)
@@ -315,7 +331,10 @@ class Player:
 
     @classmethod
     def exists(cls, name: str) -> bool:
-        return (PLAYERS_DIR / f"{name.lower()}.toml").exists()
+        return (
+            (PLAYERS_DIR / name.lower() / "player.toml").exists()
+            or (PLAYERS_DIR / f"{name.lower()}.toml").exists()
+        )
 
     # ── Commission persistence helpers ──────────────────────────────────────────
 
