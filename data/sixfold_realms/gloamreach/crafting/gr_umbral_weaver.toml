@@ -1,0 +1,87 @@
+# How this commission fits into the region
+# The Weaver’s dialogue already checks for the materials and triggers the crafting flow.
+#
+# The Umbral Mantle gains its final stats through the quality tier system, keeping it consistent with Heartwood and Mistfen.
+#
+# The prestige requirement reinforces the idea that Gloamreach respects balance and control, not brute force.
+#
+# The shadow_step proc in the top tier ties directly into the region’s light‑and‑shadow mechanics.
+
+id   = "gr_umbral_weaver"
+name = "Umbral Mantle Weaving"
+desc = "A shadow‑weaving process that binds shadow‑ore and entropy residue into a mantle of shifting darkness."
+
+# ---------------------------------------------------------
+# Requirements
+# ---------------------------------------------------------
+
+[[requirement]]
+item_id = "gr_shadow_ore"
+count   = 1
+
+[[requirement]]
+item_id = "gr_entropy_residue"
+count   = 1
+
+# Optional prestige requirement — Gloamreach respects balance and control
+[[requirement]]
+prestige_min = 3
+
+
+# ---------------------------------------------------------
+# Quality Tiers
+# ---------------------------------------------------------
+
+# Tier 1 — unstable weave
+[[quality]]
+name        = "Frayed Weave"
+min_quality = 0
+max_quality = 39
+effects = [
+  { type = "stat_bonus", stat = "defense", amount = -1 },
+  { type = "stat_bonus", stat = "dodge", amount = -3 }
+]
+
+# Tier 2 — stable weave
+[[quality]]
+name        = "Balanced Weave"
+min_quality = 40
+max_quality = 79
+effects = []
+
+# Tier 3 — perfect weave
+[[quality]]
+name        = "Umbral Perfection"
+min_quality = 80
+max_quality = 100
+effects = [
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+  { type = "stat_bonus", stat = "dodge", amount = 5 },
+  { type = "on_enter_room", ability = "shadow_step", chance = 0.05 }
+]
+
+
+# ---------------------------------------------------------
+# Resulting Item
+# ---------------------------------------------------------
+
+[[result]]
+item_id = "umbral_mantle"
+count   = 1
+
+
+# ---------------------------------------------------------
+# Crafting Script
+# ---------------------------------------------------------
+
+script = [
+  { op = "take_item", item_id = "gr_shadow_ore" },
+  { op = "take_item", item_id = "gr_entropy_residue" },
+
+  { op = "give_item", item_id = "umbral_mantle" },
+
+  { op = "message", tag = "crafting",
+    text = "The Weaver draws the shadows tight, weaving them into a mantle that shifts with the light." },
+
+  { op = "advance_quest", quest_id = "gr_mantle", step = 2 }
+]

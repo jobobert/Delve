@@ -1,0 +1,241 @@
+[[room]]
+id          = "mp_entrance"
+name        = "Loomroot Gate"
+description = "A wooden gate half‑claimed by pale fungus. The air smells faintly sweet."
+flags       = ["town"]
+exits       = { east = "mp_approach1" }
+on_enter    = [
+  { op = "message", tag = "system", text = "A faint haze of spores drifts across your vision." },
+  { op = "add_spores", amount = 2 }
+]
+
+[[room]]
+id          = "mp_approach1"
+name        = "Approach — Fungal Verge"
+description = "Grass gives way to patches of soft white growth. Your thoughts feel slightly sluggish."
+exits       = { west = "mp_entrance", east = "mp_approach2" }
+on_enter    = [
+  { op = "add_spores", amount = 3 }
+]
+
+[[room]]
+id          = "mp_approach2"
+name        = "Approach — Drifting Field"
+description = "Spores drift like dust motes. A faint ringing echoes in your ears."
+exits       = { west = "mp_approach1", east = "mp_approach3" }
+on_enter    = [
+  { op = "if_spores_at_least", amount = 20, then = [
+    { op = "apply_status", effect = "confused", duration = 1 },
+    { op = "message", tag = "hazard", text = "The spores cloud your thoughts." }
+  ] }
+]
+
+[[room]]
+id          = "mp_approach3"
+name        = "Approach — Loomroot Crossing"
+description = "A crossroads where fungal fibers hang from old signposts."
+exits       = { west = "mp_approach2", north = "mp_approach4", east = "mp_approach5" }
+
+[[room]]
+id          = "mp_approach4"
+name        = "Approach — Fresh Air Pocket"
+description = "A rare breeze clears the spores. Your mind sharpens."
+exits       = { south = "mp_approach3" }
+on_enter    = [
+  { op = "add_spores", amount = -10 },
+  { op = "message", tag = "system", text = "The air clears your head." }
+]
+
+[[room]]
+id          = "mp_approach5"
+name        = "Approach — Bloom Edge"
+description = "The first massive fungal bloom rises ahead, pulsing faintly."
+exits       = { west = "mp_approach3", east = "mp_approach6" }
+on_enter    = [
+  { op = "add_spores", amount = 4 }
+]
+
+[[room]]
+id          = "mp_approach6"
+name        = "Approach — Memory Drift Path"
+description = "The path seems… different than you remember. Did that fence always lean?"
+exits       = {
+  west = "mp_approach5",
+  east = { to = "mp_approach7", show_if = { op = "spores_at_most", amount = 25 } }
+}
+on_enter = [
+  { op = "if_spores_at_least", amount = 25, then = [
+    { op = "message", tag = "error", text = "Your memory drifts. You lose track of the path." }
+  ] }
+]
+
+[[room]]
+id          = "mp_approach7"
+name        = "Approach — Sporehaven Gate"
+description = "A wooden archway covered in fungal carvings. The settlement lies ahead."
+exits       = { west = "mp_approach6", east = "mp_fields1" }
+
+[[room]]
+id          = "mp_fields1"
+name        = "Fields — Sporehaven Outskirts"
+description = "Farmhouses stand half‑claimed by fungus. Lanterns glow dimly through the haze."
+exits       = { west = "mp_approach7", east = "mp_fields2" }
+on_enter    = [
+  { op = "add_spores", amount = 3 }
+]
+
+[[room]]
+id          = "mp_fields2"
+name        = "Fields — Thick Spore Drift"
+description = "Spores swirl in dense clouds. Shapes blur at the edges of your vision."
+exits       = { west = "mp_fields1", east = "mp_fields3" }
+on_enter    = [
+  { op = "add_spores", amount = 6 }
+]
+
+[[room]]
+id          = "mp_fields3"
+name        = "Fields — Memory Echo Lane"
+description = "You feel as though you've walked this lane before. The houses seem familiar."
+exits       = {
+  west = "mp_fields2",
+  east = { to = "mp_fields4", show_if = { op = "spores_at_most", amount = 30 } }
+}
+on_enter = [
+  { op = "if_spores_at_least", amount = 30, then = [
+    { op = "teleport", room_id = "mp_fields2" },
+    { op = "message", tag = "error", text = "Your memory loops. You find yourself back where you started." }
+  ] }
+]
+
+[[room]]
+id          = "mp_fields4"
+name        = "Fields — Bloom Maze Entrance"
+description = "Towering mushrooms form a natural maze. The air is thick with spores."
+exits       = { west = "mp_fields3", north = "mp_maze1" }
+
+[[room]]
+id          = "mp_maze1"
+name        = "Bloom Maze — Outer Ring"
+description = "Fungal walls shift subtly when you look away."
+exits       = { south = "mp_fields4", east = "mp_maze2" }
+on_enter    = [
+  { op = "add_spores", amount = 5 }
+]
+
+[[room]]
+id          = "mp_maze2"
+name        = "Bloom Maze — Shifting Hall"
+description = "The corridor bends in ways that feel wrong. Your sense of direction falters."
+exits       = {
+  west = "mp_maze1",
+  east = { to = "mp_maze3", show_if = { op = "spores_at_most", amount = 35 } }
+}
+on_enter = [
+  { op = "if_spores_at_least", amount = 35, then = [
+    { op = "teleport", room_id = "mp_maze1" },
+    { op = "message", tag = "error", text = "The maze shifts around you." }
+  ] }
+]
+
+[[room]]
+id          = "mp_maze3"
+name        = "Bloom Maze — Resonance Node"
+description = "A glowing fungal node pulses with stored memories."
+exits       = { west = "mp_maze2", north = "mp_maze4" }
+on_enter    = [
+  { op = "add_spores", amount = -10 },
+  { op = "message", tag = "system", text = "The node stabilizes your thoughts." }
+]
+
+[[room]]
+id          = "mp_maze4"
+name        = "Bloom Maze — Inner Ring"
+description = "The maze tightens here. The air is warm and humid."
+exits       = { south = "mp_maze3", east = "mp_fields5" }
+
+[[room]]
+id          = "mp_fields5"
+name        = "Fields — Loomroot Rise"
+description = "A hill overlooking the fungal plains. The Memory Garden lies ahead."
+exits       = { west = "mp_maze4", east = "mp_fields6" }
+
+[[room]]
+id          = "mp_fields6"
+name        = "Fields — Clarity Grove"
+description = "A grove of tall, spore‑resistant trees. The air is clean."
+exits       = { west = "mp_fields5", east = "mp_fields7" }
+on_enter    = [
+  { op = "add_spores", amount = -15 }
+]
+
+[[room]]
+id          = "mp_fields7"
+name        = "Fields — Garden Approach"
+description = "Ancient stone pillars rise from the fungal earth. A faint hum fills the air."
+exits       = { west = "mp_fields6", east = "mp_garden_entrance" }
+
+[[room]]
+id          = "mp_garden_entrance"
+name        = "Memory Garden — Gate"
+description = "A massive fungal archway grown around ancient stone. The air vibrates with stored thoughts."
+exits       = { west = "mp_fields7", east = "mp_garden1" }
+on_enter    = [
+  { op = "if_spores_at_least", amount = 30, then = [
+    { op = "message", tag = "error", text = "Your mind is too clouded to enter the Garden." },
+    { op = "teleport", room_id = "mp_fields7" }
+  ] }
+]
+
+[[room]]
+id          = "mp_garden1"
+name        = "Memory Garden — Outer Chamber"
+description = "Fungal growth intertwines with ancient machinery. Whispered memories echo faintly."
+exits       = { west = "mp_garden_entrance", east = "mp_garden2" }
+
+[[room]]
+id          = "mp_garden2"
+name        = "Memory Garden — Node Hall"
+description = "Rows of fungal memory nodes pulse with stored knowledge."
+exits       = { west = "mp_garden1", east = "mp_garden3" }
+on_enter    = [
+  { op = "add_spores", amount = -5 }
+]
+
+[[room]]
+id          = "mp_garden3"
+name        = "Memory Garden — Shifting Archive"
+description = "Shelves of fungal growth rearrange themselves when unobserved."
+exits       = {
+  west = "mp_garden2",
+  east = { to = "mp_garden4", show_if = { op = "spores_at_most", amount = 20 } }
+}
+on_enter = [
+  { op = "if_spores_at_least", amount = 20, then = [
+    { op = "teleport", room_id = "mp_garden2" },
+    { op = "message", tag = "error", text = "The archive shifts before you can focus." }
+  ] }
+]
+
+[[room]]
+id          = "mp_garden4"
+name        = "Memory Garden — Core Antechamber"
+description = "A warm glow radiates from deeper within. The air feels heavy with meaning."
+exits       = { west = "mp_garden3", east = "mp_garden5" }
+
+[[room]]
+id          = "mp_garden5"
+name        = "Memory Garden — Cognitive Core"
+description = "A massive fungal heart pulses with ancient knowledge."
+exits       = { west = "mp_garden4", east = "mp_garden6" }
+on_enter    = [
+  { op = "spawn", npc_id = "mp_core_guardian" }
+]
+
+[[room]]
+id          = "mp_garden6"
+name        = "Memory Garden — Fragment Chamber"
+description = "A crystalline fungal node floats in a column of soft light."
+items       = ["cognitive_regulator_fragment"]
+exits       = { west = "mp_garden5" }
+

@@ -102,7 +102,7 @@ touching code. It reflects the actual current state of every file.
 - Both formats can coexist in the same file
 - `next = ""` ends the conversation
 
-**Script ops** — all 37:
+**Script ops** — ~47 ops (see `engine/script.py` docstring for full list):
 `say`, `message`, `set_flag`, `clear_flag`, `give_gold`, `take_gold`, `give_xp`,
 `heal`, `set_hp`, `damage`, `give_item`, `take_item`, `spawn_item`,
 `advance_quest`, `complete_quest`, `teach_style`, `unlock_exit`, `lock_exit`,
@@ -110,7 +110,8 @@ touching code. It reflects the actual current state of every file.
 `if_status`, `prestige`, `add_affinity`, `remove_affinity`, `if_prestige`,
 `if_affinity`, `give_companion`, `dismiss_companion`, `bank_expand`,
 `if_flag`, `if_not_flag`, `if_item`, `if_quest`, `if_quest_complete`, `fail`,
-`require_tag`
+`require_tag`, `teleport_player`, `move_npc`, `move_item`,
+`if_combat_round`, `if_npc_hp`, `end_combat`, `journal_entry`
 
 ---
 
@@ -145,7 +146,38 @@ To add logging to a new area: `import engine.log as log` then call
 
 ## Known state / recent work
 
-The most recent session completed **World Modularity Phase 2**:
+The most recent session completed **WCT Graph Views + Bug Fixes**:
+
+1. **In-browser dialogue graph** (`_showDlgGraph`) — interactive pan/zoom SVG tree of any
+   dialogue file, toggled by a "Graph" button in the dialogue editor. Nodes are colour-coded
+   by script op type; edges show conditional vs unconditional responses; a slide-in detail
+   panel shows full node text, conditions, script ops, and responses.
+
+2. **In-browser quest graph** (`_showQuestGraph`) — vertical chain SVG for quest step flow,
+   toggled by a "Graph" button in the quest editor. Scans all loaded dialogue files to find
+   `advance_quest`/`complete_quest` triggers and annotates edges with NPC/node source or a
+   ⚠ "no trigger found" warning edge.
+
+3. **CSS extraction** — the entire `<style>` block extracted from `tools/wct.html` into
+   `tools/wct_common.css`, served by wct_server.py at `/css/wct_common.css`.
+
+4. **Critical bug fixes** found and fixed:
+   - *Temporal dead zone (TDZ)*: `const showDirs` used before declaration inside `renderMap`
+     caused a ReferenceError → blank map canvas. Fixed by hoisting declaration above the edge loop.
+   - *Flat response format*: TOML `[[response]]` entries are top-level with a `node = "parent_id"`
+     field — they are NOT nested in `[[node]]`. The graph layout function now populates
+     `nodeMap[nid].response` from `d.response[]` the same way `exportDialogueDot` does.
+   - *Array vs object*: `_dlgRecordTrans` calls `out.push(...)` so `out` must be an array.
+     Quest graph now collects into `tempTrans[]` then groups into `byStep{}`.
+   - *Missing module-level functions*: `_dotFmtScriptOps` and `_dotFmtCondition` were called
+     but never defined; added as module-level helpers.
+
+5. **"Export DOT" + "Graph" buttons** added to both dialogue editor and quest editor headers.
+   Each editor now has: **Save** · **Export DOT** · **Graph**.
+
+---
+
+The session before that completed **World Modularity Phase 2**:
 
 1. **Multi-world data layout** — zone folders moved from `data/<zone>/` into
    `data/sixfold_realms/<zone>/`. The engine discovers worlds by scanning `data/`
@@ -244,6 +276,55 @@ The session after that completed **Coordinate Removal + Web Frontend**:
 
 ---
 
+## Planned engine work (next session)
+
+These are the engine features the user wants implemented next. None exist yet — design them
+with the same data-first, no-external-deps principles.
+
+### 1. Light mechanic
+- Each room has a `light = N` (0 = pitch black, 10 = bright). Default: 10.
+- Player has a `vision_threshold` (default 3). Below this level the player is blind.
+- Items can have a `light_add = N` attribute (positive = torch, negative = blindfold).
+- Script ops: `{ op = "set_room_light", room_id = "...", value = N }`,
+  `{ op = "adjust_light", amount = N }` (affects current room),
+  `{ op = "if_light", max = N, then = [...], else = [...] }`.
+- Dialogue, NPC detection, items, and map rendering should all respect current light level.
+
+### 2. World-defined player attributes
+- World config defines custom numeric attributes: `PLAYER_ATTRS = [{id="corruption", min=0, max=100, default=0}]`.
+- Persisted in `player.toml` alongside skills.
+- Script ops: `{ op = "set_attr", name = "corruption", value = N }`,
+  `{ op = "adjust_attr", name = "corruption", amount = N }` (respects min/max clamp),
+  `{ op = "if_attr", name = "corruption", min = N, max = N, then = [...], else = [...] }`.
+- Optional stats display: `display = "bar"` or `display = "number"` in config.
+
+### 3. Scripted fighting style passives
+- Currently passives (parry, riposte, bleed, dodge, counter, etc.) are hardcoded in `combat.py` lines ~250+.
+- Move them to the TOML style data:
+  ```toml
+  [[passive]]
+  ability    = "parry"
+  threshold  = 30            # proficiency required to unlock
+  message    = "You parry the attack!"
+  on_activate = [{ op = "block_damage" }]
+  ```
+- `{ op = "block_damage" }` is a new combat-only script op that negates the current hit.
+- Engine reads passives from style data at combat time; hardcoded fallback removed.
+
+### 4. Standalone script files
+- Allow running a `.toml` script file as a one-shot event (for major world state changes
+  after big events, or post-quest upgrades).
+- `{ op = "run_script_file", path = "scripts/event_drakes_return.toml" }` as a script op.
+- Or as a standalone tool: `python tools/run_script.py <script.toml> --player <name>`.
+
+### 5. World config.py → TOML
+- Convert `data/<world_id>/config.py` to `data/<world_id>/config.toml`.
+- Update `engine/world_config.py` `init()` to parse TOML instead of importing Python.
+- Update all existing worlds, WCT, and `WORLD_MANUAL.md`.
+- WCT should expose a "World Settings" editor panel for these fields.
+
+---
+
 ## Tools reference
 
 ```bash
@@ -252,6 +333,7 @@ python tools/validate.py              # check data integrity (run after every ed
 python tools/map.py [--zone Z] [--full]          # ASCII map
 python tools/map.py --html [--world W] [--output F]  # self-contained HTML map
 python tools/wct_server.py            # WCT → http://localhost:7373  |  Game → /game
+python tools/offline_bot.py [--world W] [--turns N] [--quest Q]  # offline playtester
 python tools/ai_player.py play [--goal "..."] [--verbose]
 python tools/clean.py [--all | --cache | --state | --players]
 python tools/md2html.py <input.md>    # convert Markdown to HTML

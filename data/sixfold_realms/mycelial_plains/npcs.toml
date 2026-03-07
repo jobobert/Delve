@@ -1,0 +1,156 @@
+[[npc]]
+id          = "mp_mayor_dellen"
+name        = "Mayor Dellen Farrow"
+desc_short  = "A kind but exhausted leader trying to keep Sporehaven functioning."
+desc_long   = "Dellen’s eyes are tired, and his thoughts wander mid-sentence. He fights the creeping forgetfulness with stubborn determination."
+tags        = ["humanoid", "townsfolk"]
+style       = "mindweft"
+style_prof  = 10
+hp          = 50
+max_hp      = 50
+attack      = 4
+defense     = 4
+hostile     = false
+xp_reward   = 20
+gold_reward = 0
+dialogue    = "mp_mayor_dellen"
+round_script = [
+  { op = "if_spores_at_least", amount = 40, then = [
+    { op = "say", text = "You look… foggy. The spores are getting to you, friend." }
+  ] }
+]
+
+[[npc]]
+id          = "mp_healer_rissa"
+name        = "Healer Rissa Vale"
+desc_short  = "A brewmaster who studies the fungus and its effects."
+desc_long   = "Rissa’s clarity brews keep the town functioning. She speaks softly, as if afraid her thoughts might slip away."
+tags        = ["humanoid", "healer"]
+style       = "mindweft"
+style_prof  = 20
+hp          = 55
+max_hp      = 55
+attack      = 5
+defense     = 6
+hostile     = false
+xp_reward   = 20
+gold_reward = 0
+dialogue    = "mp_healer_rissa"
+
+[[npc]]
+id          = "mp_memory_wanderer"
+name        = "Memory-Touched Wanderer"
+desc_short  = "A person who drifts through the plains, half-lost in thought."
+desc_long   = "Their eyes unfocus as they speak, as if listening to voices only they can hear."
+tags        = ["humanoid", "memory_touched"]
+style       = "mindweft"
+style_prof  = 25
+hp          = 60
+max_hp      = 60
+attack      = 7
+defense     = 5
+hostile     = false
+xp_reward   = 20
+gold_reward = 2
+dialogue    = "mp_memory_wanderer"
+round_script = [
+  { op = "if_spores_at_least", amount = 30, then = [
+    { op = "say", text = "Do you hear them too? The memories… drifting…" }
+  ] }
+]
+admin_comment = "Individuals partially absorbed into the fungal network."
+
+[[npc]]
+id          = "mp_sporeling"
+name        = "Sporeling"
+desc_short  = "A small fungal creature that drifts on tiny puffs of spores."
+desc_long   = "It moves with a strange, hesitant curiosity, as if mimicking forgotten behaviors."
+tags        = ["fungal", "construct"]
+style       = "mindweft"
+style_prof  = 15
+hp          = 40
+max_hp      = 40
+attack      = 8
+defense     = 3
+hostile     = true
+xp_reward   = 25
+gold_reward = 0
+round_script = [
+  { op = "damage", amount = 3 },
+  { op = "apply_status", effect = "spores", duration = 1 }
+]
+
+[[npc]]
+id          = "mp_memory_node_guardian"
+name        = "Memory Node Guardian"
+desc_short  = "A fungal construct grown to protect ancient knowledge."
+desc_long   = "Its body is etched with glowing spore patterns that shift like written language."
+tags        = ["fungal", "construct"]
+style       = "mindweft"
+style_prof  = 35
+hp          = 90
+max_hp      = 90
+attack      = 14
+defense     = 10
+hostile     = true
+xp_reward   = 80
+gold_reward = 0
+round_script = [
+  { op = "if_spores_at_least", amount = 25, then = [
+    { op = "say", text = "Your mind is open. The Garden welcomes you." },
+    { op = "heal", amount = 5 }
+  ] }
+]
+
+
+[[npc]]
+id          = "mp_core_guardian"
+name        = "Cognitive Core Guardian"
+desc_short  = "A towering fungal entity pulsing with ancient memory."
+desc_long   = "Its form shifts between humanoid and fungal shapes, as if built from half-remembered thoughts."
+tags        = ["fungal", "boss", "construct"]
+style       = "mindweft"
+style_prof  = 60
+hp          = 180
+max_hp      = 180
+attack      = 20
+defense     = 14
+hostile     = true
+xp_reward   = 250
+gold_reward = 0
+
+kill_script = [
+  { op = "set_flag", flag = "mp_core_guardian_slain" },
+  { op = "advance_quest", quest_id = "mp_fragment", step = 2 },
+  { op = "message", tag = "combat_kill", text = "The guardian collapses into drifting spores that fade into the air." }
+]
+
+round_script = [
+  { op = "if_spores_at_least", amount = 30, then = [
+    { op = "say", text = "Your mind is clouded. You cannot resist." },
+    { op = "damage", amount = 8 }
+  ] },
+  { op = "if_spores_at_most", amount = 10, then = [
+    { op = "say", text = "Clarity… it burns…" },
+    { op = "damage", amount = 10 }
+  ] }
+]
+
+
+[[npc]]
+id          = "mp_sporewarden"
+name        = "The Sporewarden"
+desc_short  = "A cloaked figure who weaves fungal fibers into protective garments."
+desc_long   = "Their voice is calm and steady, untouched by the spores. They claim to remember the world before the malfunction."
+tags        = ["humanoid", "crafter"]
+style       = "mindweft"
+style_prof  = 45
+hp          = 75
+max_hp      = 75
+attack      = 10
+defense     = 10
+hostile     = false
+xp_reward   = 20
+gold_reward = 0
+dialogue    = "mp_sporewarden"
+

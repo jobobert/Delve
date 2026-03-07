@@ -1,0 +1,66 @@
+[[node]]
+id    = "root"
+lines = [
+  "Sira’s halo brightens as you approach. 'Your light wavers. The caverns notice.'"
+]
+
+[[response]]
+node = "root"
+text = "Can you stabilize my light?"
+next = "stabilize"
+
+[[response]]
+node = "root"
+text = "Why do shadows move on their own here?"
+next = "shadow_explain"
+
+[[response]]
+node = "root"
+text = "Do you know anything about the guardian?"
+next = "guardian_hint"
+
+
+# --- Stabilize ---
+[[node]]
+id   = "stabilize"
+line = "Sira touches your lantern. The flame steadies."
+script = [
+  { op = "add_light", amount = 1 },
+  { op = "message", tag = "system", text = "Your light stabilizes." }
+]
+
+[[response]]
+node = "stabilize"
+text = "Thank you."
+next = ""
+
+
+# --- Shadow explanation ---
+[[node]]
+id   = "shadow_explain"
+line = "'Shadows detach when the caverns amplify instability. They become… echoes of you.'"
+
+[[response]]
+node = "shadow_explain"
+text = "Can they be stopped?"
+next = "shadow_stop"
+
+[[node]]
+id   = "shadow_stop"
+line = "'Dim your light. Or use a tuning fork to disrupt the echo.'"
+
+[[response]]
+node = "shadow_stop"
+text = "I'll remember that."
+next = ""
+
+
+# --- Guardian hint ---
+[[node]]
+id   = "guardian_hint"
+line = "'The guardian feeds on darkness and recoils from bright light. Balance is key.'"
+
+[[response]]
+node = "guardian_hint"
+text = "Good to know."
+next = ""

@@ -1,0 +1,83 @@
+# -------------------------
+# NODE: root
+# -------------------------
+[[node]]
+id    = "root"
+lines = [
+  "Kale squints at the currents. 'The rivers are wrong, traveller. They remember things they shouldn't.'"
+]
+
+[[response]]
+node = "root"
+text = "What do you mean, 'remember'?"
+next = "ask_remember"
+
+[[response]]
+node = "root"
+text = "I just need passage."
+next = "ask_passage"
+
+
+# -------------------------
+# NODE: ask_remember
+# -------------------------
+[[node]]
+id   = "ask_remember"
+line = "'Once, they were calm. Now they bring echoes from the Peaks, the Fens, the Heartwood... even the Gloam.'"
+script = [
+  { op = "advance_quest", quest_id = "rivers_remember", step = 1 },
+]
+
+[[response]]
+node = "ask_remember"
+text = "Is there anything I can do?"
+next = "offer_help"
+
+[[response]]
+node = "ask_remember"
+text = "Sounds like a problem for someone else."
+next = "dismiss"
+
+
+# -------------------------
+# NODE: offer_help
+# -------------------------
+[[node]]
+id   = "offer_help"
+line = "Kale nods slowly. 'Find where the echoes are strongest. The old mural, the hidden stair... they might still sing.'"
+
+[[response]]
+node = "offer_help"
+text = "I'll look around the confluence."
+next = ""
+
+
+# -------------------------
+# NODE: dismiss
+# -------------------------
+[[node]]
+id   = "dismiss"
+line = "Kale shrugs. 'Then mind your footing. The river doesn't care if you believe in it.'"
+
+[[response]]
+node = "dismiss"
+text = "..."
+next = ""
+
+
+# -------------------------
+# NODE: ask_passage
+# -------------------------
+[[node]]
+id   = "ask_passage"
+line = "'Passage used to be simple. Now the currents twist. Until the echoes calm, I won't risk a full crossing.'"
+
+[[response]]
+node = "ask_passage"
+text = "Then I'll help calm them."
+next = "offer_help"
+
+[[response]]
+node = "ask_passage"
+text = "I'll find another way."
+next = ""

@@ -1,0 +1,23 @@
+[[node]]
+id    = "root"
+lines = [
+  "The sentinel refracts into prismatic shards. 'Light calibration required.'"
+]
+
+[[response]]
+node = "root"
+text = "Begin calibration."
+next = "calibrate"
+
+[[node]]
+id   = "calibrate"
+line = "'Align the mirrors. Restore the beam.'"
+script = [
+  { op = "add_resonance", amount = 10 },
+  { op = "set_flag", flag = "cc_light_aligned" }
+]
+
+[[response]]
+node = "calibrate"
+text = "The beam is restored."
+next = ""

@@ -1,0 +1,272 @@
+# Signature Weapon: Sky-Piercer Glaive
+[[item]]
+id          = "sky_piercer_glaive"
+name        = "Sky-Piercer Glaive"
+desc_short  = "A long glaive with a blade shaped like a wind-split feather."
+desc_long   = "Forged from resonant alloy and drakebone, the Sky-Piercer hums with trapped updrafts. It anchors gliders and sings when struck."
+slot        = "weapon"
+weight      = 3
+tags        = ["polearm", "wind", "draconic"]
+weapon_tags = ["polearm", "reach"]
+respawn     = false
+gold_value  = 450
+effects     = [
+  { type = "stat_bonus", stat = "attack", amount = 12 },
+  { type = "stat_bonus", stat = "defense", amount = 3 },
+  { type = "on_equip", message = "The glaive's edge hums and the wind seems to answer." },
+  { type = "on_hit", ability = "stun", chance = 0.10, magnitude = 1 },
+]
+
+# Mining: Resonant Alloy Vein (scenery node)
+[[item]]
+id          = "resonant_alloy_ingot_node"
+name        = "Resonant Alloy Vein"
+desc_short  = "A seam of shimmering alloy embedded in the rock."
+desc_long   = "The metal vibrates faintly; miners prize it for its use in ancient machinery."
+slot        = ""
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "require_tag", tag = "pickaxe", fail_message = "You need a pickaxe to mine this seam." },
+  { op = "skill_check", skill = "crafting", dc = 12,
+    on_pass = [
+      { op = "give_item", item_id = "resonant_alloy_ingot" },
+      { op = "skill_grow", skill = "crafting", amount = 3 },
+      { op = "message", tag = "item", text = "You extract a glowing ingot of resonant alloy." },
+    ],
+    on_fail = [
+      { op = "give_item", item_id = "scrap_metal" },
+      { op = "message", tag = "system", text = "You chip off a dull scrap of metal." },
+    ],
+  },
+]
+
+# Mining: Volcanic Glass Node
+[[item]]
+id          = "volcanic_glass_node"
+name        = "Volcanic Glass Deposit"
+desc_short  = "A cluster of sharp, glassy shards fused to the rock."
+desc_long   = "The shards catch the light like frozen flame; careful extraction yields useful lenses."
+slot        = ""
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "require_tag", tag = "pickaxe", fail_message = "You need a pickaxe to harvest the glass." },
+  { op = "skill_check", skill = "survival", dc = 10,
+    on_pass = [
+      { op = "give_item", item_id = "volcanic_glass_shard" },
+      { op = "skill_grow", skill = "survival", amount = 2 },
+      { op = "message", tag = "item", text = "You pry a sharp shard free without cutting yourself." },
+    ],
+    on_fail = [
+      { op = "damage", amount = 4, message = "A shard slices your hand as you fumble." },
+    ],
+  },
+]
+
+# Mining: Drakebone Deposit
+[[item]]
+id          = "drakebone_deposit"
+name        = "Drakebone Cluster"
+desc_short  = "A cluster of fossilized drakebone embedded in the cliff."
+desc_long   = "Rare and prized, drakebone is light, strong, and sings faintly when struck."
+slot        = ""
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "require_tag", tag = "pickaxe", fail_message = "You need a pickaxe to extract drakebone." },
+  { op = "skill_check", skill = "crafting", dc = 14,
+    on_pass = [
+      { op = "give_item", item_id = "drakebone_fragment" },
+      { op = "skill_grow", skill = "crafting", amount = 4 },
+      { op = "message", tag = "item", text = "You free a resonant fragment of drakebone." },
+    ],
+    on_fail = [
+      { op = "message", tag = "system", text = "The bone crumbles under your tools." },
+    ],
+  },
+]
+
+# Node: Rusty Pickaxe (scenery pickup)
+[[item]]
+id          = "rusty_pickaxe_node"
+name        = "Rusty Pickaxe"
+desc_short  = "An old pickaxe wedged into a rack."
+desc_long   = "It looks serviceable enough for light mining."
+slot        = ""
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "give_item", item_id = "rusty_pickaxe" },
+  { op = "message", tag = "item", text = "You take the rusty pickaxe; it's heavier than it looks." },
+]
+
+[[item]]
+id          = "rusty_pickaxe"
+name        = "Rusty Pickaxe"
+desc_short  = "A worn but usable pickaxe."
+desc_long   = "It has seen better days, but it can still break rock."
+slot        = "weapon"
+weight      = 3
+tags        = ["pickaxe"]
+weapon_tags = ["tool"]
+respawn     = false
+gold_value  = 10
+
+# Crafting components and outputs
+[[item]]
+id          = "resonant_alloy_ingot"
+name        = "Resonant Alloy Ingot"
+desc_short  = "A glowing ingot of resonant metal."
+desc_long   = "Used in ancient devices and high-tier crafting."
+slot        = ""
+respawn     = false
+gold_value  = 120
+
+[[item]]
+id          = "volcanic_glass_shard"
+name        = "Volcanic Glass Shard"
+desc_short  = "A sharp shard of volcanic glass."
+desc_long   = "Useful for lenses and precision tools."
+slot        = ""
+respawn     = false
+gold_value  = 30
+
+[[item]]
+id          = "drakebone_fragment"
+name        = "Drakebone Fragment"
+desc_short  = "A resonant fragment of drakebone."
+desc_long   = "Light and strong; prized by smiths and hunters."
+slot        = ""
+respawn     = false
+gold_value  = 200
+
+[[item]]
+id          = "scrap_metal"
+name        = "Scrap Metal"
+desc_short  = "A dull piece of metal."
+desc_long   = "Not much on its own, but useful in a pinch."
+slot        = ""
+respawn     = false
+gold_value  = 5
+
+[[item]]
+id          = "drake_scale"
+name        = "Drake Scale"
+desc_short  = "A thick, ember-flecked scale."
+desc_long   = "Proof of a drake hunt and a useful crafting component."
+slot        = ""
+respawn     = false
+gold_value  = 40
+
+# Device piece
+[[item]]
+id          = "thermal_conductor_piece"
+name        = "Thermal Conductor"
+desc_short  = "A humming crystalline module carved with heat sigils."
+desc_long   = "Part of the Sixfold Regulator; its pulse is out of sync with the Peaks."
+slot        = ""
+scenery     = true
+respawn     = false
+on_get      = [
+  { op = "message", tag = "item", text = "The conductor thrums in your hands, warm and insistent." },
+  { op = "set_flag", flag = "dp_has_thermal_conductor" },
+]
+
+# Resonance Forge Panel (fully wired)
+[[item]]
+id          = "resonance_forge_panel"
+name        = "Resonance Forge Panel"
+desc_short  = "A ringed control panel with rotating sigils and a molten cradle."
+desc_long   = "Ancient gears and crystal inlays await a resonant alloy to stabilize the vent timing. Aligning the panel will calm the vents and unlock the Thermal Conduit Gate."
+slot        = ""
+scenery     = true
+respawn     = false
+
+on_use = [
+  { op = "if_has_item", item_id = "resonant_alloy_ingot", then = [
+    { op = "take_item", item_id = "resonant_alloy_ingot" },
+    { op = "message", tag = "crafting", text = "You place the ingot into the cradle. The panel hums and the gears begin to turn." },
+    { op = "set_flag", flag = "dp_forge_aligned" },
+    { op = "set_flag", flag = "dp_thermal_gate_unlocked" },
+    { op = "unlock_exit", room_id = "dp_apex_approach_3", direction = "east" },
+    { op = "message", tag = "system", text = "A deep rumble echoes through the mountain as the forge stabilizes the vents." },
+    { op = "advance_quest", quest_id = "forge_sky_piercer", step = 2 },
+    { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 3 },
+  ], else = [
+    { op = "skill_check", skill = "crafting", dc = 14,
+      on_pass = [
+        { op = "message", tag = "crafting", text = "You jury-rig the panel with careful strikes and the resonance locks into place." },
+        { op = "set_flag", flag = "dp_forge_aligned" },
+        { op = "set_flag", flag = "dp_thermal_gate_unlocked" },
+        { op = "unlock_exit", room_id = "dp_apex_approach_3", direction = "east" },
+        { op = "advance_quest", quest_id = "forge_sky_piercer", step = 2 },
+        { op = "message", tag = "system", text = "The gate's sigils glow and the lock releases with a sigh." },
+      ],
+      on_fail = [
+        { op = "message", tag = "error", text = "Your attempts misalign the panel; the vents flare in protest." },
+        { op = "damage", amount = 6, message = "A backlash of heat sears you." },
+      ],
+    },
+  ] },
+]
+
+# Drake Egg (companion hook)
+[[item]]
+id          = "drake_egg"
+name        = "Drake Egg"
+desc_short  = "A warm, mottled egg humming faintly with life."
+desc_long   = "An egg from the Apex's hoard. It responds to calm hands and steady reputations."
+slot        = ""
+scenery     = true
+respawn     = false
+on_get      = [
+  { op = "if_prestige", min = 40, then = [
+    { op = "message", tag = "item", text = "The egg settles in your arms, as if recognizing you." },
+    { op = "set_flag", flag = "dp_drake_egg_taken" },
+  ], else = [
+    { op = "message", tag = "system", text = "The egg trembles and cracks slightly; you feel a pang of guilt." },
+    { op = "damage", amount = 10, message = "A shard of shell cuts you as the egg rejects your touch." },
+  ] },
+]
+
+[[item]]
+id          = "drake_feather_fragment"
+name        = "Drake Feather Fragment"
+desc_short  = "A shard of iridescent drake feather."
+desc_long   = "Lightweight and razor‑edged, this fragment hums faintly with thermal resonance. Hunters prize these as signs of a drake’s passing."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["dragon_peaks_material"]
+
+[[item]]
+id          = "glider_anchor_point"
+name        = "Glider Anchor Point"
+desc_short  = "A reinforced hook used to secure gliders in high winds."
+desc_long   = "Crafted from alloy and drakebone, these anchors are embedded along the Sky Rift to allow safe glider deployment."
+slot        = ""
+weight      = 1
+respawn     = false
+tags        = ["dragon_peaks_tool"]
+
+[[item]]
+id          = "sky_piercer_anchor"
+name        = "Sky‑Piercer Anchor"
+desc_short  = "A heavy‑duty anchor designed for extreme updrafts."
+desc_long   = "Used by Sky‑Piercer climbers to ascend the highest thermal columns. Its alloy core resists intense heat and pressure."
+slot        = ""
+weight      = 1
+respawn     = false
+tags        = ["dragon_peaks_tool"]
+
+[[item]]
+id          = "drake_hoard_fragment"
+name        = "Drake Hoard Fragment"
+desc_short  = "A scorched piece of treasure from a drake’s hoard."
+desc_long   = "Melted gold fused with unknown alloy. The Apex Drake’s hoard contains many such fragments, each warped by intense heat."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["dragon_peaks_material"]
+

@@ -1,0 +1,7 @@
+id          = "mistfen_expanse"
+name        = "Mistfen Expanse"
+description = """
+A spatially unstable swamp where distance folds, echoes repeat, and pressure warps the air.
+Anchor Stones and Echo Compasses are the only reliable guides. Somewhere beneath the water
+lies the Drowned Vault and the Pressure Regulator fragment.
+"""

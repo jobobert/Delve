@@ -1,0 +1,171 @@
+[[npc]]
+id          = "gr_lightbearer_alen"
+name        = "Lightbearer Alen"
+desc_short  = "A weary traveler holding a lantern that never dims."
+desc_long   = "Alen’s lantern glows with unnatural steadiness, pushing back the gloom around him."
+tags        = ["humanoid", "lightbearer"]
+style       = "umbral_veil"
+style_prof  = 25
+hp          = 60
+max_hp      = 60
+attack      = 8
+defense     = 6
+hostile     = false
+xp_reward   = 40
+gold_reward = 0
+
+
+[[npc]]
+id          = "gr_lightbearer_sira"
+name        = "Lightbearer Sira"
+desc_short  = "A calm figure surrounded by a faint halo of light."
+desc_long   = "Sira’s presence steadies the air, suppressing the caverns’ entropy."
+tags        = ["humanoid", "lightbearer"]
+style       = "umbral_veil"
+style_prof  = 30
+hp          = 70
+max_hp      = 70
+attack      = 9
+defense     = 8
+hostile     = false
+dialogue    = "gr_lightbearer_sira"
+xp_reward   = 40
+gold_reward = 0
+
+
+[[npc]]
+id          = "gr_echo_hermit"
+name        = "Echo‑Touched Hermit"
+desc_short  = "A figure who flickers between moments."
+desc_long   = "The hermit’s form shifts subtly, as if caught between echoes of themselves."
+tags        = ["humanoid", "echo_touched"]
+style       = "umbral_veil"
+style_prof  = 35
+hp          = 65
+max_hp      = 65
+attack      = 10
+defense     = 7
+hostile     = false
+xp_reward   = 40
+gold_reward = 0
+dialogue    = "gr_echo_hermit"
+round_script = [
+  { op = "if_light_at_least", amount = 3, then = [
+    { op = "say", text = "The hermit flickers violently in your bright light." },
+    { op = "apply_status", effect = "stunned", duration = 1 }
+  ] }
+]
+
+[[npc]]
+id          = "gr_afterimage"
+name        = "Detached Afterimage"
+desc_short  = "A shadow torn free from its source."
+desc_long   = "It moves with jerky, delayed motions, mimicking your posture a moment too late."
+tags        = ["shadow", "echo"]
+style       = "umbral_veil"
+style_prof  = 20
+hp          = 40
+max_hp      = 40
+attack      = 12
+defense     = 4
+hostile     = true
+xp_reward   = 35
+gold_reward = 0
+round_script = [
+  { op = "if_light_at_most", amount = 1, then = [
+    { op = "say", text = "The afterimage destabilizes in the dim light." },
+    { op = "damage", amount = 4 }
+  ] }
+]
+
+[[npc]]
+id          = "gr_entropy_wisp"
+name        = "Entropy Wisp"
+desc_short  = "A drifting knot of unstable energy."
+desc_long   = "It pulses with chaotic force, warping the air around it."
+tags        = ["entropy", "construct"]
+style       = "umbral_veil"
+style_prof  = 30
+hp          = 50
+max_hp      = 50
+attack      = 14
+defense     = 6
+hostile     = true
+xp_reward   = 50
+gold_reward = 0
+round_script = [
+  { op = "apply_status", effect = "entropy", duration = 1 }
+]
+
+[[npc]]
+id          = "gr_entropy_husk"
+name        = "Entropy Husk"
+desc_short  = "A hollow shell animated by unstable energy."
+desc_long   = "Its movements are slow but powerful, leaving trails of distortion."
+tags        = ["entropy", "construct"]
+style       = "umbral_veil"
+style_prof  = 40
+hp          = 90
+max_hp      = 90
+attack      = 18
+defense     = 12
+hostile     = true
+xp_reward   = 90
+gold_reward = 0
+round_script = [
+  { op = "if_light_at_least", amount = 2, then = [
+    { op = "say", text = "The husk recoils from your bright light." },
+    { op = "damage", amount = 5 }
+  ] }
+]
+
+[[npc]]
+id          = "gr_entropy_guardian"
+name        = "Entropy Guardian"
+desc_short  = "A towering figure of shadow‑crystal and unstable energy."
+desc_long   = "Its form shifts constantly, as if struggling to maintain coherence."
+tags        = ["entropy", "boss", "construct"]
+style       = "umbral_veil"
+style_prof  = 60
+hp          = 180
+max_hp      = 180
+attack      = 22
+defense     = 16
+hostile     = true
+xp_reward   = 250
+gold_reward = 0
+
+kill_script = [
+  { op = "set_flag", flag = "gr_entropy_guardian_slain" },
+  { op = "advance_quest", quest_id = "gr_shadow_fragment", step = 2 },
+  { op = "message", tag = "combat_kill", text = "The guardian collapses into drifting shards of shadow‑crystal." }
+]
+
+round_script = [
+  { op = "if_light_at_least", amount = 3, then = [
+    { op = "say", text = "The guardian destabilizes under your bright light!" },
+    { op = "damage", amount = 8 }
+  ] },
+  { op = "if_light_at_most", amount = 1, then = [
+    { op = "say", text = "The guardian feeds on the surrounding darkness." },
+    { op = "heal", amount = 6 }
+  ] }
+]
+
+
+[[npc]]
+id          = "gr_umbral_weaver"
+name        = "Umbral Weaver"
+desc_short  = "A cloaked figure weaving strands of shadow‑silk."
+desc_long   = "Their hands move with impossible precision, stitching darkness into form."
+tags        = ["humanoid", "crafter"]
+style       = "umbral_veil"
+style_prof  = 45
+hp          = 75
+max_hp      = 75
+attack      = 10
+defense     = 10
+hostile     = false
+dialogue    = "gr_umbral_weaver"
+xp_reward   = 40
+gold_reward = 0

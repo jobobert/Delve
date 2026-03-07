@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "'Light fractures. You must reflect true intent.'"
+]
+
+[[response]]
+node = "root"
+text = "I see the path."
+next = ""

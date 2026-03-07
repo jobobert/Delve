@@ -1,0 +1,23 @@
+[[node]]
+id   = "root"
+line = "The guardian’s form ripples. 'Memory… must be preserved.'"
+
+[[response]]
+node = "root"
+text = "I seek the Regulator Fragment."
+next = "warn"
+
+[[response]]
+node = "root"
+text = "I will leave."
+next = ""
+
+
+[[node]]
+id   = "warn"
+line = "'Then face the Garden’s judgment.'"
+
+[[response]]
+node = "warn"
+text = "I accept."
+next = ""

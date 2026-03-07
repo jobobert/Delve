@@ -334,18 +334,18 @@ class WorldModel:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _TAG_COLORS: dict[str, str] = {
-    Tag.ROOM_NAME:  "#ffdc64", Tag.ROOM_DESC:  "#cccccc",
-    Tag.MOVE:       "#88aaff", Tag.NPC:        "#d4a0e0",
-    Tag.ITEM:       "#50dc78", Tag.ITEM_HAVE:  "#50dc78",
-    Tag.COMBAT_HIT: "#f05050", Tag.COMBAT_RECV:"#cc8844",
-    Tag.COMBAT_KILL:"#ff8844", Tag.COMBAT_DEATH:"#cc0000",
-    Tag.DIALOGUE:   "#c8a0e8", Tag.QUEST:      "#80e890",
-    Tag.REWARD_XP:  "#80e890", Tag.REWARD_GOLD:"#f0c060",
-    Tag.SHOP:       "#88ccff", Tag.DOOR:       "#ff9944",
-    Tag.ERROR:      "#ff6666", Tag.SYSTEM:     "#888888",
-    Tag.BLANK:      "#333333",
+    Tag.ROOM_NAME:  "#F29E00", Tag.ROOM_DESC:  "#c8c8c8",
+    Tag.MOVE:       "#7ab8e8", Tag.NPC:        "#c89ad4",
+    Tag.ITEM:       "#60cc80", Tag.ITEM_HAVE:  "#60cc80",
+    Tag.COMBAT_HIT: "#e04848", Tag.COMBAT_RECV:"#c07030",
+    Tag.COMBAT_KILL:"#F29E00", Tag.COMBAT_DEATH:"#cc0000",
+    Tag.DIALOGUE:   "#b898d8", Tag.QUEST:      "#78d888",
+    Tag.REWARD_XP:  "#78d888", Tag.REWARD_GOLD:"#F29E00",
+    Tag.SHOP:       "#7ab8e8", Tag.DOOR:       "#e08830",
+    Tag.ERROR:      "#e05050", Tag.SYSTEM:     "#707080",
+    Tag.BLANK:      "#2a2a3a",
 }
-_TAG_DEFAULT = "#bbbbbb"
+_TAG_DEFAULT = "#aaaaaa"
 
 
 class HtmlLogger:
@@ -370,34 +370,90 @@ class HtmlLogger:
     def write(self, path: Path, summary: dict) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         body = "\n".join(self._rows)
-        summary_html = "".join(
-            f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in summary.items()
+        # lowercase keys are metadata (used in header); Title-case keys go in the sidebar table
+        world = summary.get("world", "Delve")
+        ts    = summary.get("started", "")
+        summary_rows = "".join(
+            f'<tr><td class="sk">{k}</td><td class="sv">{v}</td></tr>'
+            for k, v in summary.items() if k[:1].isupper()
         )
         path.write_text(f"""<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8">
-<title>Delve Bot Session</title>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Delve Bot Session &mdash; {world}</title>
 <style>
-  body {{ background:#1a1a2e; color:#ccc; font-family:monospace;
-         font-size:13px; padding:16px; line-height:1.4; }}
-  .line {{ padding:1px 0; white-space:pre-wrap; word-break:break-word; }}
-  .banner.zone    {{ background:#0f3460; color:#88aaff; font-weight:bold;
-                     padding:4px 8px; margin:8px 0 2px; border-radius:4px; }}
-  .banner.mission {{ background:#332200; color:#ffdc64; font-weight:bold;
-                     padding:4px 8px; margin:4px 0; border-radius:4px; }}
-  .banner.turn    {{ color:#333; font-size:10px; margin-top:8px;
-                     border-top:1px solid #222; padding-top:4px; }}
-  h2  {{ color:#88aaff; margin-bottom:16px; }}
-  h3  {{ color:#888; margin-top:24px; }}
-  table {{ border-collapse:collapse; margin-top:8px; }}
-  td  {{ padding:3px 14px 3px 0; }}
-  td:first-child {{ color:#888; }}
-</style></head><body>
-<h2>Delve Offline Bot &mdash; Session Log</h2>
+/* Inspired by CSS Zen Garden 209 "CSS Co., Ltd." by Benjamin Klemm */
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:#DADADA;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#333}}
+a{{color:#F29E00}}
+
+/* ── Page chrome ─────────────────────────── */
+.page-wrapper{{max-width:1080px;margin:0 auto;position:relative;padding-bottom:60px}}
+
+header{{background:#111118;border-bottom:3px solid #F29E00;padding:18px 24px 14px}}
+header h1{{color:#F29E00;font-size:20px;font-weight:bold;letter-spacing:.06em;
+           font-family:Arial,Helvetica,sans-serif}}
+header .sub{{color:#666;font-size:11px;margin-top:5px;letter-spacing:.03em}}
+
+footer{{background:#111118;border-top:3px solid #F29E00;padding:10px 24px;
+        color:#555;font-size:11px;text-align:center}}
+
+/* ── Two-column layout ───────────────────── */
+.content-area{{display:flex;align-items:flex-start}}
+
+/* Summary sidebar */
+.sidebar{{width:210px;flex-shrink:0;background:#1a1a22;border-right:2px solid #F29E00;
+          position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow-y:auto}}
+.sidebar h3{{background:#F29E00;color:#111;padding:6px 12px;font-size:11px;
+             font-weight:bold;text-transform:uppercase;letter-spacing:.08em}}
+.sidebar table{{width:100%;border-collapse:collapse}}
+.sk{{color:#F29E00;font-weight:bold;padding:5px 8px 5px 12px;font-size:11px;
+     border-bottom:1px solid #2a2a34;white-space:nowrap;vertical-align:top}}
+.sv{{color:#c8c8c8;padding:5px 12px 5px 4px;font-size:11px;
+     border-bottom:1px solid #2a2a34;word-break:break-all}}
+
+/* Main log pane */
+.log{{flex:1;background:#13131d;min-height:100vh;font-family:"Courier New",Courier,monospace;
+      font-size:12px;line-height:1.5;overflow-x:hidden}}
+
+/* Log lines */
+.line{{padding:0 16px;white-space:pre-wrap;word-break:break-word}}
+
+/* Banners */
+.banner.zone{{background:#0e1e38;color:#F29E00;font-weight:bold;
+              padding:7px 16px;margin:12px 0 2px;
+              border-left:4px solid #F29E00;
+              font-family:Arial,Helvetica,sans-serif;font-size:12px;
+              letter-spacing:.04em}}
+.banner.mission{{background:#1c1200;color:#d4900a;padding:4px 16px 4px 20px;
+                 margin:2px 0;border-left:4px solid #6a4800;
+                 font-family:Arial,Helvetica,sans-serif;font-size:11px;
+                 font-style:italic}}
+.banner.turn{{color:#222234;font-size:10px;padding:2px 16px;
+              border-top:1px solid #1e1e2c;margin-top:8px;
+              font-family:Arial,Helvetica,sans-serif}}
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+  <header>
+    <h1>Delve Offline Bot &mdash; {world}</h1>
+    <div class="sub">{ts}</div>
+  </header>
+  <div class="content-area">
+    <div class="sidebar">
+      <h3>Session Summary</h3>
+      <table>{summary_rows}</table>
+    </div>
+    <div class="log">
 {body}
-<h3>Session Summary</h3>
-<table>{summary_html}</table>
+    </div>
+  </div>
+  <footer>Delve Offline Bot &mdash; generated by offline_bot.py</footer>
+</div>
 </body></html>""", encoding="utf-8")
-        print(f"  HTML log → {path}")
+        print(f"  HTML log -> {path}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1084,14 +1140,44 @@ class BotRunner:
                 print(f"{C_WARN}[WARN] Player died — stopping.{RESET}")
                 break
 
-            # 1. Low-HP flee check
+            # 1a. Heal via potion when below 40% HP (out of combat or in)
+            if p.hp < p.max_hp * 0.40:
+                potion = next(
+                    (i for i in p.inventory if i.get("id") == "health_potion"), None
+                )
+                if potion:
+                    print(f"{C_SIDE}  [heal] use Health Potion (HP {p.hp}/{p.max_hp}){RESET}")
+                    self._cmd("use Health Potion")
+                    continue
+
+            # 1b. Low-HP flee check
             if p.hp < p.max_hp * 0.20 and self._hostile():
                 exits = self._model.room_exits.get(p.room_id, {})
                 if exits:
                     flee_dir = next(iter(exits))
                     print(f"{C_SIDE}  [flee] {flee_dir}{RESET}")
                     self._cmd(flee_dir)
+                    # Mark queued explore targets as visited so we don't return to danger
+                    for mtype, margs in self._stack:
+                        if mtype == "go_to":
+                            self._visited.add(margs.get("room", ""))
+                    self._pending_dirs.clear()
+                    self._stack = [(t, a) for t, a in self._stack if t != "go_to"]
                 continue
+
+            # 1c. Rest at inn when very low HP, no potions, and not already heading there
+            if p.hp < p.max_hp * 0.30 and not self._hostile():
+                already_going_inn = any(
+                    mtype == "go_to" and margs.get("room") == "inn"
+                    for mtype, margs in self._stack
+                )
+                if not already_going_inn:
+                    if p.room_id == "inn":
+                        self._cmd("rest")
+                        continue
+                    if self._model.bfs_path(p.room_id, "inn") is not None:
+                        self._push("go_to", room="inn")  # push on top; resumes after
+                        continue
 
             # 2. Hostile NPC in room — attack it
             hostile = self._hostile()
@@ -1121,8 +1207,28 @@ class BotRunner:
             if command is None:
                 continue  # sub-mission was pushed; re-evaluate
 
+            # Track room before movement commands so we can detect blocked exits
+            room_before_cmd = self._player.room_id
+
             # Snapshot attack/defense before any equip change
             self._cmd(command)
+
+            # Detect failed movement (locked door, invalid exit, etc.).
+            # If a direction command didn't change our room, abort the current
+            # go_to and mark the target as visited so BFS skips it next time.
+            _DIRS = {"north","south","east","west",
+                     "northeast","northwest","southeast","southwest","up","down"}
+            if command in _DIRS and self._player.room_id == room_before_cmd:
+                # Movement blocked — find and cancel the active go_to
+                blocked_target: str | None = None
+                for mtype, margs in reversed(self._stack):
+                    if mtype == "go_to":
+                        blocked_target = margs.get("room")
+                        break
+                self._pending_dirs.clear()
+                self._stack = [(t, a) for t, a in self._stack if t != "go_to"]
+                if blocked_target:
+                    self._visited.add(blocked_target)  # skip on next exploration pass
 
             # After picking up, try to equip
             if command.startswith("get "):
@@ -1272,6 +1378,8 @@ def main() -> None:
     print(f"Stats  ->  {stats_path}")
 
     html_log.write(html_path, {
+        "world":         _wc.WORLD_NAME,
+        "started":       datetime.now().strftime("%Y-%m-%d  %H:%M:%S"),
         "World":         world_path.name,
         "Character":     args.name,
         "Turns":         summary["turns"],

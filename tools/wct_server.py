@@ -428,6 +428,19 @@ class WCTHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": "wct.html not found"}, 404)
 
+        elif path.startswith("/css/"):
+            fname    = path[5:]
+            css_path = TOOLS_DIR / fname
+            if css_path.suffix == ".css" and css_path.exists():
+                body = css_path.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/css; charset=utf-8")
+                self.send_header("Content-Length", len(body))
+                self.end_headers()
+                self.wfile.write(body)
+            else:
+                self._send_json({"error": "not found"}, 404)
+
         elif path == "/api/world":
             qs = parse_qs(parsed.query)
             world_id = (qs.get("world_id") or [""])[0].strip()
@@ -593,6 +606,23 @@ class WCTHandler(BaseHTTPRequestHandler):
             existing.setdefault("item", []).append(item_data)
             ok, err = _write_file(str(file_path.relative_to(ROOT)), existing)
             self._send_json({"ok": ok, "error": err})
+
+        elif path == "/api/create_dialogue":
+            world_id = body.get("world_id", "")
+            zone_id  = body.get("zone_id", "")
+            npc_id   = body.get("npc_id", "").strip()
+            if not world_id or not zone_id or not npc_id:
+                self._send_json({"ok": False, "error": "world_id, zone_id and npc_id required"})
+                return
+            dlg_dir   = DATA_DIR / world_id / zone_id / "dialogues"
+            dlg_dir.mkdir(parents=True, exist_ok=True)
+            file_path = dlg_dir / f"{npc_id}.toml"
+            if file_path.exists():
+                self._send_json({"ok": False, "error": f"Dialogue '{npc_id}.toml' already exists"})
+                return
+            starter = {"node": [{"id": "root", "line": "Hello, traveller."}], "response": []}
+            ok, err = _write_file(str(file_path.relative_to(ROOT)), starter)
+            self._send_json({"ok": ok, "error": err, "file": str(file_path.relative_to(ROOT))})
 
         elif path == "/api/create_zone":
             world_id = body.get("world_id", "")

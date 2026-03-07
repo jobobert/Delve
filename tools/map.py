@@ -2,7 +2,8 @@
 """
 tools/map.py — Admin map utility for Delve.
 
-Renders the world as either an ASCII terminal map or a self-contained HTML file.
+Renders the world as an ASCII terminal map, a self-contained HTML file,
+or a Graphviz .dot file.
 
 Rooms without an explicit coord = [x, y] field are placed automatically on the
 map using exit topology (BFS from their neighbours). They appear with a dashed
@@ -15,8 +16,16 @@ Usage:
   python tools/map.py --full                   # ASCII map with item/NPC counts
   python tools/map.py --html                   # HTML map -> tools/admin_map.html
   python tools/map.py --html --output my.html  # HTML map to custom path
+  python tools/map.py --dot                    # Graphviz .dot -> tools/map.dot
+  python tools/map.py --dot --output my.dot    # Graphviz .dot to custom path
   python tools/map.py --world NAME             # select world by folder name
   python tools/map.py --help
+
+Graphviz rendering examples (after --dot):
+  dot   -Tsvg tools/map.dot -o map.svg    # hierarchical layout
+  neato -Tsvg tools/map.dot -o map.svg    # spring layout (respects coord pos)
+  fdp   -Tsvg tools/map.dot -o map.svg    # force-directed (good for clusters)
+  dot   -Tpng tools/map.dot -o map.png
 """
 
 import json
@@ -27,7 +36,7 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
 from engine.toml_io    import load as toml_load
-from engine.map_builder import apply_auto_layout, exit_dest
+from engine.map_builder import apply_auto_layout, exit_dest, FACE_OFFSET, REVERSE_DIR
 
 DATA_DIR  = ROOT / "data"
 SKIP_DIRS = {"zone_state", "players"}
@@ -234,21 +243,43 @@ def _render_grid(world: dict, rooms: dict, full: bool) -> None:
         if y > min_y:
             vline = ""
             for x in range(min_x, max_x + 1):
-                room  = coords.get((x, y))
-                below = coords.get((x, y - 1))
+                room      = coords.get((x, y))
+                below     = coords.get((x, y - 1))
+                right     = coords.get((x + 1, y))
+                below_right = coords.get((x + 1, y - 1))
+                below_left  = coords.get((x - 1, y - 1))
+
+                # 6-char cell area: south connector
                 if room and below:
-                    south  = room.get("exits", {}).get("south")
-                    s_dest = exit_dest(south)
+                    south  = room.get("exits", {}).get("south") or room.get("exits", {}).get("s")
+                    s_dest = exit_dest(south) if south else ""
                     if s_dest:
                         vline += C_LOCKED + "  x   " + RESET if exit_locked(south) else C_CONN + "  |   " + RESET
                     else:
                         vline += "      "
                 else:
                     vline += "      "
+
+                # 3-char connector area: SE diagonal (from this column) or SW diagonal (from next)
+                has_se = has_sw = False
+                if room and below_right:
+                    se = room.get("exits", {}).get("southeast") or room.get("exits", {}).get("se")
+                    has_se = bool(exit_dest(se) if se else "")
+                if right and below:
+                    sw = right.get("exits", {}).get("southwest") or right.get("exits", {}).get("sw")
+                    has_sw = bool(exit_dest(sw) if sw else "")
+                if has_se and has_sw:
+                    vline += C_CONN + " X " + RESET
+                elif has_se:
+                    vline += C_CONN + " \\ " + RESET
+                elif has_sw:
+                    vline += C_CONN + " / " + RESET
+                else:
+                    vline += "   "
             print("  " + vline)
 
     print()
-    print(C_DETAIL + "  Legend:  [ABCD] room-id   * = start room   ~ = auto-placed   -x- = locked" + RESET)
+    print(C_DETAIL + "  Legend:  [ABCD] room-id   * = start room   ~ = auto-placed   -x- = locked   \\ / X = diagonal exits" + RESET)
     if full:
         print(C_DETAIL + "           i# = items   n# = NPCs" + RESET)
     print()
@@ -296,6 +327,12 @@ def generate_html(world: dict, world_name: str, output_path: Path) -> None:
         cy = PAD_Y + (max_y - y) * CELL_H + CELL_H // 2   # SVG Y inverted
         return cx, cy
 
+    def face_anchor(gx: int, gy: int, direction: str) -> tuple[int, int]:
+        """Return the SVG pixel coordinate of the exit face for a room at grid pos (gx, gy)."""
+        cx, cy = cell_center(gx, gy)
+        fo = FACE_OFFSET.get(direction, (0.0, 0.0))
+        return (cx + int(fo[0] * CELL_W / 2), cy + int(fo[1] * CELL_H / 2))
+
     # Build room detail data passed to JS
     room_data: dict[str, dict] = {}
     for rid, room in rooms.items():
@@ -328,12 +365,11 @@ def generate_html(world: dict, world_name: str, output_path: Path) -> None:
             "admin_comment": room.get("admin_comment", ""),
         }
 
-    # SVG: connection lines between placed rooms
+    # SVG: connection lines between placed rooms — drawn from exit face to arrival face.
     drawn_pairs: set[tuple] = set()
     svg_lines:   list[str]  = []
     for rid, room in placed.items():
         dc1 = room["_display_coord"]
-        cx1, cy1 = cell_center(dc1[0], dc1[1])
         for direction, ev in room.get("exits", {}).items():
             dest = exit_dest(ev)
             if not dest or dest not in placed:
@@ -342,13 +378,15 @@ def generate_html(world: dict, world_name: str, output_path: Path) -> None:
             if pair in drawn_pairs:
                 continue
             drawn_pairs.add(pair)
-            dc2 = placed[dest]["_display_coord"]
-            cx2, cy2 = cell_center(dc2[0], dc2[1])
-            locked = exit_locked(ev)
-            color  = "#e05050" if locked else "#444"
-            dash   = 'stroke-dasharray="6,4"' if locked else ""
+            ax1, ay1 = face_anchor(dc1[0], dc1[1], direction)
+            dc2      = placed[dest]["_display_coord"]
+            rev_dir  = REVERSE_DIR.get(direction, "")
+            ax2, ay2 = face_anchor(dc2[0], dc2[1], rev_dir)
+            locked   = exit_locked(ev)
+            color    = "#e05050" if locked else "#444"
+            dash     = 'stroke-dasharray="6,4"' if locked else ""
             svg_lines.append(
-                f'<line x1="{cx1}" y1="{cy1}" x2="{cx2}" y2="{cy2}" '
+                f'<line x1="{ax1}" y1="{ay1}" x2="{ax2}" y2="{ay2}" '
                 f'stroke="{color}" stroke-width="2" {dash}/>'
             )
 
@@ -603,6 +641,145 @@ function filterTo(zone) {{
     print(f"Open in browser: file:///{output_path.resolve()}")
 
 
+# ── Graphviz .dot generator ───────────────────────────────────────────────────
+
+def _dot_q(s: str) -> str:
+    """Return s as a quoted DOT string literal."""
+    return '"' + str(s).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+
+
+def generate_dot(world: dict, world_name: str, output_path: Path,
+                 zone_filter: str = "") -> None:
+    """Write a Graphviz .dot file for the world.
+
+    Nodes are grouped into subgraphs (cluster_<zone>) so Graphviz renders
+    zone boundaries as boxes.  Rooms with explicit coord fields carry a
+    pos attribute — use ``neato -n`` to honour them exactly, or any other
+    engine to let Graphviz compute its own layout.
+
+    Locked exits are drawn with dashed red edges.
+    Auto-placed rooms (no coord) have a dashed border.
+    Start rooms have a white border and thicker stroke.
+    """
+    rooms = {
+        rid: r for rid, r in world["rooms"].items()
+        if not zone_filter or r.get("_zone") == zone_filter
+    }
+    if not rooms:
+        print(f"No rooms found" + (f" for zone '{zone_filter}'" if zone_filter else "") + ".")
+        return
+
+    zone_list  = [z for z in world["zone_list"]
+                  if any(r.get("_zone") == z for r in rooms.values())]
+    zone_color = {zid: _ZONE_COLORS[i % len(_ZONE_COLORS)]
+                  for i, zid in enumerate(world["zone_list"])}
+
+    lines: list[str] = []
+    lines += [
+        f"// Graphviz map — {world_name}",
+        f"// Generated by tools/map.py",
+        f"// Render: neato -Tsvg {output_path.name} -o map.svg",
+        "graph World {",
+        f"  label={_dot_q(world_name)}",
+        "  labelloc=t  labeljust=l",
+        "  bgcolor=" + _dot_q("#1a1a2e"),
+        "  fontname=Arial  fontsize=14  fontcolor=" + _dot_q("#cccccc"),
+        "  pad=0.4  splines=true  overlap=false",
+        "  node [shape=box style=filled fontname=Arial fontsize=9 fontcolor=" + _dot_q("#eeeeee") + "]",
+        "  edge [fontname=Arial fontsize=7 color=" + _dot_q("#666666") + "]",
+        "",
+    ]
+
+    # One subgraph cluster per zone
+    for zone_id in zone_list:
+        zone_rooms = {rid: r for rid, r in rooms.items() if r.get("_zone") == zone_id}
+        if not zone_rooms:
+            continue
+        color = zone_color.get(zone_id, "#888888")
+        # Graphviz cluster node requires "cluster_" prefix
+        lines += [
+            f"  subgraph cluster_{zone_id} {{",
+            f"    label={_dot_q(zone_id)}",
+            f"    style=filled",
+            f"    fillcolor={_dot_q(color + '18')}",   # ~10% opacity hex
+            f"    color={_dot_q(color)}",
+            f"    fontcolor={_dot_q(color)}",
+            f"    fontname=Arial  fontsize=10",
+        ]
+        for rid, room in sorted(zone_rooms.items()):
+            label     = room.get("name", rid)
+            is_start  = bool(room.get("start"))
+            is_auto   = bool(room.get("_auto_placed"))
+
+            border_color = "#ffffff" if is_start else color
+            pen          = 3 if is_start else (1 if not is_auto else 1)
+            fill         = color + ("44" if is_start else "22")
+            node_style   = "filled,dashed" if is_auto else "filled"
+
+            # Position hint: graphviz uses inches; scale grid units by 1.5"
+            pos_attr = ""
+            dc = room.get("_display_coord")
+            if dc and not is_auto:
+                px = round(dc[0] * 1.5, 2)
+                py = round(dc[1] * 1.5, 2)
+                pos_attr = f" pos={_dot_q(f'{px},{py}!')}"
+
+            ni = len(room.get("items",  []))
+            ns = len(room.get("spawns", []))
+            counts = f"  i:{ni} n:{ns}" if (ni or ns) else ""
+            full_label = f"{label}\\n{rid}{counts}"
+
+            tooltip = room.get("description", "")[:80].replace('"', "'")
+
+            lines.append(
+                f"    {_dot_q(rid)} ["
+                f"label={_dot_q(full_label)} "
+                f"style={_dot_q(node_style)} "
+                f"fillcolor={_dot_q(fill)} "
+                f"color={_dot_q(border_color)} "
+                f"penwidth={pen}"
+                f"{pos_attr}"
+                f" tooltip={_dot_q(tooltip)}"
+                f"]"
+            )
+        lines += ["  }", ""]
+
+    # Edges — deduplicate bidirectional pairs
+    drawn: set[tuple] = set()
+    for rid, room in rooms.items():
+        for direction, ev in room.get("exits", {}).items():
+            dest = exit_dest(ev)
+            if not dest or dest not in rooms:
+                continue
+            pair = tuple(sorted([rid, dest]))
+            if pair in drawn:
+                continue
+            drawn.add(pair)
+
+            rev_dir = REVERSE_DIR.get(direction, "")
+            label   = f"{direction}/{rev_dir}" if rev_dir else direction
+            locked  = exit_locked(ev)
+            e_style = "dashed" if locked else "solid"
+            e_color = "#e05050" if locked else "#555555"
+
+            lines.append(
+                f"  {_dot_q(rid)} -- {_dot_q(dest)} "
+                f"[label={_dot_q(label)} style={_dot_q(e_style)} color={_dot_q(e_color)}]"
+            )
+
+    lines += ["", "}"]
+
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    n_auto   = sum(1 for r in rooms.values() if r.get("_auto_placed"))
+    n_locked = sum(1 for r in rooms.values()
+                   for ev in r.get("exits", {}).values() if exit_locked(ev))
+    print(f"Written -> {output_path}  [{len(rooms)} rooms, {len(zone_list)} zones"
+          + (f", {n_auto} auto-placed" if n_auto else "")
+          + (f", {n_locked} locked exits" if n_locked else "")
+          + "]")
+    print(f"Render:  neato -Tsvg {output_path} -o map.svg   (or dot / fdp / sfdp)")
+
+
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -622,6 +799,7 @@ def main() -> None:
 
     world_path = _pick_world(world_arg)
     html_mode  = "--html" in args
+    dot_mode   = "--dot"  in args
 
     print(f"Loading '{world_path.name}'...", end=" ", flush=True)
     world = load_world(world_path)
@@ -629,26 +807,38 @@ def main() -> None:
     auto_note = f", {n_auto} auto-placed" if n_auto else ""
     print(f"{len(world['rooms'])} rooms{auto_note}, {len(world['npcs'])} NPCs, {len(world['items'])} items")
 
+    # Read world name from config.py (shared by HTML and DOT modes)
+    world_name = world_path.name
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("_wc", world_path / "config.py")
+        mod  = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        world_name = getattr(mod, "WORLD_NAME", world_path.name)
+    except Exception:
+        pass
+
+    # --output / -o (shared by HTML and DOT modes)
+    output_path: Path | None = None
+    for flag in ("--output", "-o"):
+        if flag in args:
+            idx = args.index(flag)
+            if idx + 1 < len(args):
+                output_path = Path(args[idx + 1])
+
     if html_mode:
-        output_path = ROOT / "tools" / "admin_map.html"
-        for flag in ("--output", "-o"):
-            if flag in args:
-                idx = args.index(flag)
-                if idx + 1 < len(args):
-                    output_path = Path(args[idx + 1])
+        out = output_path or ROOT / "tools" / "admin_map.html"
+        generate_html(world, world_name, out)
+        return
 
-        # Read world name from config.py
-        world_name = world_path.name
-        try:
-            import importlib.util
-            spec = importlib.util.spec_from_file_location("_wc", world_path / "config.py")
-            mod  = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            world_name = getattr(mod, "WORLD_NAME", world_path.name)
-        except Exception:
-            pass
-
-        generate_html(world, world_name, output_path)
+    if dot_mode:
+        zone_filter = ""
+        if "--zone" in args:
+            idx = args.index("--zone")
+            if idx + 1 < len(args):
+                zone_filter = args[idx + 1]
+        out = output_path or ROOT / "tools" / "map.dot"
+        generate_dot(world, world_name, out, zone_filter=zone_filter)
         return
 
     # ASCII mode

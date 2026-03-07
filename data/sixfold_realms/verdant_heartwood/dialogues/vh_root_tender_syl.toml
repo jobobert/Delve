@@ -1,0 +1,97 @@
+[[node]]
+id    = "root"
+lines = [
+  "Syl traces a glowing line along a root. 'The forest knows your steps before you take them.'"
+]
+
+[[response]]
+node = "root"
+text = "Lyren said you could help me with the vines."
+next = "vine_intro"
+
+[[response]]
+node = "root"
+text = "Your hands glow. Are you a healer?"
+next = "healer_intro"
+
+[[response]]
+node = "root"
+text = "The forest feels… aware. Is that normal?"
+next = "forest_awake"
+
+
+# --- Vine charm path ---
+[[node]]
+id   = "vine_intro"
+line = "'The vines respond to calm intent. A charm can help—if the forest accepts you.'"
+
+[[response]]
+node      = "vine_intro"
+condition = { prestige_min = 5 }
+text      = "Can you teach me?"
+next      = "vine_teach"
+
+[[response]]
+node      = "vine_intro"
+condition = { prestige_max = 4 }
+text      = "What must I do to earn that trust?"
+next      = "vine_unworthy"
+
+
+[[node]]
+id   = "vine_teach"
+line = "Syl weaves a small charm from living roots. 'Hold this. The vines will sense your gentleness.'"
+script = [
+  { op = "give_item", item_id = "vh_vine_charm" },
+  { op = "message", tag = "system", text = "You receive a Vine‑Calming Charm." }
+]
+
+[[response]]
+node = "vine_teach"
+text = "Thank you."
+next = ""
+
+
+[[node]]
+id   = "vine_unworthy"
+line = "'Help the forest. Heal a wounded creature, or clear a choking vine. The Heartwood watches.'"
+
+[[response]]
+node = "vine_unworthy"
+text = "I'll prove myself."
+next = ""
+
+
+# --- Healer path ---
+[[node]]
+id   = "healer_intro"
+line = "'I mend what the forest cannot. Growth is powerful, but even it falters.'"
+
+[[response]]
+node = "healer_intro"
+text = "Can you heal me?"
+next = "heal_player"
+
+[[node]]
+id   = "heal_player"
+line = "Syl places a hand on your shoulder. Warmth spreads through you."
+script = [
+  { op = "heal", amount = 20 },
+  { op = "message", tag = "system", text = "You feel restored." }
+]
+
+[[response]]
+node = "heal_player"
+text = "Thank you."
+next = ""
+
+
+# --- Forest awareness ---
+[[node]]
+id   = "forest_awake"
+line = "'The Heartwood is awake. It remembers the Regulator’s fall. It watches for those who would mend it.'"
+
+[[response]]
+node = "forest_awake"
+text = "I hope it finds me worthy."
+next = ""

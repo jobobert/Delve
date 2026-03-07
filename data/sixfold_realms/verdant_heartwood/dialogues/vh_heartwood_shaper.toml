@@ -1,0 +1,116 @@
+[[node]]
+id    = "root"
+lines = [
+  "Thalen stands before the living forge. 'The Heartwood bends for those who respect it.'"
+]
+
+[[response]]
+node = "root"
+text = "Can you craft armor from the Heartwood?"
+next = "carapace_intro"
+
+[[response]]
+node = "root"
+text = "This forge… it’s alive?"
+next = "forge_explain"
+
+[[response]]
+node = "root"
+text = "I’m seeking the Regulator fragment."
+next = "fragment_path"
+
+
+# --- Carapace crafting ---
+[[node]]
+id   = "carapace_intro"
+line = "'The Carapace is not forged. It is grown. Bring me bark, resin, and a resonant heart.'"
+
+[[response]]
+node = "carapace_intro"
+text = "I have the materials."
+next = "carapace_check"
+
+[[response]]
+node = "carapace_intro"
+text = "Where can I find them?"
+next = "carapace_help"
+
+
+[[node]]
+id   = "carapace_check"
+line = "Thalen examines your materials."
+script = [
+  { op = "if_item", item_id = "vh_heartwood_bark", then = [
+    { op = "if_item", item_id = "vh_sap_resin", then = [
+      { op = "if_item", item_id = "mf_quartz_heart", then = [
+        { op = "take_item", item_id = "vh_heartwood_bark" },
+        { op = "take_item", item_id = "vh_sap_resin" },
+        { op = "take_item", item_id = "mf_quartz_heart" },
+        { op = "give_item", item_id = "heartwood_carapace" },
+        { op = "message", tag = "quest", text = "The Heartwood Carapace forms around your hands." },
+        { op = "advance_quest", quest_id = "vh_carapace", step = 2 },
+      ], else = [
+        { op = "message", tag = "error", text = "'You lack the resonant heart. The Carapace will not grow without it.'" }
+      ] },
+    ], else = [
+      { op = "message", tag = "error", text = "'You lack the resin. Growth needs binding.'" }
+    ] },
+  ], else = [
+    { op = "message", tag = "error", text = "'You lack the bark. The forest must offer its skin willingly.'" }
+  ] },
+]
+
+[[response]]
+node = "carapace_check"
+text = "Understood."
+next = ""
+
+
+[[node]]
+id   = "carapace_help"
+line = "'Bark from the ancient trees. Resin from the warrens. A quartz heart from the Mistfen.'"
+
+[[response]]
+node = "carapace_help"
+text = "I'll gather them."
+next = ""
+
+
+# --- Forge explanation ---
+[[node]]
+id   = "forge_explain"
+line = "'The forge grows what you ask of it. But it listens only to truth.'"
+
+[[response]]
+node = "forge_explain"
+text = "How do I speak truth to a forge?"
+next = "forge_truth"
+
+[[node]]
+id   = "forge_truth"
+line = "'With intent. With purpose. And with the right materials.'"
+
+[[response]]
+node = "forge_truth"
+text = "I'll remember that."
+next = ""
+
+
+# --- Fragment path ---
+[[node]]
+id   = "fragment_path"
+line = "'The fragment lies in the Inner Sanctum. But the guardian tests all who enter.'"
+
+[[response]]
+node = "fragment_path"
+text = "What kind of test?"
+next = "guardian_hint"
+
+[[node]]
+id   = "guardian_hint"
+line = "'Strength, yes. But also harmony. The forest rejects those who take without giving.'"
+
+[[response]]
+node = "guardian_hint"
+text = "I'll be ready."
+next = ""

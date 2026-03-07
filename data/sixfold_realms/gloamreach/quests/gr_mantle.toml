@@ -1,0 +1,39 @@
+# Integration notes
+# Step 2 is advanced by the Weaver’s crafting script.
+#
+# Step 3 can be advanced by an on_equip script on the mantle or a Core‑level room check.
+#
+# The quest reinforces the region’s themes: instability, shadow‑silk, entropy seep.
+
+id      = "gr_mantle"
+title   = "Weaving the Umbral Mantle"
+giver   = "gr_umbral_weaver"
+summary = "The Umbral Weaver can shape a mantle from shadow‑ore and entropy residue, but only if you gather the materials and withstand the caverns’ instability."
+
+[[step]]
+index     = 1
+objective = "Gather Shadow‑Ore and Entropy Residue."
+hint      = "Shadow‑Ore forms in dim caverns; entropy residue clings to unstable constructs."
+
+[[step]]
+index     = 2
+objective = "Bring the materials to the Umbral Weaver."
+hint      = "The Weaver waits in the Echo Warrens."
+
+[[step]]
+index     = 3
+objective = "Wear the Umbral Mantle to attune it."
+hint      = "Equip the mantle to complete the weaving."
+
+[[reward]]
+type   = "xp"
+amount = 300
+
+[[reward]]
+type   = "prestige"
+amount = 2
+reason = "mastered the caverns’ instability"
+
+[[reward]]
+type   = "gold"
+amount = 50

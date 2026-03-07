@@ -1,0 +1,159 @@
+#item = [{id = "item_dim_lantern", name = "Dim Lantern", desc_short = "A lantern that glows faintly, resisting the deep gloam.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_prism_shard", name = "Prism Shard", desc_short = "A shard of crystal capable of refracting even weak light.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_gloam_crystal", name = "Gloam Crystal", desc_short = "A crystal infused with twilight energy.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_gloamroot_sample", name = "Gloamroot Sample", desc_short = "A root that glows faintly with trapped light.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_lumen_shard", name = "Lumen Shard", desc_short = "A shard of pure light harvested from glowing fungi.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_reflection_fragment", name = "Reflection Fragment", desc_short = "A fragment of mirrored stone showing faint echoes of the past.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_device_piece_4", name = "Device Piece: Shadow Regulator", desc_short = "A component of the ancient device that controls the balance between light and shadow.", weight = 0, respawn = false, no_drop = false, tags = ["device_piece"], effects = [], value = 0, on_get = [], type = "misc"}]
+
+[[item]]
+id          = "gr_dim_lantern"
+name        = "Dim Lantern"
+desc_short  = "A lantern that emits a weak, wavering glow."
+desc_long   = "Its light is barely enough to push back the gloom, but it steadies your steps."
+slot        = "hand"
+weight      = 1
+respawn     = false
+on_equip    = [
+  { op = "add_light", amount = 1 }
+]
+on_drop     = [
+  { op = "add_light", amount = -1 }
+]
+
+[[item]]
+id          = "gr_bright_lantern"
+name        = "Bright Lantern"
+desc_short  = "A lantern that burns with steady, bright light."
+desc_long   = "Its glow cuts through the gloom, revealing paths hidden in darkness."
+slot        = "hand"
+weight      = 1
+respawn     = false
+on_equip    = [
+  { op = "add_light", amount = 2 }
+]
+on_drop     = [
+  { op = "add_light", amount = -2 }
+]
+
+[[item]]
+id          = "gr_shadow_crystal"
+name        = "Shadow Crystal"
+desc_short  = "A crystal that absorbs light instead of emitting it."
+desc_long   = "Holding it dims your surroundings, revealing paths that hide from brightness."
+slot        = "hand"
+weight      = 0
+respawn     = false
+on_equip    = [
+  { op = "add_light", amount = -1 }
+]
+on_drop     = [
+  { op = "add_light", amount = 1 }
+]
+
+[[item]]
+id          = "gr_entropy_band"
+name        = "Entropy Band"
+desc_short  = "A ring that stabilizes ambient entropy."
+desc_long   = "The metal is cool to the touch, resisting the caverns’ creeping instability."
+slot        = "finger"
+weight      = 0
+respawn     = false
+effects     = [
+  { type = "status_resist", effect = "entropy", amount = 20 }
+]
+
+[[item]]
+id          = "gr_nullstone_shard"
+name        = "Nullstone Shard"
+desc_short  = "A shard of stone that deadens magical interference."
+desc_long   = "It hums faintly, absorbing unstable energy around you."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["entropy_resist"]
+
+[[item]]
+id          = "gr_echo_tuning_fork"
+name        = "Echo Tuning Fork"
+desc_short  = "A fork that vibrates with delayed resonance."
+desc_long   = "Striking it disrupts shadow echoes and stabilizes looping corridors."
+slot        = ""
+weight      = 0
+respawn     = false
+on_use      = [
+  { op = "set_flag", flag = "gr_echo_disrupted" },
+  { op = "message", tag = "system", text = "The tuning fork hums, disrupting the echo around you." }
+]
+
+[[item]]
+id          = "gr_afterimage_trap"
+name        = "Afterimage Trap"
+desc_short  = "A small device that captures unstable shadows."
+desc_long   = "When activated, it pulls afterimages into itself, neutralizing them."
+slot        = ""
+weight      = 0
+respawn     = false
+on_use      = [
+  { op = "set_flag", flag = "gr_afterimage_trapped" },
+  { op = "message", tag = "system", text = "The trap snaps shut, capturing a drifting afterimage." }
+]
+
+[[item]]
+id          = "gr_shadow_ore"
+name        = "Shadow‑Ore"
+desc_short  = "A lump of ore that absorbs light."
+desc_long   = "It feels heavier than it should, as if pulling toward darkness."
+slot        = ""
+weight      = 1
+respawn     = false
+tags        = ["gloam_material"]
+
+[[item]]
+id          = "gr_entropy_residue"
+name        = "Entropy Residue"
+desc_short  = "A smear of unstable energy."
+desc_long   = "It clings to your fingers like cold smoke."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["gloam_material"]
+
+[[item]]
+id          = "umbral_mantle"
+name        = "Umbral Mantle"
+desc_short  = "A cloak woven from shadow‑silk and entropy threads."
+desc_long   = "It shifts with the light, sometimes absorbing it, sometimes bending it around you."
+slot        = "chest"
+weight      = 1
+respawn     = false
+armor_tags  = ["shadow", "entropy"]
+effects     = [
+  { type = "stat_bonus", stat = "dodge", amount = 5 },
+  { type = "stat_bonus", stat = "defense", amount = 3 },
+  { type = "on_enter_room", ability = "shadow_step", chance = 0.05 }
+]
+on_equip    = [
+  { op = "set_flag", flag = "gr_mantle_equipped" }
+]
+on_drop     = [
+  { op = "clear_flag", flag = "gr_mantle_equipped" }
+]
+
+[[item]]
+id          = "shadow_regulator_fragment"
+name        = "Shadow Regulator Fragment"
+desc_short  = "A shard of the Regulator’s dampening subsystem."
+desc_long   = "It pulses with inverted resonance, amplifying instability instead of absorbing it."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["device_piece"]
+on_get      = [
+  { op = "advance_quest", quest_id = "gr_shadow_fragment", step = 3 },
+  { op = "prestige", amount = 3, reason = "recovered the Shadow Regulator Fragment" }
+]
+
+[[item]]
+id          = "gr_shadecloth_scrap"
+name        = "Shadecloth Scrap"
+desc_short  = "A scrap of shadow‑resistant fabric."
+desc_long   = "Woven in Gloamreach to protect against low‑level gloam exposure. Not very strong, but better than nothing."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["gloamreach_material", "light_armor"]

@@ -1,0 +1,76 @@
+[[node]]
+id    = "root"
+lines = [
+  "The hermit flickers in and out of sync. 'You are… early? No. Late.'"
+]
+
+[[response]]
+node = "root"
+text = "Are you all right?"
+next = "state"
+
+[[response]]
+node = "root"
+text = "Why are you flickering like that?"
+next = "echo_explain"
+
+[[response]]
+node = "root"
+text = "Do you know the way to the Core?"
+next = "core_hint"
+
+
+# --- State ---
+[[node]]
+id   = "state"
+line = "'I am between moments. The echoes pull at me.'"
+
+[[response]]
+node = "state"
+text = "Can I help?"
+next = "state_help"
+
+[[node]]
+id   = "state_help"
+line = "'Dim your light. It hurts to be seen too brightly.'"
+script = [
+  { op = "if_light_at_least", amount = 3, then = [
+    { op = "message", tag = "error", text = "Your light is too bright. The hermit recoils." }
+  ] }
+]
+
+[[response]]
+node = "state_help"
+text = "I'll lower my light."
+next = ""
+
+
+# --- Echo explanation ---
+[[node]]
+id   = "echo_explain"
+line = "'The caverns remember. They replay. Sometimes they replay… me.'"
+
+[[response]]
+node = "echo_explain"
+text = "How do I stop the echoes?"
+next = "echo_stop"
+
+[[node]]
+id   = "echo_stop"
+line = "'Strike a tuning fork. It disrupts the resonance.'"
+
+[[response]]
+node = "echo_stop"
+text = "I have one."
+next = ""
+
+
+# --- Core hint ---
+[[node]]
+id   = "core_hint"
+line = "'Downward. Always downward. The entropy veins point the way.'"
+
+[[response]]
+node = "core_hint"
+text = "Thank you."
+next = ""

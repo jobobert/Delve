@@ -90,6 +90,19 @@ def init(world_path: Path) -> None:
     _world_path = world_path
     cfg = _load_cfg(world_path / "config.py")
 
+    # Propagate world path to content-scanning modules so they look in the
+    # right world folder instead of the top-level data/ directory.
+    import engine.quests as _q
+    import engine.dialogue as _d
+    import engine.crafting as _c
+    _q._DATA_ROOT          = world_path
+    _q._QUEST_CACHE        = {}
+    _d._DATA_ROOT          = world_path
+    _d._CACHE              = {}
+    _d._PATH_MAP           = None
+    _c._DATA_ROOT          = world_path
+    _c._COMMISSION_CACHE   = None
+
     WORLD_NAME    = str(_get(cfg, "WORLD_NAME",    _DEFAULTS["WORLD_NAME"]))
     NEW_CHAR_HP   = int(_get(cfg, "NEW_CHAR_HP",   _DEFAULTS["NEW_CHAR_HP"]))
     CURRENCY_NAME = str(_get(cfg, "CURRENCY_NAME", _DEFAULTS["CURRENCY_NAME"]))

@@ -1,0 +1,34 @@
+[[style]]
+id   = "rootbind"
+name = "Rootbind"
+desc = "A grounded, symbiotic style that channels living force through the body."
+
+affinities = {
+  weapon_tags = ["natural", "fist"],
+  armor_tags  = ["organic", "heartwood"]
+}
+
+growth = {
+  on_hit_taken = 1.5
+  on_grapple   = 2.0
+  on_regen     = 1.0
+}
+
+abilities = [
+  { id = "rooted_stance",
+    type = "stance",
+    desc = "Root yourself, gaining +4 defense and minor regeneration for 3 rounds.",
+    trigger = { on_command = "stance root" },
+    effect  = [
+      { stat = "defense", amount = 4, duration = 3 },
+      { type = "regen", amount = 2, duration = 3 }
+    ]
+  },
+
+  { id = "constrict",
+    type = "on_hit",
+    desc = "6% chance to bind the enemy, reducing their dodge.",
+    chance = 0.06,
+    effect = { type = "debuff", stat = "dodge", amount = -5, duration = 2 }
+  }
+]

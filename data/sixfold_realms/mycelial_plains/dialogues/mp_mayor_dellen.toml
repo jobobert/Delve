@@ -1,0 +1,67 @@
+[[node]]
+id    = "root"
+lines = [
+  "Dellen rubs his temples. 'Welcome… I think. Hard to keep track these days.'"
+]
+
+[[response]]
+node = "root"
+text = "Are you feeling all right?"
+next = "state"
+
+[[response]]
+node = "root"
+text = "What’s happening to the Plains?"
+next = "explain"
+
+[[response]]
+node = "root"
+text = "Have you heard of a strange fragment?"
+next = "fragment_hint"
+
+
+# --- State ---
+[[node]]
+id   = "state"
+line = "'Some days are clearer than others. The spores… they make it hard to think.'"
+script = [
+  { op = "if_spores_at_least", amount = 30, then = [
+    { op = "message", tag = "system", text = "Dellen squints at you. 'You look worse off than me.'" }
+  ] }
+]
+
+[[response]]
+node = "state"
+text = "I’ll try to stay clear-headed."
+next = ""
+
+
+# --- Explain ---
+[[node]]
+id   = "explain"
+line = "'The fungus used to help us remember. Now it just… takes. Thoughts slip away like sand.'"
+
+[[response]]
+node = "explain"
+text = "Is there a way to fight it?"
+next = "fight_it"
+
+[[node]]
+id   = "fight_it"
+line = "'Rissa brews clarity tonics. They help. For a while.'"
+
+[[response]]
+node = "fight_it"
+text = "I’ll speak with her."
+next = ""
+
+
+# --- Fragment Hint ---
+[[node]]
+id   = "fragment_hint"
+line = "'A ruin lies deeper in the fields. Folks say it holds old memories… and something important.'"
+
+[[response]]
+node = "fragment_hint"
+text = "I’ll look into it."
+next = ""

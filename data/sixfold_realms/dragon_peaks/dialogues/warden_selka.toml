@@ -1,0 +1,98 @@
+# -------------------------
+# NODE: root
+# -------------------------
+[[node]]
+id    = "root"
+lines = [
+  "Selka stands with a hand on the tower rail, watching the skies."
+]
+
+[[response]]
+node = "root"
+text = "What can you tell me about the Apex?"
+next = "about_apex"
+
+[[response]]
+node = "root"
+text = "I brought proof of a hunt."
+next = "give_proof"
+
+
+# -------------------------
+# NODE: about_apex
+# -------------------------
+[[node]]
+id   = "about_apex"
+line = "'The Apex is old. It remembers the architects. It will not give up the conductor lightly.'"
+
+[[response]]
+node = "about_apex"
+text = "Is there a peaceful way?"
+next = "peaceful"
+
+[[response]]
+node = "about_apex"
+text = "Then I'll take it by force."
+next = "force"
+
+
+# -------------------------
+# NODE: peaceful
+# -------------------------
+[[node]]
+id   = "peaceful"
+line = "'High prestige and careful offerings may open a parley. The Drakesworn respect honor.'"
+
+[[response]]
+node = "peaceful"
+text = "How do I gain that prestige?"
+next = "gain_prestige"
+
+
+# -------------------------
+# NODE: gain_prestige
+# -------------------------
+[[node]]
+id   = "gain_prestige"
+line = "'Bring proof of skill: drakebone, or help the smith with rare alloy. Actions speak.'"
+
+[[response]]
+node = "gain_prestige"
+text = "Understood."
+next = ""
+
+
+# -------------------------
+# NODE: force
+# -------------------------
+[[node]]
+id   = "force"
+line = "'Then expect the Peaks to answer in kind. The hunters will help those who pay.'"
+
+[[response]]
+node = "force"
+text = "So be it."
+next = ""
+
+
+# -------------------------
+# NODE: give_proof
+# -------------------------
+[[node]]
+id   = "give_proof"
+line = "Selka examines your offering carefully."
+script = [
+  { op = "if_has_item", item_id = "drakebone_fragment", then = [
+    { op = "take_item", item_id = "drakebone_fragment" },
+    { op = "message", tag = "dialogue", text = "'This will do. You have my attention.'" },
+    { op = "prestige", amount = 8, reason = "presented drakebone to Selka" },
+    { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 2 },
+  ], else = [
+    { op = "message", tag = "dialogue", text = "'You have nothing of note. Return when you do.'" },
+  ] },
+]
+
+[[response]]
+node = "give_proof"
+text = "I will return."
+next = ""

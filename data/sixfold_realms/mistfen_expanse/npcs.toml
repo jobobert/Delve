@@ -1,0 +1,80 @@
+[[npc]]
+id          = "mf_path_reader_sera"
+name        = "Path‑Reader Sera"
+desc_short  = "A calm figure with eyes half‑closed, listening to the swamp."
+desc_long   = "Sera’s posture is relaxed but precise, as if every breath is measured against the Mistfen’s pulse."
+tags        = ["humanoid", "prestige_neutral"]
+style       = "pressure_weave"
+style_prof  = 40
+hp          = 60
+max_hp      = 60
+attack      = 10
+defense     = 8
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+
+[[npc]]
+id          = "mf_swamp_smuggler"
+name        = "Mistfen Smuggler"
+desc_short  = "A hooded figure watching the paths with practiced wariness."
+desc_long   = "Mud‑stained boots, quick eyes, and a habit of standing where the mist is thickest."
+tags        = ["humanoid", "criminal"]
+style       = "shadowstrike"
+style_prof  = 35
+hp          = 45
+max_hp      = 45
+attack      = 11
+defense     = 7
+xp_reward   = 55
+gold_reward = 18
+hostile     = false
+
+[[npc]]
+id          = "mf_vault_watcher"
+name        = "Vault Watcher"
+desc_short  = "A pressure‑wreathed guardian formed of water and stone."
+desc_long   = "Its shape shifts with each breath you take, as if your lungs are part of its body."
+tags        = ["construct", "armored"]
+style       = "iron_root"
+style_prof  = 50
+hp          = 90
+max_hp      = 90
+attack      = 14
+defense     = 12
+xp_reward   = 140
+gold_reward = 0
+hostile     = true
+kill_script = [
+  { op = "set_flag",      flag = "mf_vault_watcher_slain" },
+  { op = "advance_quest", quest_id = "mf_pressure_below", step = 2 },
+  { op = "message", tag = "combat_kill", text = "The Vault Watcher collapses into still water." },
+]
+round_script = [
+  # High‑prestige branch: guardian eases off a bit
+  { op = "if_prestige", min = 10, then = [
+    { op = "if_combat_round", min = 2, then = [
+      { op = "if_npc_hp", max = 70, then = [
+        { op = "say", text = "Stabilising presence detected. Reducing pressure." },
+        { op = "apply_status", effect = "weakened", duration = 2 },
+      ] },
+    ] },
+  ] },
+
+  # Low‑prestige branch: guardian hits harder
+  { op = "if_prestige", max = -5, then = [
+    { op = "if_combat_round", min = 2, then = [
+      { op = "say", text = "Destabilising intruder. Increasing pressure." },
+      { op = "damage", amount = 4, message = "The water around you compresses violently." },
+    ] },
+  ] },
+
+  # Existing behaviour (kept as a neutral fallback)
+  { op = "if_combat_round", min = 3, then = [
+    { op = "if_npc_hp", max = 40, then = [
+      { op = "say", text = "Pressure… equalising…" },
+      { op = "apply_status", effect = "weakened", duration = 3 },
+    ] },
+  ] },
+]
+

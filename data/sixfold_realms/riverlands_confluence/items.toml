@@ -1,0 +1,155 @@
+#item = [{id = "item_river_map_fragment", name = "River Map Fragment", desc_short = "A hand-drawn fragment showing several river branches and partial routes to distant regions.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = [], type = "misc", admin_comment = "Need to find a way to use the map in game play"}, {id = "item_driftwood_charm", name = "Driftwood Charm", desc_short = "A small charm said to keep boats from capsizing in rough currents.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = [], slot = "charm", type = "misc"}, {id = "item_river_token", name = "River Token", desc_short = "A carved stone token granting free passage with certain ferrymen.", weight = 0, respawn = true, no_drop = false, tags = [], effects = [], value = 0, on_get = [], type = "currency", admin_comment = "Used for free passage in certain ferry places"}]
+
+[[item]]
+id          = "mural_inscription_fragment"
+name        = "Faded Inscription Fragment"
+desc_short  = "A fragment of text beneath the mural."
+desc_long   = "Most of the words are worn away, but you can still make out: 'Five conduits feed the heart...'"
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+
+[[item]]
+id          = "resonant_token"
+name        = "Resonant Token"
+desc_short  = "A small metal disc that hums faintly in your hand."
+desc_long   = "Concentric circles are etched into its surface. It seems to vibrate in time with your heartbeat."
+slot        = "neck"
+weight      = 0
+tags        = ["resonant"]
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "perception", amount = 3 },
+  { type = "on_equip", message = "The world sharpens, as if coming into tune." },
+]
+on_get = [
+  { op = "message", tag = "item", text = "The token's hum settles into a steady, reassuring rhythm." },
+  { op = "set_flag", flag = "rl_has_resonant_token" },
+]
+
+[[item]]
+id          = "clarity_stew"
+name        = "Bowl of Clarity Stew"
+desc_short  = "A steaming bowl of herb-laced stew."
+desc_long   = "The innkeeper swears it 'cuts through river fog and swamp mists alike.'"
+slot        = ""
+weight      = 0
+respawn     = true
+effects     = [
+  { type = "on_use", heal = 20, message = "Warmth spreads through you, and your thoughts feel a little clearer." },
+]
+
+[[item]]
+id          = "ferryman_hook"
+name        = "Ferryman's Hook"
+desc_short  = "A long-handled hook used to pull boats to the dock."
+desc_long   = "The wood is worn smooth by years of use. The metal tip is etched with tiny circles."
+slot        = "weapon"
+weight      = 2
+weapon_tags = ["polearm", "river"]
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack", amount = 5 },
+  { type = "on_hit", ability = "bleed", chance = 0.15, magnitude = 2 },
+]
+
+[[item]]
+id          = "driftwood_crate"
+name        = "Waterlogged Crate"
+desc_short  = "A crate half-sunk into the pier."
+desc_long   = "It looks like it washed up from somewhere upriver."
+slot        = ""
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "skill_check", skill = "survival", dc = 8,
+    on_pass = [
+      { op = "give_item", item_id = "clarity_stew" },
+      { op = "message", tag = "item", text = "You pry the crate open and salvage a sealed jar of stew." },
+    ],
+    on_fail = [
+      { op = "message", tag = "system", text = "The crate splinters uselessly in your hands." },
+    ],
+  },
+]
+
+[[item]]
+id          = "rl_travel_rations"
+name        = "Travel Rations"
+desc_short  = "A bundle of dried meat and hardbread."
+desc_long   = "Simple but reliable food for long journeys. Keeps well even in humid Riverlands air."
+slot        = ""
+weight      = 1
+respawn     = false
+tags        = ["consumable", "travel"]
+
+[[item]]
+id          = "rl_water_flask"
+name        = "Water Flask"
+desc_short  = "A sturdy leather flask."
+desc_long   = "A refillable flask used by travelers and ferrymen alike. Holds enough water for a day's march."
+slot        = ""
+weight      = 1
+respawn     = false
+tags        = ["container", "travel"]
+
+[[item]]
+id          = "rl_torch_bundle"
+name        = "Torch Bundle"
+desc_short  = "A bundle of three pitch‑soaked torches."
+desc_long   = "Reliable light sources for caves, ruins, and gloam‑touched areas."
+slot        = ""
+weight      = 1
+respawn     = false
+tags        = ["light_source", "consumable"]
+
+[[item]]
+id          = "rl_rope_coil"
+name        = "Coil of Rope"
+desc_short  = "Twenty feet of braided rope."
+desc_long   = "Strong enough for climbing, ferry mooring, or makeshift repairs."
+slot        = ""
+weight      = 1
+respawn     = false
+tags        = ["tool", "travel"]
+
+[[item]]
+id          = "rl_basic_repair_kit"
+name        = "Basic Repair Kit"
+desc_short  = "Tools for minor gear repairs."
+desc_long   = "A small kit containing needles, thread, resin patches, and metal clamps. Useful for restoring worn equipment."
+slot        = ""
+weight      = 1
+respawn     = false
+tags        = ["tool", "repair"]
+
+[[item]]
+id          = "rl_small_pouch"
+name        = "Small Pouch"
+desc_short  = "A simple leather pouch."
+desc_long   = "Adds a bit of extra carrying space. Favored by Riverlands traders."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["container", "inventory_upgrade"]
+
+[[item]]
+id          = "rl_minor_tonic"
+name        = "Minor Tonic"
+desc_short  = "A mild restorative brew."
+desc_long   = "A blend of Riverlands herbs that restores a small amount of vitality."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["consumable", "healing"]
+
+[[item]]
+id          = "rl_antifog_oil"
+name        = "Antifog Oil"
+desc_short  = "A pungent oil that sharpens the senses."
+desc_long   = "Rubbing this beneath the nose helps resist the Mistfen’s disorienting fog."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["consumable", "mistfen_resist"]

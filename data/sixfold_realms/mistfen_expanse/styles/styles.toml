@@ -1,0 +1,31 @@
+[[style]]
+id   = "pressure_weave"
+name = "Pressure Weave"
+desc = "A deceptive style that manipulates distance, timing, and spatial pressure."
+
+affinities = {
+  weapon_tags = ["dagger", "short_blade"],
+  armor_tags  = ["cloth", "leather"]
+}
+
+growth = {
+  on_dodge   = 2.0
+  on_miss    = 1.0
+  on_hit     = 1.2
+}
+
+abilities = [
+  { id = "phase_step",
+    type = "stance",
+    desc = "Shift your position, increasing dodge by 12% for 2 rounds.",
+    trigger = { on_command = "stance phase" },
+    effect  = { stat = "dodge", amount = 12, duration = 2 }
+  },
+
+  { id = "pressure_spike",
+    type = "on_hit",
+    desc = "8% chance to apply a brief stagger, reducing enemy attack.",
+    chance = 0.08,
+    effect = { type = "debuff", stat = "attack", amount = -3, duration = 2 }
+  }
+]

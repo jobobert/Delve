@@ -1,0 +1,31 @@
+[[style]]
+id   = "sky_piercer"
+name = "Sky‑Piercer"
+desc = "A high‑altitude style of leaping strikes and wind‑aligned aggression."
+
+affinities = {
+  weapon_tags = ["polearm", "glaive", "spear"],
+  armor_tags  = ["light", "scale"]
+}
+
+growth = {
+  on_hit     = 1.5
+  on_crit    = 2.0
+  on_kill    = 3.0
+}
+
+abilities = [
+  { id = "wind_step",
+    type = "stance",
+    desc = "Leap into a higher stance, increasing crit chance by 8% for 3 rounds.",
+    trigger = { on_command = "stance wind" },
+    effect  = { stat = "crit", amount = 8, duration = 3 }
+  },
+
+  { id = "skyfall",
+    type = "on_crit",
+    desc = "10% chance on critical hit to deal an additional burst of wind damage.",
+    chance = 0.10,
+    effect = { type = "bonus_damage", magnitude = 6 }
+  }
+]

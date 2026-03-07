@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "'Heat rises. Will you endure?'"
+]
+
+[[response]]
+node = "root"
+text = "I will."
+next = ""

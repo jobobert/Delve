@@ -11,10 +11,11 @@ None require external packages except where marked.
 |--------|-------------|-------------|
 | `validate.py` | Check all world TOML for errors | — |
 | `clean.py` | Delete caches, zone state, player saves | — |
-| `map.py` | ASCII or HTML interactive world map | — |
-| `dialogue_graph.py` | Graphviz DOT graph of an NPC's dialogue tree | graphviz CLI (for `--render`) |
-| `quest_graph.py` | Graphviz DOT graph of a quest's step flow | graphviz CLI |
+| `map.py` | ASCII map in terminal (WCT has richer HTML map) | — |
+| `dialogue_graph.py` | Graphviz DOT graph of an NPC's dialogue tree (also built into WCT) | graphviz CLI (for `--render`) |
+| `quest_graph.py` | Graphviz DOT graph of a quest's step flow (also built into WCT) | graphviz CLI |
 | `ai_player.py` | Autonomous AI playtester via Anthropic API | `ANTHROPIC_API_KEY` |
+| `offline_bot.py` | Deterministic offline playtester (no API key needed) | — |
 | `wct_server.py` | Local web server: World Creation Tool + web game client | — |
 | `md2html.py` | Convert a Markdown file to a self-contained HTML page | — |
 
@@ -59,25 +60,23 @@ python tools/clean.py --all        # everything, no prompt
 
 ## map.py
 
-Renders the world map in the terminal or as a self-contained HTML file.
+Renders the world map as an ASCII diagram in the terminal.
 
 ```
 python tools/map.py                          # ASCII map, all zones
 python tools/map.py --zone ashwood           # ASCII map, one zone
 python tools/map.py --full                   # ASCII map with item/NPC counts per room
-python tools/map.py --html                   # HTML map -> tools/admin_map.html
-python tools/map.py --html --output my.html  # HTML map to a custom path
 python tools/map.py --world <name>           # select world by folder name
+python tools/map.py --dot                    # export Graphviz .dot file
 ```
 
-The HTML output (`admin_map.html`) is self-contained — open it directly in any
-browser.  It shows rooms as nodes, exits as edges, with room details on click.
+Auto-placed rooms appear with a `~` marker.  An optional `coord = [x, y]`
+field (east = +x, north = +y) in the room TOML can pin a room's position.
 
-All rooms are placed automatically using exit topology (BFS from neighbours),
-the same auto-layout used by the in-game `map` command.  Auto-placed rooms
-appear with a dashed border in HTML and a `~` marker in ASCII.  An optional
-`coord = [x, y]` field (east = +x, north = +y) can pin a room's position
-permanently if a fixed layout is needed.
+> **The WCT map view is the recommended map tool.** It renders an interactive
+> SVG map with pan/zoom, room detail panel, NPC/item count badges, exit-direction
+> labels, per-zone colour coding, and one-click navigation to the editor.
+> Use `map.py` when you need a quick terminal view or a headless `.dot` export.
 
 ---
 
@@ -85,6 +84,10 @@ permanently if a fixed layout is needed.
 
 Generates a Graphviz DOT file visualising one NPC's complete dialogue tree.
 Every node, every response path, every condition and script op is shown.
+
+> **Also available in the WCT.** Open any dialogue in the WCT editor and click
+> **Graph** for an interactive in-browser SVG view, or **Export DOT** to download
+> the `.dot` file without leaving the browser.
 
 **Requires:** the `dot` command from [Graphviz](https://graphviz.org/) on your PATH
 (only needed for `--render`; you can also render the `.dot` file manually).
@@ -155,6 +158,10 @@ and annotates every edge with the source NPC, required flags, and flags set.
 trigger found is highlighted with a dashed red "⚠ no advance_quest trigger
 found" edge, telling you that nothing in any dialogue file currently drives
 the quest to that step.
+
+> **Also available in the WCT.** Open any quest in the WCT editor and click
+> **Graph** for an interactive in-browser SVG view, or **Export DOT** to download
+> the `.dot` file without leaving the browser.
 
 **Requires:** `dot` from Graphviz (only for `--render`).
 
@@ -244,6 +251,26 @@ on startup, or pass `--browser` to open it.
 The server uses a threading model so the SSE stream for the game client can
 run concurrently with WCT requests.
 
+### WCT features
+
+- **Editor** — rooms, NPCs, items, quests, dialogues with full field editing,
+  script op editor, exit editor, ref picker
+- **Map view** — interactive SVG map (pan/zoom), per-zone colour coding, room
+  detail panel, one-click edit; optional NPC/item count badges and exit-direction
+  labels on edges
+- **Dialogue graph** — click **Graph** in any dialogue editor to toggle an in-browser
+  interactive SVG tree: nodes colour-coded by script op, conditional edges in blue,
+  click any node for a detail panel showing text / conditions / ops / responses
+- **Quest graph** — click **Graph** in any quest editor to toggle an in-browser
+  interactive SVG step-flow diagram: START → steps → COMPLETE, with edges annotated
+  from the dialogue files that drive each transition (⚠ warnings where no trigger is found)
+- **DOT export** — download Graphviz `.dot` files for the full world map (map
+  toolbar), any NPC's dialogue tree (dialogue **Export DOT** button), or any quest's
+  step flow (quest **Export DOT** button)
+- **Validate** — run `validate.py` from inside the browser
+- **UI state** — selected object, panel widths, and sidebar collapse state are
+  saved per-world in `localStorage`
+
 ### Game server endpoints
 
 | Endpoint | Method | Purpose |
@@ -266,8 +293,8 @@ See `frontend/FRONTEND_MANUAL.md` for the full protocol reference.
 | File | Role |
 |------|------|
 | `graph_common.py` | Shared library for `dialogue_graph.py` and `quest_graph.py` |
-| `wct.html` | Static frontend asset for the World Creation Tool |
-| `admin_map.html` | Generated by `map.py --html` — not committed |
+| `wct.html` | WCT browser frontend (HTML + JS) |
+| `wct_common.css` | WCT stylesheet — served at `/css/wct_common.css` by `wct_server.py` |
 | `md2html.py` | Markdown → self-contained HTML converter |
 | `ai_sessions/` | AI playtester logs — not committed |
 

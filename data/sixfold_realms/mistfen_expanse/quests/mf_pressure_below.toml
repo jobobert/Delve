@@ -1,0 +1,28 @@
+id      = "mf_pressure_below"
+title   = "Pressure Below"
+giver   = "mf_path_reader_sera"
+summary = "Enter the Drowned Vault and recover the Pressure Regulator fragment from its guardian."
+
+[[step]]
+index     = 1
+objective = "Obtain and tune an Echo Compass at the Resonance Pillar."
+hint      = "You’ll need an Echo Compass and the pillar in the Anchor Field."
+
+[[step]]
+index     = 2
+objective = "Defeat the Vault Watcher guarding the inner hall."
+hint      = "The Drowned Vault lies west of the Echo Gate."
+
+[[step]]
+index     = 3
+objective = "Claim the Pressure Regulator fragment from the Vault Core."
+hint      = "Take the fragment once the guardian is defeated."
+
+[[reward]]
+type   = "xp"
+amount = 350
+
+[[reward]]
+type    = "prestige"
+amount  = 3
+reason  = "recovered the Pressure Regulator fragment"

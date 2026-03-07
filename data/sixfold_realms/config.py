@@ -22,13 +22,12 @@ WORLD_NAME: str = "The Sixfold Realms"
 #   condition = { skill = "social", min = 40 }
 #   { op = "skill_check", skill = "stealth", dc = 14, on_pass = [...] }
 SKILLS: dict = {
-    "stealth":    "Stealth",
-    "survival":   "Survival",
     "perception": "Perception",
-    "athletics":  "Athletics",
-    "social":     "Social",
-    "arcana":     "Arcana",
-    "mining":     "Mining",
+    "navigation": "Navigation",
+    "diplomacy": "Diplomacy",
+    "survival": "Survival",
+    "lore": "Lore",
+    "crafting": "Crafting",
 }
 
 # ── New character stats ────────────────────────────────────────────────────────
@@ -40,7 +39,7 @@ NEW_CHAR_HP: int = 100
 # ── Currency ───────────────────────────────────────────────────────────────────
 # Display name for the in-game currency (used in stats, shop headers, etc.).
 # Note: command keywords "deposit gold" / "withdraw gold" are grammar and unchanged.
-CURRENCY_NAME: str = "gold"
+CURRENCY_NAME: str = "marks"
 
 # ── Fighting styles ────────────────────────────────────────────────────────────
 # ID of the style every new character starts with.
@@ -52,6 +51,12 @@ DEFAULT_STYLE: str = "brawling"
 # Item TOML slot= values must match an entry in this list.
 # Add, remove, or rename entries to fit your world's genre.
 EQUIPMENT_SLOTS: tuple = (
-    "weapon", "head", "chest", "legs", "arms",
-    "pack", "ring", "shield", "cape",
+     "head",
+    "body",
+    "hands",
+    "feet",
+    "weapon",
+    "offhand",
+    "neck",
+    "ring",
 )

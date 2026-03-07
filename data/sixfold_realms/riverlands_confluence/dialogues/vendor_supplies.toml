@@ -1,0 +1,48 @@
+[[node]]
+id    = "root"
+lines = [
+  "The supply vendor adjusts a stack of crates. 'Need gear for the road? I've got the basics and a bit more.'"
+]
+
+[[response]]
+node = "root"
+text = "Show me what you have for sale."
+next = "open_shop"
+
+[[response]]
+node = "root"
+text = "Where do you get your supplies?"
+next = "sourcing"
+
+[[response]]
+node = "root"
+text = "Nothing right now."
+next = ""
+
+
+# --- Open Shop ---
+[[node]]
+id   = "open_shop"
+line = "'Take a look. Everything here’s priced fair and meant to last.'"
+script = [
+  { op = "open_shop", shop_id = "vendor_supplies" }
+]
+
+[[response]]
+node = "open_shop"
+text = "Let me browse."
+next = ""
+
+
+# --- Sourcing Info ---
+[[node]]
+id   = "sourcing"
+lines = [
+  "'Riverlands traders bring me most of it. Hunters from the Peaks drop off odds and ends, and the Heartwood folk trade resin and tools when the paths are clear.'",
+  "'If you’re heading out, check your packs twice. The world’s wide, and it doesn’t forgive forgetfulness.'"
+]
+
+[[response]]
+node = "sourcing"
+text = "Good advice."
+next = ""

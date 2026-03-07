@@ -1,0 +1,289 @@
+# --- ENTRY & CAMP ---
+
+[[room]]
+id          = "mf_swamp_edge"
+name        = "Swamp’s Edge"
+description = "The ground softens as the Riverlands gives way to the Mistfen. The air hums with pressure."
+exits       = { east = "mf_mist_loop1", south = "mf_path_reader_camp" }
+
+[[room]]
+id          = "mf_path_reader_camp"
+name        = "Path‑Reader Encampment"
+description = "Lanterns hang from bent trees. Path‑Readers sit in quiet focus, listening to the swamp."
+flags       = ["town", "no_combat"]
+spawns      = ["mf_path_reader_sera"]
+exits       = { north = "mf_swamp_edge", east = "mf_anchor_field", south = "mf_smuggler_hide" }
+
+[[room]]
+id          = "mf_smuggler_hide"
+name        = "Smuggler’s Screen"
+description = "Thicker mist and leaning reeds hide a small clearing from the Path‑Readers’ sight."
+spawns      = ["mf_swamp_smuggler"]
+exits       = { north = "mf_path_reader_camp", east = "mf_low_path1" }
+
+[[room]]
+id          = "mf_anchor_field"
+name        = "Anchor Field"
+description = "Stone markers jut from the mud, each carved with spirals that vibrate faintly."
+items       = ["mf_anchor_stone_node", "mf_resonance_pillar", "mf_bog_quartz_node"]
+exits       = { west = "mf_path_reader_camp", east = "mf_mist_loop1", south = "mf_low_path1" }
+
+# --- LOWER PATHS (non‑loop, light hazard) ---
+
+[[room]]
+id          = "mf_low_path1"
+name        = "Sinking Path"
+description = "The path dips under shallow water. Each step pulls at your boots."
+flags       = ["hazard"]
+hazard_damage  = 1
+hazard_message = "Cold water seeps into your boots."
+hazard_exempt_flag = "has_waders"
+exits       = { north = "mf_anchor_field", east = "mf_low_path2", west = "mf_smuggler_hide" }
+
+[[room]]
+id          = "mf_low_path2"
+name        = "Crooked Log Crossing"
+description = "A fallen tree spans a dark pool. The mist above it swirls in slow spirals."
+exits       = { west = "mf_low_path1", east = "mf_low_path3", south = "mf_stretch1" }
+
+[[room]]
+id          = "mf_low_path3"
+name        = "Reed‑Choked Bend"
+description = "Tall reeds block your view. Sounds arrive late, as if delayed by the air."
+flags       = ["hazard"]
+hazard_damage  = 1
+hazard_message = "The pressure in your ears spikes painfully."
+exits       = { west = "mf_low_path2", east = "mf_mist_loop2" }
+
+# --- LOOPING MIST RING ---
+
+[[room]]
+id          = "mf_mist_loop1"
+name        = "Mist Loop — Segment 1"
+description = "Mist curls in repeating patterns. Without an Anchor Stone, you feel the path folding back on itself."
+flags       = ["hazard"]
+hazard_damage  = 0
+hazard_message = "The world seems to fold; you lose your sense of direction."
+hazard_exempt_flag = "mf_anchor_attuned"
+exits       = { east = "mf_mist_loop2", west = "mf_mist_loop3", south = "mf_stretch1" }
+on_enter    = [
+  { op = "if_not_flag", flag = "mf_loop_warned", then = [
+    { op = "message", tag = "system", text = "The mist thickens. Paths here may not be what they seem." },
+    { op = "set_flag", flag = "mf_loop_warned" },
+  ] },
+  { op = "if_flag", flag = "mf_anchor_attuned", then = [
+    { op = "if_not_flag", flag = "mf_anchors_in_the_mire_completed", then = [
+      { op = "complete_quest", quest_id = "mf_anchors_in_the_mire" },
+      { op = "set_flag", flag = "mf_anchors_in_the_mire_completed" },
+      { op = "message", tag = "quest", text = "With the Anchor Stone steady in your hand, the loops finally yield. The path feels… normal." },
+    ] },
+  ] },
+]
+
+[[room]]
+id          = "mf_mist_loop2"
+name        = "Mist Loop — Segment 2"
+description = "The air compresses and expands unnaturally, as if the swamp is breathing around you."
+flags       = ["hazard"]
+hazard_damage  = 0
+hazard_message = "Your footsteps echo twice—once ahead, once behind."
+hazard_exempt_flag = "mf_anchor_attuned"
+exits       = { east = "mf_mist_loop3", west = "mf_mist_loop1", south = "mf_stretch2", north = "mf_low_path3" }
+on_enter    = [{ op = "if_flag", flag = "mf_anchor_attuned", then = [
+    { op = "if_not_flag", flag = "mf_anchors_in_the_mire_completed", then = [
+      { op = "complete_quest", quest_id = "mf_anchors_in_the_mire" },
+      { op = "set_flag", flag = "mf_anchors_in_the_mire_completed" },
+      { op = "message", tag = "quest", text = "With the Anchor Stone steady in your hand, the loops finally yield. The path feels… normal." },
+    ] },
+  ] },
+]
+
+[[room]]
+id          = "mf_mist_loop3"
+name        = "Mist Loop — Segment 3"
+description = "Shapes in the mist repeat at wrong intervals. Without an anchor, you could walk forever."
+flags       = ["hazard"]
+hazard_damage  = 0
+hazard_message = "The loop tries to close around you."
+hazard_exempt_flag = "mf_anchor_attuned"
+exits       = {
+  east = "mf_mist_loop1",
+  west = { to = "mf_echo_gate", show_if = { op = "has_flag", flag = "mf_anchor_attuned" } },
+  south = "mf_stretch3",
+}
+on_enter = [
+    { op = "if_flag", flag = "mf_anchor_attuned", then = [
+    { op = "if_not_flag", flag = "mf_anchors_in_the_mire_completed", then = [
+      { op = "complete_quest", quest_id = "mf_anchors_in_the_mire" },
+      { op = "set_flag", flag = "mf_anchors_in_the_mire_completed" },
+      { op = "message", tag = "quest", text = "With the Anchor Stone steady in your hand, the loops finally yield. The path feels… normal." },
+    ] },
+  ] },
+]
+
+# --- STRETCH ZONES (distance distortion) ---
+
+[[room]]
+id          = "mf_stretch1"
+name        = "Stretching Causeway"
+description = "A narrow causeway seems longer than it should be. Each step feels like three."
+flags       = ["hazard"]
+hazard_damage  = 1
+hazard_message = "Your legs ache as if you’ve walked much farther."
+exits       = {
+  north = "mf_mist_loop1",
+  south = {
+    to = "mf_stretch2",
+    on_exit = [
+      { op = "skill_check", skill = "navigation", dc = 10,
+        on_pass = [
+          { op = "message", tag = "system", text = "You focus on fixed landmarks and keep the distance from stretching too far." },
+        ],
+        on_fail = [
+          { op = "message", tag = "system", text = "You lose track of distance and end up somewhere slightly… off." },
+          { op = "set_flag", flag = "mf_stretch_lost" },
+        ],
+      },
+    ],
+  },
+  west = "mf_low_path2",
+}
+
+[[room]]
+id          = "mf_stretch2"
+name        = "Echoing Boardwalk"
+description = "Wooden planks creak underfoot. The far end seems to slide away as you approach."
+flags       = ["hazard"]
+hazard_damage  = 1
+hazard_message = "Your sense of scale warps; you feel briefly dizzy."
+exits       = {
+  north = "mf_mist_loop2",
+  south = {
+    to = "mf_stretch3",
+    show_if = { op = "not_flag", flag = "mf_stretch_lost" },
+  },
+  east = "mf_stretch_side",
+}
+
+[[room]]
+id          = "mf_stretch_side"
+name        = "Side Landing"
+description = "A small platform juts out from the boardwalk, overlooking a still pool."
+items       = ["mf_bog_quartz_node"]
+exits       = { west = "mf_stretch2" }
+
+[[room]]
+id          = "mf_stretch3"
+name        = "Compressed Crossing"
+description = "The distance between two leaning trees feels wrong—too short, then too long, then short again."
+flags       = ["hazard"]
+hazard_damage  = 1
+hazard_message = "Your chest tightens as the air squeezes around you."
+exits       = {
+  north = "mf_mist_loop3",
+  south = "mf_rot_platform1",
+}
+
+# --- ROTATING PLATFORM PUZZLE ---
+
+[[room]]
+id          = "mf_rot_platform1"
+name        = "Rotating Platform"
+description = "A circular stone platform floats on dark water. Faint grooves mark four possible alignments."
+on_enter    = [
+  { op = "if_not_flag", flag = "mf_rot_state", then = [
+    { op = "set_flag", flag = "mf_rot_state_0" },
+  ] },
+]
+exits       = {
+  north = "mf_stretch3",
+  east  = { to = "mf_rot_east",  show_if = { op = "has_flag", flag = "mf_rot_state_1" } },
+  south = { to = "mf_rot_south", show_if = { op = "has_flag", flag = "mf_rot_state_2" } },
+  west  = { to = "mf_rot_west",  show_if = { op = "has_flag", flag = "mf_rot_state_3" } },
+}
+items       = ["mf_rot_lever"]
+
+[[room]]
+id          = "mf_rot_east"
+name        = "Eastern Landing"
+description = "A short stretch of dry ground leads toward the Echo Gate’s approach."
+exits       = { west = "mf_rot_platform1", east = "mf_drowned_approach" }
+
+[[room]]
+id          = "mf_rot_south"
+name        = "Southern Mire"
+description = "Thick mud and stagnant pools make this route slow and unpleasant."
+flags       = ["hazard"]
+hazard_damage  = 1
+hazard_message = "You slog through clinging mud."
+exits       = { north = "mf_rot_platform1" }
+
+[[room]]
+id          = "mf_rot_west"
+name        = "Western Backwater"
+description = "A quiet backwater where the mist hangs heavy and still."
+items       = ["mf_bog_quartz_node"]
+exits       = { east = "mf_rot_platform1" }
+
+# --- ECHO GATE & APPROACH ---
+
+[[room]]
+id          = "mf_echo_gate"
+name        = "Echo Gate"
+description = "A stone arch hums with pressure. A circular recess waits for a tuned Echo Compass."
+exits       = { west = "mf_drowned_approach", east = "mf_mist_loop3" }
+on_enter    = [
+  { op = "if_not_flag", flag = "mf_echo_gate_seen", then = [
+    { op = "journal_entry",
+      title = "The Echo Gate",
+      text  = "A humming stone arch in the Mistfen. Sera said a tuned Echo Compass could open it." },
+    { op = "set_flag", flag = "mf_echo_gate_seen" },
+  ] },
+]
+
+[[room]]
+id          = "mf_drowned_approach"
+name        = "Approach to the Drowned Vault"
+description = "Ruined stone pillars lean at impossible angles over dark water. The pressure here is almost painful."
+exits       = {
+  east = "mf_echo_gate",
+  west = {
+    to        = "mf_drowned_vault_entrance",
+    locked    = true,
+    lock_tag  = "",
+    desc      = "a half‑submerged stone doorway sealed by invisible pressure",
+    show_if   = { op = "has_flag", flag = "mf_echo_gate_unlocked" },
+    on_unlock = [{ op = "message", tag = "door", text = "The pressure relents with a deep, resonant sigh." }],
+  },
+}
+
+# --- DROWNED VAULT ---
+
+[[room]]
+id          = "mf_drowned_vault_entrance"
+name        = "Drowned Vault — Entrance"
+description = "A submerged stair descends into a half‑flooded ruin. Each breath feels heavier than the last."
+exits       = { down = "mf_drowned_vault_hall", east = "mf_drowned_approach" }
+
+[[room]]
+id          = "mf_drowned_vault_hall"
+name        = "Drowned Vault — Hall"
+description = "Water laps at ancient carvings. Pressure warps the air into shimmering waves."
+flags       = ["hazard"]
+hazard_damage  = 2
+hazard_message = "The crushing pressure squeezes your chest."
+spawns      = ["mf_vault_watcher"]
+exits       = { up = "mf_drowned_vault_entrance", west = "mf_vault_core" }
+
+[[room]]
+id          = "mf_vault_core"
+name        = "Drowned Vault — Core"
+description = "A crystalline device floats above the water: the Pressure Regulator fragment, pulsing with uneven force."
+items       = ["pressure_regulator_fragment"]
+exits       = { east = "mf_drowned_vault_hall" }
+on_enter    = [
+  { op = "if_not_flag", flag = "mf_pressure_piece_seen", then = [
+    { op = "message", tag = "quest", text = "You have found the Pressure Regulator fragment." },
+    { op = "set_flag", flag = "mf_pressure_piece_seen" },
+  ] },
+]

@@ -1,0 +1,67 @@
+[[node]]
+id    = "root"
+lines = [
+  "The wanderer stares past you. 'Have we met? Or… will we?'"
+]
+
+[[response]]
+node = "root"
+text = "Are you lost?"
+next = "lost"
+
+[[response]]
+node = "root"
+text = "What do you hear?"
+next = "hear"
+
+[[response]]
+node = "root"
+text = "Do you know the way to the Memory Garden?"
+next = "garden"
+
+
+# --- Lost ---
+[[node]]
+id   = "lost"
+line = "'Not lost. Just… between thoughts.'"
+script = [
+  { op = "if_spores_at_least", amount = 25, then = [
+    { op = "say", text = "'Your mind drifts too. I can feel it.'" }
+  ] }
+]
+
+[[response]]
+node = "lost"
+text = "I’ll try to stay focused."
+next = ""
+
+
+# --- Hear ---
+[[node]]
+id   = "hear"
+line = "'Voices. Memories. Not mine. Not yours. The Plains whisper.'"
+
+[[response]]
+node = "hear"
+text = "What are they saying?"
+next = "hear_more"
+
+[[node]]
+id   = "hear_more"
+line = "'They want to be remembered.'"
+
+[[response]]
+node = "hear_more"
+text = "I’ll remember."
+next = ""
+
+
+# --- Garden ---
+[[node]]
+id   = "garden"
+line = "'The Garden lies ahead, but it rejects clouded minds.'"
+
+[[response]]
+node = "garden"
+text = "I’ll clear my thoughts first."
+next = ""

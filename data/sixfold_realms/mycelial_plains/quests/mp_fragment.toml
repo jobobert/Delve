@@ -1,0 +1,41 @@
+# Integration notes
+# Step 1 is advanced by the tuning fork’s on_use script (set_flag = mp_memory_stabilized).
+#
+# Step 2 is advanced by the Core Guardian’s kill_script.
+#
+# Step 3 is advanced by the fragment’s on_get script.
+#
+# The quest reinforces the region’s core mechanics: clarity, memory drift, and fungal cognition.
+
+id      = "mp_fragment"
+title   = "The Garden of Forgotten Knowledge"
+giver   = "mp_mayor_dellen"
+summary = "A fragment of the ancient device lies deep within the Memory Garden. To reach it, you must keep your mind clear and navigate the shifting archive."
+
+[[step]]
+index     = 1
+objective = "Stabilize a memory node using a tuning fork."
+hint      = "Memory nodes resonate when struck with the right frequency."
+
+[[step]]
+index     = 2
+objective = "Defeat the Cognitive Core Guardian."
+hint      = "The guardian reacts to your clarity—stay focused."
+
+[[step]]
+index     = 3
+objective = "Claim the Cognitive Regulator Fragment."
+hint      = "The fragment rests in the deepest chamber of the Garden."
+
+[[reward]]
+type   = "xp"
+amount = 400
+
+[[reward]]
+type   = "prestige"
+amount = 3
+reason = "recovered the Cognitive Regulator Fragment"
+
+[[reward]]
+type   = "gold"
+amount = 60

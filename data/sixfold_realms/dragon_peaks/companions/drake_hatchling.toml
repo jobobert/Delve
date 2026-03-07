@@ -1,0 +1,24 @@
+id          = "drake_hatchling"
+name        = "Drake Hatchling"
+desc_short  = "A small drake with curious eyes and a smoky breath."
+desc_long   = "It follows you with fierce loyalty and a nascent sense of the winds."
+tags        = ["beast", "small"]
+style       = "brawling"
+style_prof  = 30
+hp          = 120
+max_hp      = 120
+attack      = 14
+defense     = 8
+
+[unlock_condition]
+op    = "has_flag"
+flag  = "dp_drake_egg_taken"
+
+[on_join]
+script = [
+  { op = "message", tag = "companion", text = "The hatchling chirps and curls at your feet, already protective." },
+  { op = "prestige", amount = 10, reason = "hatched a drake companion" },
+]
+admin_comment = """
+Hatching should be gated by a follow-up quest or incubation ritual; implement as a quest step that consumes the drake_egg and spawns the companion.
+"""

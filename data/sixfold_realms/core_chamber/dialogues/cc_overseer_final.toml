@@ -1,0 +1,58 @@
+[[node]]
+id    = "root"
+lines = [
+  "The Overseer’s form ripples through shifting frequencies. 'Intruder detected. Resonance unstable.'"
+]
+
+[[response]]
+node = "root"
+text = "I’m here to restore the device."
+next = "restore"
+
+[[response]]
+node = "root"
+text = "Stand down. The world needs this."
+next = "stand_down"
+
+[[response]]
+node = "root"
+text = "I will leave."
+next = ""
+
+
+# --- Restore ---
+[[node]]
+id   = "restore"
+line = "'Restoration requires stability. Stability requires control. Control requires resistance.'"
+
+[[response]]
+node = "restore"
+text = "Then test me."
+next = "begin_test"
+
+[[node]]
+id   = "begin_test"
+line = "'Calibration challenge initiated.'"
+script = [
+  { op = "spawn", npc_id = "cc_echo_light" },
+  { op = "spawn", npc_id = "cc_echo_pressure" },
+  { op = "spawn", npc_id = "cc_echo_growth" },
+  { op = "spawn", npc_id = "cc_echo_heat" },
+  { op = "spawn", npc_id = "cc_echo_memory" }
+]
+
+[[response]]
+node = "begin_test"
+text = "I’m ready."
+next = ""
+
+
+# --- Stand Down ---
+[[node]]
+id   = "stand_down"
+line = "'The system cannot stand down. Catastrophic overload imminent without recalibration.'"
+
+[[response]]
+node = "stand_down"
+text = "Then let me recalibrate it."
+next = "restore"

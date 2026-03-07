@@ -1,0 +1,39 @@
+# Integration notes
+# Step 2 is advanced by the Sporewarden’s crafting script.
+#
+# Step 3 is advanced by the mantle’s on_equip script.
+#
+# The quest reinforces the region’s themes: clarity, memory, and fungal resonance.
+
+id      = "mp_mantle"
+title   = "The Sporewarden’s Path"
+giver   = "mp_sporewarden"
+summary = "The Sporewarden can weave a mantle that shields the mind from spores, but only if you gather the right materials and attune it."
+
+[[step]]
+index     = 1
+objective = "Gather Fungal Fiber and a Clarity Cap."
+hint      = "Fungal Fiber grows in bloom zones; Clarity Caps grow in cleaner groves."
+
+[[step]]
+index     = 2
+objective = "Bring the materials to the Sporewarden."
+hint      = "The Sporewarden waits near the Loomroot Rise."
+
+[[step]]
+index     = 3
+objective = "Wear the Sporewarden Mantle to attune it."
+hint      = "Equip the mantle to complete the weaving."
+
+[[reward]]
+type   = "xp"
+amount = 300
+
+[[reward]]
+type   = "prestige"
+amount = 2
+reason = "mastered the Plains’ cognitive instability"
+
+[[reward]]
+type   = "gold"
+amount = 50

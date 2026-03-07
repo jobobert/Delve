@@ -1,0 +1,9 @@
+[[region]]
+id          = "riverlands_confluence"
+name        = "Riverlands Confluence"
+description = """
+Where five rivers once met in calm harmony, the waters now churn with unstable currents.
+Ferries creak at their moorings, and the air hums with distant echoes from the outer realms.
+"""
+recommended_level  = 1
+admin_comment      = "Piece Effect: None directly; the Riverlands feel the echoes of all other regions’ instability.  Notes: Safe starting area with mild threats and navigation challenges."

@@ -4,639 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Delve — World Creation Tool</title>
-<style>
-:root {
-  --bg:        #0d0f12;
-  --surface:   #13161b;
-  --panel:     #181c23;
-  --border:    #252b36;
-  --accent:    #c8a96e;
-  --accent2:   #5b8fb9;
-  --dim:       #4a5568;
-  --text:      #cdd6e4;
-  --text-dim:  #6b7a90;
-  --green:     #4caf7d;
-  --red:       #e05252;
-  --yellow:    #d4a843;
-  --purple:    #9b7fd4;
-  --room-col:  #c8a96e;
-  --npc-col:   #e07e5a;
-  --item-col:  #6fbbcf;
-  --quest-col: #9b7fd4;
-  --dlg-col:   #5ba87a;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  background: var(--bg); color: var(--text);
-  font-family: 'Consolas','JetBrains Mono','Fira Mono',monospace;
-  font-size: 14px; line-height: 1.5;
-  display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-}
-
-/* ── Header ─────────────────────────────────────────────────────── */
-header {
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 0 16px; height: 44px; display: flex; align-items: center;
-  gap: 12px; flex-shrink: 0; z-index: 100;
-}
-.logo { font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: .12em; }
-.logo span { color: var(--dim); font-weight: 400; }
-.hbtn {
-  background: none; border: 1px solid var(--border); color: var(--text-dim);
-  padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: inherit;
-  font-size: 12px; transition: all .15s;
-}
-.hbtn:hover { border-color: var(--accent); color: var(--accent); }
-.hbtn.primary { border-color: var(--accent); color: var(--accent); }
-.hbtn.primary:hover { background: var(--accent); color: var(--bg); }
-.hbtn.danger:hover { border-color: var(--red); color: var(--red); }
-select.world-sel {
-  background: var(--panel); border: 1px solid var(--border); color: var(--text);
-  padding: 4px 8px; border-radius: 4px; font-family: inherit; font-size: 12px;
-  cursor: pointer;
-}
-select.world-sel:focus { outline: none; border-color: var(--accent); }
-#status-bar { margin-left: auto; font-size: 11px; color: var(--text-dim); }
-#status-bar.ok  { color: var(--green); }
-#status-bar.err { color: var(--red); }
-
-/* ── Workspace ───────────────────────────────────────────────────── */
-.workspace { display: flex; flex: 1; overflow: hidden; }
-
-/* ── Tree nav ───────────────────────────────────────────────────── */
-#tree {
-  width: 400px; min-width: 260px; max-width: 700px;
-  background: var(--surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: row; flex-shrink: 0; overflow: hidden;
-  resize: horizontal;
-}
-#tree-nav {
-  width: 90px; flex-shrink: 0;
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 6px 4px; overflow: hidden;
-  border-right: 1px solid var(--border);
-}
-.type-nav-btn {
-  background: none; border: 1px solid transparent; border-radius: 5px;
-  color: var(--text-dim); cursor: pointer; font-family: inherit;
-  padding: 7px 4px; display: flex; flex-direction: column;
-  align-items: center; gap: 4px; width: 100%; transition: all .15s;
-}
-.type-nav-btn:hover { border-color: var(--border); color: var(--text); }
-.type-nav-btn.active { border-color: var(--accent); background: var(--panel); color: var(--text); }
-.type-nav-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
-#tree-resizer {
-  width: 4px; background: var(--border); cursor: col-resize; flex-shrink: 0;
-  transition: background .1s;
-}
-#tree-resizer:hover, #tree-resizer.active { background: var(--accent); }
-#tree-detail {
-  flex: 1; display: flex; flex-direction: column; overflow: hidden;
-  background: var(--surface);
-}
-#detail-list { flex: 1; overflow-y: auto; padding: 4px 0; }
-/* tag palette (in #xref) */
-.tag-palette-header {
-  font-size: 10px; color: var(--dim); text-transform: uppercase;
-  letter-spacing: .06em; margin-bottom: 5px;
-}
-.tag-palette-header span { color: var(--text-dim); font-size: 10px; }
-#tag-palette-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.tag-palette-chip {
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 10px; padding: 2px 8px; font-size: 11px;
-  cursor: grab; color: var(--purple); user-select: none;
-}
-.tag-palette-chip:hover { border-color: var(--purple); }
-.tag-palette-chip.dragging { opacity: .5; cursor: grabbing; }
-/* xref tag panel + resizer */
-#xref-resizer {
-  height: 4px; background: var(--border); cursor: row-resize; flex-shrink: 0;
-  transition: background .1s;
-}
-#xref-resizer:hover, #xref-resizer.active { background: var(--accent); }
-#xref-tags {
-  flex-shrink: 0; padding: 6px 8px; overflow-y: auto;
-  height: 130px; min-height: 60px; border-top: 1px solid var(--border);
-}
-#xref.collapsed #xref-resizer { display: none; }
-#xref.collapsed #xref-tags    { display: none; }
-/* spawn widget */
-.spawn-list { display: flex; flex-direction: column; gap: 6px; }
-.spawn-card {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 5px; padding: 5px 8px;
-}
-.spawn-id { flex: 1; min-width: 0; }
-.spawn-count-wrap { display: flex; align-items: center; gap: 3px; }
-.spawn-count { width: 46px; padding: 4px 6px; }
-.spawn-hostile { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-.spawn-rm {
-  background: none; border: none; color: var(--dim); cursor: pointer;
-  font-size: 16px; line-height: 1; padding: 0 2px; flex-shrink: 0;
-}
-.spawn-rm:hover { color: var(--red); }
-.tree-toolbar {
-  padding: 8px; display: flex; gap: 6px; border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.tree-search {
-  flex: 1; background: var(--panel); border: 1px solid var(--border);
-  color: var(--text); padding: 4px 8px; border-radius: 4px; font-family: inherit;
-  font-size: 12px;
-}
-.tree-search:focus { outline: none; border-color: var(--accent); }
-.zone-node { user-select: none; }
-.zone-header {
-  padding: 5px 10px; font-weight: 600; color: var(--text-dim); cursor: pointer;
-  display: flex; align-items: center; gap: 6px;
-}
-.zone-header:hover { color: var(--text); }
-.zone-header .caret { font-size: 10px; transition: transform .15s; }
-.zone-header.open .caret { transform: rotate(90deg); }
-.zone-items { display: none; }
-.zone-header.open + .zone-items { display: block; }
-.type-group { margin-left: 6px; }
-.type-label {
-  padding: 3px 10px; font-size: 11px; color: var(--dim); text-transform: uppercase;
-  letter-spacing: .08em; cursor: pointer;
-}
-.tree-item {
-  padding: 3px 10px 3px 20px; cursor: pointer; display: flex; align-items: center;
-  gap: 6px; border-radius: 3px; margin: 1px 4px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.tree-item:hover { background: var(--panel); }
-.tree-item.selected { background: var(--panel); outline: 1px solid var(--accent); }
-.tree-item.dragging { opacity: .5; }
-.badge {
-  font-size: 9px; padding: 1px 4px; border-radius: 3px; color: var(--bg);
-  font-weight: 700; flex-shrink: 0;
-}
-.badge-room  { background: var(--room-col); }
-.badge-npc   { background: var(--npc-col); }
-.badge-item  { background: var(--item-col); }
-.badge-quest { background: var(--quest-col); }
-.badge-dlg   { background: var(--dlg-col); }
-
-/* ── Editor ─────────────────────────────────────────────────────── */
-#editor {
-  flex: 1; overflow-y: auto; padding: 20px;
-  display: flex; flex-direction: column; gap: 0;
-}
-.empty-state {
-  margin: auto; text-align: center; color: var(--dim); line-height: 2;
-}
-.empty-state h2 { font-size: 18px; color: var(--text-dim); margin-bottom: 8px; }
-
-/* ── Editor fields ───────────────────────────────────────────────── */
-.editor-header {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
-  padding-bottom: 12px; border-bottom: 1px solid var(--border);
-}
-.editor-type { font-size: 11px; padding: 2px 8px; border-radius: 3px; color: var(--bg); font-weight: 700; }
-.editor-title { font-size: 16px; font-weight: 600; color: var(--text); flex: 1; }
-.editor-actions { display: flex; gap: 8px; }
-
-.field-row {
-  display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px;
-}
-.field-row.inline { flex-direction: row; align-items: center; gap: 12px; flex-wrap: wrap; }
-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; }
-.field-input, .field-textarea, .field-select {
-  background: var(--panel); border: 1px solid var(--border); color: var(--text);
-  padding: 6px 10px; border-radius: 4px; font-family: inherit; font-size: 14px;
-  transition: border-color .15s;
-}
-.field-input:focus, .field-textarea:focus, .field-select:focus {
-  outline: none; border-color: var(--accent);
-}
-.field-input.id-field { font-family: monospace; color: var(--yellow); }
-.field-input.id-field.dup { border-color: var(--red); }
-.field-textarea { resize: vertical; min-height: 60px; }
-.field-select { cursor: pointer; }
-.checkbox-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-.checkbox-row input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--accent); }
-
-.section-title {
-  font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .1em;
-  margin: 18px 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border);
-}
-
-/* chips (flags, tags, spawn refs, item refs) */
-.chips-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.chip {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-  padding: 2px 10px; font-size: 12px; display: flex; align-items: center; gap: 5px;
-  cursor: default;
-}
-.chip .chip-x { cursor: pointer; color: var(--dim); font-size: 11px; }
-.chip .chip-x:hover { color: var(--red); }
-.chip-add {
-  background: none; border: 1px dashed var(--border); border-radius: 12px;
-  padding: 2px 10px; font-size: 12px; color: var(--text-dim); cursor: pointer;
-}
-.chip-add:hover { border-color: var(--accent); color: var(--accent); }
-.chip-inline-input {
-  background: var(--bg); border: 1px solid var(--accent); color: var(--text);
-  padding: 2px 8px; border-radius: 12px; font-family: inherit; font-size: 12px;
-  width: 130px; outline: none;
-}
-.chip-drop-target { outline: 2px dashed var(--accent) !important; background: rgba(200,169,110,.07) !important; }
-.editor-drop-hint {
-  background: rgba(91,143,185,.12); border: 1px dashed var(--accent2); border-radius: 5px;
-  padding: 7px 14px; margin-bottom: 12px; color: var(--accent2); font-size: 12px;
-  text-align: center; pointer-events: none;
-}
-
-/* ref input with drag support */
-.ref-row { display: flex; gap: 6px; align-items: center; }
-.ref-input { flex: 1; }
-.ref-pick-btn {
-  background: none; border: 1px solid var(--border); color: var(--text-dim);
-  padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;
-}
-.ref-pick-btn:hover { border-color: var(--accent); color: var(--accent); }
-.ref-drop { outline: 2px dashed var(--accent); }
-
-/* script / exit previews */
-.script-preview {
-  margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
-}
-.script-preview-pill {
-  font-size: 10px; padding: 1px 6px; background: var(--bg);
-  border: 1px solid var(--border); border-radius: 10px; color: var(--purple);
-}
-.script-preview-more { font-size: 10px; color: var(--dim); }
-.exits-preview { margin-top: 7px; font-size: 12px; }
-.exits-preview-row {
-  display: flex; align-items: center; gap: 6px; padding: 2px 0;
-  border-bottom: 1px solid rgba(37,43,54,.5);
-}
-.exits-preview-row:last-child { border-bottom: none; }
-.exits-dir { color: var(--accent); min-width: 80px; font-weight: 600; }
-.exits-target { color: var(--text-dim); }
-.exits-lock { font-size: 11px; color: var(--yellow); margin-left: 4px; }
-
-/* script / exit buttons */
-.script-btn {
-  background: none; border: 1px solid var(--purple); color: var(--purple);
-  padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: inherit;
-  font-size: 12px; transition: all .15s;
-}
-.script-btn:hover { background: var(--purple); color: var(--bg); }
-.exit-btn {
-  background: none; border: 1px solid var(--accent2); color: var(--accent2);
-  padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: inherit;
-  font-size: 12px;
-}
-.exit-btn:hover { background: var(--accent2); color: var(--bg); }
-
-/* ID lock toggle */
-.id-row { display: flex; gap: 6px; align-items: center; }
-.id-lock {
-  background: none; border: 1px solid var(--border); color: var(--text-dim);
-  padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;
-}
-.id-lock:hover { border-color: var(--accent); color: var(--accent); }
-
-/* give_accepts cards */
-.accept-card {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
-  padding: 10px; margin-bottom: 8px;
-}
-.accept-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-
-/* shop cards */
-.shop-card {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 5px; padding: 5px 8px; margin-bottom: 4px;
-}
-.shop-price { width: 60px; padding: 4px 6px; }
-.shop-rm {
-  background: none; border: none; color: var(--dim); cursor: pointer;
-  font-size: 14px; padding: 0 2px; flex-shrink: 0;
-}
-.shop-rm:hover { color: var(--red); }
-
-/* quest step cards */
-.step-card {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
-  padding: 10px; margin-bottom: 8px;
-}
-.step-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; }
-
-/* ── Modals ──────────────────────────────────────────────────────── */
-.modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,.7);
-  display: flex; align-items: center; justify-content: center; z-index: 500;
-}
-.modal-backdrop.hidden { display: none; }
-.modal {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-  display: flex; flex-direction: column; min-width: 520px; max-width: 800px;
-  max-height: 85vh; width: 90%;
-}
-.modal-header {
-  padding: 12px 16px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.modal-title { font-weight: 600; font-size: 14px; }
-.modal-close {
-  background: none; border: none; color: var(--dim); cursor: pointer;
-  font-size: 18px; line-height: 1; padding: 2px;
-}
-.modal-close:hover { color: var(--red); }
-.modal-body { flex: 1; overflow-y: auto; padding: 16px; }
-.modal-footer {
-  padding: 12px 16px; border-top: 1px solid var(--border);
-  display: flex; justify-content: flex-end; gap: 8px;
-}
-
-/* ── Script editor ────────────────────────────────────────────────── */
-.script-ops-list { display: flex; flex-direction: column; gap: 4px; }
-.op-row {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 5px;
-  padding: 8px 10px; display: flex; flex-direction: column; gap: 6px;
-}
-.op-row-header { display: flex; align-items: center; gap: 8px; }
-.op-select {
-  background: var(--bg); border: 1px solid var(--border); color: var(--purple);
-  padding: 3px 6px; border-radius: 3px; font-family: inherit; font-size: 12px;
-}
-.op-select:focus { outline: none; border-color: var(--purple); }
-.op-field-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.op-field-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-.op-input {
-  background: var(--bg); border: 1px solid var(--border); color: var(--text);
-  padding: 3px 7px; border-radius: 3px; font-family: inherit; font-size: 12px;
-  min-width: 80px;
-}
-.op-input:focus { outline: none; border-color: var(--accent); }
-.op-select-small {
-  background: var(--bg); border: 1px solid var(--border); color: var(--text);
-  padding: 3px 6px; border-radius: 3px; font-family: inherit; font-size: 12px;
-}
-.op-select-small:focus { outline: none; border-color: var(--accent); }
-.op-remove {
-  margin-left: auto; background: none; border: none; color: var(--dim);
-  cursor: pointer; font-size: 14px; padding: 0 4px;
-}
-.op-remove:hover { color: var(--red); }
-.op-branch { margin-left: 16px; margin-top: 6px; }
-.op-branch-label { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; font-style: italic; }
-.add-op-btn {
-  background: none; border: 1px dashed var(--border); color: var(--text-dim);
-  padding: 5px 12px; border-radius: 4px; cursor: pointer; font-family: inherit;
-  font-size: 12px; width: 100%; margin-top: 4px;
-}
-.add-op-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-/* ── Exit editor ─────────────────────────────────────────────────── */
-.exit-row-card {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 5px;
-  padding: 8px 10px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 6px;
-}
-.exit-row-top { display: flex; align-items: center; gap: 8px; }
-.exit-row-advanced { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-
-/* ── Ref picker ──────────────────────────────────────────────────── */
-.picker-search {
-  width: 100%; background: var(--panel); border: 1px solid var(--border);
-  color: var(--text); padding: 6px 10px; border-radius: 4px; font-family: inherit;
-  margin-bottom: 8px;
-}
-.picker-search:focus { outline: none; border-color: var(--accent); }
-.picker-list { max-height: 280px; overflow-y: auto; }
-.picker-item {
-  padding: 6px 10px; cursor: pointer; border-radius: 3px;
-  display: flex; align-items: center; gap: 8px;
-}
-.picker-item:hover { background: var(--panel); }
-.picker-id { font-size: 11px; color: var(--text-dim); }
-
-/* ── Validate modal ─────────────────────────────────────────────── */
-#validate-output {
-  white-space: pre-wrap; font-size: 12px; color: var(--text);
-  max-height: 400px; overflow-y: auto;
-}
-.validate-ok  { color: var(--green); }
-.validate-err { color: var(--red); }
-
-/* ── New object modal ───────────────────────────────────────────── */
-.new-obj-type-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-.type-btn {
-  padding: 6px 14px; border-radius: 4px; border: 1px solid var(--border);
-  cursor: pointer; font-family: inherit; font-size: 12px; background: none;
-  color: var(--text-dim);
-}
-.type-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(200,169,110,.08); }
-.zone-select-row { display: flex; flex-direction: column; gap: 6px; }
-
-/* ── Scrollbar ───────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--dim); }
-
-/* ── XRef panel ──────────────────────────────────────────────────── */
-#xref {
-  width: 220px; background: var(--surface); border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
-  transition: width .18s;
-}
-#xref.collapsed { width: 30px; }
-.xref-toolbar {
-  padding: 6px 8px; display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid var(--border); flex-shrink: 0; height: 34px;
-}
-.xref-title {
-  font-size: 10px; color: var(--text-dim); text-transform: uppercase;
-  letter-spacing: .08em; white-space: nowrap; overflow: hidden;
-}
-#xref.collapsed .xref-title { display: none; }
-#xref-body { flex: 1; overflow-y: auto; }
-#xref.collapsed #xref-body { display: none; }
-.xref-empty { color: var(--dim); padding: 12px 10px; font-size: 12px; }
-.xref-group-title {
-  font-size: 10px; color: var(--dim); text-transform: uppercase;
-  letter-spacing: .08em; padding: 8px 10px 3px; border-top: 1px solid var(--border);
-  margin-top: 2px;
-}
-.xref-group-title:first-child { border-top: none; margin-top: 0; }
-.xref-item {
-  padding: 4px 10px; cursor: pointer; display: flex; align-items: flex-start;
-  gap: 6px; border-radius: 3px; margin: 1px 4px;
-}
-.xref-item:hover { background: var(--panel); }
-.xref-info { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
-.xref-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.xref-ctx  { font-size: 10px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.xref-toggle-btn {
-  background: none; border: none; color: var(--text-dim); cursor: pointer;
-  font-size: 13px; padding: 0 2px; flex-shrink: 0;
-}
-.xref-toggle-btn:hover { color: var(--accent); }
-
-/* ── Dialogue editor ─────────────────────────────────────────────── */
-.dlg-toolbar { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
-.dlg-file    { font-size: 11px; color: var(--text-dim); margin-left: auto; }
-.dlg-node-card {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 7px;
-  margin-bottom: 12px;
-}
-.dlg-node-header {
-  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-  border-bottom: 1px solid var(--border); background: rgba(0,0,0,.15);
-  border-radius: 7px 7px 0 0; flex-wrap: wrap;
-}
-.dlg-node-id {
-  font-family: monospace; color: var(--yellow); font-weight: 700;
-  font-size: 13px; flex: 0 0 auto;
-}
-.dlg-node-id-input {
-  background: var(--bg); border: 1px solid var(--border); color: var(--yellow);
-  padding: 2px 7px; border-radius: 4px; font-family: monospace; font-size: 12px;
-  width: 140px;
-}
-.dlg-node-id-input:focus { outline: none; border-color: var(--yellow); }
-.dlg-node-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
-.dlg-lines { display: flex; flex-direction: column; gap: 5px; }
-.dlg-line-row { display: flex; gap: 6px; align-items: flex-start; }
-.dlg-line-ta {
-  flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text);
-  padding: 5px 8px; border-radius: 4px; font-family: inherit; font-size: 12px;
-  resize: vertical; min-height: 48px;
-}
-.dlg-line-ta:focus { outline: none; border-color: var(--accent); }
-.dlg-icon-btn {
-  background: none; border: none; color: var(--dim); cursor: pointer; font-size: 14px;
-  padding: 3px 5px; line-height: 1; flex-shrink: 0;
-}
-.dlg-icon-btn:hover { color: var(--red); }
-.dlg-resp-section { margin-top: 4px; }
-.dlg-resp-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
-.dlg-resp-row {
-  display: flex; align-items: flex-start; gap: 6px; padding: 5px 0;
-  border-top: 1px solid rgba(37,43,54,.7); flex-wrap: wrap;
-}
-.dlg-resp-row:first-of-type { border-top: none; }
-.dlg-resp-text {
-  flex: 1; min-width: 180px; background: var(--bg); border: 1px solid var(--border);
-  color: var(--text); padding: 4px 8px; border-radius: 4px; font-family: inherit;
-  font-size: 12px;
-}
-.dlg-resp-text:focus { outline: none; border-color: var(--accent2); }
-.dlg-next-sel {
-  background: var(--bg); border: 1px solid var(--border); color: var(--accent2);
-  padding: 4px 6px; border-radius: 4px; font-family: inherit; font-size: 12px;
-  max-width: 140px;
-}
-.dlg-next-sel:focus { outline: none; border-color: var(--accent2); }
-.dlg-cond-badge {
-  font-size: 10px; padding: 2px 6px; background: rgba(155,127,212,.15);
-  border: 1px solid var(--purple); border-radius: 10px; color: var(--purple);
-  cursor: pointer; white-space: nowrap;
-}
-.dlg-cond-badge:hover { background: rgba(155,127,212,.25); }
-.dlg-cond-editor {
-  width: 100%; background: var(--bg); border: 1px solid var(--purple); border-radius: 5px;
-  padding: 8px 10px; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
-}
-.dlg-cond-sel {
-  background: var(--panel); border: 1px solid var(--border); color: var(--text);
-  padding: 3px 6px; border-radius: 4px; font-family: inherit; font-size: 12px;
-}
-.dlg-cond-val {
-  background: var(--panel); border: 1px solid var(--border); color: var(--text);
-  padding: 3px 7px; border-radius: 4px; font-family: inherit; font-size: 12px; width: 120px;
-}
-.dlg-cond-val:focus, .dlg-cond-sel:focus { outline: none; border-color: var(--purple); }
-
-/* ── Field help icons ────────────────────────────────────────────── */
-.help-icon {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--text-dim); color: var(--bg);
-  font-size: 9px; font-style: normal; font-weight: 700;
-  cursor: help; margin-left: 5px; flex-shrink: 0;
-  vertical-align: middle; position: relative;
-}
-.help-icon::after {
-  content: attr(data-tip);
-  position: absolute; left: 20px; top: -6px;
-  background: #1a1a2e; border: 1px solid var(--border);
-  color: var(--text); font-size: 12px; font-weight: 400; font-style: normal;
-  padding: 7px 11px; border-radius: 5px;
-  white-space: pre-wrap; max-width: 280px; min-width: 160px;
-  z-index: 9999; pointer-events: none; line-height: 1.45;
-  display: none; box-shadow: 0 4px 14px rgba(0,0,0,.5);
-}
-.help-icon:hover::after { display: block; }
-
-/* ── Map view ─────────────────────────────────────────────────────── */
-#map-view {
-  display: none; flex: 1; flex-direction: column; overflow: hidden;
-}
-#map-toolbar {
-  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
-  background: var(--panel); border-bottom: 1px solid var(--border); flex-shrink: 0;
-  flex-wrap: wrap;
-}
-#map-legend { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-#map-body {
-  flex: 1; display: flex; flex-direction: row; overflow: hidden;
-}
-#map-canvas {
-  flex: 1; overflow: hidden; position: relative;
-  background: var(--bg); cursor: grab;
-}
-#map-canvas.dragging { cursor: grabbing; }
-#map-svg { display: block; transform-origin: 0 0; user-select: none; }
-.map-room-node rect { transition: fill 0.1s, stroke 0.1s; }
-.map-room-node:hover rect { fill: rgba(255,255,255,0.09) !important; }
-.map-room-node.map-selected rect { stroke: #fff !important; stroke-width: 2.5 !important; }
-.map-hint { color: var(--text-dim); font-size: 11px; }
-
-#map-info {
-  width: 230px; flex-shrink: 0;
-  display: none; flex-direction: column;
-  background: var(--surface); border-left: 1px solid var(--border);
-  overflow-y: auto;
-}
-#map-info.visible { display: flex; }
-#map-info-header {
-  padding: 10px 12px 6px;
-  border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-#map-info-name {
-  font-size: 13px; font-weight: 600; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-#map-info-zone { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
-#map-info-body { flex: 1; padding: 6px 8px; overflow-y: auto; }
-#map-info-edit {
-  padding: 8px 12px; border-top: 1px solid var(--border); flex-shrink: 0;
-}
-#map-info-edit button { width: 100%; }
-.map-info-section { margin-bottom: 8px; }
-.map-info-section-title {
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .06em; color: var(--text-dim); margin-bottom: 4px;
-}
-.map-info-row {
-  display: flex; align-items: center; gap: 6px;
-  padding: 3px 0; font-size: 12px; color: var(--text);
-  white-space: nowrap; overflow: hidden;
-}
-.map-info-row .badge { flex-shrink: 0; }
-.map-info-row span { overflow: hidden; text-overflow: ellipsis; }
-.map-info-row .map-info-dir {
-  font-size: 10px; color: var(--text-dim); flex-shrink: 0; min-width: 24px;
-}
-</style>
+<link rel="stylesheet" href="/css/wct_common.css">
 </head>
 <body>
 
@@ -714,6 +82,13 @@ label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; lett
     <div id="map-legend"></div>
     <span class="map-hint">scroll = pan &nbsp;|&nbsp; wheel = zoom &nbsp;|&nbsp; click room = details</span>
     <span class="map-hint">&#9476; border = auto-placed &nbsp; &#9548; line = locked exit</span>
+    <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none">
+      <input type="checkbox" id="map-show-counts" style="accent-color:var(--accent);cursor:pointer" onchange="renderMap()"> counts
+    </label>
+    <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none">
+      <input type="checkbox" id="map-show-dirs" style="accent-color:var(--accent);cursor:pointer" onchange="renderMap()"> exit labels
+    </label>
+    <button class="hbtn" onclick="exportDot(_mapZoneFilter)" title="Download Graphviz .dot file">Export DOT</button>
   </div>
   <div id="map-body">
     <div id="map-canvas"></div>
@@ -949,10 +324,20 @@ async function loadWorld(worldId) {
   renderEditor();
   document.getElementById('xref-body').innerHTML = '<div class="xref-empty">Select an object to see where it is used.</div>';
   setStatus(`${WORLD_CONFIG.world_name} loaded`, 'ok');
+  _restoreUiState();
 }
 
 function reloadWorld() {
-  if (WORLD_ID) loadWorld(WORLD_ID);
+  if (WORLD_ID) return loadWorld(WORLD_ID);
+}
+
+function _restoreSelection({type, zone_id, id}) {
+  const zone = WORLD_DATA?.zones?.[zone_id];
+  if (!zone) return;
+  const key = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type + 's';
+  const arr = zone[key] || [];
+  const obj = arr.find(o => (o.id || o._id || o._npc_id) === id);
+  if (obj) selectObject(type, zone_id, obj);
 }
 
 function rebuildDataLists() {
@@ -993,6 +378,7 @@ function setActiveType(type) {
   renderTypeList(type);
   const search = document.getElementById('tree-search');
   if (search) search.value = '';
+  _saveUiState();
 }
 
 function renderTypeList(type) {
@@ -1071,6 +457,7 @@ function setupTreeResizer() {
       resizer.classList.remove('active');
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup',   onUp);
+      _saveUiState();
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup',   onUp);
@@ -1094,6 +481,7 @@ function setupXrefResizer() {
       resizer.classList.remove('active');
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup',   onUp);
+      _saveUiState();
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup',   onUp);
@@ -1171,6 +559,7 @@ function selectObject(type, zone_id, data) {
 
   renderEditor();
   document.getElementById('btn-save').disabled = false;
+  _saveUiState();
 }
 
 function markDirty() {
@@ -1644,6 +1033,57 @@ function renderNpcEditor(main) {
   main.appendChild(sectionTitle('give_accepts', 'Items this NPC will accept from the player via the "give" command.\nEach entry: { item_id, message, script }\nScript runs when the player gives the item.'));
   renderGiveAccepts(main, d);
 
+  main.appendChild(sectionTitle('Dialogue', 'Link a dialogue tree to this NPC.\nThe fallback dialog is shown when the NPC is talked to but has no dialogue tree,\nor when a dialogue node is missing.'));
+
+  main.appendChild(fieldRow('Fallback Dialog', textareaInput(d.fallback_dialog, v => { d.fallback_dialog = v || undefined; markDirty(); }),
+    null, 'Text shown when this NPC is talked to with no dialogue tree configured,\nor when a dialogue node cannot be found.'));
+
+  const _dlgNpcId = d.id || '';
+  const _existingDlg = (() => {
+    for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+      const dl = (zone.dialogues || []).find(dl => dl._npc_id === _dlgNpcId);
+      if (dl) return {zone_id: zid, data: dl};
+    }
+    return null;
+  })();
+  const dlgRow = document.createElement('div');
+  dlgRow.style.display = 'flex'; dlgRow.style.gap = '8px'; dlgRow.style.alignItems = 'center';
+  dlgRow.style.marginTop = '6px';
+  const dlgStatus = document.createElement('span');
+  dlgStatus.style.cssText = 'font-size:12px;color:var(--text-dim);flex:1';
+  dlgStatus.textContent = _existingDlg ? 'Dialogue tree linked' : 'No dialogue tree';
+  const dlgBtn = document.createElement('button');
+  dlgBtn.className = _existingDlg ? 'hbtn' : 'hbtn primary';
+  dlgBtn.textContent = _existingDlg ? 'Open Dialogue' : 'Create Dialogue';
+  dlgBtn.addEventListener('click', async () => {
+    if (_existingDlg) {
+      selectObject('dialogue', _existingDlg.zone_id, _existingDlg.data);
+    } else {
+      if (!_dlgNpcId) { setStatus('Save the NPC first to get an ID', 'err'); return; }
+      const r = await fetch('/api/create_dialogue', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({world_id: WORLD_ID, zone_id: SELECTED.zone_id, npc_id: _dlgNpcId})
+      });
+      const j = await r.json();
+      if (j.ok) {
+        setStatus('Dialogue created', 'ok');
+        const _saved = SELECTED ? {type: SELECTED.type, zone_id: SELECTED.zone_id,
+          id: SELECTED.data.id || ''} : null;
+        await reloadWorld();
+        if (_saved) _restoreSelection(_saved);
+        // Now navigate to the new dialogue
+        for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+          const dl = (zone.dialogues || []).find(dl => dl._npc_id === _dlgNpcId);
+          if (dl) { selectObject('dialogue', zid, dl); break; }
+        }
+      } else {
+        setStatus('Error: ' + j.error, 'err');
+      }
+    }
+  });
+  dlgRow.appendChild(dlgStatus); dlgRow.appendChild(dlgBtn);
+  main.appendChild(dlgRow);
+
   main.appendChild(sectionTitle('Notes'));
   main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => d.admin_comment = v),
     null, 'Developer note. Ignored by the engine at runtime.'));
@@ -1770,6 +1210,7 @@ function renderItemEditor(main) {
   bonusRow.appendChild(bonusPair('Attack Bonus',  'attack_bonus'));
   bonusRow.appendChild(bonusPair('Defense Bonus', 'defense_bonus'));
   bonusRow.appendChild(bonusPair('HP Bonus',      'hp_bonus', 'Passive bonus to the player\'s max HP while equipped.'));
+  bonusRow.appendChild(bonusPair('Weight', 'weight', 'Item weight (arbitrary units). Used for encumbrance if enabled.\nLeave blank for weightless items.'));
   main.appendChild(bonusRow);
 
   const cbRow = document.createElement('div'); cbRow.className = 'field-row inline';
@@ -1836,6 +1277,21 @@ function serialiseQuest(data) {
 function renderQuestEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('quest', 'editor-type', d.title || d._id || d.id));
+  const questDotBtn = document.createElement('button');
+  questDotBtn.className = 'hbtn'; questDotBtn.textContent = 'Export DOT';
+  questDotBtn.title = 'Download quest flow as Graphviz .dot file';
+  questDotBtn.addEventListener('click', exportQuestDot);
+  main.querySelector('.editor-actions')?.appendChild(questDotBtn);
+  const questGrfBtn = document.createElement('button');
+  questGrfBtn.className = 'hbtn'; questGrfBtn.textContent = 'Graph';
+  questGrfBtn.setAttribute('data-role', 'quest-graph-btn');
+  questGrfBtn.title = 'Toggle interactive quest step flow graph';
+  questGrfBtn.addEventListener('click', () => {
+    const showing = !!main.querySelector('.dlg-graph-wrap');
+    questGrfBtn.classList.toggle('primary', !showing);
+    _showQuestGraph(main, d);
+  });
+  main.querySelector('.editor-actions')?.appendChild(questGrfBtn);
   main.appendChild(fieldRow('Quest ID', (() => {
     const inp = document.createElement('input');
     inp.type='text'; inp.className='field-input id-field';
@@ -1937,6 +1393,21 @@ function renderQuestRewards(main, d) {
 function renderDialogueEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('dialogue', 'editor-type', d._npc_id || ''));
+  const dlgDotBtn = document.createElement('button');
+  dlgDotBtn.className = 'hbtn'; dlgDotBtn.textContent = 'Export DOT';
+  dlgDotBtn.title = 'Download dialogue tree as Graphviz .dot file';
+  dlgDotBtn.addEventListener('click', exportDialogueDot);
+  main.querySelector('.editor-actions')?.appendChild(dlgDotBtn);
+  const dlgGrfBtn = document.createElement('button');
+  dlgGrfBtn.className = 'hbtn'; dlgGrfBtn.textContent = 'Graph';
+  dlgGrfBtn.setAttribute('data-role', 'dlg-graph-btn');
+  dlgGrfBtn.title = 'Toggle interactive dialogue tree graph';
+  dlgGrfBtn.addEventListener('click', () => {
+    const showing = !!main.querySelector('.dlg-graph-wrap');
+    dlgGrfBtn.classList.toggle('primary', !showing);
+    _showDlgGraph(main, d);
+  });
+  main.querySelector('.editor-actions')?.appendChild(dlgGrfBtn);
 
   // Normalize: ensure node/response arrays, normalise line→lines
   d.node     = (d.node     || []).map(n => ({
@@ -2302,7 +1773,7 @@ async function saveSelected() {
     const clean = serialiseQuest(data);
     const res = await fetch('/api/write_file', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, data: clean }) });
     const j = await res.json();
-    if (j.ok) { DIRTY = false; setStatus('Saved', 'ok'); }
+    if (j.ok) { DIRTY = false; setStatus('Saved', 'ok'); _saveUiState(); }
     else setStatus('Error: ' + j.error, 'err');
     return;
   }
@@ -2311,7 +1782,7 @@ async function saveSelected() {
     const clean = serialiseDlg(data);
     const res = await fetch('/api/write_file', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, data: clean }) });
     const j = await res.json();
-    if (j.ok) { DIRTY = false; setStatus('Saved', 'ok'); }
+    if (j.ok) { DIRTY = false; setStatus('Saved', 'ok'); _saveUiState(); }
     else setStatus('Error: ' + j.error, 'err');
     return;
   }
@@ -2327,14 +1798,19 @@ async function saveSelected() {
   if (j.ok) {
     DIRTY = false;
     setStatus('Saved', 'ok');
-    // Update lookup maps
+    const _savedKey = SELECTED
+      ? { type: SELECTED.type, zone_id: SELECTED.zone_id,
+          id: SELECTED.data.id || SELECTED.data._id || SELECTED.data._npc_id || '' }
+      : null;
     if (data.id) {
       if (type==='room')  ALL_ROOMS[data.id]  = {...data, zone_id};
       if (type==='npc')   ALL_NPCS[data.id]   = {...data, zone_id};
       if (type==='item')  ALL_ITEMS[data.id]  = {...data, zone_id};
     }
     rebuildDataLists();
-    reloadWorld();
+    await reloadWorld();
+    if (_savedKey) _restoreSelection(_savedKey);
+    _saveUiState();
   } else {
     setStatus('Error: ' + j.error, 'err');
   }
@@ -3218,6 +2694,54 @@ function renderXRef(id) {
   });
 }
 
+// ── UI state persistence (localStorage) ──────────────────────────────
+
+function _saveUiState() {
+  if (!WORLD_ID) return;
+  const state = {
+    activeType:      _ACTIVE_TYPE,
+    xrefCollapsed:   document.getElementById('xref')?.classList.contains('collapsed') || false,
+    treeDetailWidth: document.getElementById('tree-detail')?.style.width || '',
+    xrefTagsHeight:  document.getElementById('xref-tags')?.style.height  || '',
+  };
+  if (SELECTED) {
+    state.selectedKey = {
+      type:    SELECTED.type,
+      zone_id: SELECTED.zone_id,
+      id:      SELECTED.data.id || SELECTED.data._id || SELECTED.data._npc_id || '',
+    };
+  }
+  try { localStorage.setItem('wct_ui_' + WORLD_ID, JSON.stringify(state)); } catch {}
+}
+
+function _restoreUiState() {
+  if (!WORLD_ID) return;
+  let state;
+  try { state = JSON.parse(localStorage.getItem('wct_ui_' + WORLD_ID)); } catch { return; }
+  if (!state) return;
+  if (state.activeType && state.activeType !== _ACTIVE_TYPE) setActiveType(state.activeType);
+  if (state.treeDetailWidth) {
+    const td = document.getElementById('tree-detail');
+    if (td) td.style.width = state.treeDetailWidth;
+  }
+  if (state.xrefTagsHeight) {
+    const xt = document.getElementById('xref-tags');
+    if (xt) xt.style.height = state.xrefTagsHeight;
+  }
+  if (state.xrefCollapsed) {
+    const panel = document.getElementById('xref');
+    const btn   = document.getElementById('xref-toggle');
+    if (panel && !panel.classList.contains('collapsed')) {
+      panel.classList.add('collapsed');
+      if (btn) btn.innerHTML = '&laquo;';
+    }
+  }
+  if (state.selectedKey) {
+    // Defer until the stack unwinds so the tree is fully rendered
+    setTimeout(() => _restoreSelection(state.selectedKey), 0);
+  }
+}
+
 function navigateTo(type, zone_id, id) {
   const zone = WORLD_DATA?.zones?.[zone_id];
   if (!zone) return;
@@ -3232,6 +2756,7 @@ function toggleXref() {
   const btn    = document.getElementById('xref-toggle');
   const closed = panel.classList.toggle('collapsed');
   btn.innerHTML = closed ? '&laquo;' : '&raquo;';
+  _saveUiState();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3250,6 +2775,29 @@ const MAP_DIR_DELTA = {
   n:[0,-1], s:[0,1], e:[1,0], w:[-1,0],
   ne:[1,-1], nw:[-1,-1], se:[1,1], sw:[-1,1],
   u:[0,-2], d:[0,2],
+};
+
+// Fractional offset from room CENTER toward the exit face (SVG: +y = down).
+// Multiply by (CW/2, CH/2) to get pixel offset from center.
+const MAP_FACE_OFFSET = {
+  north:     [ 0.0, -1.0], south:     [ 0.0,  1.0],
+  east:      [ 1.0,  0.0], west:      [-1.0,  0.0],
+  northeast: [ 1.0, -1.0], northwest: [-1.0, -1.0],
+  southeast: [ 1.0,  1.0], southwest: [-1.0,  1.0],
+  up:        [ 0.0, -1.0], down:      [ 0.0,  1.0],
+  n:[ 0.0,-1.0], s:[ 0.0, 1.0], e:[ 1.0, 0.0], w:[-1.0, 0.0],
+  ne:[1.0,-1.0], nw:[-1.0,-1.0], se:[1.0,1.0], sw:[-1.0,1.0],
+  u:[ 0.0,-1.0], d:[ 0.0, 1.0],
+};
+
+const MAP_REVERSE_DIR = {
+  north:'south', south:'north', east:'west', west:'east',
+  northeast:'southwest', southwest:'northeast',
+  northwest:'southeast', southeast:'northwest',
+  up:'down', down:'up',
+  n:'s', s:'n', e:'w', w:'e',
+  ne:'sw', sw:'ne', nw:'se', se:'nw',
+  u:'d', d:'u',
 };
 
 let _mapZoneFilter = '';
@@ -3276,14 +2824,18 @@ function _buildMapLayout() {
   if (!WORLD_DATA) return {};
   const rooms = {};
   for (const [zid, zone] of Object.entries(WORLD_DATA.zones || {})) {
-    for (const r of zone.rooms || []) {
+    for (const r of (zone.rooms || [])) {
       if (!r.id) continue;
       rooms[r.id] = { id: r.id, name: r.name || r.id, zone_id: zid,
-                      exits: r.exits || {}, coord: r.coord || null, start: !!r.start };
+                      exits: r.exits || {}, coord: r.coord || null, start: !!r.start,
+                      npc_count:  Array.isArray(r.spawns) ? r.spawns.length : (r.spawns ? 1 : 0),
+                      item_count: Array.isArray(r.items)  ? r.items.length  : (r.items  ? 1 : 0) };
     }
   }
 
   const posOf = {}, grid = {};
+  const explicitIds = new Set();
+
   const nearestFree = (x, y) => {
     if (!grid[`${x},${y}`]) return [x, y];
     for (let r = 1; r < 40; r++)
@@ -3293,28 +2845,44 @@ function _buildMapLayout() {
             return [x+dx, y+dy];
     return [x+50, y+50];
   };
+
+  // Prefer positions that continue along the approach axis before falling back to spiral.
+  const nearestFreeAlongDir = (x, y, dx, dy) => {
+    if (!grid[`${x},${y}`]) return [x, y];
+    if (dx !== 0 || dy !== 0) {
+      const sx = dx > 0 ? 1 : (dx < 0 ? -1 : 0);
+      const sy = dy > 0 ? 1 : (dy < 0 ? -1 : 0);
+      for (let dist = 1; dist < 30; dist++) {
+        const nx = x + sx * dist, ny = y + sy * dist;
+        if (!grid[`${nx},${ny}`]) return [nx, ny];
+      }
+    }
+    return nearestFree(x, y);
+  };
+
   const place = (rid, p) => { posOf[rid] = p; grid[`${p[0]},${p[1]}`] = rid; };
 
+  // Phase 1: seed from explicit coords
   for (const [rid, room] of Object.entries(rooms)) {
     const c = room.coord;
-    if (c && c.length >= 2) place(rid, [Math.round(c[0]), Math.round(c[1])]);
+    if (c && c.length >= 2) { place(rid, [Math.round(c[0]), Math.round(c[1])]); explicitIds.add(rid); }
   }
 
   const unplaced = new Set(Object.keys(rooms).filter(id => !posOf[id]));
   const inQueue  = new Set();
-  const queue    = [];
+  const queue    = []; // [rid, [idealX, idealY], [dx, dy]]
 
   const enqueueNeighbors = (rid, p) => {
     for (const [dir, ev] of Object.entries(rooms[rid].exits)) {
       const dest = typeof ev === 'string' ? ev : (ev?.to || '');
       if (dest && unplaced.has(dest) && !inQueue.has(dest)) {
         const d = MAP_DIR_DELTA[dir];
-        if (d) { queue.push([dest, [p[0]+d[0], p[1]+d[1]]]); inQueue.add(dest); }
+        if (d) { queue.push([dest, [p[0]+d[0], p[1]+d[1]], d]); inQueue.add(dest); }
       }
     }
   };
 
-  for (const [rid, p] of Object.entries(posOf)) enqueueNeighbors(rid, p);
+  for (const rid of Object.keys(posOf)) enqueueNeighbors(rid, posOf[rid]);
 
   if (!queue.length) {
     const seed = Object.values(rooms).find(r => r.start) || Object.values(rooms)[0];
@@ -3324,15 +2892,125 @@ function _buildMapLayout() {
     }
   }
 
+  // Phase 2: BFS with directional collision resolution
   for (let qi = 0; qi < queue.length; qi++) {
-    const [rid, exp] = queue[qi];
+    const [rid, exp, delta] = queue[qi];
     if (!unplaced.has(rid)) continue;
-    const p = nearestFree(exp[0], exp[1]);
+    const p = nearestFreeAlongDir(exp[0], exp[1], delta[0], delta[1]);
     place(rid, p); unplaced.delete(rid); enqueueNeighbors(rid, p);
   }
-  for (const rid of unplaced) { const p = nearestFree(0, 0); place(rid, p); }
+
+  // Phase 3: pull auto-placed rooms toward their ideal positions
+  let changed = true;
+  for (let iter = 0; iter < 10 && changed; iter++) {
+    changed = false;
+    for (const rid of Object.keys(posOf)) {
+      if (explicitIds.has(rid)) continue;
+      const cur = posOf[rid];
+      for (const [dir, ev] of Object.entries(rooms[rid].exits)) {
+        const dest = typeof ev === 'string' ? ev : (ev?.to || '');
+        if (!dest || !posOf[dest]) continue;
+        const d = MAP_DIR_DELTA[dir];
+        if (!d || (!d[0] && !d[1])) continue;
+        const ideal = [posOf[dest][0] - d[0], posOf[dest][1] - d[1]];
+        if (ideal[0] === cur[0] && ideal[1] === cur[1]) break;
+        const key = `${ideal[0]},${ideal[1]}`;
+        if (!grid[key]) {
+          delete grid[`${cur[0]},${cur[1]}`];
+          posOf[rid] = ideal;
+          grid[key] = rid;
+          changed = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // Phase 4: disconnected islands — BFS each component separately, spread horizontally
+  while (unplaced.size > 0) {
+    const compSeed = unplaced.values().next().value;
+    const allPos   = Object.values(posOf);
+    const maxX     = allPos.length ? Math.max(...allPos.map(p => p[0])) : -1;
+    const seedP    = nearestFree(maxX + 4, 0);
+    place(compSeed, seedP); unplaced.delete(compSeed);
+    const cq = [[compSeed, seedP]];
+    for (let qi = 0; qi < cq.length; qi++) {
+      const [crid, cpos] = cq[qi];
+      for (const [dir, ev] of Object.entries(rooms[crid].exits)) {
+        const dest = typeof ev === 'string' ? ev : (ev?.to || '');
+        if (!dest || !unplaced.has(dest)) continue;
+        const d = MAP_DIR_DELTA[dir];
+        if (!d) continue;
+        const np = nearestFreeAlongDir(cpos[0]+d[0], cpos[1]+d[1], d[0], d[1]);
+        place(dest, np); unplaced.delete(dest); cq.push([dest, np]);
+      }
+    }
+  }
   for (const [rid, p] of Object.entries(posOf)) rooms[rid]._pos = p;
   return rooms;
+}
+
+function exportDot(zoneFilter) {
+  const allRooms = _buildMapLayout();
+  const rooms = zoneFilter
+    ? Object.fromEntries(Object.entries(allRooms).filter(([,r]) => r.zone_id === zoneFilter))
+    : allRooms;
+
+  if (!Object.keys(rooms).length) { setStatus('No rooms to export', 'err'); return; }
+
+  const worldName = WORLD_CONFIG?.world_name || WORLD_ID || 'World';
+  const _dq = s => '"' + String(s).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,'\\n') + '"';
+
+  // Group rooms by zone
+  const zones = {};
+  for (const [rid, room] of Object.entries(rooms)) {
+    (zones[room.zone_id] = zones[room.zone_id] || []).push({id: rid, ...room});
+  }
+
+  let dot = `graph ${_dq(worldName)} {\n`;
+  dot += `  layout=neato\n  overlap=false\n  sep="0.5"\n`;
+  dot += `  node [shape=box style=rounded fontname=Helvetica fontsize=10]\n`;
+  dot += `  edge [fontsize=9]\n\n`;
+
+  // Zone cluster subgraphs with room nodes
+  for (const [zid, rlist] of Object.entries(zones)) {
+    dot += `  subgraph cluster_${zid} {\n`;
+    dot += `    label=${_dq(zid)}\n    style=dashed\n`;
+    for (const r of rlist) {
+      const attrs = [`label=${_dq(r.name || r.id)}`];
+      if (r._pos) attrs.push(`pos="${r._pos[0]*2},${-r._pos[1]*2}!"`);
+      else attrs.push('style="rounded,dashed"');
+      dot += `    ${_dq(r.id)} [${attrs.join(', ')}]\n`;
+    }
+    dot += '  }\n\n';
+  }
+
+  // Edges (deduplicated)
+  const drawn = new Set();
+  for (const [rid, room] of Object.entries(rooms)) {
+    for (const [dir, ev] of Object.entries(room.exits || {})) {
+      const dest = typeof ev === 'string' ? ev : (ev?.to || '');
+      if (!dest || !rooms[dest]) continue;
+      const key = [rid, dest].sort().join('|');
+      if (drawn.has(key)) continue;
+      drawn.add(key);
+      const locked = typeof ev === 'object' && ev?.locked;
+      const attrs = [`label=${_dq(dir)}`];
+      if (locked) attrs.push('style=dashed color=red');
+      dot += `  ${_dq(rid)} -- ${_dq(dest)} [${attrs.join(', ')}]\n`;
+    }
+  }
+  dot += '}\n';
+
+  // Trigger download
+  const blob = new Blob([dot], {type: 'text/plain'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const fname = (WORLD_ID || 'world') + (zoneFilter ? '_' + zoneFilter : '') + '.dot';
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  setStatus(`Exported ${fname}`, 'ok');
 }
 
 function renderMap(zoneFilter) {
@@ -3386,27 +3064,55 @@ function renderMap(zoneFilter) {
   svg.setAttribute('width',  (maxX-minX+1)*(CW+GX) + M*2);
   svg.setAttribute('height', (maxY-minY+1)*(CH+GY) + M*2);
 
-  // Exit lines
+  const showCounts = document.getElementById('map-show-counts')?.checked || false;
+  const showDirs   = document.getElementById('map-show-dirs')?.checked   || false;
+
+  // Exit lines — drawn from each room's exit face to the destination's opposite face.
+  // This avoids center-to-center lines passing through room boxes.
   const drawn = new Set();
   for (const [rid, room] of Object.entries(rooms)) {
     if (!room._pos) continue;
     const [sx1, sy1] = toSvg(...room._pos);
     const cx1 = sx1 + CW/2, cy1 = sy1 + CH/2;
-    for (const [, ev] of Object.entries(room.exits)) {
+    for (const [dir, ev] of Object.entries(room.exits)) {
       const dest = typeof ev === 'string' ? ev : (ev?.to || '');
       if (!dest || !rooms[dest]?._pos) continue;
       const key = [rid, dest].sort().join('|');
       if (drawn.has(key)) continue;
       drawn.add(key);
+
+      // Source face anchor
+      const fo1 = MAP_FACE_OFFSET[dir] || [0, 0];
+      const ax1 = cx1 + fo1[0] * CW/2;
+      const ay1 = cy1 + fo1[1] * CH/2;
+
+      // Destination face anchor (reverse direction)
       const [sx2, sy2] = toSvg(...rooms[dest]._pos);
+      const cx2 = sx2 + CW/2, cy2 = sy2 + CH/2;
+      const revDir = MAP_REVERSE_DIR[dir] || '';
+      const fo2 = MAP_FACE_OFFSET[revDir] || [0, 0];
+      const ax2 = cx2 + fo2[0] * CW/2;
+      const ay2 = cy2 + fo2[1] * CH/2;
+
       const locked = typeof ev === 'object' && ev?.locked;
       const ln = document.createElementNS(NS, 'line');
-      ln.setAttribute('x1', cx1); ln.setAttribute('y1', cy1);
-      ln.setAttribute('x2', sx2 + CW/2); ln.setAttribute('y2', sy2 + CH/2);
+      ln.setAttribute('x1', ax1); ln.setAttribute('y1', ay1);
+      ln.setAttribute('x2', ax2); ln.setAttribute('y2', ay2);
       ln.setAttribute('stroke', locked ? '#c05050' : '#4a4a5a');
       ln.setAttribute('stroke-width', '1.5');
       if (locked) ln.setAttribute('stroke-dasharray', '5,4');
       svg.appendChild(ln);
+      if (showDirs) {
+        const tx = ax1 + (ax2-ax1)*0.12;
+        const ty = ay1 + (ay2-ay1)*0.12;
+        const lt = document.createElementNS(NS, 'text');
+        lt.setAttribute('x', tx); lt.setAttribute('y', ty - 3);
+        lt.setAttribute('text-anchor', 'middle');
+        lt.setAttribute('font-size', '8'); lt.setAttribute('fill', locked ? '#c05050' : '#666');
+        lt.setAttribute('pointer-events', 'none');
+        lt.textContent = dir;
+        svg.appendChild(lt);
+      }
     }
   }
 
@@ -3448,6 +3154,13 @@ function renderMap(zoneFilter) {
     g.appendChild(mkT(nm,  CW/2, CH/2-4, 11, '#eee', true));
     const id2 = rid.length > 22 ? rid.slice(0,22)+'…' : rid;
     g.appendChild(mkT(id2, CW/2, CH/2+12, 9, '#888', false));
+
+    if (showCounts && (room.npc_count || room.item_count)) {
+      const tags = [];
+      if (room.npc_count)  tags.push(`N:${room.npc_count}`);
+      if (room.item_count) tags.push(`I:${room.item_count}`);
+      g.appendChild(mkT(tags.join('  '), CW/2, CH/2+23, 8, '#aaa', false));
+    }
 
     svg.appendChild(g);
   }
@@ -3581,6 +3294,869 @@ function mapInfoEditRoom() {
   document.querySelector('.workspace').style.display = 'flex';
   document.getElementById('map-view').style.display  = 'none';
   document.getElementById('btn-map').classList.remove('active');
+}
+
+// ── Dialogue DOT export ───────────────────────────────────────────────────────
+
+function exportDialogueDot() {
+  if (!SELECTED || SELECTED.type !== 'dialogue') return;
+  const dlg    = SELECTED.data;
+  const npcId  = dlg._npc_id || 'dialogue';
+  const worldN = WORLD_CONFIG?.world_name || WORLD_ID || 'World';
+
+  // Node map + reachability
+  const nodeMap = {};
+  (dlg.node || []).forEach(n => { if (n.id) nodeMap[n.id] = {...n, response: []}; });
+  (dlg.response || []).forEach(r => { const p = r.node||''; if (nodeMap[p]) nodeMap[p].response.push(r); });
+  const reachable = new Set();
+  const stack = ['root'];
+  while (stack.length) {
+    const nid = stack.pop();
+    if (reachable.has(nid)) continue;
+    reachable.add(nid);
+    (nodeMap[nid]?.response || []).forEach(r => { const nx = r.next||''; if (nx && nodeMap[nx] && !reachable.has(nx)) stack.push(nx); });
+  }
+
+  // Helpers
+  const _esc  = s => '"' + String(s).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,'\\n') + '"';
+  const _h    = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const _wrap = (s,w=55) => { const ws=String(s).split(' ');const ls=[];let c='';ws.forEach(wd=>{if(c&&(c+' '+wd).length>w){ls.push(c);c=wd;}else c=c?c+' '+wd:wd;});if(c)ls.push(c);return ls.map(_h).join('<BR/>'); };
+  const _dId  = s => '"' + String(s).replace(/"/g,'\\"') + '"';
+
+  const C_NEUTRAL='#EEEEEE',C_FLAG='#FFF9C4',C_ITEM='#FFE0B2',C_QUEST_ADV='#FFD54F';
+  const C_QUEST_DONE='#A5D6A7',C_DAMAGE='#FFCDD2',C_COND='#E3F2FD',C_SCR='#F5F5F5';
+
+  const _hdrColor = sc => {
+    const ops=new Set((sc||[]).filter(o=>typeof o==='object').map(o=>o.op));
+    if(ops.has('complete_quest'))  return C_QUEST_DONE;
+    if(ops.has('advance_quest'))   return C_QUEST_ADV;
+    if(['give_item','take_item','spawn_item','give_gold','give_xp'].some(o=>ops.has(o))) return C_ITEM;
+    if(['damage','fail'].some(o=>ops.has(o))) return C_DAMAGE;
+    if(ops.has('set_flag')||ops.has('clear_flag')) return C_FLAG;
+    return C_NEUTRAL;
+  };
+  const _fmtOp = op => {
+    if(!op?.op) return '';
+    const {op:n}=op;
+    if(n==='set_flag')       return `set_flag: ${op.flag||'?'}`;
+    if(n==='clear_flag')     return `clear_flag: ${op.flag||'?'}`;
+    if(n==='give_item')      return `give_item: ${op.item_id||'?'}`;
+    if(n==='take_item')      return `take_item: ${op.item_id||'?'}`;
+    if(n==='give_gold')      return `give_gold: ${op.amount||'?'}`;
+    if(n==='give_xp')        return `give_xp: ${op.amount||'?'}`;
+    if(n==='damage')         return `damage: ${op.amount||'?'}`;
+    if(n==='advance_quest')  return `advance_quest: ${op.quest_id||'?'} -> step ${op.step||'?'}`;
+    if(n==='complete_quest') return `complete_quest: ${op.quest_id||'?'}`;
+    return n;
+  };
+  const _fmtCond = c => {
+    if(!c) return '';
+    const p=[];
+    if(c.flag)          p.push(`flag: ${c.flag}`);
+    if(c.not_flag)      p.push(`not: ${c.not_flag}`);
+    if(c.item)          p.push(`has_item: ${c.item}`);
+    if(c.quest)         p.push(`quest ${c.quest} step ${c.step||'?'}`);
+    if(c.quest_complete)p.push(`quest_done: ${c.quest_complete}`);
+    if(c.gold)          p.push(`gold>=${c.gold}`);
+    if(c.skill)         p.push(`skill ${c.skill}>=${c.min||'?'}`);
+    return p.join(', ');
+  };
+
+  const _nodeLabel = (nid, node) => {
+    const sc=node.script||[]; const cond=node.condition;
+    const hc=_hdrColor(sc); const reach=reachable.has(nid)||nid==='root';
+    const rows=[];
+    if(cond) rows.push(`<TR><TD BGCOLOR="${C_COND}" ALIGN="LEFT"><FONT COLOR="#1565C0" POINT-SIZE="9">entry if: ${_h(_fmtCond(cond))}</FONT></TD></TR>`);
+    rows.push(`<TR><TD BGCOLOR="${hc}"><FONT COLOR="${reach?'black':'#999999'}"><B>${_h(nid)}</B></FONT></TD></TR>`);
+    const lns=(node.lines?.length?node.lines:(node.line?[node.line]:[]));
+    if(lns.length){
+      lns.forEach(l=>rows.push(`<TR><TD ALIGN="LEFT" BALIGN="LEFT"><I>${_wrap(l)}</I></TD></TR>`));
+      if(node.lines?.length>1) rows.push(`<TR><TD ALIGN="LEFT"><FONT COLOR="#999999" POINT-SIZE="8">${node.cycle?'[cycle]':'[random pick]'}</FONT></TD></TR>`);
+    } else rows.push('<TR><TD ALIGN="LEFT"><FONT COLOR="#AAAAAA"><I>(no text)</I></FONT></TD></TR>');
+    const ops=sc.filter(o=>typeof o==='object').map(_fmtOp).filter(Boolean);
+    if(ops.length) rows.push(`<TR><TD BGCOLOR="${C_SCR}" ALIGN="LEFT" BALIGN="LEFT"><FONT COLOR="#444444" POINT-SIZE="9">${ops.map(o=>`&#9658; ${_h(o)}`).join('<BR/>')}</FONT></TD></TR>`);
+    const T='<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4" BGCOLOR="white">';
+    return `<\n    ${T}\n      ${rows.join('\n      ')}\n    </TABLE>\n  >`;
+  };
+
+  const lines = [];
+  const w = s => lines.push(s);
+  w(`digraph "dialogue_${npcId}" {`);
+  w(`  label=${_esc(npcId + ' \u2014 dialogue tree\n' + worldN)}`);
+  w('  labelloc=t labeljust=l rankdir=TB');
+  w('  node [fontname="Courier" fontsize=10 shape=none margin=0]');
+  w('  edge [fontname="Courier" fontsize=9]');
+  w('');
+  w(`  ${_dId('__END__')} [label="END" shape=oval style=filled fillcolor="#DDDDDD"]`);
+  w('');
+
+  for (const [nid, node] of Object.entries(nodeMap)) {
+    const lbl = _nodeLabel(nid, node);
+    const reach = reachable.has(nid)||nid==='root';
+    const extra = !reach ? ' color="#BBBBBB"' : (node.condition ? ' style="dashed" color="#1565C0" penwidth="1.5"' : '');
+    w(`  ${_dId(nid)} [label=${lbl}${extra}]`);
+  }
+  w('');
+
+  for (const [nid, node] of Object.entries(nodeMap)) {
+    (node.response||[]).forEach(resp => {
+      const nxt = resp.next||'';
+      const target = nxt ? _dId(nxt) : _dId('__END__');
+      const parts = [resp.text||''];
+      if(resp.condition) parts.push(`[if: ${_fmtCond(resp.condition)}]`);
+      (resp.script||[]).filter(o=>typeof o==='object').forEach(o=>{const f=_fmtOp(o);if(f)parts.push(`\u25b8 ${f}`);});
+      const lbl = _esc(parts.filter(Boolean).join('\n'));
+      if(!nxt)           w(`  ${_dId(nid)} -> ${target} [style=dashed color="#AAAAAA" fontcolor="#888888" label=${lbl}]`);
+      else if(resp.condition) w(`  ${_dId(nid)} -> ${target} [color=blue fontcolor=blue label=${lbl}]`);
+      else               w(`  ${_dId(nid)} -> ${target} [label=${lbl}]`);
+    });
+  }
+
+  w('');
+  w('  subgraph cluster_legend {');
+  w('    label="Legend" style=rounded color=black fontname="Courier" fontsize=9');
+  w('    node [shape=box fontname="Courier" fontsize=9]');
+  w('    LL1 [label="narrative"         style=filled fillcolor="#EEEEEE"]');
+  w('    LL2 [label="sets flag"         style=filled fillcolor="#FFF9C4"]');
+  w('    LL3 [label="gives item/gp/xp" style=filled fillcolor="#FFE0B2"]');
+  w('    LL4 [label="advances quest"   style=filled fillcolor="#FFD54F"]');
+  w('    LL5 [label="completes quest"  style=filled fillcolor="#A5D6A7"]');
+  w('    LL6 [label="damage / fail"    style=filled fillcolor="#FFCDD2"]');
+  w('    LL7 [label="END" shape=oval   style=filled fillcolor="#DDDDDD"]');
+  w('    LL8 [label="has entry cond"   style=dashed color="#1565C0"]');
+  w('    LL9 [label="unreachable"      color="#BBBBBB" fontcolor="#AAAAAA"]');
+  w('    LL1 -> LL2 -> LL3 -> LL4 -> LL5 -> LL6 -> LL7 -> LL8 -> LL9 [style=invis]');
+  w('  }');
+  w('}');
+
+  const dot  = lines.join('\n') + '\n';
+  const blob = new Blob([dot], {type:'text/plain'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `dialogue_${npcId}.dot`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  setStatus(`Exported dialogue_${npcId}.dot`, 'ok');
+}
+
+// ── Quest DOT export helpers ──────────────────────────────────────────────────
+
+function _dlgRecordTrans(op, questId, npcId, nodeId, condList, fullScript, out) {
+  const name = op?.op;
+  let toStep;
+  if (name === 'advance_quest' && op.quest_id === questId) toStep = parseInt(op.step || 0);
+  else if (name === 'complete_quest' && op.quest_id === questId) toStep = null;
+  else return;
+  const flagsReq = [];
+  condList.forEach(cond => {
+    if (!cond) return;
+    if (cond.flag)           flagsReq.push(`flag:${cond.flag}`);
+    if (cond.not_flag)       flagsReq.push(`not:${cond.not_flag}`);
+    if (cond.item)           flagsReq.push(`has_item:${cond.item}`);
+    if (cond.quest)          flagsReq.push(`quest ${cond.quest} step ${cond.step||'?'}`);
+    if (cond.quest_complete) flagsReq.push(`quest_done:${cond.quest_complete}`);
+    if (cond.gold)           flagsReq.push(`gold>=${cond.gold}`);
+  });
+  const flagsSet = [], otherOps = [];
+  (fullScript||[]).filter(o=>typeof o==='object').forEach(o => {
+    if (o.op === 'set_flag') flagsSet.push(o.flag||'?');
+    else if (!['advance_quest','complete_quest'].includes(o.op)) {
+      const f = _dlgFmtOp(o); if (f) otherOps.push(f);
+    }
+  });
+  out.push({npc_id:npcId, node_id:nodeId, to_step:toStep, flags_required:flagsReq, flags_set:flagsSet, other_ops:otherOps});
+}
+
+function _dlgFmtOp(op) {
+  if (!op?.op) return '';
+  const n = op.op;
+  if (n==='set_flag')       return `set_flag: ${op.flag||'?'}`;
+  if (n==='clear_flag')     return `clear_flag: ${op.flag||'?'}`;
+  if (n==='give_item')      return `give_item: ${op.item_id||'?'}`;
+  if (n==='take_item')      return `take_item: ${op.item_id||'?'}`;
+  if (n==='give_gold')      return `give_gold: ${op.amount||'?'}`;
+  if (n==='give_xp')        return `give_xp: ${op.amount||'?'}`;
+  if (n==='damage')         return `damage: ${op.amount||'?'}`;
+  if (n==='advance_quest')  return `advance_quest: ${op.quest_id||'?'} -> step ${op.step||'?'}`;
+  if (n==='complete_quest') return `complete_quest: ${op.quest_id||'?'}`;
+  return n;
+}
+
+function _dotFmtScriptOps(script) {
+  return (script || []).map(op => _dlgFmtOp(op)).filter(Boolean);
+}
+
+function _dotFmtCondition(c) {
+  if (!c) return '';
+  const p = [];
+  if (c.flag)           p.push(`flag: ${c.flag}`);
+  if (c.not_flag)       p.push(`not: ${c.not_flag}`);
+  if (c.item)           p.push(`has_item: ${c.item}`);
+  if (c.quest)          p.push(`quest ${c.quest} step ${c.step||'?'}`);
+  if (c.quest_complete) p.push(`quest_done: ${c.quest_complete}`);
+  if (c.gold)           p.push(`gold>=${c.gold}`);
+  if (c.skill)          p.push(`skill ${c.skill}>=${c.min||'?'}`);
+  return p.join(', ');
+}
+
+function exportQuestDot() {
+  if (!SELECTED || SELECTED.type !== 'quest') return;
+  const quest   = SELECTED.data;
+  const questId = quest._id || quest.id || 'quest';
+  const worldN  = WORLD_CONFIG?.world_name || WORLD_ID || 'World';
+
+  const _esc  = s => '"' + String(s).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,'\\n') + '"';
+  const _h    = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const _wrap = (s,w=52) => { const ws=String(s).split(' ');const ls=[];let c='';ws.forEach(wd=>{if(c&&(c+' '+wd).length>w){ls.push(c);c=wd;}else c=c?c+' '+wd:wd;});if(c)ls.push(c);return ls.map(_h).join('<BR/>'); };
+  const _dId  = s => '"' + String(s).replace(/"/g,'\\"') + '"';
+  const C_COND_BG = '#E3F2FD';
+  const T_OPEN = '<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4" BGCOLOR="white">';
+
+  // Collect transitions by scanning all dialogues
+  const transitions = [];
+  for (const [, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+    for (const dlg of (zone.dialogues || [])) {
+      const npcId = dlg._npc_id || '';
+      const nm = {};
+      (dlg.node||[]).forEach(n => { if(n.id) nm[n.id] = {...n, response:[]}; });
+      (dlg.response||[]).forEach(r => { if(nm[r.node]) nm[r.node].response.push(r); });
+      for (const [nid, node] of Object.entries(nm)) {
+        (node.script||[]).filter(o=>typeof o==='object').forEach(op =>
+          _dlgRecordTrans(op, questId, npcId, nid, [node.condition], node.script||[], transitions));
+        (node.response||[]).forEach(resp =>
+          (resp.script||[]).filter(o=>typeof o==='object').forEach(op =>
+            _dlgRecordTrans(op, questId, npcId, nid, [node.condition, resp.condition], resp.script||[], transitions)));
+      }
+    }
+  }
+
+  const byTo = {};
+  transitions.forEach(t => {
+    const k = t.to_step === null ? 'complete' : t.to_step;
+    (byTo[k] = byTo[k] || []).push(t);
+  });
+
+  const steps   = (quest.step || []).slice().sort((a,b) => a.index - b.index);
+  const rewards = quest.reward || [];
+  const rewardLine = rewards.map(r => {
+    if(r.type==='gold') return `${r.amount}g`;
+    if(r.type==='xp')   return `${r.amount} xp`;
+    if(r.type==='item') return r.item_id||'?';
+    return '';
+  }).filter(Boolean).join(', ') || 'no rewards';
+
+  const transLabel = t => {
+    const p = [`${t.npc_id} / ${t.node_id}`];
+    if(t.flags_required.length) p.push('req: '+t.flags_required.join(', '));
+    if(t.flags_set.length)      p.push('sets: '+t.flags_set.join(', '));
+    t.other_ops.forEach(o => p.push(o));
+    return p.join('\n');
+  };
+
+  const lines = [];
+  const w = s => lines.push(s);
+  w(`digraph ${_dId('quest_'+questId)} {`);
+  const tparts = [quest.title||questId];
+  if(quest.summary) tparts.push(quest.summary);
+  if(worldN) tparts.push(worldN);
+  w(`  label=${_esc(tparts.join('\n'))}`);
+  w('  labelloc=t labeljust=l rankdir=TB');
+  w('  node [fontname="Courier" fontsize=10]');
+  w('  edge [fontname="Courier" fontsize=9]');
+  w('');
+  w(`  __START__ [shape=oval style=filled fillcolor="#C8E6C9" label=${_esc(quest.giver?`START\n(${quest.giver})`:'START')}]`);
+  w(`  __COMPLETE__ [shape=oval style=filled fillcolor="#A5D6A7" label=${_esc('COMPLETE\nRewards: '+rewardLine)}]`);
+  w('');
+
+  steps.forEach(s => {
+    const rows = [];
+    rows.push(`<TR><TD BGCOLOR="${C_COND_BG}"><B>Step ${s.index}</B></TD></TR>`);
+    rows.push(`<TR><TD ALIGN="LEFT" BALIGN="LEFT">${_wrap(s.objective||'')}</TD></TR>`);
+    if(s.hint) rows.push(`<TR><TD ALIGN="LEFT" BALIGN="LEFT"><FONT COLOR="#666666" POINT-SIZE="9">Hint: ${_wrap(s.hint)}</FONT></TD></TR>`);
+    if(s.completion_flag) rows.push(`<TR><TD ALIGN="LEFT" BGCOLOR="#FFF9C4"><FONT COLOR="#555555" POINT-SIZE="9">sets: ${_h(s.completion_flag)}</FONT></TD></TR>`);
+    w(`  ${_dId(`__step_${s.index}__`)} [shape=none margin=0 label=<\n    ${T_OPEN}\n      ${rows.join('\n      ')}\n    </TABLE>\n  >]`);
+  });
+  w('');
+
+  const emitEdges = (src, dst, found, isComplete=false) => {
+    if(found?.length) {
+      const col = isComplete ? 'darkgreen' : '#1565C0';
+      found.forEach(t => w(`  ${_dId(src)} -> ${_dId(dst)} [label=${_esc(transLabel(t))} color=${_esc(col)}]`));
+    } else {
+      const note = isComplete ? '\u26a0 no complete_quest trigger found' : '\u26a0 no advance_quest trigger found';
+      w(`  ${_dId(src)} -> ${_dId(dst)} [label=${_esc(note)} style=dashed color=red fontcolor=red]`);
+    }
+  };
+
+  steps.forEach((s, i) => {
+    const src = i===0 ? '__START__' : `__step_${steps[i-1].index}__`;
+    emitEdges(src, `__step_${s.index}__`, byTo[s.index]);
+  });
+  if(steps.length) {
+    emitEdges(`__step_${steps[steps.length-1].index}__`, '__COMPLETE__', byTo['complete'], true);
+  } else {
+    emitEdges('__START__', '__COMPLETE__', byTo['complete'], true);
+  }
+
+  w('}');
+
+  const dot  = lines.join('\n') + '\n';
+  const blob = new Blob([dot], {type:'text/plain'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `quest_${questId}.dot`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  setStatus(`Exported quest_${questId}.dot`, 'ok');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// In-editor graph views — Dialogue & Quest
+// ═══════════════════════════════════════════════════════════════════════
+
+const DG_NW = 190, DG_NH = 72, DG_HG = 36, DG_VG = 90, DG_HDR = 22;
+
+function _dlgNodeBgColor(script) {
+  const s = Array.isArray(script) ? script : [];
+  let hasFlag = false, hasItem = false, hasAdv = false, hasDone = false, hasDmg = false;
+  for (const op of s) {
+    if (!op || typeof op !== 'object') continue;
+    const n = op.op || '';
+    if (n === 'set_flag') hasFlag = true;
+    else if (['give_item','give_gold','give_xp'].includes(n)) hasItem = true;
+    else if (n === 'advance_quest' || n === 'start_quest') hasAdv = true;
+    else if (n === 'complete_quest') hasDone = true;
+    else if (n === 'damage' || n === 'fail') hasDmg = true;
+  }
+  if (hasDmg)  return '#FFCDD2';
+  if (hasDone) return '#A5D6A7';
+  if (hasAdv)  return '#FFD54F';
+  if (hasItem) return '#FFE0B2';
+  if (hasFlag) return '#FFF9C4';
+  return '#DDDDDD';
+}
+
+function _dlgGraphLayout(d) {
+  const nodeMap = {};
+  for (const n of (d.node || [])) {
+    const nid = n.id || n._id || 'root';
+    nodeMap[nid] = { ...n, response: n.response ? [...n.response] : [] };
+  }
+  // Attach flat-format responses ([[response]] with node field)
+  for (const r of (d.response || [])) {
+    const p = r.node || '';
+    if (nodeMap[p]) nodeMap[p].response.push(r);
+  }
+  const level = {}, bfsOrd = [], q = ['root'];
+  level['root'] = 0;
+  while (q.length) {
+    const nid = q.shift();
+    bfsOrd.push(nid);
+    const n = nodeMap[nid];
+    if (!n) continue;
+    const lv = level[nid];
+    for (const r of (n.response || [])) {
+      const nxt = r.next || '';
+      if (nxt && nodeMap[nxt] && !(nxt in level)) { level[nxt] = lv + 1; q.push(nxt); }
+    }
+  }
+  const byLevel = {};
+  for (const nid of bfsOrd) {
+    const lv = level[nid];
+    if (!byLevel[lv]) byLevel[lv] = [];
+    byLevel[lv].push(nid);
+  }
+  const reachable = new Set(bfsOrd);
+  const maxLevel  = bfsOrd.length ? Math.max(...bfsOrd.map(n => level[n])) : 0;
+  const orphans   = Object.keys(nodeMap).filter(nid => !(nid in level));
+  if (orphans.length) {
+    const orphLv = maxLevel + 2;
+    byLevel[orphLv] = orphans;
+    orphans.forEach(nid => { level[nid] = orphLv; });
+  }
+  const pos = {};
+  for (const [lv, ids] of Object.entries(byLevel)) {
+    const lvInt = parseInt(lv);
+    const span  = ids.length * DG_NW + (ids.length - 1) * DG_HG;
+    ids.forEach((nid, i) => {
+      pos[nid] = { x: -span/2 + i * (DG_NW + DG_HG), y: lvInt * (DG_NH + DG_VG) };
+    });
+  }
+  const allLevels = Object.keys(byLevel).map(Number);
+  const endPos = { x: -50, y: (Math.max(...allLevels) + 1) * (DG_NH + DG_VG) + 20 };
+  return { nodeMap, pos, reachable, endPos };
+}
+
+function _dlgGraphMakePanZoom(canvas, svg) {
+  let scale = 1, panX = 0, panY = 0;
+  const applyT = () => { svg.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`; };
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    scale = Math.max(0.12, Math.min(5, scale * (e.deltaY < 0 ? 1.12 : 1/1.12)));
+    applyT();
+  }, { passive: false });
+  let dragging = false, lx = 0, ly = 0;
+  const onMove = e => {
+    if (!dragging) return;
+    panX += e.clientX - lx; panY += e.clientY - ly;
+    lx = e.clientX; ly = e.clientY; applyT();
+  };
+  const onUp = () => { dragging = false; canvas.classList.remove('dragging'); };
+  canvas.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    dragging = true; lx = e.clientX; ly = e.clientY; canvas.classList.add('dragging');
+  });
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup',   onUp);
+  requestAnimationFrame(() => {
+    const cr = canvas.getBoundingClientRect();
+    const bb = svg.getBBox();
+    if (!bb.width || !bb.height) return;
+    scale = Math.min(1.2, (cr.width - 60) / bb.width, (cr.height - 60) / bb.height);
+    panX  = (cr.width  - bb.width  * scale) / 2 - bb.x * scale;
+    panY  = (cr.height - bb.height * scale) / 2 - bb.y * scale;
+    applyT();
+  });
+  return () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup',   onUp);
+  };
+}
+
+function _dlgGraphNodeClick(nid, node, detailEl) {
+  if (detailEl._openNid === nid) {
+    detailEl.style.width = '0'; detailEl._openNid = null; return;
+  }
+  detailEl._openNid = nid;
+  detailEl.style.width = '240px';
+  detailEl.innerHTML = '';
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'padding:8px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0';
+  const idSpan = document.createElement('span');
+  idSpan.style.cssText = 'font-family:monospace;color:var(--yellow);font-weight:bold;font-size:12px;word-break:break-all';
+  idSpan.textContent = nid;
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0;margin-left:6px';
+  closeBtn.textContent = '×';
+  closeBtn.addEventListener('click', () => { detailEl.style.width = '0'; detailEl._openNid = null; });
+  hdr.appendChild(idSpan); hdr.appendChild(closeBtn);
+  detailEl.appendChild(hdr);
+  const body = document.createElement('div');
+  body.style.cssText = 'padding:10px;font-size:11px;overflow-y:auto;flex:1;line-height:1.6;font-family:monospace';
+  const addSec = (title, text, color) => {
+    if (!text) return;
+    const t = document.createElement('div');
+    t.style.cssText = 'color:var(--text-dim);text-transform:uppercase;font-size:9px;letter-spacing:.08em;margin-top:10px;margin-bottom:3px';
+    t.textContent = title;
+    body.appendChild(t);
+    const v = document.createElement('div');
+    v.style.cssText = `color:${color || 'var(--text)'};white-space:pre-wrap;font-size:11px`;
+    v.textContent = text;
+    body.appendChild(v);
+  };
+  if (node.condition) addSec('Entry condition', _dotFmtCondition(node.condition), 'var(--purple)');
+  const lines = Array.isArray(node.lines) ? node.lines : (node.line ? [node.line] : []);
+  addSec('Dialogue', lines.join('\n---\n') || '(no text)', 'var(--text)');
+  const ops = _dotFmtScriptOps(node.script || []);
+  if (ops.length) addSec('Script', ops.map(o => '▸ '+o).join('\n'), 'var(--accent)');
+  const resps = (node.response || []);
+  if (resps.length) {
+    const t = document.createElement('div');
+    t.style.cssText = 'color:var(--text-dim);text-transform:uppercase;font-size:9px;letter-spacing:.08em;margin-top:10px;margin-bottom:3px';
+    t.textContent = 'Responses';
+    body.appendChild(t);
+    for (const r of resps) {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:4px 0;border-top:1px solid var(--border)';
+      const txt = document.createElement('div');
+      txt.style.color = 'var(--text)';
+      txt.textContent = (r.text || '(no text)') + (r.next ? ` → ${r.next}` : ' → END');
+      row.appendChild(txt);
+      if (r.condition) {
+        const cd = document.createElement('div'); cd.style.color = 'var(--purple)';
+        cd.textContent = '[if: ' + _dotFmtCondition(r.condition) + ']';
+        row.appendChild(cd);
+      }
+      const rops = _dotFmtScriptOps(r.script || []);
+      if (rops.length) {
+        const ro = document.createElement('div'); ro.style.color = 'var(--accent)';
+        ro.textContent = rops.map(o => '▸ '+o).join(' | ');
+        row.appendChild(ro);
+      }
+      body.appendChild(row);
+    }
+  }
+  detailEl.appendChild(body);
+}
+
+function _showDlgGraph(main, d) {
+  const existing = main.querySelector('.dlg-graph-wrap');
+  if (existing) {
+    existing._cleanup?.();
+    existing.remove();
+    main.querySelectorAll('[data-dlg-hidden]').forEach(el => {
+      el.style.display = ''; el.removeAttribute('data-dlg-hidden');
+    });
+    main.querySelector('[data-role="dlg-graph-btn"]')?.classList.remove('primary');
+    return;
+  }
+  const formEls = [...main.children].filter(el => !el.classList.contains('editor-header'));
+  formEls.forEach(el => { el.style.display = 'none'; el.setAttribute('data-dlg-hidden', '1'); });
+
+  const { nodeMap, pos, reachable, endPos } = _dlgGraphLayout(d);
+  const NS  = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.style.cssText = 'display:block;transform-origin:0 0;user-select:none;overflow:visible';
+
+  const defs = document.createElementNS(NS, 'defs');
+  const mkMk = (id, col) => {
+    const m = document.createElementNS(NS, 'marker');
+    m.setAttribute('id', id); m.setAttribute('markerWidth','8'); m.setAttribute('markerHeight','6');
+    m.setAttribute('refX','7'); m.setAttribute('refY','3'); m.setAttribute('orient','auto');
+    const poly = document.createElementNS(NS, 'polygon');
+    poly.setAttribute('points','0 0, 8 3, 0 6'); poly.setAttribute('fill', col);
+    m.appendChild(poly); defs.appendChild(m);
+  };
+  mkMk('dg-bl','#6b7a90'); mkMk('dg-bu','#5b8fb9'); mkMk('dg-en','#888');
+  svg.appendChild(defs);
+
+  const edgeG = document.createElementNS(NS, 'g');
+  const nodeG = document.createElementNS(NS, 'g');
+  svg.appendChild(edgeG); svg.appendChild(nodeG);
+
+  const mkT = (txt, x, y, sz, col, bold, italic, anchor) => {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('font-size', sz); t.setAttribute('fill', col);
+    t.setAttribute('font-family', 'Consolas,monospace');
+    if (bold)   t.setAttribute('font-weight','bold');
+    if (italic) t.setAttribute('font-style','italic');
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt; return t;
+  };
+
+  // Edges
+  for (const [nid, n] of Object.entries(nodeMap)) {
+    const sp = pos[nid];
+    if (!sp) continue;
+    const sx = sp.x + DG_NW/2, sy = sp.y + DG_NH;
+    for (const r of (n.response || [])) {
+      const nxt  = r.next || '';
+      const hasCd = !!(r.condition);
+      let tx, ty, col, dash, mid;
+      if (!nxt) {
+        tx = endPos.x + 50; ty = endPos.y; col = '#555'; dash = '4,3'; mid = 'dg-en';
+      } else if (pos[nxt]) {
+        tx = pos[nxt].x + DG_NW/2; ty = pos[nxt].y;
+        col = hasCd ? '#5b8fb9' : '#6b7a90'; dash = null; mid = hasCd ? 'dg-bu' : 'dg-bl';
+      } else continue;
+      const cy1 = sy + DG_VG * 0.4, cy2 = ty - DG_VG * 0.4;
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', `M${sx},${sy} C${sx},${cy1} ${tx},${cy2} ${tx},${ty}`);
+      path.setAttribute('stroke', col); path.setAttribute('stroke-width','1.5');
+      path.setAttribute('fill','none');
+      if (dash) path.setAttribute('stroke-dasharray', dash);
+      path.setAttribute('marker-end', `url(#${mid})`);
+      edgeG.appendChild(path);
+    }
+  }
+
+  // END oval
+  const ex = endPos.x + 50, ey = endPos.y + 18;
+  const endEll = document.createElementNS(NS, 'ellipse');
+  endEll.setAttribute('cx', ex); endEll.setAttribute('cy', ey);
+  endEll.setAttribute('rx', 38); endEll.setAttribute('ry', 16);
+  endEll.setAttribute('fill','#232530'); endEll.setAttribute('stroke','#888');
+  endEll.setAttribute('stroke-width','1.5');
+  nodeG.appendChild(endEll);
+  nodeG.appendChild(mkT('END', ex, ey + 5, 12, '#aaa', true, false, 'middle'));
+
+  // Nodes
+  for (const [nid, n] of Object.entries(nodeMap)) {
+    const p = pos[nid];
+    if (!p) continue;
+    const { x, y } = p;
+    const hdrColor = _dlgNodeBgColor(n.script || []);
+    const isOrphan = !reachable.has(nid);
+    const hasCond  = !!n.condition;
+    const isRoot   = nid === 'root';
+    const g = document.createElementNS(NS, 'g');
+    g.dataset.nid = nid; g.style.cursor = 'pointer';
+
+    const defStroke = isRoot ? '#c8a96e' : isOrphan ? '#2a2a30' : hasCond ? '#5b8fb9' : '#303540';
+    const rect = document.createElementNS(NS, 'rect');
+    rect.setAttribute('x', x); rect.setAttribute('y', y);
+    rect.setAttribute('width', DG_NW); rect.setAttribute('height', DG_NH);
+    rect.setAttribute('rx', 5); rect.setAttribute('fill', '#1a1d24');
+    rect.setAttribute('stroke', defStroke); rect.setAttribute('stroke-width', isRoot ? '2' : '1.5');
+    if (hasCond && !isRoot) rect.setAttribute('stroke-dasharray','4,3');
+
+    const hdr  = document.createElementNS(NS, 'rect');
+    hdr.setAttribute('x', x); hdr.setAttribute('y', y);
+    hdr.setAttribute('width', DG_NW); hdr.setAttribute('height', DG_HDR);
+    hdr.setAttribute('rx', 5); hdr.setAttribute('fill', isOrphan ? '#252525' : hdrColor);
+    const hdr2 = document.createElementNS(NS, 'rect');
+    hdr2.setAttribute('x', x); hdr2.setAttribute('y', y + DG_HDR/2);
+    hdr2.setAttribute('width', DG_NW); hdr2.setAttribute('height', DG_HDR/2);
+    hdr2.setAttribute('fill', isOrphan ? '#252525' : hdrColor);
+
+    const shortId = nid.length > 22 ? nid.slice(0,21)+'…' : nid;
+    const idTxt   = mkT(shortId, x + DG_NW/2, y + 15, 11, isOrphan ? '#555' : '#222', true, false, 'middle');
+    const line    = n.line || (Array.isArray(n.lines) ? n.lines[0] : '') || '';
+    const lineStr = line.length > 28 ? line.slice(0,27)+'…' : (line || '(no text)');
+    const lineTxt = mkT(lineStr, x + 7, y + DG_HDR + 17, 10, isOrphan ? '#444' : '#cdd6e4', false, true, null);
+    const ops = _dotFmtScriptOps(n.script || []);
+    const opStr   = ops.map(o => '▸ '+o).join(' | ');
+    const opTrunc = opStr.length > 34 ? opStr.slice(0,33)+'…' : opStr;
+
+    g.appendChild(rect); g.appendChild(hdr); g.appendChild(hdr2);
+    g.appendChild(idTxt); g.appendChild(lineTxt);
+    if (opTrunc) g.appendChild(mkT(opTrunc, x + 7, y + DG_HDR + 33, 9, '#888', false, false, null));
+
+    g.addEventListener('mouseenter', () => rect.setAttribute('stroke','#c8a96e'));
+    g.addEventListener('mouseleave', () => rect.setAttribute('stroke', defStroke));
+    g.addEventListener('click', () => _dlgGraphNodeClick(nid, n, detailEl));
+    nodeG.appendChild(g);
+  }
+
+  const detailEl = document.createElement('div');
+  detailEl.className = 'dlg-graph-detail'; detailEl.style.width = '0';
+
+  const canvas = document.createElement('div');
+  canvas.className = 'dlg-graph-canvas'; canvas.appendChild(svg);
+
+  const graphBody = document.createElement('div');
+  graphBody.style.cssText = 'display:flex;flex:1;overflow:hidden;min-height:0';
+  graphBody.appendChild(canvas); graphBody.appendChild(detailEl);
+
+  const tb = document.createElement('div');
+  tb.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0';
+  const backBtn = document.createElement('button');
+  backBtn.className = 'hbtn'; backBtn.textContent = '< Editor';
+  backBtn.addEventListener('click', () => {
+    wrap._cleanup?.();
+    wrap.remove();
+    main.querySelectorAll('[data-dlg-hidden]').forEach(el => {
+      el.style.display = ''; el.removeAttribute('data-dlg-hidden');
+    });
+    main.querySelector('[data-role="dlg-graph-btn"]')?.classList.remove('primary');
+  });
+  const expBtn = document.createElement('button');
+  expBtn.className = 'hbtn'; expBtn.textContent = 'Export DOT';
+  expBtn.addEventListener('click', exportDialogueDot);
+  const hint = document.createElement('span');
+  hint.style.cssText = 'font-size:11px;color:var(--text-dim);margin-left:6px';
+  hint.textContent = 'Click node for details';
+  tb.appendChild(backBtn); tb.appendChild(expBtn); tb.appendChild(hint);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'dlg-graph-wrap';
+  wrap.appendChild(tb); wrap.appendChild(graphBody);
+  main.appendChild(wrap);
+
+  wrap._cleanup = _dlgGraphMakePanZoom(canvas, svg);
+}
+
+// ── Quest Graph ────────────────────────────────────────────────────────────
+
+function _showQuestGraph(main, quest) {
+  const existing = main.querySelector('.dlg-graph-wrap');
+  if (existing) {
+    existing._cleanup?.();
+    existing.remove();
+    main.querySelectorAll('[data-dlg-hidden]').forEach(el => {
+      el.style.display = ''; el.removeAttribute('data-dlg-hidden');
+    });
+    main.querySelector('[data-role="quest-graph-btn"]')?.classList.remove('primary');
+    return;
+  }
+  const formEls = [...main.children].filter(el => !el.classList.contains('editor-header'));
+  formEls.forEach(el => { el.style.display = 'none'; el.setAttribute('data-dlg-hidden', '1'); });
+
+  const questId  = quest.id || quest._id || 'unknown';
+  const steps    = {};
+  for (const s of (quest.step || [])) steps[s.index] = s;
+  const stepNums = Object.keys(steps).map(Number).sort((a,b) => a - b);
+
+  // Collect transitions from loaded world data
+  const byStep = {};
+  if (WORLD_DATA?.zones) {
+    const tempTrans = [];
+    for (const zone of Object.values(WORLD_DATA.zones)) {
+      for (const dlg of (zone.dialogues || [])) {
+        const npcId = dlg._npc_id || '';
+        // Build per-node response map (handles flat [[response]] TOML format)
+        const nodeRespMap = {};
+        (dlg.node || []).forEach(n => { nodeRespMap[n.id || n._id || 'root'] = []; });
+        (dlg.response || []).forEach(r => { const p = r.node || ''; if (nodeRespMap[p]) nodeRespMap[p].push(r); });
+        for (const node of (dlg.node || [])) {
+          const nid = node.id || node._id || 'root';
+          const nc  = node.condition, ns = node.script || [];
+          for (const op of ns)
+            _dlgRecordTrans(op, questId, npcId, nid, [nc], ns, tempTrans);
+          const resps = nodeRespMap[nid] || node.response || [];
+          for (const resp of resps)
+            for (const op of (resp.script || []))
+              _dlgRecordTrans(op, questId, npcId, nid, [nc, resp.condition], resp.script, tempTrans);
+        }
+      }
+    }
+    // Group by step number (null = complete_quest)
+    for (const t of tempTrans) {
+      const key = t.to_step ?? 'complete';
+      if (!byStep[key]) byStep[key] = [];
+      byStep[key].push(t);
+    }
+  }
+
+  const NS  = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.style.cssText = 'display:block;transform-origin:0 0;user-select:none;overflow:visible';
+
+  const QNW = 320, QNH = 80, QVG = 90, CX = QNW / 2, QHDR = 24, OVAL_RX = 80, OVAL_RY = 26;
+  const defs = document.createElementNS(NS, 'defs');
+  const mkMk = (id, col) => {
+    const m = document.createElementNS(NS, 'marker');
+    m.setAttribute('id', id); m.setAttribute('markerWidth','8'); m.setAttribute('markerHeight','6');
+    m.setAttribute('refX','7'); m.setAttribute('refY','3'); m.setAttribute('orient','auto');
+    const poly = document.createElementNS(NS, 'polygon');
+    poly.setAttribute('points','0 0, 8 3, 0 6'); poly.setAttribute('fill', col);
+    m.appendChild(poly); defs.appendChild(m);
+  };
+  mkMk('qg-bl','#1565C0'); mkMk('qg-gr','#2e7d32'); mkMk('qg-rd','#c62828');
+  svg.appendChild(defs);
+
+  const edgeG = document.createElementNS(NS, 'g');
+  const nodeG = document.createElementNS(NS, 'g');
+  svg.appendChild(edgeG); svg.appendChild(nodeG);
+
+  const mkT = (txt, x, y, sz, col, bold) => {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y); t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-size', sz); t.setAttribute('fill', col);
+    t.setAttribute('font-family','Consolas,monospace');
+    if (bold) t.setAttribute('font-weight','bold');
+    t.textContent = txt; return t;
+  };
+
+  // START oval
+  const startCY = OVAL_RY + 8;
+  const startEll = document.createElementNS(NS, 'ellipse');
+  startEll.setAttribute('cx', CX); startEll.setAttribute('cy', startCY);
+  startEll.setAttribute('rx', OVAL_RX); startEll.setAttribute('ry', OVAL_RY);
+  startEll.setAttribute('fill','#1b3a1e'); startEll.setAttribute('stroke','#2e7d32'); startEll.setAttribute('stroke-width','1.5');
+  nodeG.appendChild(startEll);
+  nodeG.appendChild(mkT('START', CX, startCY - 7, 13, '#4caf7d', true));
+  const giver = quest.giver || '';
+  if (giver) nodeG.appendChild(mkT('('+giver+')', CX, startCY + 9, 10, '#388e3c', false));
+
+  // Step boxes
+  const stepY = {};
+  for (let i = 0; i < stepNums.length; i++) {
+    const sn = stepNums[i];
+    const sy = startCY + OVAL_RY + QVG + i * (QNH + QVG);
+    stepY[sn] = sy;
+    const s  = steps[sn];
+    const r  = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', 0); r.setAttribute('y', sy);
+    r.setAttribute('width', QNW); r.setAttribute('height', QNH);
+    r.setAttribute('rx', 6); r.setAttribute('fill','#1a1d24');
+    r.setAttribute('stroke','#304060'); r.setAttribute('stroke-width','1.5');
+    const hd = document.createElementNS(NS, 'rect');
+    hd.setAttribute('x', 0); hd.setAttribute('y', sy);
+    hd.setAttribute('width', QNW); hd.setAttribute('height', QHDR);
+    hd.setAttribute('rx', 6); hd.setAttribute('fill','#1a2e3f');
+    const hd2 = document.createElementNS(NS, 'rect');
+    hd2.setAttribute('x', 0); hd2.setAttribute('y', sy + QHDR/2);
+    hd2.setAttribute('width', QNW); hd2.setAttribute('height', QHDR/2); hd2.setAttribute('fill','#1a2e3f');
+    nodeG.appendChild(r); nodeG.appendChild(hd); nodeG.appendChild(hd2);
+    nodeG.appendChild(mkT(`Step ${sn}`, CX, sy + 16, 11, '#5b8fb9', true));
+    const obj = s.objective || '';
+    nodeG.appendChild(mkT(obj.length > 44 ? obj.slice(0,43)+'…' : (obj||'(no objective)'), CX, sy + 38, 10, '#cdd6e4', false));
+    if (s.completion_flag) nodeG.appendChild(mkT('sets: '+s.completion_flag, CX, sy + 58, 9, '#c8a96e', false));
+  }
+
+  // COMPLETE oval
+  const lastStepBottom = stepNums.length
+    ? stepY[stepNums[stepNums.length - 1]] + QNH
+    : startCY + OVAL_RY;
+  const complCY = lastStepBottom + QVG + OVAL_RY;
+  const rewards = quest.reward || [];
+  const rwParts = [];
+  for (const rw of rewards) {
+    if (rw.type === 'gold')      rwParts.push(`${rw.amount||'?'}g`);
+    else if (rw.type === 'xp')   rwParts.push(`${rw.amount||'?'} xp`);
+    else if (rw.type === 'item') rwParts.push(rw.item_id||'?');
+  }
+  const complEll = document.createElementNS(NS, 'ellipse');
+  complEll.setAttribute('cx', CX); complEll.setAttribute('cy', complCY);
+  complEll.setAttribute('rx', OVAL_RX); complEll.setAttribute('ry', OVAL_RY);
+  complEll.setAttribute('fill','#1b3a1e'); complEll.setAttribute('stroke','#2e7d32'); complEll.setAttribute('stroke-width','1.5');
+  nodeG.appendChild(complEll);
+  nodeG.appendChild(mkT('COMPLETE', CX, complCY - 7, 13, '#4caf7d', true));
+  if (rwParts.length) nodeG.appendChild(mkT(rwParts.join('  '), CX, complCY + 9, 9, '#388e3c', false));
+
+  // Edges
+  const drawEdge = (fy, ty, trans, isComplete) => {
+    const found  = trans?.length > 0;
+    const col    = isComplete ? '#2e7d32' : found ? '#1565C0' : '#c62828';
+    const arrowId = isComplete ? 'qg-gr' : found ? 'qg-bl' : 'qg-rd';
+    const path   = document.createElementNS(NS, 'path');
+    path.setAttribute('d', `M${CX},${fy} L${CX},${ty}`);
+    path.setAttribute('stroke', col); path.setAttribute('stroke-width', found ? '2' : '1.5');
+    path.setAttribute('fill','none');
+    if (!found) path.setAttribute('stroke-dasharray','5,4');
+    path.setAttribute('marker-end', `url(#${arrowId})`);
+    edgeG.appendChild(path);
+    const label = found
+      ? (trans[0].npc_id + '/' + trans[0].node_id + (trans.length > 1 ? ` +${trans.length-1}` : ''))
+      : '⚠ no trigger found';
+    const lt = document.createElementNS(NS, 'text');
+    lt.setAttribute('x', CX + 8); lt.setAttribute('y', (fy + ty) / 2 - 3);
+    lt.setAttribute('font-size','9'); lt.setAttribute('fill', col);
+    lt.setAttribute('font-family','Consolas,monospace');
+    lt.textContent = label; edgeG.appendChild(lt);
+  };
+
+  if (stepNums.length) {
+    drawEdge(startCY + OVAL_RY, stepY[stepNums[0]], byStep[stepNums[0]] || [], false);
+    for (let i = 1; i < stepNums.length; i++)
+      drawEdge(stepY[stepNums[i-1]] + QNH, stepY[stepNums[i]], byStep[stepNums[i]] || [], false);
+    drawEdge(stepY[stepNums[stepNums.length-1]] + QNH, complCY - OVAL_RY, byStep['complete'] || [], true);
+  } else {
+    drawEdge(startCY + OVAL_RY, complCY - OVAL_RY, byStep['complete'] || [], true);
+  }
+
+  // Build view
+  const canvas = document.createElement('div');
+  canvas.className = 'dlg-graph-canvas'; canvas.appendChild(svg);
+
+  const tb = document.createElement('div');
+  tb.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0';
+  const backBtn = document.createElement('button');
+  backBtn.className = 'hbtn'; backBtn.textContent = '< Editor';
+  backBtn.addEventListener('click', () => {
+    wrap._cleanup?.();
+    wrap.remove();
+    main.querySelectorAll('[data-dlg-hidden]').forEach(el => {
+      el.style.display = ''; el.removeAttribute('data-dlg-hidden');
+    });
+    main.querySelector('[data-role="quest-graph-btn"]')?.classList.remove('primary');
+  });
+  const expBtn = document.createElement('button');
+  expBtn.className = 'hbtn'; expBtn.textContent = 'Export DOT';
+  expBtn.addEventListener('click', exportQuestDot);
+  const stepInfo = document.createElement('span');
+  stepInfo.style.cssText = 'font-size:11px;color:var(--text-dim);margin-left:6px';
+  stepInfo.textContent = stepNums.length ? `${stepNums.length} step(s)` : 'No steps defined';
+  tb.appendChild(backBtn); tb.appendChild(expBtn); tb.appendChild(stepInfo);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'dlg-graph-wrap';
+  wrap.appendChild(tb); wrap.appendChild(canvas);
+  main.appendChild(wrap);
+
+  wrap._cleanup = _dlgGraphMakePanZoom(canvas, svg);
 }
 
 // ═══════════════════════════════════════════════════════════════════════

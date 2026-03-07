@@ -1,0 +1,48 @@
+[[node]]
+id    = "root"
+lines = [
+  "The alloy vendor wipes soot from his hands. 'Looking for metal that can stand up to drakefire?'"
+]
+
+[[response]]
+node = "root"
+text = "Show me what you have for sale."
+next = "open_shop"
+
+[[response]]
+node = "root"
+text = "How do you work with such volatile materials?"
+next = "crafting_info"
+
+[[response]]
+node = "root"
+text = "Nothing right now."
+next = ""
+
+
+# --- Open Shop ---
+[[node]]
+id   = "open_shop"
+line = "'Take a look. Finest alloys this side of the Peaks.'"
+script = [
+  { op = "open_shop", shop_id = "vendor_alloys" }
+]
+
+[[response]]
+node = "open_shop"
+text = "Let me browse."
+next = ""
+
+
+# --- Crafting Info ---
+[[node]]
+id   = "crafting_info"
+lines = [
+  "'Drakebone, heat crystals, resonant ore… none of it behaves unless you know how to listen to the metal.'",
+  "'Every ingot has a mood. Get it wrong, and it shatters. Get it right, and it sings.'"
+]
+
+[[response]]
+node = "crafting_info"
+text = "That explains the quality of your work."
+next = ""

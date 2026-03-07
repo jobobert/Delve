@@ -1,0 +1,98 @@
+#Commission: forgeskypiercer
+[[commission]]
+id          = "forge_sky_piercer_commission"
+npc_id      = "smith_orun"
+label       = "Forge the Sky-Piercer"
+desc        = "Provide Orun with the required materials and assist at the Hearthforge Ruin."
+slot        = "weapon"
+weapon_tags = []
+materials   = ["resonant_alloy_ingot", "drakebone_fragment", "volcanic_glass_shard"]
+turns_required = 20
+gold_cost       = 0
+on_complete = [
+  { op = "message", tag = "crafting", text = "Orun hammers the final edge and hands you the Sky-Piercer." },
+  { op = "give_item", item_id = "sky_piercer_glaive" },
+  { op = "advance_quest", quest_id = "forge_sky_piercer", step = 3 },
+  { op = "prestige", amount = 5, reason = "forged the Sky-Piercer with Orun" },
+]
+# --- Quality Tiers ---
+[[quality]]
+name        = "Imbalanced Temper"
+min_quality = 0
+max_quality = 39
+effects = [
+  { type = "stat_bonus", stat = "attack", amount = -1 }
+]
+
+[[quality]]
+name        = "Balanced Temper"
+min_quality = 40
+max_quality = 79
+effects = []
+
+[[quality]]
+name        = "Sky‑Piercer Masterwork"
+min_quality = 80
+max_quality = 100
+effects = [
+  { type = "stat_bonus", stat = "attack", amount = 2 },
+  { type = "on_hit", ability = "wind_cut", chance = 0.05, magnitude = 3 }
+]
+
+
+
+
+
+[[commission]]
+id   = "dp_resonant_ingot"
+name = "Resonant Ingot Forging"
+desc = "A high‑heat forging process that binds drake‑scale essence into a metal ingot."
+
+[[requirement]]
+item_id = "dp_drake_scale"
+count   = 1
+
+[[requirement]]
+item_id = "dp_raw_ore"
+count   = 1
+
+[[requirement]]
+prestige_min = 2
+
+# -----------------------
+# Quality Tiers
+# -----------------------
+
+[[quality]]
+name        = "Brittle Alloy"
+min_quality = 0
+max_quality = 39
+effects = [
+  { type = "stat_bonus", stat = "attack", amount = -1 }
+]
+
+[[quality]]
+name        = "Tempered Alloy"
+min_quality = 40
+max_quality = 79
+effects = []
+
+[[quality]]
+name        = "Sky‑Forged Alloy"
+min_quality = 80
+max_quality = 100
+effects = [
+  { type = "stat_bonus", stat = "attack", amount = 2 },
+  { type = "on_crit", ability = "wind_burst", chance = 0.05 }
+]
+
+[[result]]
+item_id = "dp_resonant_ingot"
+count   = 1
+
+script = [
+  { op = "take_item", item_id = "dp_drake_scale" },
+  { op = "take_item", item_id = "dp_raw_ore" },
+  { op = "give_item", item_id = "dp_resonant_ingot" },
+  { op = "message", tag = "crafting", text = "The forge roars as the ingot cools, humming with draconic resonance." }
+]

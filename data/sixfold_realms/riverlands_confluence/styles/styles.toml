@@ -1,0 +1,46 @@
+# The engine scans data/*/styles/*.toml at startup and merges all found styles
+# into one global dict. Future zones may define their own styles here too.
+#
+# Field reference
+# ───────────────
+# difficulty            = proficiency gain divisor (1.0 = normal, 2.0 = twice as slow)
+# preferred_weapon_tags = weapon tag affinities — matching gear gives damage bonus
+# preferred_armor_tags  = armor tag affinities — matching gear gives defense bonus
+# weapon_bonus / armor_bonus = max % bonus at full proficiency (0.0 = none, 0.30 = 30%)
+# learned_from          = npc id of the trainer, or "" if self-taught / innate
+# learned_at            = minimum player level to learn
+
+[[style]]
+id   = "flowcurrent"
+name = "Flowcurrent"
+desc = "A fluid, reactive style that redirects force and turns an opponent’s momentum against them."
+
+# Weapons and armor that synergize with the style
+affinities = {
+  weapon_tags = ["staff", "light_blade", "fist"],
+  armor_tags  = ["cloth", "leather"]
+}
+
+# How proficiency grows
+growth = {
+  on_hit     = 1.0
+  on_dodge   = 1.5
+  on_parry   = 2.0
+}
+
+# Active abilities and conditional effects
+abilities = [
+  { id = "flow_shift",
+    type = "stance",
+    desc = "Entering Flow Shift increases dodge by 10% for 2 rounds.",
+    trigger = { on_command = "stance flow" },
+    effect  = { stat = "dodge", amount = 10, duration = 2 }
+  },
+
+  { id = "redirect",
+    type = "on_hit_taken",
+    desc = "5% chance to reduce incoming damage by half and counter for minor damage.",
+    chance = 0.05,
+    effect = { type = "counter", magnitude = 3 }
+  }
+]

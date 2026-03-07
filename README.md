@@ -178,23 +178,26 @@ python main.py
 # Data integrity — run after every data change
 python tools/validate.py
 
-# Maps
-python tools/map.py                          # ASCII map, all zones
-python tools/map.py --zone <zone_id>         # single zone
-python tools/map.py --full                   # with NPC/item counts
-python tools/map.py --html                   # HTML map → tools/admin_map.html
-python tools/map.py --html --output my.html  # HTML map to custom path
-python tools/map.py --world <name>           # select world by folder name
-
-# World Creation Tool — browser-based TOML editor with map, dialogue graph
+# World Creation Tool — browser-based TOML editor
+# Includes interactive map (pan/zoom, NPC/item counts, exit labels),
+# in-browser dialogue tree and quest flow graphs, DOT export for all three,
+# and integrated world validator
 python tools/wct_server.py                   # → http://localhost:7373
 python tools/wct_server.py --port 8080
 python tools/wct_server.py --browser         # also open browser automatically
 
+# ASCII map (terminal)
+python tools/map.py                          # all zones
+python tools/map.py --zone <zone_id>         # single zone
+python tools/map.py --full                   # with NPC/item counts
+python tools/map.py --world <name>           # select world
+
 # AI playtester (requires ANTHROPIC_API_KEY)
-python tools/ai_player.py play
-python tools/ai_player.py play --goal "Complete the quest" --verbose
-python tools/ai_player.py analyse
+python tools/ai_player.py --goal "Complete the quest" --verbose
+
+# Offline deterministic playtester (no API key needed)
+python tools/offline_bot.py
+python tools/offline_bot.py --world first_world --quest ashwood_contract
 
 # Maintenance
 python tools/clean.py                        # interactive reset menu

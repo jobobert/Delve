@@ -1,0 +1,376 @@
+# Subregion A — Highspire Approach (Rooms 1–6)
+
+[[room]]
+id          = "dp_approach_1"
+name        = "Ridge Road"
+description = "A narrow path clinging to the mountain, wind biting at your cloak."
+coord       = [0,0]
+exits       = { east = "dp_approach_2", south = "rl_ferry_berth_peaks" }
+flags       = []
+on_enter    = [
+  { op = "message", tag = "system", text = "The air tastes of iron and distant flame." },
+]
+
+[[room]]
+id          = "dp_approach_2"
+name        = "Windward Ledge"
+description = "A ledge with ropes tied to ancient anchors; updrafts buffet anything loose."
+coord       = [1,0]
+exits       = { west = "dp_approach_1", east = "dp_approach_3", up = "dp_watch_post" }
+flags       = ["hazard"]
+hazard_damage = 2
+hazard_message = "A sudden gust nearly throws you off balance."
+on_enter = [
+  { op = "skill_check", skill = "perception", dc = 12,
+    on_pass = [{ op = "message", tag = "system", text = "You spot a safer line of footing." }],
+    on_fail = [{ op = "damage", amount = 3, message = "You stagger as the wind slams into you." }],
+  },
+]
+
+[[room]]
+id          = "dp_approach_3"
+name        = "Charred Outcrop"
+description = "Blackened rock and a faint trail of scorched feathers."
+coord       = [2,0]
+exits       = { west = "dp_approach_2", east = "dp_approach_4" }
+items       = ["drake_feather_fragment"]
+spawns      = ["young_drake_scout"]
+flags       = []
+
+[[room]]
+id          = "dp_approach_4"
+name        = "Miner's Waystation"
+description = "A small shelter with racks for tools and a brazier for warming hands."
+coord       = [3,0]
+exits       = { west = "dp_approach_3", east = "dp_approach_5" }
+spawns      = ["miner_apprentice"]
+items       = ["rusty_pickaxe_node"]
+flags       = ["no_combat"]
+
+[[room]]
+id          = "dp_approach_5"
+name        = "Resonant Cairn"
+description = "Stacked stones hum faintly when the wind passes through them."
+coord       = [4,0]
+exits       = { west = "dp_approach_4", east = "dp_approach_6" }
+on_enter    = [
+  { op = "message", tag = "lore", text = "An old plaque reads: 'Tune the vents; the mountain listens.'" },
+]
+
+[[room]]
+id          = "dp_approach_6"
+name        = "Highspire Gate"
+description = "A carved arch marks the entrance to Highspire Hold; banners flap wildly."
+coord       = [5,0]
+exits       = { west = "dp_approach_5", east = "dp_highspire_1" }
+flags       = ["no_combat"]
+
+# Subregion B — Highspire Hold (Rooms 7–12)
+
+[[room]]
+id          = "dp_highspire_1"
+name        = "Highspire Main Street"
+description = "Stone buildings cling to the cliff; smiths' forges glow through the dusk."
+coord       = [6,0]
+exits       = { west = "dp_approach_6", north = "dp_highspire_2", east = "dp_highspire_3", south = "dp_highspire_5" }
+spawns      = ["smith_orun", "vendor_alloys"]
+flags       = ["town", "no_combat"]
+
+[[room]]
+id          = "dp_highspire_2"
+name        = "Dragon Watch Tower"
+description = "A tall tower with platforms for spotting drakes and signaling alarms."
+coord       = [6,1]
+exits       = { south = "dp_highspire_1" }
+spawns      = ["warden_selka"]
+flags       = []
+
+[[room]]
+id          = "dp_highspire_3"
+name        = "Alloy Market"
+description = "Stalls selling resonant alloys, heat crystals, and forged tools."
+coord       = [7,0]
+exits       = { west = "dp_highspire_1", east = "dp_highspire_4" }
+spawns      = ["vendor_alloys"]
+flags       = ["no_combat"]
+
+[[room]]
+id          = "dp_highspire_4"
+name        = "Skybridge Entrance"
+description = "A rope-and-plank bridge stretches toward the chasm; wind whistles through its slats."
+coord       = [8,0]
+exits       = { west = "dp_highspire_3", east = "dp_sky_rift_1" }
+flags       = ["hazard"]
+hazard_damage = 2
+hazard_message = "The bridge groans under the wind's pressure."
+
+[[room]]
+id          = "dp_highspire_5"
+name        = "Emberfall Road"
+description = "A path descending toward the volcanic vents; heat shimmers in the air."
+coord       = [6,-1]
+exits       = { north = "dp_highspire_1", south = "dp_emberfall_1", east = "dp_highspire_6" }
+flags       = []
+
+[[room]]
+id          = "dp_highspire_6"
+name        = "Tinkerer's Alcove"
+description = "A cramped workshop where Orun's apprentices experiment with alloys."
+coord       = [7,-1]
+exits       = { west = "dp_highspire_5" }
+spawns      = ["tinker_apprentice"]
+items       = ["resonant_alloy_ingot_node"]
+flags       = ["no_combat"]
+
+# Subregion C — Emberfall Vents (Rooms 13–18)
+
+[[room]]
+id          = "dp_emberfall_1"
+name        = "Scorched Foothills"
+description = "Patches of molten rock and brittle vegetation crackle underfoot."
+coord       = [6,-2]
+exits       = { north = "dp_highspire_5", south = "dp_emberfall_2" }
+flags       = ["hazard"]
+hazard_damage = 3
+hazard_message = "Heat from below scorches your boots."
+
+[[room]]
+id          = "dp_emberfall_2"
+name        = "Heat Vent Field"
+description = "A field of vents that pulse hot air in irregular bursts."
+coord       = [6,-3]
+exits       = { north = "dp_emberfall_1", south = "dp_emberfall_3", east = "dp_mine_entrance" }
+flags       = ["hazard"]
+hazard_damage = 4
+hazard_message = "A sudden vent blast sears exposed skin."
+on_enter = [
+  { op = "skill_check", skill = "survival", dc = 12,
+    on_pass = [{ op = "message", tag = "system", text = "You time your steps between the vent pulses." }],
+    on_fail = [{ op = "damage", amount = 6, message = "A blast catches you unprepared." }],
+  },
+]
+
+[[room]]
+id          = "dp_mine_entrance"
+name        = "Resonant Mine Entrance"
+description = "A reinforced tunnel mouth leading into the mountain, lined with old support beams."
+coord       = [7,-3]
+exits       = { west = "dp_emberfall_2", east = "dp_mine_1" }
+flags       = []
+
+[[room]]
+id          = "dp_mine_1"
+name        = "Resonant Vein Tunnel"
+description = "Walls glitter with faintly humming metal seams."
+coord       = [8,-3]
+exits       = { west = "dp_mine_entrance", east = "dp_mine_2" }
+items       = ["resonant_alloy_ingot_node"]
+flags       = []
+
+[[room]]
+id          = "dp_mine_2"
+name        = "Drakebone Gallery"
+description = "Fossilized bones protrude from the rock like pale roots."
+coord       = [9,-3]
+exits       = { west = "dp_mine_1" }
+items       = ["drakebone_deposit"]
+flags       = []
+
+[[room]]
+id          = "dp_emberfall_3"
+name        = "Glass Run"
+description = "Fields of volcanic glass shards glitter like broken stars."
+coord       = [6,-4]
+exits       = { north = "dp_emberfall_2", south = "dp_emberfall_4" }
+items       = ["volcanic_glass_node"]
+flags       = []
+
+[[room]]
+id          = "dp_emberfall_4"
+name        = "Drake Roost"
+description = "Charred perches and scattered bones mark a drake nesting ground."
+coord       = [6,-5]
+exits       = { north = "dp_emberfall_3", south = "dp_emberfall_5" }
+spawns      = ["ashwood_drake"]
+flags       = []
+
+[[room]]
+id          = "dp_emberfall_5"
+name        = "Hearthforge Ruin"
+description = "An ancient forge half-buried in ash; gears still hum faintly."
+coord       = [6,-6]
+exits       = { north = "dp_emberfall_4", south = "dp_emberfall_6" }
+items       = ["resonance_forge_panel"]
+flags       = []
+on_enter = [
+  { op = "if_not_flag", flag = "dp_forge_intro", then = [
+    { op = "message", tag = "system", text = "Gears hum faintly. Panels await alignment to stabilize the vents." },
+    { op = "set_flag", flag = "dp_forge_intro" },
+  ] },
+]
+
+[[room]]
+id          = "dp_emberfall_6"
+name        = "Magma Sluice"
+description = "A channel of slow-moving magma; stepping stones cross at narrow points."
+coord       = [6,-7]
+exits       = { north = "dp_emberfall_5", east = "dp_sky_rift_6" }
+flags       = ["hazard"]
+hazard_damage = 5
+hazard_message = "The heat is unbearable without protection."
+
+# Subregion D — Sky Rift Chasm (Rooms 19–24)
+
+[[room]]
+id          = "dp_sky_rift_1"
+name        = "Sky Rift Mouth"
+description = "A yawning chasm with visible updrafts and distant platforms."
+coord       = [9,0]
+exits       = { west = "dp_highspire_4", east = "dp_sky_rift_2" }
+flags       = ["hazard"]
+hazard_message = "The updrafts tug at your balance."
+
+[[room]]
+id          = "dp_sky_rift_2"
+name        = "Glider Platform"
+description = "A platform with old glider rigs; ropes hang ready for anchoring."
+coord       = [10,0]
+exits       = { west = "dp_sky_rift_1", east = "dp_sky_rift_3" }
+items       = ["glider_anchor_point"]
+flags       = []
+on_enter = [
+  { op = "if_not_flag", flag = "dp_glider_intro", then = [
+    { op = "message", tag = "system", text = "A faded sign reads: 'Anchor with a polearm or steady line.'" },
+    { op = "set_flag", flag = "dp_glider_intro" },
+  ] },
+]
+
+[[room]]
+id          = "dp_sky_rift_3"
+name        = "Wind Tunnel"
+description = "A narrow corridor where wind funnels violently; timing is everything."
+coord       = [11,0]
+exits       = { west = "dp_sky_rift_2", east = "dp_sky_rift_4" }
+flags       = ["hazard"]
+hazard_damage = 3
+hazard_message = "A focused gust slams into you."
+
+[[room]]
+id          = "dp_sky_rift_4"
+name        = "Suspended Spire"
+description = "A tall spire with rings for anchoring gliders and ropes."
+coord       = [12,0]
+exits       = { west = "dp_sky_rift_3", east = "dp_sky_rift_5" }
+items       = ["sky_piercer_anchor"]
+flags       = []
+
+[[room]]
+id          = "dp_sky_rift_5"
+name        = "Ridge of Echoes"
+description = "Wind-carved stone that sings when struck; echoes reveal hidden paths."
+coord       = [13,0]
+exits       = { west = "dp_sky_rift_4", east = "dp_sky_rift_6" }
+flags       = []
+on_enter = [
+  { op = "skill_check", skill = "perception", dc = 14,
+    on_pass = [{ op = "message", tag = "system", text = "You hear a faint secondary tone that points to a narrow ledge." }],
+    on_fail = [{ op = "message", tag = "system", text = "The wind drowns out subtle echoes." }],
+  },
+]
+
+[[room]]
+id          = "dp_sky_rift_6"
+name        = "Skybridge Terminus"
+description = "A battered platform overlooking the chasm; ropes lead to distant cliffs."
+coord       = [14,0]
+exits       = { west = "dp_sky_rift_5", south = "dp_emberfall_6", east = "dp_apex_approach_1" }
+flags       = ["hazard"]
+
+# Subregion E — Apex Drake's Domain (Rooms 25–30)
+
+[[room]]
+id          = "dp_apex_approach_1"
+name        = "Cracked Summit"
+description = "The air thins and the ground trembles with each distant roar."
+coord       = [15,0]
+exits       = { west = "dp_sky_rift_6", east = "dp_apex_approach_2" }
+flags       = []
+
+[[room]]
+id          = "dp_apex_approach_2"
+name        = "Hoard Ridge"
+description = "Scattered treasures and bones litter the slope; a deep scent of old smoke hangs here."
+coord       = [16,0]
+exits       = { west = "dp_apex_approach_1", east = "dp_apex_approach_3" }
+items       = ["drake_hoard_fragment"]
+flags       = []
+
+[[room]]
+id          = "dp_apex_approach_3"
+name        = "Thermal Conduit Gate"
+description = "An ancient gate carved with concentric rings; heat pulses from within."
+coord       = [17,0]
+exits       = {
+  west = "dp_apex_approach_2",
+  east = {
+    to       = "dp_apex_inner_1",
+    locked   = true,
+    lock_tag = "dp_thermal_gate_lock",
+    desc     = "A ringed stone gate sealed by humming sigils.",
+  },
+}
+flags       = []
+on_enter = [
+  { op = "if_not_flag", flag = "dp_thermal_gate_notice", then = [
+    { op = "message", tag = "system", text = "The carved rings in the gate pulse faintly; something holds them closed." },
+    { op = "set_flag", flag = "dp_thermal_gate_notice" },
+  ] },
+  { op = "if_flag", flag = "dp_thermal_gate_unlocked", then = [
+    { op = "unlock_exit", room_id = "dp_apex_approach_3", direction = "east" },
+    { op = "message", tag = "system", text = "With a grinding sigh the gate's rings slide aside, revealing the path inward." },
+    { op = "set_flag", flag = "dp_thermal_gate_opened" },
+  ] },
+]
+
+[[room]]
+id          = "dp_apex_inner_1"
+name        = "Apex Outer Ledge"
+description = "A wide ledge overlooking a cavernous hollow where the Apex Drake nests."
+coord       = [18,0]
+exits       = { west = "dp_apex_approach_3", east = "dp_apex_inner_2" }
+spawns      = ["apex_drake_guard"]
+flags       = []
+
+[[room]]
+id          = "dp_apex_inner_2"
+name        = "Hearth of the Apex"
+description = "A cavern lit by molten veins; the Thermal Conductor sits on a pedestal of stone and metal."
+coord       = [19,0]
+exits       = { west = "dp_apex_inner_1", east = "dp_apex_inner_3" }
+items       = ["thermal_conductor_piece", "drake_egg"]
+flags       = ["no_combat"]
+on_enter = [
+  { op = "if_not_flag", flag = "dp_thermal_piece_seen", then = [
+    { op = "message", tag = "lore", text = "A humming crystal rests in a carved cradle, its pulse out of sync with the world." },
+    { op = "set_flag", flag = "dp_thermal_piece_seen" },
+  ] },
+]
+
+[[room]]
+id          = "dp_apex_inner_3"
+name        = "Apex Summit"
+description = "The highest point; the Apex Drake circles above, its shadow swallowing the light."
+coord       = [20,0]
+exits       = { west = "dp_apex_inner_2" }
+spawns      = ["apex_drake"]
+flags       = []
+
+[[room]]
+id          = "dp_watch_post"
+name        = "Mountain Watch Post"
+description = "A small wooden lookout built on a rocky outcrop. From here, scouts watch for drake movement."
+exits       = {
+  down = "dp_approach_2"
+}
+
+

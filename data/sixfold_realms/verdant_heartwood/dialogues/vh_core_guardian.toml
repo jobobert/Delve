@@ -1,0 +1,23 @@
+[[node]]
+id   = "root"
+line = "The guardian stirs. Roots coil. 'Only those who honor growth may pass.'"
+
+[[response]]
+node = "root"
+text = "I seek the Regulator fragment."
+next = "warn"
+
+[[response]]
+node = "root"
+text = "I will leave."
+next = ""
+
+
+[[node]]
+id   = "warn"
+line = "'Then face the Heartwood’s judgment.'"
+
+[[response]]
+node = "warn"
+text = "I accept."
+next = ""

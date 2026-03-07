@@ -1,0 +1,43 @@
+# This quest guides the player through gathering materials, learning from Syl and Lyren, and finally crafting the Carapace with Thalen.
+#
+# Notes on integration:
+#
+# Step 2 is advanced by Thalen’s crafting script when the player brings the materials.
+#
+# Step 3 can be completed by adding a small on_equip script to the Carapace or a check in any Heartwood Core room.
+#
+# The quest reinforces cross‑region progression by requiring the Bog‑Quartz Heart.
+
+
+id      = "vh_carapace"
+title   = "Growing the Heartwood Carapace"
+giver   = "vh_heartwood_shaper"
+summary = "Thalen can grow a living armor from Heartwood materials, but only if you gather the forest’s gifts and prove your harmony with the Heartwood."
+
+[[step]]
+index     = 1
+objective = "Gather the materials needed to grow the Heartwood Carapace."
+hint      = "You will need Heartwood Bark, Sap Resin, and a resonant heart from the Mistfen."
+
+[[step]]
+index     = 2
+objective = "Bring the materials to Thalen at the Growth Forge."
+hint      = "Thalen waits in the Heartwood Core."
+
+[[step]]
+index     = 3
+objective = "Wear the Heartwood Carapace and let it attune to you."
+hint      = "Equip the armor to complete the growth cycle."
+
+[[reward]]
+type   = "xp"
+amount = 300
+
+[[reward]]
+type   = "prestige"
+amount = 2
+reason = "earned the Heartwood’s trust"
+
+[[reward]]
+type   = "gold"
+amount = 50

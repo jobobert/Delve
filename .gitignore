@@ -5,6 +5,7 @@ For Claude.txt
 tools/ai_sessions/*
 *.pdf
 */__pycache__
+data/*/__pycache__
 config.py
 !data/*/config.py
 config - Copy.py
@@ -16,3 +17,8 @@ output/
 *.dot
 *.svg
 data/sixfold_realms/world_overview.md
+World Creation Tool Design Document.pptx
+TODO.md
+HANDOFF.md
+data/*/WORLD_TODO.md
+

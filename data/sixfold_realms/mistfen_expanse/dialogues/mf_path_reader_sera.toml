@@ -1,0 +1,74 @@
+[[node]]
+id    = "root"
+lines = [
+  "The swamp folds upon itself. Most who walk it are swallowed by their own footsteps.",
+  "Listen, and you can hear where the pressure is wrong.",
+]
+
+[[response]]
+node      = "root"
+condition = { not_quest = "mf_anchors_in_the_mire" }
+text      = "Can you help me walk this place safely?"
+next      = "anchor_intro"
+
+[[response]]
+node = "root"
+text = "I'm searching for a device piece—something tied to pressure."
+next = "device_intro"
+
+[[response]]
+node = "root"
+text = "I'll find my own way."
+next = ""
+
+[[response]]
+node      = "root"
+condition = { prestige_min = 20 }
+text      = "You speak as if the swamp respects reputation."
+next      = "prestige_comment"
+
+[[node]]
+id   = "anchor_intro"
+line = "Anchor Stones pin the loops. Without one, the Mistfen will keep folding you back on yourself."
+script = [
+  { op = "advance_quest", quest_id = "mf_anchors_in_the_mire", step = 1 },
+]
+
+[[response]]
+node = "anchor_intro"
+text = "Where do I get an Anchor Stone?"
+next = "anchor_where"
+
+[[node]]
+id   = "anchor_where"
+line = "In the Anchor Field east of camp. But the stones answer only to those with some standing."
+script = [
+  { op = "journal_entry",
+    title = "Anchors in the Mire",
+    text  = "Sera told you to seek an Anchor Stone in the field east of her camp. Prestige may matter." },
+]
+
+[[response]]
+node = "anchor_where"
+text = "Then I’ll prove myself worthy."
+next = ""
+
+[[node]]
+id   = "device_intro"
+line = "A fragment lies in the Drowned Vault. The Echo Gate bars the way, tuned to a very specific rhythm."
+script = [
+  { op = "advance_quest", quest_id = "mf_pressure_below", step = 1 },
+]
+
+[[response]]
+node = "device_intro"
+text = "How do I match that rhythm?"
+next = "gate_hint"
+
+[[node]]
+id   = "gate_hint"
+line = "Find an Echo Compass and tune it at the Resonance Pillar in the Anchor Field. When it settles, the Gate will listen."
+
+[[node]]
+id   = "prestige_comment"
+line = "Everything here remembers pressure—of water, of time, of deeds. The stones know who burdens the world and who eases it."

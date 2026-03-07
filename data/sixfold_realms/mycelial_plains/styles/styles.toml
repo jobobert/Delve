@@ -1,0 +1,23 @@
+[[style]]
+id          = "mindweft"
+name        = "Mindweft"
+desc_short  = "A predictive, resonance‑driven combat style."
+desc_long   = "Mindweft practitioners weave intuition, pattern recognition, and micro‑movements into a fluid style that anticipates attacks before they land. Originating in the Mycelial Plains, it has since been generalized into a resonance‑based discipline usable anywhere."
+strong_vs   = ["flowcurrent", "rootbind"]
+weak_vs     = ["sky_piercer"]
+multipliers = { attack = 1.0, defense = 1.0 }
+bonuses     = { perception = 2 }
+difficulty  = "advanced"
+preferred_weapon_tags = ["light", "finesse"]
+preferred_armor_tags  = ["cloth", "mycelial"]
+learning_source       = "trainer"
+
+[[style.passive]]
+ability    = "anticipate"
+threshold  = 0
+desc       = "Small chance to reduce incoming damage by predicting the attack pattern."
+
+[[style.passive]]
+ability    = "cognitive_flow"
+threshold  = 20
+desc       = "Increases perception further as the user maintains momentum in combat."

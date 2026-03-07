@@ -1,0 +1,6 @@
+id          = "core_chamber"
+name        = "Core Chamber"
+description = """
+The heart of the ancient device. Resonance hums through the air, unstable and shifting.
+Fragments of every region echo here as the machine struggles to reboot.
+"""

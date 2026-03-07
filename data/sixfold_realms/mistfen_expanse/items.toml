@@ -1,0 +1,178 @@
+# Anchor Stone node (prestige‑gated) 
+[[item]]
+id          = "mf_anchor_stone_node"
+name        = "Anchor Stone Marker"
+desc_short  = "A carved stone marker humming with contained pressure."
+desc_long   = "One of several stones used by Path‑Readers to pin the swamp in place."
+slot        = ""
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "if_prestige", min = 5, then = [
+    { op = "give_item", item_id = "anchor_stone" },
+    { op = "set_flag",  flag = "mf_anchor_attuned" },
+    { op = "message", tag = "quest", text = "You take an Anchor Stone; the loops should trouble you less now." },
+    { op = "advance_quest", quest_id = "mf_anchors_in_the_mire", step = 2 },
+  ], else = [
+    { op = "message", tag = "error", text = "The stone resists your touch. Perhaps you need more standing here." },
+  ] },
+]
+
+[[item]]
+id          = "anchor_stone"
+name        = "Anchor Stone"
+desc_short  = "A palm‑sized stone etched with spirals."
+desc_long   = "Path‑Readers use these to pin down unstable paths. It hums faintly in your hand."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["anchor"]
+
+# Resonance pillar used for tuning the compass
+[[item]]
+id          = "mf_resonance_pillar"
+name        = "Resonance Pillar"
+desc_short  = "A tall stone pillar vibrating with layered echoes."
+desc_long   = "The surface is worn smooth by generations of Path‑Readers tuning their tools here."
+slot        = ""
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "if_item", item_id = "echo_compass", then = [
+    { op = "take_item", item_id = "echo_compass" },
+    { op = "give_item", item_id = "echo_compass_tuned" },
+    { op = "set_flag",  flag = "mf_echo_gate_unlocked" },
+    { op = "message", tag = "quest", text = "The Echo Compass locks onto the pillar’s rhythm. The Echo Gate should now respond." },
+    { op = "advance_quest", quest_id = "mf_pressure_below", step = 1 },
+  ], else = [
+    { op = "message", tag = "system", text = "The pillar hums, but you have nothing to tune here." },
+  ] },
+]
+
+[[item]]
+id          = "echo_compass"
+name        = "Echo Compass"
+desc_short  = "A brass compass whose needle spins in slow circles."
+desc_long   = "Untuned, it reacts to every stray pressure wave in the Mistfen."
+slot        = ""
+weight      = 0
+respawn     = false
+gold_value  = 20
+tags        = ["mistfen_tool"]
+
+[[item]]
+id          = "echo_compass_tuned"
+name        = "Tuned Echo Compass"
+desc_short  = "A compass whose needle points steadily toward the Echo Gate."
+desc_long   = "Attuned at the Resonance Pillar, it now locks onto the Vault’s pressure signature."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["echo_key", "mistfen_tool"]
+
+# Mining nodes and materials
+[[item]]
+id          = "mf_bog_quartz_node"
+name        = "Bog Quartz Vein"
+desc_short  = "Pale crystals jut from the peat, warped by pressure."
+slot        = ""
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "require_tag", tag = "pickaxe",
+    fail_message = "You need a pickaxe to chip the quartz free." },
+  { op = "skill_check", skill = "mining", dc = 10,
+    on_pass = [
+      { op = "give_item",  item_id = "bog_quartz" },
+      { op = "skill_grow", skill = "mining", amount = 2 },
+    ],
+    on_fail = [
+      { op = "give_item",  item_id = "bog_quartz" },
+      { op = "message", tag = "system", text = "You pry loose a cloudy shard of quartz." },
+    ],
+  },
+]
+
+[[item]]
+id          = "bog_quartz"
+name        = "Bog Quartz"
+desc_short  = "A cloudy shard of pressure‑warped quartz."
+slot        = ""
+weight      = 0
+respawn     = false
+gold_value  = 5
+tags        = ["mistfen_material", "heartwood_hook"]
+
+[[item]]
+id          = "pressure_hollowed_stone"
+name        = "Pressure‑Hollowed Stone"
+desc_short  = "A stone worn thin by oscillating pressure waves."
+slot        = ""
+weight      = 0
+respawn     = false
+gold_value  = 5
+tags        = ["mistfen_material", "heartwood_hook"]
+
+# Rotating platform lever
+[[item]]
+id          = "mf_rot_lever"
+name        = "Grooved Lever"
+desc_short  = "A stone lever with four notches."
+slot        = ""
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "message", tag = "system", text = "You push the lever. The platform grinds and slowly rotates." },
+  { op = "if_flag", flag = "mf_rot_state_0", then = [
+    { op = "clear_flag", flag = "mf_rot_state_0" },
+    { op = "set_flag",   flag = "mf_rot_state_1" },
+  ], else = [
+    { op = "if_flag", flag = "mf_rot_state_1", then = [
+      { op = "clear_flag", flag = "mf_rot_state_1" },
+      { op = "set_flag",   flag = "mf_rot_state_2" },
+    ], else = [
+      { op = "if_flag", flag = "mf_rot_state_2", then = [
+        { op = "clear_flag", flag = "mf_rot_state_2" },
+        { op = "set_flag",   flag = "mf_rot_state_3" },
+      ], else = [
+        { op = "clear_flag", flag = "mf_rot_state_3" },
+        { op = "set_flag",   flag = "mf_rot_state_0" },
+      ] },
+    ] },
+  ] },
+]
+
+# Device piece
+[[item]]
+id          = "pressure_regulator_fragment"
+name        = "Pressure Regulator Fragment"
+desc_short  = "A crystalline fragment pulsing with uneven force."
+desc_long   = "One of six components of the ancient Sixfold Regulator."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["device_piece"]
+on_get      = [
+  { op = "advance_quest", quest_id = "mf_pressure_below", step = 3 },
+  { op = "prestige", amount = 3, reason = "recovered the Pressure Regulator fragment" },
+]
+
+[[item]]
+id          = "mf_quartz_heart"
+name        = "Bog‑Quartz Heart"
+desc_short  = "A heart‑shaped crystal that pulses faintly with pressure."
+desc_long   = "Sera hinted that Verdant Heartwood might respond to this focus. Roots remember pressure differently than water."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["heartwood_hook", "mistfen_focus"]
+
+[[item]]
+id          = "mf_anchor_pebble"
+name        = "Anchor Pebble"
+desc_short  = "A small stone that hums faintly."
+desc_long   = "A weak spatial stabilizer used by Mistfen guides. Helps maintain orientation in mild distortions."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["mistfen_tool", "resonance"]

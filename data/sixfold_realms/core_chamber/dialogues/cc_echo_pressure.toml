@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "'Space bends. Will your resolve?'"
+]
+
+[[response]]
+node = "root"
+text = "I hold steady."
+next = ""

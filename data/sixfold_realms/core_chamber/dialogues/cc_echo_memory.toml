@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "'Memory drifts. What remains of you?'"
+]
+
+[[response]]
+node = "root"
+text = "Enough."
+next = ""

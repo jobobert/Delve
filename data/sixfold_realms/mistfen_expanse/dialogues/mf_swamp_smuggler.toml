@@ -1,0 +1,34 @@
+[[node]]
+id    = "root"
+lines = [
+  "You look like someone the Path‑Readers wouldn’t vouch for. That’s good for business.",
+]
+
+[[response]]
+node      = "root"
+condition = { prestige_max = 4 }
+text      = "What kind of business?"
+next      = "offer"
+
+[[response]]
+node      = "root"
+condition = { prestige_min = 5 }
+text      = "You should move on. The Path‑Readers are watching."
+next      = "snub"
+
+[[node]]
+id   = "offer"
+line = "Shortcuts through the loops. Places to stand when the pressure spikes. Smugglers’ paths."
+
+[[response]]
+node = "offer"
+text = "Tell me one of those shortcuts."
+next = "shortcut_hint"
+
+[[node]]
+id   = "shortcut_hint"
+line = "From the first loop, walk west twice, then turn your back to the mist and go where it feels wrong. Don’t blame me if you don’t like where you end up."
+
+[[node]]
+id   = "snub"
+line = "High‑faces like you make trouble. Go buy a map from the Path‑Readers instead."

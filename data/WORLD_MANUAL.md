@@ -658,8 +658,22 @@ Every script runs with access to the current state:
 - `player` — mutable player state (HP, gold, inventory, flags, skills…)
 - `world` — rooms, item templates, NPC templates
 - `quests` — quest tracker (start/advance/complete)
-- `round` — current combat round number (0 outside combat)
-- `npc` — the NPC being fought (set by `round_script` context)
+- `round` — current combat round number (`0` outside combat)
+- `npc` — the NPC being fought (only set in `round_script` and `kill_script` context; `None` otherwise)
+
+**Context availability by script location:**
+
+| Script location | `npc` available | `round` > 0 |
+|-----------------|:--------------:|:-----------:|
+| `kill_script` | Yes (the killed NPC) | Yes |
+| `round_script` | Yes (opponent NPC) | Yes |
+| `give_accepts[].script` | Yes (the giver NPC) | No |
+| `on_get` / `on_drop` (item) | No | No |
+| `on_enter` (room / exit) | No | No |
+| Dialogue `script` / response `script` | Yes (the speaker NPC) | No |
+
+> **Note:** `if_combat_round`, `if_npc_hp`, and `end_combat` only make sense inside
+> `round_script`. They will silently do nothing if `npc` is `None`.
 
 ### 7.4 Script Abort
 
@@ -667,7 +681,20 @@ Every script runs with access to the current state:
 `require_tag` also aborts if the player lacks the required item tag.
 Both are caught cleanly — no exception reaches the player.
 
-### 7.5 All Script Operations (45 ops)
+**Typical `fail` patterns:**
+
+```toml
+# Abort if the player doesn't have gold — do nothing silently
+{ op = "if_not_flag", flag = "quest_active", then = [{ op = "fail" }] }
+
+# require_tag shows a message and stops
+{ op = "require_tag", tag = "pickaxe", fail_message = "You need a pickaxe to mine here." }
+```
+
+### 7.5 All Script Operations (~47 ops)
+
+> **Quick tip:** For a condensed reference of every op and its attributes, see
+> [Appendix C](#appendix-c--all-script-ops-quick-reference) at the end of this document.
 
 ---
 

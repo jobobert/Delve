@@ -1,0 +1,45 @@
+[[node]]
+id    = "root"
+lines = [
+  "The central crystal pulses weakly. 'Resonance aligned. Awaiting directive.'"
+]
+
+[[response]]
+node = "root"
+text = "Restore the Sixfold Regulator."
+next = "restore"
+
+[[response]]
+node = "root"
+text = "Disable the device permanently."
+next = "disable"
+
+
+# --- Restore Path ---
+[[node]]
+id   = "restore"
+line = "'Directive accepted. Reboot sequence initializing.'"
+script = [
+  { op = "set_flag", flag = "cc_reboot_restore" },
+  { op = "advance_quest", quest_id = "cc_finale", step = 3 }
+]
+
+[[response]]
+node = "restore"
+text = "Let the world breathe again."
+next = ""
+
+
+# --- Disable Path ---
+[[node]]
+id   = "disable"
+line = "'Directive accepted. Shutdown sequence initializing.'"
+script = [
+  { op = "set_flag", flag = "cc_reboot_disable" },
+  { op = "advance_quest", quest_id = "cc_finale", step = 3 }
+]
+
+[[response]]
+node = "disable"
+text = "Let nature reclaim its freedom."
+next = ""

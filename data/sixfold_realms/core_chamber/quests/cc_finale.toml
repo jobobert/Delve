@@ -1,0 +1,57 @@
+id      = "cc_finale"
+title   = "Heart of the Shield"
+giver   = "mp_mayor_dellen"
+summary = "With all five device pieces recovered, descend into the Core Chamber, stabilize the resonance lattice, defeat the Overseer, and choose the fate of the Sixfold Regulator."
+
+# ---------------------------------------------------------
+# ACT I — DESCENT
+# ---------------------------------------------------------
+
+[[step]]
+index     = 1
+objective = "Enter the Core Chamber and stabilize your resonance."
+hint      = "Resonance stability begins at 100. Keep it above 60 to pass the Calibration Gate."
+
+# ---------------------------------------------------------
+# ACT II — RECALIBRATION
+# ---------------------------------------------------------
+
+[[step]]
+index     = 2
+objective = "Calibrate all five subsystems in the Resonance Lattice."
+hint      = "Each calibration room restores resonance and sets an alignment flag."
+
+# ---------------------------------------------------------
+# ACT III — THE OVERSEER
+# ---------------------------------------------------------
+
+[[step]]
+index     = 3
+objective = "Defeat the Overseer’s final form."
+hint      = "The Overseer reacts to your resonance stability. High stability weakens it."
+
+# ---------------------------------------------------------
+# ACT IV — THE CHOICE
+# ---------------------------------------------------------
+
+[[step]]
+index     = 4
+objective = "Realign the central crystal and choose the fate of the device."
+hint      = "You may restore the Regulator or disable it permanently."
+
+# ---------------------------------------------------------
+# REWARDS
+# ---------------------------------------------------------
+
+[[reward]]
+type   = "xp"
+amount = 1000
+
+[[reward]]
+type   = "prestige"
+amount = 5
+reason = "restored balance to the world"
+
+[[reward]]
+type   = "gold"
+amount = 200

@@ -1,0 +1,100 @@
+[[commission]]
+id    = "mf_tune_echo_compass"
+title = "Tune the Echo Compass"
+desc  = "Use Mistfen materials to stabilise an Echo Compass for the Drowned Vault."
+repeatable = false
+
+giver_npc = "mf_path_reader_sera"
+
+requires = [
+  { item_id = "echo_compass",           qty = 1 },
+  { item_id = "bog_quartz",             qty = 2 },
+  { item_id = "pressure_hollowed_stone", qty = 1 },
+]
+
+produces = [
+  { item_id = "echo_compass_tuned", qty = 1 },
+]
+
+on_accept = [
+  { op = "message", tag = "quest", text = "Sera agrees to help you tune the compass—if you bring the right materials." },
+]
+
+on_complete = [
+  { op = "set_flag",  flag = "mf_echo_gate_unlocked" },
+  { op = "prestige",  amount = 1, reason = "worked with the Path‑Readers to stabilise the Mistfen" },
+]
+
+# --- Quality Tiers ---
+[[quality]]
+name        = "Distorted Tuning"
+min_quality = 0
+max_quality = 39
+effects = [
+  { type = "status_resist", effect = "confused", amount = -10 }
+]
+
+[[quality]]
+name        = "Standard Tuning"
+min_quality = 40
+max_quality = 79
+effects = []
+
+[[quality]]
+name        = "Perfect Tuning"
+min_quality = 80
+max_quality = 100
+effects = [
+  { type = "status_resist", effect = "confused", amount = 20 }
+]
+
+[[commission]]
+id   = "mf_quartz_heart"
+name = "Bog‑Quartz Heart Refinement"
+desc = "A Mistfen refinement that stabilizes a quartz core into a resonant heart."
+
+[[requirement]]
+item_id = "mf_raw_quartz"
+count   = 1
+
+[[requirement]]
+item_id = "mf_swamp_salt"
+count   = 1
+
+# -----------------------
+# Quality Tiers
+# -----------------------
+
+[[quality]]
+name        = "Clouded Resonance"
+min_quality = 0
+max_quality = 39
+effects = [
+  { type = "stat_bonus", stat = "max_hp", amount = -2 }
+]
+
+[[quality]]
+name        = "Stable Resonance"
+min_quality = 40
+max_quality = 79
+effects = []
+
+[[quality]]
+name        = "Pure Resonance"
+min_quality = 80
+max_quality = 100
+effects = [
+  { type = "stat_bonus", stat = "max_hp", amount = 3 },
+  { type = "on_enter_room", ability = "mist_sense", chance = 0.05 }
+]
+
+[[result]]
+item_id = "mf_quartz_heart"
+count   = 1
+
+script = [
+  { op = "take_item", item_id = "mf_raw_quartz" },
+  { op = "take_item", item_id = "mf_swamp_salt" },
+  { op = "give_item", item_id = "mf_quartz_heart" },
+  { op = "message", tag = "crafting", text = "The quartz stabilizes, pulsing with a soft inner glow." }
+]

@@ -1,0 +1,80 @@
+[[node]]
+id    = "root"
+lines = [
+  "Lyren rests a hand on a living root. 'The Heartwood listens. It remembers more than we do.'"
+]
+
+[[response]]
+node = "root"
+text = "What does it remember?"
+next = "memory_explain"
+
+[[response]]
+node = "root"
+text = "The paths seem alive. How do I move safely?"
+next = "path_help"
+
+[[response]]
+node = "root"
+text = "I'm looking for something powerful—something tied to growth."
+next = "fragment_hint"
+
+
+# --- Memory explanation ---
+[[node]]
+id   = "memory_explain"
+line = "'Roots store impressions. Touch the right cluster, and the forest may show you the true path.'"
+
+[[response]]
+node = "memory_explain"
+text = "Where should I start?"
+next = "memory_start"
+
+[[node]]
+id   = "memory_start"
+line = "'The Listening Grove. The roots there hum with old echoes.'"
+
+[[response]]
+node = "memory_start"
+text = "I'll look there."
+next = ""
+
+
+# --- Path help ---
+[[node]]
+id   = "path_help"
+line = "'The vines test intent. Calm them, and they part. Force them, and they tighten.'"
+
+[[response]]
+node = "path_help"
+text = "How do I calm them?"
+next = "vine_help"
+
+[[node]]
+id   = "vine_help"
+line = "'A charm woven from living roots. Syl can teach you, if the forest trusts you.'"
+
+[[response]]
+node = "vine_help"
+text = "I'll speak with Syl."
+next = ""
+
+
+# --- Fragment hint ---
+[[node]]
+id   = "fragment_hint"
+line = "'Deep in the Core lies a shard of the old Regulator. But the guardian will not yield it easily.'"
+
+[[response]]
+node = "fragment_hint"
+text = "How do I reach the Core?"
+next = "core_path"
+
+[[node]]
+id   = "core_path"
+line = "'Follow the roots downward. When the quartz sings, you are close.'"
+
+[[response]]
+node = "core_path"
+text = "Understood."
+next = ""

@@ -1,0 +1,62 @@
+# -------------------------
+# NODE: root
+# -------------------------
+[[node]]
+id    = "root"
+lines = [
+  "Orun wipes his hands on an apron and eyes your gear."
+]
+
+[[response]]
+node = "root"
+text = "Can you forge something special?"
+next = "forge"
+
+[[response]]
+node = "root"
+text = "Do you buy ore?"
+next = "buy_ore"
+
+
+# -------------------------
+# NODE: forge
+# -------------------------
+[[node]]
+id   = "forge"
+line = "'I can, but I need resonant alloy, drakebone, and a glass shard. Bring them and I'll try.'"
+
+[[response]]
+node = "forge"
+text = "What will it cost?"
+next = "cost"
+
+[[response]]
+node = "forge"
+text = "I'll gather the materials."
+next = ""
+
+
+# -------------------------
+# NODE: cost
+# -------------------------
+[[node]]
+id   = "cost"
+line = "'Not gold. I want proof you can handle the Peaks. Bring me a drake scale and a resonant ingot.'"
+
+[[response]]
+node = "cost"
+text = "Consider it done."
+next = ""
+
+
+# -------------------------
+# NODE: buy_ore
+# -------------------------
+[[node]]
+id   = "buy_ore"
+line = "'I'll pay well for resonant alloy and drakebone if you bring them.'"
+
+[[response]]
+node = "buy_ore"
+text = "Understood."
+next = ""

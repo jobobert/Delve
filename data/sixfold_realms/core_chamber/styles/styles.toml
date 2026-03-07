@@ -1,0 +1,18 @@
+[[style]]
+id          = "resonance_core"
+name        = "Resonance Core"
+desc_short  = "A shifting style that blends all five subsystems."
+desc_long   = "This style is not learned but emerges from the Sixfold Regulator itself. It adapts dynamically, shifting between light, pressure, heat, growth, and memory patterns."
+strong_vs   = ["umbral_veil", "flowcurrent", "sky_piercer", "rootbind", "mindweft"]
+weak_vs     = []
+multipliers = { attack = 1.0, defense = 1.0 }
+bonuses     = { perception = 2 }
+difficulty  = "legendary"
+preferred_weapon_tags = []
+preferred_armor_tags  = []
+learning_source       = "none"
+
+[[style.passive]]
+ability    = "resonance_shift"
+threshold  = 0
+desc       = "Randomly changes elemental affinity each round."

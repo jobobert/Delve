@@ -1,0 +1,66 @@
+[[node]]
+id    = "root"
+lines = [
+  "Rissa stirs a simmering pot. 'Careful. The spores cling to the mind more than the lungs.'"
+]
+
+[[response]]
+node = "root"
+text = "Can you help me reduce spore exposure?"
+next = "help"
+
+[[response]]
+node = "root"
+text = "What causes the mind to fog like this?"
+next = "explain"
+
+[[response]]
+node = "root"
+text = "Do you know about the Memory Garden?"
+next = "garden_hint"
+
+
+# --- Help ---
+[[node]]
+id   = "help"
+line = "'Drink this. It should clear your thoughts.'"
+script = [
+  { op = "add_spores", amount = -15 },
+  { op = "message", tag = "system", text = "Your mind sharpens." }
+]
+
+[[response]]
+node = "help"
+text = "Thank you."
+next = ""
+
+
+# --- Explain ---
+[[node]]
+id   = "explain"
+line = "'The fungus was once a memory archive. Now it overgrows, overwrites, overwhelms.'"
+
+[[response]]
+node = "explain"
+text = "Can it be fixed?"
+next = "fix"
+
+[[node]]
+id   = "fix"
+line = "'Maybe. If the old device piece is restored.'"
+
+[[response]]
+node = "fix"
+text = "I’ll try."
+next = ""
+
+
+# --- Garden Hint ---
+[[node]]
+id   = "garden_hint"
+line = "'The Garden remembers everything. But it won’t let you in if your mind is clouded.'"
+
+[[response]]
+node = "garden_hint"
+text = "I’ll keep my exposure low."
+next = ""

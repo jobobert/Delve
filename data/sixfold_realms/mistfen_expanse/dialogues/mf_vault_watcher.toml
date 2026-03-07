@@ -1,0 +1,17 @@
+[[node]]
+id   = "root"
+line = "Pressure must be maintained. Intrusion detected."
+
+[[response]]
+node = "root"
+text = "I need the fragment you’re guarding."
+next = "warn"
+
+[[response]]
+node = "root"
+text = "Then I’ll leave you to your duty."
+next = ""
+
+[[node]]
+id   = "warn"
+line = "Then you must withstand what this place was built to contain."

@@ -1,0 +1,147 @@
+#item = [{id = "item_clarity_brew", name = "Clarity Brew", desc_short = "A tonic that temporarily clears spore-induced mental fog.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_glowcap_spore", name = "Glowcap Spore", desc_short = "A glowing spore used in alchemical mixtures.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_mycelial_thread", name = "Mycelial Thread", desc_short = "A strong fungal fiber used in crafting.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_lumen_marrow", name = "Lumen Marrow", desc_short = "A glowing substance harvested from bioluminescent fungi.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_device_piece_5", name = "Device Piece: Cognitive Regulator", desc_short = "A device component that stabilizes memory and thought patterns.", weight = 0, respawn = false, no_drop = false, tags = ["device_piece"], effects = [], value = 0, on_get = [], type = "misc"}]
+
+# ---------------------------------------------------------
+# Clarity & Anti-Spore Items
+# ---------------------------------------------------------
+
+[[item]]
+id          = "mp_clarity_brew"
+name        = "Clarity Brew"
+desc_short  = "A sharp herbal drink that clears the mind."
+desc_long   = "Brewed from clarity caps and bitterroot. Temporarily cuts through the mental fog caused by spores."
+slot        = ""
+weight      = 0
+respawn     = false
+on_use      = [
+  { op = "add_spores", amount = -20 },
+  { op = "message", tag = "system", text = "Your thoughts sharpen as the brew takes effect." }
+]
+
+[[item]]
+id          = "mp_fungal_mask"
+name        = "Fungal Mask"
+desc_short  = "A cloth mask treated with anti-spore resin."
+desc_long   = "Reduces spore inhalation and helps maintain clarity in dense bloom zones."
+slot        = "head"
+weight      = 0
+respawn     = false
+effects     = [
+  { type = "status_resist", effect = "spores", amount = 25 }
+]
+
+
+# ---------------------------------------------------------
+# Memory Interaction Tools
+# ---------------------------------------------------------
+
+[[item]]
+id          = "mp_memory_tuning_fork"
+name        = "Memory Tuning Fork"
+desc_short  = "A fork that vibrates with cognitive resonance."
+desc_long   = "Striking it stabilizes nearby memory nodes and reduces drift."
+slot        = ""
+weight      = 0
+respawn     = false
+on_use      = [
+  { op = "set_flag", flag = "mp_memory_stabilized" },
+  { op = "message", tag = "system", text = "The tuning fork hums, anchoring your thoughts." }
+]
+
+[[item]]
+id          = "mp_spore_lens"
+name        = "Spore Lens"
+desc_short  = "A lens that reveals hidden fungal inscriptions."
+desc_long   = "Used to read memory spores embedded in ancient structures."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["memory_tool"]
+
+
+# ---------------------------------------------------------
+# Region Materials
+# ---------------------------------------------------------
+
+[[item]]
+id          = "mp_fungal_fiber"
+name        = "Fungal Fiber"
+desc_short  = "A strong, flexible fiber harvested from fungal stalks."
+desc_long   = "Used in textiles, ropes, and certain resonance tools."
+slot        = ""
+weight      = 1
+respawn     = false
+tags        = ["mycelial_material"]
+
+[[item]]
+id          = "mp_clarity_cap"
+name        = "Clarity Cap"
+desc_short  = "A pale mushroom with sharp, minty scent."
+desc_long   = "The primary ingredient in clarity brews."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["mycelial_material"]
+
+[[item]]
+id          = "mp_memory_spores"
+name        = "Memory Spores"
+desc_short  = "A cluster of shimmering spores."
+desc_long   = "Encoded with fragments of ancient knowledge."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["mycelial_material"]
+
+[[item]]
+id          = "mp_mycelial_resin"
+name        = "Mycelial Resin"
+desc_short  = "A sticky resin that stabilizes fungal growth."
+desc_long   = "Used to reinforce memory nodes and craft spore-resistant gear."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["mycelial_material"]
+
+
+# ---------------------------------------------------------
+# Signature Armor — Sporewarden Mantle
+# ---------------------------------------------------------
+
+[[item]]
+id          = "sporewarden_mantle"
+name        = "Sporewarden Mantle"
+desc_short  = "A mantle woven from fungal fibers and clarity caps."
+desc_long   = "It resists spore exposure and sharpens perception, helping its wearer navigate the Plains."
+slot        = "chest"
+weight      = 1
+respawn     = false
+armor_tags  = ["cloth", "light"]
+effects     = [
+  { type = "stat_bonus", stat = "perception", amount = 2 },
+  { type = "status_resist", effect = "spores", amount = 30 }
+]
+on_equip    = [
+  { op = "set_flag", flag = "mp_mantle_equipped" }
+]
+on_drop     = [
+  { op = "clear_flag", flag = "mp_mantle_equipped" }
+]
+
+
+# ---------------------------------------------------------
+# Device Piece — Cognitive Regulator Fragment
+# ---------------------------------------------------------
+
+[[item]]
+id          = "cognitive_regulator_fragment"
+name        = "Cognitive Regulator Fragment"
+desc_short  = "A crystalline fungal node containing ancient knowledge."
+desc_long   = "This fragment once governed memory and cognition across the region."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["device_piece"]
+on_get      = [
+  { op = "advance_quest", quest_id = "mp_fragment", step = 3 },
+  { op = "prestige", amount = 3, reason = "recovered the Cognitive Regulator Fragment" }
+]

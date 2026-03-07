@@ -1,0 +1,80 @@
+[[node]]
+id    = "root"
+lines = [
+  "Alen steadies his lantern. 'Easy now. The caverns twist when your light does.'"
+]
+
+[[response]]
+node = "root"
+text = "Why does the light behave so strangely here?"
+next = "light_explain"
+
+[[response]]
+node = "root"
+text = "Can you help me navigate the caverns?"
+next = "navigation_help"
+
+[[response]]
+node = "root"
+text = "Have you seen a strange fragment of some device?"
+next = "fragment_hint"
+
+
+# --- Light explanation ---
+[[node]]
+id   = "light_explain"
+line = "'Gloamreach was meant to dampen excess energy. Now it amplifies it. Light bends. Shadows wander.'"
+
+[[response]]
+node = "light_explain"
+text = "How do I keep my light steady?"
+next = "light_advice"
+
+[[node]]
+id   = "light_advice"
+line = "'Balance. Too bright, and the caverns push back. Too dim, and the shadows feed.'"
+
+[[response]]
+node = "light_advice"
+text = "I'll try to keep it balanced."
+next = ""
+
+
+# --- Navigation help ---
+[[node]]
+id   = "navigation_help"
+line = "'Watch the runes. They brighten when your light is strong enough.'"
+
+[[response]]
+node = "navigation_help"
+text = "What if my light is too dim?"
+next = "dim_warning"
+
+[[node]]
+id   = "dim_warning"
+line = "'Then the caverns will swallow the path. Keep a lantern handy.'"
+
+[[response]]
+node = "dim_warning"
+text = "Understood."
+next = ""
+
+
+# --- Fragment hint ---
+[[node]]
+id   = "fragment_hint"
+line = "'A shard of something old lies deeper in the gloom. But the guardian watches it closely.'"
+
+[[response]]
+node = "fragment_hint"
+text = "Where should I look?"
+next = "fragment_where"
+
+[[node]]
+id   = "fragment_where"
+line = "'Follow the entropy veins. They lead to the Core.'"
+
+[[response]]
+node = "fragment_where"
+text = "Thank you."
+next = ""

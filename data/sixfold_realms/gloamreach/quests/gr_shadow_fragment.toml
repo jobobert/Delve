@@ -1,0 +1,41 @@
+# Integration notes
+# Step 1 is advanced by the tuning fork’s on_use script (set_flag = gr_echo_disrupted).
+#
+# Step 2 is advanced by the Entropy Guardian’s kill_script.
+#
+# Step 3 is advanced by the fragment’s on_get script.
+#
+# The quest reinforces the region’s core mechanics: light balance, echo disruption, entropy seep.
+
+id      = "gr_shadow_fragment"
+title   = "The Cavern That Remembers"
+giver   = "gr_lightbearer_alen"
+summary = "A fragment of the Regulator lies deep within Gloamreach, guarded by entropy and shadow echoes. To claim it, you must master your light and disrupt the caverns’ unstable resonance."
+
+[[step]]
+index     = 1
+objective = "Disrupt an echo chamber using a tuning fork."
+hint      = "Echo rooms replay themselves unless disrupted by resonance."
+
+[[step]]
+index     = 2
+objective = "Defeat the Entropy Guardian."
+hint      = "The guardian feeds on darkness and recoils from bright light."
+
+[[step]]
+index     = 3
+objective = "Claim the Shadow Regulator Fragment."
+hint      = "The fragment floats in the Gloam Core’s final chamber."
+
+[[reward]]
+type   = "xp"
+amount = 400
+
+[[reward]]
+type   = "prestige"
+amount = 3
+reason = "recovered the Shadow Regulator Fragment"
+
+[[reward]]
+type   = "gold"
+amount = 60

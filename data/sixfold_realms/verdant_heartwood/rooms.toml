@@ -1,0 +1,247 @@
+# =========================================================
+# VERDANT HEARTWOOD — COMPLETE ROOMS FILE
+# =========================================================
+
+# ---------------------------------------------------------
+# OVERGROWN CANOPY (1–10)
+# ---------------------------------------------------------
+
+[[room]]
+id          = "vh_edge"
+name        = "Heartwood Threshold"
+description = "The Riverlands path ends at a wall of living roots. They shift aside as if recognizing you."
+exits       = { east = "vh_canopy1" }
+on_enter    = [
+  { op = "if_item", item_id = "mf_quartz_heart", then = [
+    { op = "message", tag = "system", text = "The Bog‑Quartz Heart vibrates softly. The roots respond." },
+    { op = "set_flag", flag = "vh_roots_respect" }
+  ] }
+]
+
+[[room]]
+id          = "vh_canopy1"
+name        = "Overgrown Canopy — Lower Path"
+description = "Sunlight filters through thick leaves. Vines sway even without wind."
+exits       = { west = "vh_edge", east = "vh_canopy2", south = "vh_vine_bridge" }
+flags       = ["town"]
+
+[[room]]
+id          = "vh_canopy2"
+name        = "Overgrown Canopy — Listening Grove"
+description = "A circle of trees leans inward. Their roots pulse faintly, as if breathing."
+items       = ["vh_memory_root_cluster"]
+exits       = { west = "vh_canopy1", east = "vh_canopy3" }
+on_enter    = [
+  { op = "if_flag", flag = "vh_true_path", then = [
+    { op = "message", tag = "system", text = "The roots hum in recognition." }
+  ] }
+]
+
+[[room]]
+id          = "vh_canopy3"
+name        = "Overgrown Canopy — Pollen Drift"
+description = "Golden pollen drifts in the air. It clings to your skin and stings your eyes."
+flags       = ["hazard"]
+hazard_damage  = 2
+hazard_message = "The pollen burns your lungs."
+hazard_exempt_flag = "vh_pollen_resist"
+exits       = { west = "vh_canopy2", south = "vh_pollen_clearing" }
+
+[[room]]
+id          = "vh_pollen_clearing"
+name        = "Pollen Clearing"
+description = "A still pool reflects drifting pollen clouds. A fallen log blocks the southern path."
+items       = ["vh_fallen_log"]
+exits       = {
+  north = "vh_canopy3",
+  south = { to = "vh_canopy4", show_if = { op = "has_flag", flag = "vh_log_moved" } }
+}
+
+[[room]]
+id          = "vh_canopy4"
+name        = "Overgrown Canopy — Sunwell"
+description = "A shaft of sunlight pierces the canopy. Flowers open and close in rhythmic cycles."
+exits       = { north = "vh_pollen_clearing", east = "vh_canopy5" }
+on_enter    = [
+  { op = "if_not_flag", flag = "vh_growth_pulse", then = [
+    { op = "set_flag", flag = "vh_growth_pulse" },
+    { op = "delay", rounds = 1 },
+    { op = "if_flag", flag = "vh_growth_open", then = [
+      { op = "clear_flag", flag = "vh_growth_open" },
+      { op = "set_flag", flag = "vh_growth_closed" },
+      { op = "message", tag = "system", text = "The flowers fold inward as the light dims." }
+    ], else = [
+      { op = "clear_flag", flag = "vh_growth_closed" },
+      { op = "set_flag", flag = "vh_growth_open" },
+      { op = "message", tag = "system", text = "The flowers open, releasing a faint glow." }
+    ] },
+    { op = "clear_flag", flag = "vh_growth_pulse" }
+  ] }
+]
+
+[[room]]
+id          = "vh_canopy5"
+name        = "Overgrown Canopy — Vine Gate"
+description = "A wall of vines blocks the path. They twitch when you approach."
+items       = ["vh_vine_wall"]
+exits       = {
+  west = "vh_canopy4",
+  east = { to = "vh_canopy6", show_if = { op = "has_flag", flag = "vh_vines_cleared" } }
+}
+
+[[room]]
+id          = "vh_canopy6"
+name        = "Overgrown Canopy — Upper Path"
+description = "The canopy thickens overhead. Something watches from above."
+exits       = { west = "vh_canopy5", south = "vh_root_drop" }
+
+[[room]]
+id          = "vh_vine_bridge"
+name        = "Vine Bridge"
+description = "A woven bridge of living vines stretches across a ravine."
+flags       = ["hazard"]
+hazard_damage  = 1
+hazard_message = "The vines constrict around your ankles."
+hazard_exempt_flag = "vh_vine_safe"
+exits       = { north = "vh_canopy1", south = "vh_canopy4" }
+
+[[room]]
+id          = "vh_root_drop"
+name        = "Root Drop"
+description = "A vertical shaft lined with thick roots. They shift to form handholds."
+exits       = { north = "vh_canopy6", down = "vh_warrens1" }
+
+
+# ---------------------------------------------------------
+# ROOTBOUND WARRENS (11–20)
+# ---------------------------------------------------------
+
+[[room]]
+id          = "vh_warrens1"
+name        = "Rootbound Warrens — Entrance"
+description = "Thick roots form a tunnel. The air is damp and heavy."
+exits       = { up = "vh_root_drop", east = "vh_warrens2" }
+
+[[room]]
+id          = "vh_warrens2"
+name        = "Rootbound Warrens — Echo Chamber"
+description = "Roots coil around a hollow chamber. Touching them triggers faint whispers."
+items       = ["vh_memory_root_cluster"]
+exits       = { west = "vh_warrens1", east = "vh_warrens3" }
+
+[[room]]
+id          = "vh_warrens3"
+name        = "Rootbound Warrens — Spore Hall"
+description = "Spores drift like snow. Shapes move in the haze."
+flags       = ["hazard"]
+hazard_damage  = 2
+hazard_message = "The spores sting your lungs."
+hazard_exempt_flag = "vh_spore_mask"
+exits       = { west = "vh_warrens2", south = "vh_warrens4" }
+
+[[room]]
+id          = "vh_warrens4"
+name        = "Rootbound Warrens — Illusion Fork"
+description = "Three paths appear ahead, but only one is real."
+items       = ["vh_root_echo_trigger"]
+exits       = {
+  north = "vh_warrens3",
+  east  = { to = "vh_warrens5", show_if = { op = "has_flag", flag = "vh_true_path" } },
+  south = "vh_warrens_fake1",
+  west  = "vh_warrens_fake2"
+}
+
+[[room]]
+id          = "vh_warrens_fake1"
+name        = "False Tunnel"
+description = "The tunnel dissolves into spores. You stumble back."
+exits       = { north = "vh_warrens4" }
+on_enter    = [
+  { op = "message", tag = "system", text = "The illusion collapses around you." },
+  { op = "teleport", room_id = "vh_warrens4" }
+]
+
+[[room]]
+id          = "vh_warrens_fake2"
+name        = "False Chamber"
+description = "The chamber flickers like a mirage."
+exits       = { east = "vh_warrens4" }
+on_enter    = [
+  { op = "message", tag = "system", text = "The roots reject your presence." },
+  { op = "teleport", room_id = "vh_warrens4" }
+]
+
+[[room]]
+id          = "vh_warrens5"
+name        = "Rootbound Warrens — Symbiotic Den"
+description = "Bioluminescent fungi pulse gently. A symbiotic creature watches you."
+spawns      = ["vh_symbiote"]
+exits       = { west = "vh_warrens4", south = "vh_warrens6" }
+
+[[room]]
+id          = "vh_warrens6"
+name        = "Rootbound Warrens — Resin Pool"
+description = "A pool of amber resin glows softly. It smells sweet and sharp."
+items       = ["vh_sap_resin"]
+exits       = { north = "vh_warrens5", east = "vh_warrens7" }
+
+[[room]]
+id          = "vh_warrens7"
+name        = "Rootbound Warrens — Ascending Roots"
+description = "Roots spiral upward, forming a natural staircase."
+exits       = { west = "vh_warrens6", up = "vh_core_entrance" }
+
+
+# ---------------------------------------------------------
+# HEARTWOOD CORE (21–28)
+# ---------------------------------------------------------
+
+[[room]]
+id          = "vh_core_entrance"
+name        = "Heartwood Core — Threshold"
+description = "The roots part reluctantly. A deep pulse echoes through the chamber."
+exits       = { down = "vh_warrens7", east = "vh_core1" }
+
+[[room]]
+id          = "vh_core1"
+name        = "Heartwood Core — Living Hall"
+description = "Walls of living bark shift subtly. The air hums with growth energy."
+exits       = { west = "vh_core_entrance", east = "vh_core2" }
+
+[[room]]
+id          = "vh_core2"
+name        = "Heartwood Core — Growth Forge"
+description = "A living forge of roots and sap. It responds to your presence."
+items       = ["vh_growth_forge"]
+exits       = { west = "vh_core1", south = "vh_core3" }
+on_enter    = [
+  { op = "message", tag = "system", text = "The forge pulses with slow, rhythmic light." }
+]
+on_use      = [
+  { op = "craft", commission = "vh_heartwood_shaper" }
+]
+
+[[room]]
+id          = "vh_core3"
+name        = "Heartwood Core — Resonance Chamber"
+description = "Quartz veins glow in the walls. The Bog‑Quartz Heart vibrates strongly here."
+exits       = { north = "vh_core2", east = "vh_core4" }
+on_enter    = [
+  { op = "if_item", item_id = "mf_quartz_heart", then = [
+    { op = "message", tag = "system", text = "The quartz heart resonates with the chamber." },
+    { op = "set_flag", flag = "vh_resonance_awakened" }
+  ] }
+]
+
+[[room]]
+id          = "vh_core4"
+name        = "Heartwood Core — Inner Sanctum"
+description = "A massive root‑heart pulses slowly. The Growth Regulator Fragment floats within."
+items       = ["growth_regulator_fragment"]
+exits       = { west = "vh_core3" }
+on_enter    = [
+  { op = "if_not_flag", flag = "vh_fragment_seen", then = [
+    { op = "message", tag = "quest", text = "You have found the Growth Regulator Fragment." },
+    { op = "set_flag", flag = "vh_fragment_seen" }
+  ] }
+]

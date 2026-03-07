@@ -1,0 +1,34 @@
+id          = "hoard_of_the_apex_drake"
+name        = "The Hoard of the Apex Drake"
+description = "Recover the Thermal Conductor from the Apex Drake's hoard."
+start_flag  = ""
+
+[[step]]
+id          = 1
+name        = "Scout the Peaks"
+objective   = "Speak with Warden Selka and learn how the Apex reacts to outsiders."
+hint        = "Selka respects proof of skill."
+
+[[step]]
+id          = 2
+name        = "Gather Proof"
+objective   = "Bring a drakebone fragment or resonant alloy to Selka or Orun."
+hint        = "Hunting drakes or mining vents yields the materials."
+
+[[step]]
+id          = 3
+name        = "Enter the Apex Domain"
+objective   = "Unlock the Thermal Conduit Gate and reach the Hearth of the Apex."
+hint        = "Align the resonance forge or defeat the guard to open the gate."
+
+[[step]]
+id          = 4
+name        = "Claim the Conductor"
+objective   = "Retrieve the Thermal Conductor from the Hearth of the Apex."
+hint        = "Be prepared: the Apex will not give it up easily."
+
+[[reward]]
+xp          = 800
+gold        = 200
+prestige    = 20
+text        = "You have recovered the Thermal Conductor and proven yourself in the Peaks."
