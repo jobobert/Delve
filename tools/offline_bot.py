@@ -1280,6 +1280,8 @@ def _pick_world(world_arg: str | None) -> Path:
         print(f"  {i+1}. {w.name}")
     try:
         idx = int(input("Select: ").strip()) - 1
+        if idx < 0 or idx >= len(worlds):
+            raise IndexError("out of range")
         return worlds[idx]
     except (ValueError, IndexError):
         return worlds[0]
@@ -1311,15 +1313,21 @@ def main() -> None:
 
     # ── Engine setup ──────────────────────────────────────────────────────────
     _wc.init(world_path)
-    world = World(world_path)
-
     if Player.exists(args.name):
         player = Player.load(args.name)
+        if player.world_id != world_path.name:
+            print(f"[warn] Player '{args.name}' was in world '{player.world_id}', "
+                  f"resetting to '{world_path.name}'")
+            player.world_id = world_path.name
+            player.room_id  = world.start_room
     else:
         player = Player.create_new(args.name)
         player.world_id = world_path.name
         player.room_id  = world.start_room
-        player.save()
+    
+    player.save()
+
+    world.attach_player(player)
 
     world.attach_player(player)
     bus       = EventBus()
