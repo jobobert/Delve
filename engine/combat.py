@@ -8,15 +8,18 @@ Each fight is managed by a CombatSession. The session's public interface is:
 
 Symmetry
 ────────
-Both sides use the same passive functions (parry, stun, knockback, dodge,
-riposte, counter, bleed, etc.), drawn from styles.py. This means a guard
-with swordplay might parry your blow and riposte, while a wolf with evasion
-might sidestep. NPCs feel alive rather than like stat bags.
+Both sides use the same passive system, drawn from styles.toml. This means a
+guard with swordplay might parry your blow and riposte, while a wolf with
+evasion might sidestep. NPCs feel alive rather than like stat bags.
 
-NPC passives that skip the NPC's own attack (stun, knockback, haymaker) are
-only applied offensively (against the player). NPC-side defensive passives:
-  parry, dodge    — reduce or cancel player damage to the NPC
-  riposte, counter — deal bonus damage back to the player after parry/dodge
+Passives are fully TOML-driven via _run_passives(). Each passive entry in
+styles.toml specifies trigger, threshold, on_activate ops, and a message.
+The on_activate ops run through ScriptRunner using a combat_ctx dict so they
+can mutate hit damage, apply bleed, skip NPC turns, etc.
+
+NPC passives that skip the NPC's own attack (stun, knockback) are player
+defensive passives (trigger="defend", op="skip_npc_attack"). NPC-side
+defensive passives (parry, dodge) block player damage and may counter back.
 
 Room flags
 ──────────
@@ -39,7 +42,7 @@ round for additional damage; only one bleed source per side at a time.
 from __future__ import annotations
 import random
 from engine.events import EventBus, Event
-from engine.player import Player, item_on_hit_effects
+from engine.player import Player, item_on_hit_effects, is_blind
 from engine.msg import Msg, Tag
 from engine.room_flags import RoomFlags
 import engine.styles as styles_mod
@@ -184,10 +187,113 @@ class CombatSession:
                   final_atk=n_atk, final_def=n_def)
         return n_atk, n_def
 
+    # ── Passive execution ─────────────────────────────────────────────────────
+
+    def _run_passives(
+        self,
+        trigger: str,
+        style: dict,
+        prof: float,
+        attacker_atk: int,
+        hit_damage: int,
+        side: str,
+    ) -> dict:
+        """
+        Execute all TOML-driven passives that match `trigger` for one combat side.
+
+        trigger       — "attack" (entity is attacking) or
+                        "defend" (entity is defending)
+        style         — style dict loaded from styles.toml
+        prof          — style proficiency (0-100)
+        attacker_atk  — attack stat of the entity *using* this passive;
+                        used by counter_damage / redirect to compute back-damage
+        hit_damage    — initial damage value that passives may scale or block
+        side          — "player" or "npc"; controls message perspective
+
+        Returns a combat_ctx dict with keys:
+            hit_damage      — damage after multiply/block ops
+            blocked         — True if the hit was fully blocked
+            skip_npc_turn   — True if NPC should lose its attack (stun/knockback)
+            counter_damage  — total counter-damage to deal back to the opponent
+            counter_heal    — HP to restore to the passive user (absorb)
+            apply_bleed     — True if bleed should start on the target
+        """
+        from engine.script import ScriptRunner, GameContext
+
+        combat_ctx: dict = {
+            "hit_damage":     hit_damage,
+            "blocked":        False,
+            "skip_npc_turn":  False,
+            "counter_damage": 0,
+            "counter_heal":   0,
+            "apply_bleed":    False,
+            "attacker_atk":   attacker_atk,
+        }
+
+        # Reuse the existing GameContext so script ops have world/player access.
+        # Create a minimal fallback when CombatSession has no ctx (e.g. tools).
+        if self.ctx is not None:
+            game_ctx = self.ctx
+        else:
+            game_ctx = GameContext(
+                player=self.player, world=None, bus=self.bus, quests=None
+            )
+        game_ctx.combat_ctx = combat_ctx
+
+        fired: set[str] = set()
+        npc_name = self.npc.get("name", "the enemy")
+
+        for passive in style.get("passives", []):
+            ability   = passive.get("ability", "")
+            threshold = float(passive.get("threshold", 999))
+            p_trigger = passive.get("trigger", "attack")
+            requires  = passive.get("requires", "")
+
+            # Skip passives with wrong trigger, locked by proficiency, or
+            # whose required ability did not fire this round.
+            if p_trigger != trigger:
+                continue
+            if prof < threshold:
+                continue
+            if requires and requires not in fired:
+                continue
+
+            # Roll the passive using the same probability functions as before.
+            ok, _frag = styles_mod.check_passive(ability, prof)
+            if not ok:
+                continue
+
+            # Execute on_activate ops — they mutate combat_ctx via ScriptRunner.
+            on_activate = passive.get("on_activate", [])
+            if on_activate:
+                ScriptRunner(game_ctx).run(on_activate)
+
+            # Emit the passive's message.
+            msg = passive.get("message", "")
+            if msg:
+                msg = msg.replace("{npc}", npc_name)
+                if side == "npc":
+                    # Flip first-person phrasing: "You X" → "NPC X"
+                    if msg.startswith("You "):
+                        msg = npc_name + " " + msg[4:]
+                    elif msg.startswith("Your "):
+                        msg = npc_name + "'s " + msg[5:]
+                # Attack passives are outgoing hits; defend passives are defensive events.
+                tag = Tag.COMBAT_HIT if trigger == "attack" else Tag.COMBAT_RECV
+                self._out(tag, msg)
+
+            fired.add(ability)
+            log.debug("combat", "passive fired",
+                      side=side, trigger=trigger, ability=ability,
+                      prof=round(prof, 1),
+                      hit_dmg_after=combat_ctx["hit_damage"],
+                      blocked=combat_ctx["blocked"],
+                      skip_npc=combat_ctx["skip_npc_turn"])
+
+        game_ctx.combat_ctx = None
+        return combat_ctx
+
     # ── Main round ────────────────────────────────────────────────────────────
-    # TODO: player_attack() handles the full round in one method (~325 lines).
-    #       Future refactor candidate: split into _player_turn(), _npc_turn(),
-    #       and _apply_bleed_ticks() for easier testing and maintenance.
 
     def player_attack(self) -> None:
         if self.done:
@@ -202,10 +308,11 @@ class CombatSession:
 
         p_atk, p_def = self._player_stats()
         n_atk, n_def = self._npc_stats()
+        npc_name = self.npc.get("name", "the enemy")
 
         log.enter("combat", "player_attack",
                   player=self.player.name, player_hp=self.player.hp,
-                  npc=self.npc.get("name","?"), npc_hp=self.npc.get("hp","?"),
+                  npc=npc_name, npc_hp=self.npc.get("hp","?"),
                   p_atk=p_atk, p_def=p_def, n_atk=n_atk, n_def=n_def,
                   p_style=self.player.active_style,
                   player_bleed=self._player_bleed, npc_bleed=self._npc_bleed)
@@ -247,98 +354,74 @@ class CombatSession:
         # PLAYER → NPC
         # ══════════════════════════════════════════════════════════════════════
 
-        # Style matchup
+        # Style matchup multiplier (strong_vs / weak_vs tags on NPC)
         p_mult, p_reason = styles_mod.matchup(p_style, self.npc) if p_style else (1.0, "")
 
-        # Base damage + pre-hit passives
+        # Raw base damage before passives
         base = _base_damage(p_atk, n_def)
         log.debug("combat", "player->npc: base damage",
                   p_atk=p_atk, n_def=n_def, base_dmg=base,
-                  matchup_mult=round(p_mult,2), matchup_reason=p_reason or "none")
+                  matchup_mult=round(p_mult, 2), matchup_reason=p_reason or "none")
 
+        # Player attack passives (vital_strike, haymaker, bleed, ...)
+        p_atk_ctx: dict = {
+            "hit_damage": base, "blocked": False, "skip_npc_turn": False,
+            "counter_damage": 0, "counter_heal": 0, "apply_bleed": False,
+        }
         if p_style:
-            up = styles_mod.unlocked_passives(p_style, p_prof)
-
-            if "vital_strike" in up:
-                ok, frag = styles_mod.check_passive("vital_strike", p_prof)
-                if ok:
-                    base *= 2
-                    log.debug("combat", "passive: vital_strike fired", base_after=base)
-                    self._out(Tag.COMBAT_HIT, f"You {frag}")
-
-            if "haymaker" in up:
-                ok, frag = styles_mod.check_passive("haymaker", p_prof)
-                if ok:
-                    base = int(base * 1.75)
-                    log.debug("combat", "passive: haymaker fired", base_after=base)
-                    self._out(Tag.COMBAT_HIT, f"You {frag}")
+            p_atk_ctx = self._run_passives("attack", p_style, p_prof, p_atk, base, "player")
+        base = p_atk_ctx["hit_damage"]
 
         p_dmg = max(1, int(base * p_mult))
-        log.debug("combat", "player->npc: final damage", p_dmg=p_dmg)
+        log.debug("combat", "player->npc: damage after passives", p_dmg=p_dmg)
 
-        # NPC defensive passives (parry / dodge) — can reduce or cancel hit
-        npc_parried = False
-        npc_dodged  = False
+        # Blind accuracy check: 20% miss chance when in darkness
+        _BLIND_MISS_CHANCE = 0.20
+        blind_miss = (is_blind(self.player, self.room)
+                      and random.random() < _BLIND_MISS_CHANCE)
+        if blind_miss:
+            log.debug("combat", "player->npc: blind miss")
+            self._out(Tag.COMBAT_MISS,
+                      f"You swing wildly in the dark and miss {npc_name}!")
 
-        if n_style:
-            n_up = styles_mod.unlocked_passives(n_style, n_prof)
+        # NPC defensive passives (parry/riposte, dodge/counter, ...)
+        n_def_ctx: dict = {
+            "hit_damage": p_dmg, "blocked": False, "skip_npc_turn": False,
+            "counter_damage": 0, "counter_heal": 0, "apply_bleed": False,
+        }
+        if not blind_miss and n_style:
+            n_def_ctx = self._run_passives("defend", n_style, n_prof, n_atk, p_dmg, "npc")
 
-            if "parry" in n_up:
-                ok, frag = styles_mod.check_passive("parry", n_prof)
-                if ok:
-                    npc_parried = True
-                    log.debug("combat", "npc passive: parry fired")
-                    self._out(Tag.COMBAT_RECV, f"{self.npc['name']} {frag}")
-                    # NPC riposte
-                    if "riposte" in n_up:
-                        ok2, frag2 = styles_mod.check_passive("riposte", n_prof)
-                        if ok2 and not self._safe():
-                            rdmg = max(1, int(n_atk * 0.6))
-                            self.player.hp -= rdmg
-                            log.debug("combat", "npc passive: riposte",
-                                      rdmg=rdmg, player_hp_after=self.player.hp)
-                            self._out(Tag.COMBAT_RECV,
-                                      f"{self.npc['name']} {frag2} {rdmg} damage back! "
-                                      f"({self.player.hp}/{self.player.max_hp} HP)")
-                            if not self.player.is_alive:
-                                self._finish_player_dead(); return
+        # NPC counter damage (riposte, counter-attack) dealt back to player
+        if n_def_ctx["counter_damage"] and not self._safe():
+            cdmg = n_def_ctx["counter_damage"]
+            self.player.hp -= cdmg
+            log.debug("combat", "npc passive: counter damage to player",
+                      cdmg=cdmg, player_hp_after=self.player.hp)
+            self._out(Tag.COMBAT_RECV,
+                      f"{npc_name} deals {cdmg} counter damage! "
+                      f"({self.player.hp}/{self.player.max_hp} HP)")
+            if not self.player.is_alive:
+                self._finish_player_dead(); return
 
-            if not npc_parried and "dodge" in n_up:
-                ok, frag = styles_mod.check_passive("dodge", n_prof)
-                if ok:
-                    npc_dodged = True
-                    log.debug("combat", "npc passive: dodge fired")
-                    self._out(Tag.COMBAT_RECV, f"{self.npc['name']} {frag}")
-                    if "counter" in n_up:
-                        ok2, frag2 = styles_mod.check_passive("counter", n_prof)
-                        if ok2 and not self._safe():
-                            cdmg = max(1, int(n_atk * 0.5))
-                            self.player.hp -= cdmg
-                            log.debug("combat", "npc passive: counter",
-                                      cdmg=cdmg, player_hp_after=self.player.hp)
-                            self._out(Tag.COMBAT_RECV,
-                                      f"{self.npc['name']} {frag2} {cdmg} damage! "
-                                      f"({self.player.hp}/{self.player.max_hp} HP)")
-                            if not self.player.is_alive:
-                                self._finish_player_dead(); return
-
-        if not npc_parried and not npc_dodged:
-            self.npc["hp"] = self.npc.get("hp", npc_max) - p_dmg
+        # Apply player damage to NPC (if hit landed and wasn't blocked by passives)
+        if not blind_miss and not n_def_ctx["blocked"]:
+            final_p_dmg = n_def_ctx["hit_damage"]
+            self.npc["hp"] = self.npc.get("hp", npc_max) - final_p_dmg
             log.debug("combat", "player->npc: hit landed",
-                      p_dmg=p_dmg, npc_hp_after=self.npc["hp"])
-            msg = f"You strike {self.npc['name']} for {p_dmg} damage."
+                      p_dmg=final_p_dmg, npc_hp_after=self.npc["hp"])
+            msg = f"You strike {npc_name} for {final_p_dmg} damage."
             if p_reason:
                 msg += f" [{p_style['name'] if p_style else ''}: {p_reason}]"
             msg += f" ({max(0, self.npc['hp'])}/{npc_max} HP)"
             self._out(Tag.COMBAT_HIT, msg)
 
-            # Item on_hit effects
+            # Item on_hit effects (bleed, stun, ...)
             wpn = self.player.equipped.get("weapon")
             if wpn:
                 for fx in item_on_hit_effects(wpn):
                     ability = fx.get("ability", "")
                     chance  = float(fx.get("chance", 0))
-                    mag     = int(fx.get("magnitude", 1))
                     if random.random() < chance:
                         if ability == "bleed" and not self._player_bleed:
                             self._player_bleed = True
@@ -350,21 +433,17 @@ class CombatSession:
                             log.debug("combat", "item on_hit: stun - NPC turn skipped",
                                       weapon=wpn.get("name","?"))
                             self._out(Tag.COMBAT_HIT,
-                                      f"Your {wpn['name']} stuns {self.npc['name']}!")
+                                      f"Your {wpn['name']} stuns {npc_name}!")
                             if self.npc["hp"] > 0:
                                 return  # NPC turn skipped
 
-            # Player style bleed passive
-            if p_style and "bleed" in styles_mod.unlocked_passives(p_style, p_prof) \
-                    and not self._player_bleed:
-                ok, frag = styles_mod.check_passive("bleed", p_prof)
-                if ok:
-                    self._player_bleed = True
-                    log.debug("combat", "player passive: bleed applied")
-                    self._out(Tag.COMBAT_HIT, f"You {frag}")
+            # Bleed from player's attack-trigger style passive
+            if p_atk_ctx["apply_bleed"] and not self._player_bleed:
+                self._player_bleed = True
+                log.debug("combat", "player passive: bleed applied")
         else:
-            log.debug("combat", "player->npc: hit blocked",
-                      npc_parried=npc_parried, npc_dodged=npc_dodged)
+            log.debug("combat", "player->npc: hit blocked or missed",
+                      blind_miss=blind_miss, npc_blocked=n_def_ctx["blocked"])
 
         if self.npc["hp"] <= 0:
             self._finish_npc_dead(p_style, p_prof); return
@@ -373,148 +452,81 @@ class CombatSession:
         # NPC → PLAYER
         # ══════════════════════════════════════════════════════════════════════
 
-        n_mult, n_reason = (1.0, "")
         n_base = _base_damage(n_atk, p_def)
         log.debug("combat", "npc->player: base damage",
                   n_atk=n_atk, p_def=p_def, n_base=n_base)
 
+        # NPC attack passives (vital_strike, haymaker, bleed, ...)
+        n_atk_ctx: dict = {
+            "hit_damage": n_base, "blocked": False, "skip_npc_turn": False,
+            "counter_damage": 0, "counter_heal": 0, "apply_bleed": False,
+        }
         if n_style:
-            n_up2 = styles_mod.unlocked_passives(n_style, n_prof)
+            n_atk_ctx = self._run_passives("attack", n_style, n_prof, n_atk, n_base, "npc")
+        n_base = n_atk_ctx["hit_damage"]
+        n_dmg = max(1, n_base)
+        log.debug("combat", "npc->player: damage after passives", n_dmg=n_dmg)
 
-            # NPC offensive passives
-            if "vital_strike" in n_up2:
-                ok, frag = styles_mod.check_passive("vital_strike", n_prof)
-                if ok:
-                    n_base *= 2
-                    log.debug("combat", "npc passive: vital_strike fired", n_base_after=n_base)
-                    self._out(Tag.COMBAT_RECV, f"{self.npc['name']} {frag}")
-            if "haymaker" in n_up2:
-                ok, frag = styles_mod.check_passive("haymaker", n_prof)
-                if ok:
-                    n_base = int(n_base * 1.75)
-                    log.debug("combat", "npc passive: haymaker fired", n_base_after=n_base)
-                    self._out(Tag.COMBAT_RECV, f"{self.npc['name']} {frag}")
-
-        n_dmg = max(1, int(n_base * n_mult))
-        log.debug("combat", "npc->player: final damage", n_dmg=n_dmg)
-
-        # Player defensive passives
-        p_dodged  = False
-        p_parried = False
-
+        # Player defensive passives (stun/knockback, dodge/counter,
+        # parry/riposte, redirect/absorb, ...)
+        p_def_ctx: dict = {
+            "hit_damage": n_dmg, "blocked": False, "skip_npc_turn": False,
+            "counter_damage": 0, "counter_heal": 0, "apply_bleed": False,
+        }
         if p_style:
-            p_up = styles_mod.unlocked_passives(p_style, p_prof)
+            p_def_ctx = self._run_passives("defend", p_style, p_prof, p_atk, n_dmg, "player")
 
-            if "stun" in p_up:
-                ok, frag = styles_mod.check_passive("stun", p_prof)
-                if ok:
-                    log.debug("combat", "player passive: stun - NPC turn skipped")
-                    self._out(Tag.COMBAT_HIT, f"{self.npc['name']} {frag}")
-                    return   # NPC skips their attack
+        # Stun / knockback: player's defensive passive skips the NPC's attack entirely
+        if p_def_ctx["skip_npc_turn"]:
+            log.debug("combat", "player passive: NPC turn skipped (stun/knockback)")
+            return
 
-            if "knockback" in p_up:
-                ok, frag = styles_mod.check_passive("knockback", p_prof)
-                if ok:
-                    log.debug("combat", "player passive: knockback - NPC turn skipped")
-                    self._out(Tag.COMBAT_HIT, f"You {frag}")
-                    return
+        # Player counter damage (riposte, counter, redirect) dealt to NPC
+        if p_def_ctx["counter_damage"] and not self._safe():
+            cdmg = p_def_ctx["counter_damage"]
+            self.npc["hp"] -= cdmg
+            log.debug("combat", "player passive: counter damage to npc",
+                      cdmg=cdmg, npc_hp_after=self.npc["hp"])
+            self._out(Tag.COMBAT_HIT,
+                      f"You deal {cdmg} counter damage. "
+                      f"({max(0, self.npc['hp'])}/{npc_max} HP)")
+            if self.npc["hp"] <= 0:
+                self._finish_npc_dead(p_style, p_prof); return
 
-            if "dodge" in p_up:
-                ok, frag = styles_mod.check_passive("dodge", p_prof)
-                if ok:
-                    p_dodged = True
-                    log.debug("combat", "player passive: dodge fired")
-                    self._out(Tag.COMBAT_RECV, f"You {frag}")
-                    if "counter" in p_up:
-                        ok2, frag2 = styles_mod.check_passive("counter", p_prof)
-                        if ok2:
-                            cdmg = max(1, int(p_atk * 0.5 * p_mult))
-                            self.npc["hp"] -= cdmg
-                            log.debug("combat", "player passive: counter",
-                                      cdmg=cdmg, npc_hp_after=self.npc["hp"])
-                            self._out(Tag.COMBAT_HIT,
-                                      f"You {frag2} {cdmg} counter damage. "
-                                      f"({max(0,self.npc['hp'])}/{npc_max} HP)")
-                            if self.npc["hp"] <= 0:
-                                self._finish_npc_dead(p_style, p_prof); return
+        # Absorb heal (Flowing Water passive)
+        if p_def_ctx["counter_heal"] and not self._safe():
+            heal = p_def_ctx["counter_heal"]
+            self.player.hp = min(self.player.max_hp, self.player.hp + heal)
+            log.debug("combat", "player passive: absorb heal",
+                      heal=heal, player_hp_after=self.player.hp)
+            self._out(Tag.COMBAT_HIT, f"You recover {heal} HP.")
 
-            if not p_dodged and "parry" in p_up:
-                ok, frag = styles_mod.check_passive("parry", p_prof)
-                if ok:
-                    p_parried = True
-                    log.debug("combat", "player passive: parry fired")
-                    self._out(Tag.COMBAT_RECV, f"You {frag}")
-                    if "riposte" in p_up:
-                        ok2, frag2 = styles_mod.check_passive("riposte", p_prof)
-                        if ok2:
-                            rdmg = max(1, int(p_atk * 0.6 * p_mult))
-                            self.npc["hp"] -= rdmg
-                            log.debug("combat", "player passive: riposte",
-                                      rdmg=rdmg, npc_hp_after=self.npc["hp"])
-                            self._out(Tag.COMBAT_HIT,
-                                      f"You {frag2} {rdmg} riposte damage. "
-                                      f"({max(0,self.npc['hp'])}/{npc_max} HP)")
-                            if self.npc["hp"] <= 0:
-                                self._finish_npc_dead(p_style, p_prof); return
+        # Bleed from NPC's attack-trigger style passive (applied to player)
+        if n_atk_ctx["apply_bleed"] and not self._npc_bleed:
+            self._npc_bleed = True
+            log.debug("combat", "npc passive: bleed applied to player")
 
-        # Flowing Water redirect — convert enemy momentum into counterattack
-        if not p_dodged and not p_parried and p_style:
-            p_up = styles_mod.unlocked_passives(p_style, p_prof)
-            if "redirect" in p_up:
-                ok, frag = styles_mod.check_passive("redirect", p_prof)
-                if ok:
-                    n_tags = self.npc.get("tags", [])
-                    speed_bonus = 1.4 if "fast" in n_tags else (0.9 if "slow" in n_tags else 1.0)
-                    rdmg = max(1, int(p_atk * 0.7 * p_mult * speed_bonus))
-                    self.npc["hp"] -= rdmg
-                    log.debug("combat", "player passive: redirect",
-                              speed_bonus=speed_bonus, rdmg=rdmg,
-                              npc_hp_after=self.npc["hp"])
-                    self._out(Tag.COMBAT_HIT, f"You {frag} ({rdmg} damage). "
-                              f"({max(0,self.npc['hp'])}/{npc_max} HP)")
-                    p_dodged = True   # also absorb the incoming hit
-                    if "absorb" in p_up:
-                        ok2, frag2 = styles_mod.check_passive("absorb", p_prof)
-                        if ok2:
-                            heal = max(1, rdmg // 3)
-                            self.player.hp = min(self.player.max_hp, self.player.hp + heal)
-                            log.debug("combat", "player passive: absorb",
-                                      heal=heal, player_hp_after=self.player.hp)
-                            self._out(Tag.COMBAT_HIT,
-                                      f"You {frag2} (+{heal} HP).")
-                    if self.npc["hp"] <= 0:
-                        self._finish_npc_dead(p_style, p_prof); return
-
-        # NPC on-hit bleed
-        if n_style and "bleed" in styles_mod.unlocked_passives(n_style, n_prof) \
-                and not self._npc_bleed:
-            ok, frag = styles_mod.check_passive("bleed", n_prof)
-            if ok:
-                self._npc_bleed = True
-                log.debug("combat", "npc passive: bleed applied to player")
-
-        if not p_dodged and not p_parried:
+        # Apply NPC damage to player (if not blocked by dodge/parry/redirect)
+        if not p_def_ctx["blocked"]:
             if self._safe():
                 self._out(Tag.COMBAT_RECV,
-                          f"{self.npc['name']} strikes at you for {n_dmg} — "
+                          f"{npc_name} strikes at you for {n_dmg} — "
                           f"but you are unharmed. [safe zone]")
             else:
-                self.player.hp -= n_dmg
+                final_n_dmg = p_def_ctx["hit_damage"]
+                self.player.hp -= final_n_dmg
                 log.debug("combat", "npc->player: hit landed",
-                          n_dmg=n_dmg, player_hp_after=self.player.hp)
-                msg = f"{self.npc['name']} hits you for {n_dmg} damage."
-                if n_reason:
-                    msg += f" [{n_style['name'] if n_style else ''}: {n_reason}]"
+                          n_dmg=final_n_dmg, player_hp_after=self.player.hp)
+                msg = f"{npc_name} hits you for {final_n_dmg} damage."
                 msg += f" ({self.player.hp}/{self.player.max_hp} HP)"
                 self._out(Tag.COMBAT_RECV, msg)
                 if self._npc_bleed:
-                    self._out(Tag.COMBAT_RECV,
-                              f"{self.npc['name']}'s strike leaves you bleeding!")
+                    self._out(Tag.COMBAT_RECV, f"{npc_name}'s strike leaves you bleeding!")
                 if not self.player.is_alive:
                     self._finish_player_dead()
         else:
             log.debug("combat", "npc->player: incoming blocked",
-                      p_dodged=p_dodged, p_parried=p_parried)
+                      p_blocked=p_def_ctx["blocked"])
 
         # ── NPC may also strike the companion (30% chance per round) ──────────
         import engine.companion as companion_mod
@@ -526,8 +538,8 @@ class CombatSession:
             companion_mod.companion_take_hit(comp, self.npc, self.bus)
 
         # ── Round script ──────────────────────────────────────────────────────
-        # Runs after each full round where both combatants are still fighting.
-        # Gives NPCs the ability to react to round count and HP thresholds.
+        # Runs after each full round where both combatants are still alive.
+        # Lets NPCs react to round count and HP thresholds via script ops.
         if not self.done and self.ctx:
             round_script = self.npc.get("round_script", [])
             if round_script and not self._safe():

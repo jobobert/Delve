@@ -23,10 +23,13 @@
 14. [Crafting & Commissions](#14-crafting--commissions)
 15. [Companions](#15-companions)
 16. [Validation Tool](#16-validation-tool)
-17. [Appendix A — Room Flags](#appendix-a--room-flags)
-18. [Appendix B — Equipment Slots](#appendix-b--equipment-slots)
-19. [Appendix C — All Script Ops (Quick Reference)](#appendix-c--all-script-ops-quick-reference)
-20. [Appendix D — Player Fields for Substitution](#appendix-d--player-fields-for-substitution)
+17. [Light Mechanic](#17-light-mechanic)
+18. [World-Defined Player Attributes](#18-world-defined-player-attributes)
+19. [Standalone Script Files](#19-standalone-script-files)
+20. [Appendix A — Room Flags](#appendix-a--room-flags)
+21. [Appendix B — Equipment Slots](#appendix-b--equipment-slots)
+22. [Appendix C — All Script Ops (Quick Reference)](#appendix-c--all-script-ops-quick-reference)
+23. [Appendix D — Player Fields for Substitution](#appendix-d--player-fields-for-substitution)
 
 ---
 
@@ -76,21 +79,55 @@ data/
         <companion_id>.toml
 ```
 
-### World configuration (config.py)
+### World configuration (config.toml)
 
-Every world folder must contain a `config.py`. The engine reads it at startup and uses
+Every world folder must contain a `config.toml`. The engine reads it at startup and uses
 its values to configure world-specific behaviour:
 
-| Setting | Type | Description |
-|---------|------|-------------|
-| `WORLD_NAME` | str | Display name shown in menus and the map header |
-| `SKILLS` | dict | `{ "skill_id": "Display Name", … }` — skills available in this world |
-| `NEW_CHAR_HP` | int | Starting HP for every new character (default `100`) |
-| `CURRENCY_NAME` | str | Display name for gold (e.g. `"credits"`, `"marks"`) |
-| `DEFAULT_STYLE` | str | Fighting style ID every new character starts with |
-| `EQUIPMENT_SLOTS` | tuple | Ordered list of valid equipment slot names |
+```toml
+world_name        = "Delve"
+currency_name     = "gold"
+new_char_hp       = 100
+default_style     = "brawling"
+vision_threshold  = 3           # default player vision threshold (see §17 Light Mechanic)
 
-The engine falls back to built-in defaults if any field is absent.
+equipment_slots   = ["weapon", "head", "chest", "legs", "arms",
+                     "pack", "ring", "shield", "cape"]
+
+[skills]
+stealth    = "Stealth"
+survival   = "Survival"
+perception = "Perception"
+athletics  = "Athletics"
+social     = "Social"
+arcana     = "Arcana"
+mining     = "Mining"
+
+# Optional: world-defined numeric player attributes (see §18 Player Attributes)
+# [[player_attrs]]
+# id      = "corruption"
+# min     = 0
+# max     = 100
+# default = 0
+# display = "bar"          # "bar" shows as [####....] or "number" shows as raw int
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `world_name` | str | Display name shown in menus and the map header |
+| `currency_name` | str | Display name for gold (e.g. `"credits"`, `"marks"`) |
+| `new_char_hp` | int | Starting HP for every new character |
+| `default_style` | str | Fighting style ID every new character starts with |
+| `vision_threshold` | int | Effective light level below which a new character is blind |
+| `equipment_slots` | list | Ordered list of valid equipment slot names |
+| `[skills]` | table | `skill_id = "Display Name"` pairs for skills in this world |
+| `[[player_attrs]]` | array | World-defined custom numeric player attributes (optional) |
+
+The engine falls back to built-in defaults for any field that is absent.
+
+> **Legacy:** The engine also accepts a `config.py` file with Python constants (`WORLD_NAME`,
+> `SKILLS`, etc.) for backward compatibility, but `config.toml` is the standard format.
+> The validator will emit a migration warning for worlds still using `config.py`.
 
 ### zone.toml (optional)
 
@@ -1785,22 +1822,92 @@ hostile and closes off legitimate quests.
 
 Fighting styles define how a character (player or NPC) fights. Each style has
 passives that unlock at proficiency thresholds, preferred gear, and a matchup
-system (some styles counter others).
+system (some styles are effective or weak against certain opponent types).
 
 Styles are defined in `data/<world_id>/<zone>/styles/<style_id>.toml`.
 Players learn styles via `teach_style` scripts; NPCs have a fixed style at spawn.
-The starting style for new characters is set by `DEFAULT_STYLE` in the world's `config.py`.
-
-**Current built-in styles** (community content can add more):
-`brawling`, `swordplay`, `iron_root`, `flowing_water`, `shadowstrike`, `wardancer`, `spear_work`
-
-Players gain proficiency by fighting enemies that use that style.
-NPCs have a fixed `style_prof` and never improve.
+The starting style for new characters is set by `default_style` in the world's `config.toml`.
 
 **In world authoring**, styles matter for:
 - Setting `style` and `style_prof` on NPCs to control difficulty
 - Using `{ op = "teach_style", style_id = "..." }` to teach the player
 - Equipping items with the right `weapon_tags` or `armor_tags` for style affinity
+
+### 13.1 Style File Format
+
+```toml
+[[style]]
+id                = "swordplay"
+name              = "Swordplay"
+desc_short        = "Classical blade technique. Excels against armored humanoids."
+desc_long         = "A formal discipline from military academies..."
+strong_vs         = ["armored", "humanoid"]
+weak_vs           = ["fast", "beast", "undead"]
+strong_multiplier = 1.5
+weak_multiplier   = 0.65
+attack_bonus      = 2
+defense_bonus     = 0
+difficulty        = 1.5     # proficiency gain divisor (1.0 = normal, 2.0 = twice as slow)
+preferred_weapon_tags = ["blade", "one_handed"]
+preferred_armor_tags  = ["chain", "heavy"]
+weapon_bonus      = 0.25    # max attack % bonus from matching weapon (at full proficiency)
+armor_bonus       = 0.15    # max defense % bonus from matching armor
+learned_from      = "drill_sergeant"  # NPC id, or "" for self-taught / innate
+learned_at        = 1       # minimum player level to learn
+
+passives = [
+  { ability = "parry",   threshold = 50, trigger = "defend",
+    message = "You parry the attack cleanly!",
+    on_activate = [{op = "block_damage"}] },
+  { ability = "riposte", threshold = 75, trigger = "defend", requires = "parry",
+    message = "You riposte!",
+    on_activate = [{op = "counter_damage", multiplier = 0.6}] },
+]
+```
+
+### 13.2 Passive Fields
+
+Each entry in the `passives` array defines one passive ability:
+
+| Field | Description |
+|-------|-------------|
+| `ability` | Identifier matched by the probability function in `engine/styles.py` |
+| `threshold` | Proficiency (0–100) required to unlock this passive |
+| `trigger` | `"attack"` — fires when this entity attacks; `"defend"` — fires when defending; `"always"` — always-on stat bonus (handled directly, not via script ops) |
+| `requires` | Another ability that must have fired this hit for this to trigger (used for chained passives like riposte→parry) |
+| `message` | Text emitted when the passive fires. Use `{npc}` as a placeholder for the NPC's name. Messages are written from the player's perspective and automatically adapted when an NPC uses the style. |
+| `on_activate` | Array of combat-only script ops to execute when the passive fires (see §13.3) |
+
+### 13.3 Combat-Only Script Ops
+
+These ops are only valid inside a passive `on_activate` array. They are silently
+ignored if used outside of combat.
+
+| Op | Attributes | Effect |
+|----|-----------|--------|
+| `block_damage` | — | Sets the current hit damage to 0 and marks the hit as blocked |
+| `multiply_damage` | `multiplier` | Multiplies current hit damage (e.g. `2.0` for vital strike) |
+| `reduce_damage` | `percent` | Reduces current hit damage by N% (e.g. `percent = 30`) |
+| `counter_damage` | `multiplier` | Deals `attacker_atk * multiplier` back to the opponent |
+| `skip_npc_attack` | — | NPC loses its attack this round (stun / knockback) |
+| `apply_combat_bleed` | — | Starts a bleed effect on the target (1–3 damage per round) |
+| `heal_self` | `multiplier` | Heals the passive user for `counter_damage * multiplier` HP |
+
+**Example — full passive chain (Flowing Water):**
+```toml
+passives = [
+  { ability = "stillness", threshold = 1,  trigger = "always",  message = "" },
+  { ability = "redirect",  threshold = 40, trigger = "defend",
+    message = "You redirect the attack — using their force against them!",
+    on_activate = [{op = "counter_damage", multiplier = 0.7}, {op = "block_damage"}] },
+  { ability = "absorb",    threshold = 75, trigger = "defend", requires = "redirect",
+    message = "You absorb the impact, recovering HP!",
+    on_activate = [{op = "heal_self", multiplier = 0.33}] },
+]
+```
+
+Here `absorb` only fires if `redirect` also fired this round (`requires = "redirect"`).
+The `heal_self` op heals for a fraction of the counter damage `redirect` dealt.
 
 ---
 
@@ -1989,6 +2096,183 @@ python tools/validate.py
 - `✗` = error (game may break)
 - `⚠` = warning (game still works, but something may be wrong)
 
+Run with `--world <id>` to check a single world:
+```
+python tools/validate.py --world first_world
+```
+
+---
+
+## 17. Light Mechanic
+
+Rooms can have a light level that determines what players can see. Items can
+carry a light source (or drain). Scripts can change light levels dynamically.
+
+### 17.1 Room Light
+
+Add `light = N` to any room (integer 0–10). Default is `10` (fully lit).
+```toml
+[[room]]
+id          = "cave_entrance"
+name        = "Cave Entrance"
+description = "A gaping maw of darkness opens before you."
+light       = 2
+```
+
+### 17.2 Item Light
+
+Add `light_add = N` to any item. Positive values are light sources; negative
+values reduce effective light (blindfold, cursed hood, etc.):
+```toml
+[[item]]
+id        = "torch"
+name      = "Torch"
+light_add = 5      # adds 5 to effective light while equipped
+slot      = "cape" # or whatever slot makes sense
+
+[[item]]
+id        = "blindfold"
+name      = "Blindfold"
+light_add = -10    # negates nearly all light
+slot      = "head"
+```
+
+**Effective light** = `room.light + sum(equipped item light_add values)`.
+
+### 17.3 Player Vision
+
+Each player has a `vision_threshold` (default: `vision_threshold` from `config.toml`,
+usually `3`). When `effective_light < vision_threshold` the player is blind.
+
+**Effects of blindness:**
+- `look`: "It is pitch black. You cannot see anything."
+- `examine <target>`: "You cannot see well enough to make that out."
+- `map`: all cells show as `[???]`
+- Room items are not listed (but can still be picked up by name)
+- Combat: 20% chance to miss per attack
+
+### 17.4 Light Script Ops
+
+```toml
+# Set a specific room's light level (absolute)
+{op = "set_room_light", room_id = "cave_entrance", value = 2}
+
+# Adjust the current room's light (clamps 0–10)
+{op = "adjust_light", amount = -3}
+
+# Branch on effective light (true when effective_light <= max)
+{op = "if_light", max = 3, then = [
+  {op = "message", text = "It's too dark to read the inscription."}
+], else = [
+  {op = "message", text = "You examine the inscription carefully."}
+]}
+
+# Set player vision threshold (absolute)
+{op = "set_vision", amount = 2}
+
+# Adjust vision threshold (darkvision potion, blindness curse, etc.)
+{op = "adjust_vision", amount = -1}
+```
+
+---
+
+## 18. World-Defined Player Attributes
+
+Worlds can define custom numeric attributes for players. These appear in the
+`stats` command and can be read and modified by scripts.
+
+### 18.1 Defining Attributes
+
+In `config.toml`, add one `[[player_attrs]]` entry per attribute:
+```toml
+[[player_attrs]]
+id      = "corruption"
+min     = 0
+max     = 100
+default = 0
+display = "bar"     # "bar" = [####....] or "number" = raw integer
+
+[[player_attrs]]
+id      = "resonance"
+min     = 0
+max     = 10
+default = 5
+display = "number"
+```
+
+### 18.2 Stats Display
+
+Attributes appear at the bottom of the `stats` command output.
+- `display = "bar"` renders as `[######..........] 60/100`
+- `display = "number"` renders as a plain integer
+
+### 18.3 Attribute Script Ops
+
+```toml
+# Set an attribute to a specific value (clamped to min/max)
+{op = "set_attr", name = "corruption", value = 50}
+
+# Adjust by an amount (positive or negative, clamped)
+{op = "adjust_attr", name = "corruption", amount = 10}
+
+# Branch on attribute value
+{op = "if_attr", name = "corruption", min = 50, max = 100, then = [
+  {op = "message", text = "The darkness in you grows stronger."}
+], else = [
+  {op = "message", text = "You feel relatively clear-headed."}
+]}
+```
+
+The `if_attr` condition is true when the attribute's current value falls
+within `[min, max]` inclusive.
+
+---
+
+## 19. Standalone Script Files
+
+Script ops can live in separate `.toml` files and be invoked by name. This
+lets you create one-shot world events, batch admin changes, or complex post-quest
+upgrades without embedding large script arrays in NPC data.
+
+### 19.1 Script File Format
+
+Create a file anywhere under the world root (convention: `scripts/`):
+```toml
+# data/first_world/scripts/drake_returns.toml
+ops = [
+  {op = "message",    text = "The ground shakes as the Drake returns to Ashwood!"},
+  {op = "set_flag",   flag = "drake_returned"},
+  {op = "spawn_item", item_id = "drake_scale", room_id = "ashwood_clearing"},
+]
+```
+
+### 19.2 Inline Invocation
+
+Any script can run a file using `run_script_file`. The path is relative to the world root:
+```toml
+{op = "run_script_file", path = "scripts/drake_returns.toml"}
+```
+
+### 19.3 CLI Tool
+
+Run a script against a specific character from the command line:
+```bash
+# Run a script on an existing player
+python tools/run_script.py scripts/drake_returns.toml --player Arthen
+
+# Run a script, specifying the world explicitly
+python tools/run_script.py scripts/event.toml --player Arthen --world first_world
+
+# Preview without saving
+python tools/run_script.py scripts/event.toml --player Arthen --dry-run
+
+# Create the player if they don't exist yet
+python tools/run_script.py scripts/welcome.toml --player NewHero --create
+```
+
+The tool loads the world, loads the player, executes the ops, and saves the player.
+All OUTPUT messages are printed to the console during execution.
+
 ---
 
 ## Appendix A — Room Flags
@@ -2015,9 +2299,9 @@ flags = ["town", "no_combat", "healing"]
 
 ## Appendix B — Equipment Slots
 
-Equipment slots are **world-configurable** via `EQUIPMENT_SLOTS` in `config.py`. The table
-below lists the default slots for The Sixfold Realms. A world can add, remove, or rename slots
-freely — `item.slot` values must match an entry in the world's slot list.
+Equipment slots are **world-configurable** via `equipment_slots` in `config.toml`. The table
+below lists the default slots. A world can add, remove, or rename slots freely — `item.slot`
+values must match an entry in the world's slot list.
 
 | Slot | Items that use it |
 |------|-------------------|
@@ -2040,56 +2324,144 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 
 ## Appendix C — All Script Ops (Quick Reference)
 
+53 ops total. Unknown op names are **silently ignored** — forward-compatible with new engine versions.
+
+**Output**
+
 | Op | Key attributes | Description |
 |----|---------------|-------------|
 | `say` | `text` | Dialogue-tagged text |
-| `message` | `text`, `tag` | Text with any tag |
+| `message` | `text`, `tag` | Text with any tag (default: `system`) |
+
+**Player flags**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
 | `set_flag` | `flag` | Add flag |
 | `clear_flag` | `flag` | Remove flag |
+| `if_flag` / `if` | `flag`, `then`, `else` | Branch on flag |
+| `if_not_flag` | `flag`, `then`, `else` | Branch on flag absence |
+
+**Gold / XP / HP**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
 | `give_gold` | `amount` | Award gold |
 | `take_gold` | `amount`, `silent` | Deduct gold (fails if short) |
 | `give_xp` | `amount`, `silent` | Award XP |
-| `heal` | `amount` | Restore HP (capped) |
+| `heal` | `amount` | Restore HP (capped at max) |
 | `set_hp` | `amount` | Set HP exactly |
 | `damage` | `amount`, `message`, `silent` | Deal direct damage |
+
+**Inventory**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
 | `give_item` | `item_id` | Copy item to inventory |
 | `take_item` | `item_id` | Remove item from inventory |
 | `spawn_item` | `item_id` | Place item in current room |
+| `if_item` | `item_id`, `then`, `else` | Branch on inventory item |
+| `require_tag` | `tag`, `fail_message` | Abort if no item with tag |
+
+**Quests**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
 | `advance_quest` | `quest_id`, `step` | Start or advance quest |
 | `complete_quest` | `quest_id` | Complete quest and award rewards |
+| `if_quest` | `quest_id`, `step`, `then`, `else` | Branch on quest step |
+| `if_quest_complete` | `quest_id`, `then`, `else` | Branch on quest completion |
+
+**Styles & world**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
 | `teach_style` | `style_id` | Teach fighting style |
 | `unlock_exit` | `room_id`, `direction` | Unlock a door |
 | `lock_exit` | `room_id`, `direction` | Lock a door |
+| `teleport_player` | `room_id`, `message` | Move player to any room |
+| `move_npc` | `npc_id`, `to_room` | Move NPC between rooms |
+| `move_item` | `item_id`, `to_room`, `from_room` | Move room item |
+
+**Companions**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
 | `give_companion` | `companion_id` | Assign companion |
 | `dismiss_companion` | `message` | Remove companion |
+
+**Skills**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
 | `skill_check` | `skill`, `dc`, `on_pass`, `on_fail`, `silent`, `grow` | d20 skill roll |
 | `if_skill` | `skill`, `min`, `then`, `else` | Branch on skill value |
 | `skill_grow` | `skill`, `amount` | Directly increase skill |
-| `apply_status` | `effect`, `duration` | Apply status effect |
+
+**Status effects**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
+| `apply_status` | `effect`, `duration` | Apply status effect (poisoned / blinded / weakened / slowed / protected) |
 | `clear_status` | `effect` | Remove status effect |
 | `if_status` | `effect`, `then`, `else` | Branch on effect presence |
+
+**Prestige**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
 | `prestige` | `amount`, `reason` | Adjust prestige score |
 | `add_affinity` | `tag` | Grant affinity tag |
 | `remove_affinity` | `tag` | Remove affinity tag |
 | `if_prestige` | `min`, `max`, `then`, `else` | Branch on prestige range |
 | `if_affinity` | `tag`, `then`, `else` | Branch on affinity |
-| `bank_expand` | `tier` | Expand bank slots |
-| `if_flag` / `if` | `flag`, `then`, `else` | Branch on flag |
-| `if_not_flag` | `flag`, `then`, `else` | Branch on flag absence |
-| `if_item` | `item_id`, `then`, `else` | Branch on inventory item |
-| `if_quest` | `quest_id`, `step`, `then`, `else` | Branch on quest step |
-| `if_quest_complete` | `quest_id`, `then`, `else` | Branch on quest completion |
-| `fail` | — | Abort script immediately |
-| `require_tag` | `tag`, `fail_message` | Abort if no item with tag |
-| `teleport_player` | `room_id`, `message` | Move player to any room |
-| `move_npc` | `npc_id`, `to_room` | Move NPC between rooms |
-| `move_item` | `item_id`, `to_room`, `from_room` | Move room item |
-| `if_combat_round` | `min`, `then`, `else` | Branch on round number |
-| `if_npc_hp` | `max`, `then`, `else` | Branch on NPC HP |
-| `end_combat` | — | End fight; NPC survives |
-| `journal_entry` | `title`, `text` | Add player journal entry |
 
-> Unknown op names are **silently ignored** — future-proofing for new ops.
+**Bank & flow control**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
+| `bank_expand` | `tier` | Expand bank slots |
+| `fail` | — | Abort script immediately |
+| `journal_entry` | `title`, `text` | Add player journal entry |
+| `run_script_file` | `path` | Run ops from a world-relative TOML file (see §19) |
+
+**Combat round (NPC `round_script` only)**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
+| `if_combat_round` | `min`, `then`, `else` | Branch on round number |
+| `if_npc_hp` | `max`, `then`, `else` | Branch on NPC HP percentage |
+| `end_combat` | — | End fight; NPC survives at 1 HP |
+
+**Player attributes (world-defined, see §18)**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
+| `set_attr` | `name`, `value` | Set attribute to value (clamped to min/max) |
+| `adjust_attr` | `name`, `amount` | Add/subtract from attribute (clamped) |
+| `if_attr` | `name`, `min`, `max`, `then`, `else` | Branch when attribute is in range |
+
+**Light mechanic (see §17)**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
+| `set_room_light` | `room_id`, `value` | Set a room's light level (0–10) |
+| `adjust_light` | `amount` | Adjust current room's light (clamped 0–10) |
+| `if_light` | `max`, `then`, `else` | True when effective light <= max |
+| `set_vision` | `amount` | Set player vision threshold |
+| `adjust_vision` | `amount` | Adjust vision threshold (darkvision, blindness) |
+
+**Combat-only passive ops (style `on_activate` only, see §13.3)**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
+| `block_damage` | — | Set current hit damage to 0 (parry, dodge) |
+| `multiply_damage` | `multiplier` | Scale current hit damage |
+| `reduce_damage` | `percent` | Reduce hit damage by N% |
+| `counter_damage` | `multiplier` | Deal `attacker_atk * multiplier` back to opponent |
+| `skip_npc_attack` | — | NPC loses its attack this round (stun, knockback) |
+| `apply_combat_bleed` | — | Start bleed on target (1–3 damage/round) |
+| `heal_self` | `multiplier` | Heal user for `counter_damage * multiplier` HP |
 
 ---
 

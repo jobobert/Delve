@@ -52,7 +52,8 @@ import random
 from typing import Callable
 from engine.events import EventBus, Event
 from engine.world import World, _short, _long
-from engine.player import Player, item_on_use_effect, item_on_equip_message, item_weight
+from engine.player import (Player, item_on_use_effect, item_on_equip_message,
+                            item_weight, effective_light, is_blind)
 from engine.combat import CombatSession
 from engine.msg import Msg, Tag
 from engine.room_flags import RoomFlags
@@ -414,11 +415,17 @@ class CommandProcessor:
         self._blank()
         self._out(Tag.ROOM_NAME,    room["name"])
         self._out(Tag.ROOM_DIVIDER, "─" * len(room["name"]))
-        self._out(Tag.ROOM_DESC,    room.get("description", "You see nothing special."))
 
-        # Items — now always full dicts, so we always have the name
+        # Light check — blind players get a darkness message instead of room detail.
+        blind = is_blind(self.player, room)
+        if blind:
+            self._out(Tag.ROOM_DESC, "It is pitch black. You cannot see anything.")
+        else:
+            self._out(Tag.ROOM_DESC, room.get("description", "You see nothing special."))
+
+        # Items — only visible when not blind
         items = room.get("items", [])
-        if items:
+        if items and not blind:
             # Group by display_prefix; default is "On the ground"
             from collections import defaultdict
             by_prefix: dict[str, list[str]] = defaultdict(list)
@@ -456,9 +463,9 @@ class CommandProcessor:
             cname = comp.get("name", "?") if comp else "?"
             self._out(Tag.SYSTEM, f"({cname} is waiting — this area won't accommodate them.)")
 
-        # Live NPCs — show name + short description (numbered when names clash)
+        # Live NPCs — only visible when not blind
         alive = [n for n in room.get("_npcs", []) if n.get("hp", 1) > 0]
-        if alive:
+        if alive and not blind:
             for npc, display_name in self._numbered_npcs(alive):
                 self._out(Tag.NPC, f"{display_name} — {_short(npc)}")
 
@@ -489,6 +496,9 @@ class CommandProcessor:
         """Detailed look at a named item (room or inventory) or NPC."""
         room = self._current_room()
         if not room:
+            return
+        if is_blind(self.player, room):
+            self._out(Tag.SYSTEM, "It is too dark to make that out.")
             return
 
         # Check room items
@@ -777,6 +787,25 @@ class CommandProcessor:
         import engine.prestige as prestige_mod
         self._out(Tag.STATS, ruler)
         self._out(Tag.STATS, prestige_mod.prestige_line(p))
+
+        # ── World-defined attributes ──────────────────────────────────
+        if _wc.PLAYER_ATTRS and p.world_attrs:
+            self._out(Tag.STATS, ruler)
+            BAR_W = 16
+            for attr_def in _wc.PLAYER_ATTRS:
+                aid     = attr_def.get("id", "")
+                label   = aid.replace("_", " ").title()
+                val     = p.world_attrs.get(aid, int(attr_def.get("default", 0)))
+                lo      = int(attr_def.get("min", 0))
+                hi      = int(attr_def.get("max", 100))
+                display = attr_def.get("display", "number")
+                if display == "bar":
+                    span   = max(hi - lo, 1)
+                    filled = int(BAR_W * (val - lo) / span)
+                    bar    = "#" * filled + "." * (BAR_W - filled)
+                    self._out(Tag.STATS, f"  {label:<14} [{bar}] {val}/{hi}")
+                else:
+                    self._out(Tag.STATS, f"  {label:<14} {val}")
 
         # ── Equipment ────────────────────────────────────────────────
         self._out(Tag.STATS, ruler)
@@ -1779,6 +1808,12 @@ class CommandProcessor:
           SW/NE ('/'): xi * COL_W - 2   (gap between col xi-1 and xi)
           SE/NW ('\\'): xi * COL_W + 5  (gap between col xi and xi+1)
         """
+        # Blind players cannot read the map.
+        room = self._current_room()
+        if is_blind(self.player, room):
+            self._out(Tag.SYSTEM, "It is too dark to read the map.")
+            return
+
         from engine.toml_io import load as toml_load
         visited = self.player.visited_rooms
 

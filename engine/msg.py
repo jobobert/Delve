@@ -53,6 +53,7 @@ class Tag:
 
     # ── Combat ────────────────────────────────────────────────────
     COMBAT_HIT   = "combat_hit"    # Player successfully hits
+    COMBAT_MISS  = "combat_miss"   # Player's attack misses (blind, etc.)
     COMBAT_RECV  = "combat_recv"   # Player receives damage
     COMBAT_KILL  = "combat_kill"   # Enemy defeated
     COMBAT_DEATH = "combat_death"  # Player is killed

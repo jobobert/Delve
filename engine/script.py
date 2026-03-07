@@ -20,7 +20,7 @@ GameContext
   ctx.bus     — EventBus (emit messages to the frontend)
   ctx.quests  — QuestTracker (start/advance/complete quests)
 
-Operation reference  (45 ops)
+Operation reference  (53 ops)
 ──────────────────────────────
 Output:
   { op = "say",     text = "..." }                  — DIALOGUE-tagged text
@@ -104,6 +104,21 @@ Combat round (round_script on NPCs only):
 Journal:
   { op = "journal_entry", title = "...", text = "..." }
 
+World-defined player attributes (defined in config.toml [[player_attrs]]):
+  { op = "set_attr",    name = "attr_id", value = N }
+  { op = "adjust_attr", name = "attr_id", amount = N }    — clamps to attr min/max
+  { op = "if_attr",     name = "attr_id", min = N, max = N, then = [...], else = [...] }
+
+Light mechanic:
+  { op = "set_room_light", room_id = "...", value = N }   — set a room's light (0-10)
+  { op = "adjust_light",   amount = N }                   — adjust current room light (clamps 0-10)
+  { op = "if_light",       max = N, then = [...], else = [...] }  — true if effective light <= max
+  { op = "set_vision",     amount = N }                   — set player.vision_threshold
+  { op = "adjust_vision",  amount = N }                   — adjust vision_threshold (darkvision etc.)
+
+Standalone script files:
+  { op = "run_script_file", path = "scripts/event.toml" } — run ops from a world-relative TOML file
+
 Notes:
   - Unknown ops are silently ignored (forward-compatibility).
   - fail and require_tag raise _ScriptAbort, caught by run() — no traceback.
@@ -133,6 +148,9 @@ class GameContext:
     quests: "QuestTracker"
     round:  int = 0              # current combat round (0 = outside combat)
     npc:    "dict | None" = None # NPC being fought, set by CombatSession
+    # Mutable state dict shared between CombatSession and combat-only script ops.
+    # Set by _run_passives(); None outside of passive execution.
+    combat_ctx: "dict | None" = None
 
 
 def eval_exit_condition(cond: dict, ctx: "GameContext") -> bool:
@@ -606,6 +624,164 @@ class ScriptRunner:
             text  = op.get("text", "")
             ctx.player.journal.append({"title": title, "text": text})
             emit(Tag.JOURNAL, f"[Journal] {title} recorded.")
+
+        # ── Combat-only passive ops ───────────────────────────────────────────
+        # These ops are only valid during passive execution (ctx.combat_ctx set).
+        # They mutate the shared combat_ctx dict to communicate back to CombatSession.
+        # Silently ignored outside of combat (combat_ctx is None).
+
+        elif name == "block_damage":
+            # Set current hit damage to 0 and mark the hit as blocked.
+            if ctx.combat_ctx is not None:
+                ctx.combat_ctx["hit_damage"] = 0
+                ctx.combat_ctx["blocked"] = True
+
+        elif name == "multiply_damage":
+            # Scale current hit damage by multiplier.
+            # { op = "multiply_damage", multiplier = 2.0 }
+            if ctx.combat_ctx is not None:
+                mult = float(op.get("multiplier", 1.0))
+                ctx.combat_ctx["hit_damage"] = int(ctx.combat_ctx["hit_damage"] * mult)
+
+        elif name == "counter_damage":
+            # Deal back-damage to the current opponent (NPC or player depending on side).
+            # multiplier is applied to the attacker's base attack stat.
+            # { op = "counter_damage", multiplier = 0.6 }
+            if ctx.combat_ctx is not None:
+                mult = float(op.get("multiplier", 0.5))
+                base_atk = int(ctx.combat_ctx.get("attacker_atk", 0))
+                cdmg = max(1, int(base_atk * mult))
+                ctx.combat_ctx["counter_damage"] = (
+                    ctx.combat_ctx.get("counter_damage", 0) + cdmg
+                )
+
+        elif name == "reduce_damage":
+            # Reduce current hit damage by a percentage.
+            # { op = "reduce_damage", percent = 30 }
+            if ctx.combat_ctx is not None:
+                pct = float(op.get("percent", 0)) / 100.0
+                cur = ctx.combat_ctx["hit_damage"]
+                ctx.combat_ctx["hit_damage"] = max(0, int(cur * (1.0 - pct)))
+
+        elif name == "skip_npc_attack":
+            # Signal that the NPC should skip its attack this round (stun/knockback).
+            if ctx.combat_ctx is not None:
+                ctx.combat_ctx["skip_npc_turn"] = True
+
+        elif name == "apply_combat_bleed":
+            # Mark the defender as bleeding (1-3 damage per round going forward).
+            if ctx.combat_ctx is not None:
+                ctx.combat_ctx["apply_bleed"] = True
+
+        elif name == "heal_self":
+            # Heal the passive user for a fraction of counter damage dealt this hit.
+            # { op = "heal_self", multiplier = 0.33 }
+            if ctx.combat_ctx is not None:
+                mult = float(op.get("multiplier", 0.33))
+                cdmg = ctx.combat_ctx.get("counter_damage", 0)
+                ctx.combat_ctx["counter_heal"] = max(1, int(cdmg * mult))
+
+        # ── World-defined player attributes ───────────────────────────────────
+        elif name == "set_attr":
+            # { op = "set_attr", name = "attr_id", value = N }
+            import engine.world_config as _wc
+            attr_name = op.get("name", "")
+            value     = int(op.get("value", 0))
+            attr_def  = next((a for a in _wc.PLAYER_ATTRS if a.get("id") == attr_name), None)
+            if attr_def:
+                lo = int(attr_def.get("min", 0))
+                hi = int(attr_def.get("max", 100))
+                p.world_attrs[attr_name] = max(lo, min(hi, value))
+
+        elif name == "adjust_attr":
+            # { op = "adjust_attr", name = "attr_id", amount = N }
+            import engine.world_config as _wc
+            attr_name = op.get("name", "")
+            amount    = int(op.get("amount", 0))
+            attr_def  = next((a for a in _wc.PLAYER_ATTRS if a.get("id") == attr_name), None)
+            if attr_def:
+                lo  = int(attr_def.get("min", 0))
+                hi  = int(attr_def.get("max", 100))
+                cur = p.world_attrs.get(attr_name, int(attr_def.get("default", 0)))
+                p.world_attrs[attr_name] = max(lo, min(hi, cur + amount))
+
+        elif name == "if_attr":
+            # { op = "if_attr", name = "attr_id", min = N, max = N, then = [...], else = [...] }
+            import engine.world_config as _wc
+            attr_name = op.get("name", "")
+            attr_def  = next((a for a in _wc.PLAYER_ATTRS if a.get("id") == attr_name), None)
+            if attr_def:
+                cur     = p.world_attrs.get(attr_name, int(attr_def.get("default", 0)))
+                lo      = op.get("min", None)
+                hi      = op.get("max", None)
+                passed  = True
+                if lo is not None and cur < int(lo):
+                    passed = False
+                if hi is not None and cur > int(hi):
+                    passed = False
+                self._run_branch(passed, op)
+
+        # ── Light mechanic ────────────────────────────────────────────────────
+        elif name == "set_room_light":
+            # { op = "set_room_light", room_id = "...", value = N }
+            import engine.log as log
+            room_id = op.get("room_id", ctx.player.room_id)
+            value   = max(0, min(10, int(op.get("value", 10))))
+            target  = ctx.world.prepare_room(room_id, ctx.player)
+            if target is not None:
+                target["light"] = value
+                log.debug("light", "set_room_light", room_id=room_id, value=value)
+
+        elif name == "adjust_light":
+            # { op = "adjust_light", amount = N }  — affects current room
+            import engine.log as log
+            room   = ctx.world.prepare_room(ctx.player.room_id, ctx.player)
+            amount = int(op.get("amount", 0))
+            if room is not None:
+                current = int(room.get("light", 10))
+                room["light"] = max(0, min(10, current + amount))
+                log.debug("light", "adjust_light",
+                          room_id=ctx.player.room_id,
+                          old=current, new=room["light"])
+
+        elif name == "if_light":
+            # { op = "if_light", max = N, then = [...], else = [...] }
+            # True when effective light (room + equipped items) <= max.
+            from engine.player import effective_light
+            room   = ctx.world.prepare_room(ctx.player.room_id, ctx.player)
+            eff    = effective_light(ctx.player, room) if room else 10
+            passed = eff <= int(op.get("max", 10))
+            self._run_branch(passed, op)
+
+        elif name == "set_vision":
+            # { op = "set_vision", amount = N }
+            ctx.player.vision_threshold = max(0, int(op.get("amount", 3)))
+
+        elif name == "adjust_vision":
+            # { op = "adjust_vision", amount = N }
+            ctx.player.vision_threshold = max(
+                0, ctx.player.vision_threshold + int(op.get("amount", 0))
+            )
+
+        # ── Standalone script files ───────────────────────────────────────────
+        elif name == "run_script_file":
+            # { op = "run_script_file", path = "scripts/event.toml" }
+            # Path is relative to the world root folder.
+            import engine.log as log
+            import engine.world_config as _wc
+            from engine.toml_io import load as _toml_load
+            rel_path = op.get("path", "")
+            if rel_path and _wc._world_path:
+                script_path = _wc._world_path / rel_path
+                try:
+                    sdata = _toml_load(script_path)
+                    sub_ops = sdata.get("ops", [])
+                    log.debug("script", "run_script_file",
+                              path=str(script_path), ops=len(sub_ops))
+                    self.run(sub_ops)
+                except Exception as e:
+                    import engine.log as log
+                    log.warn("script", f"run_script_file failed: {e}", path=rel_path)
 
         # ── Unknown ops ───────────────────────────────────────────────────────
         # Unknown ops are silently ignored for forward-compatibility.

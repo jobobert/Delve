@@ -15,11 +15,13 @@ Scans all zone folders (data/*/) for TOML data files and checks:
   - Every dialogue file: nodes reachable, next= refs valid, no [[node.response]] usage
 
 Run from the project root:
-    python tools/validate.py
+    python tools/validate.py                  # validate all worlds
+    python tools/validate.py --world first_world  # validate one world only
 
 Exit code 0 = passed (warnings okay), exit code 1 = errors found.
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -51,10 +53,12 @@ def load_safe(path: Path) -> dict | None:
 
 
 def world_dirs() -> list[Path]:
-    """Return world folder Paths — subfolders of DATA_DIR that contain config.py."""
+    """Return world folder Paths — subfolders of DATA_DIR that contain config.toml or config.py."""
     return sorted(
         p for p in DATA_DIR.iterdir()
-        if p.is_dir() and (p / "config.py").exists()
+        if p.is_dir() and (
+            (p / "config.toml").exists() or (p / "config.py").exists()
+        )
     )
 
 
@@ -223,7 +227,7 @@ _NPC_REQUIRED = ("id", "name", "hp", "max_hp", "attack", "defense",
 _NPC_KNOWN = set(_NPC_REQUIRED) | {
     "shop", "rest_cost", "dialogue", "spawn_chance",
     "respawn_time", "kill_script", "gear_affinity",
-    "admin_comment", "give_accepts",
+    "admin_comment", "give_accepts", "round_script",
 }
 
 
@@ -631,16 +635,89 @@ def _print_dialogue_row(path: Path, npc_id: str, npc_known: bool,
 
 
 def validate_world_config() -> None:
-    """Load and validate the active world's config.py for correct format and fields."""
-    import importlib.util
-    world_path  = _CURRENT_WORLD or DATA_DIR
-    config_path = world_path / "config.py"
-    cfg_label   = str(config_path.relative_to(DATA_DIR.parent))
+    """Load and validate the active world's config.toml (or legacy config.py)."""
+    world_path = _CURRENT_WORLD or DATA_DIR
 
-    if not config_path.exists():
-        warn(f"{cfg_label} not found — engine will use built-in defaults")
+    # Prefer config.toml; fall back to legacy config.py.
+    toml_path = world_path / "config.toml"
+    py_path   = world_path / "config.py"
+
+    if toml_path.exists():
+        _validate_world_config_toml(toml_path)
+    elif py_path.exists():
+        _validate_world_config_py(py_path)
+    else:
+        warn(f"{world_path.name}/config.toml not found — engine will use built-in defaults")
+
+
+def _validate_world_config_toml(config_path: Path) -> None:
+    """Validate a config.toml world config file."""
+    cfg_label = str(config_path.relative_to(DATA_DIR.parent))
+    try:
+        cfg = toml_load(config_path)
+    except Exception as e:
+        err(f"{cfg_label}: failed to parse — {e}")
         return
 
+    if not str(cfg.get("world_name", "")).strip():
+        warn(f"{cfg_label}: world_name is not set")
+
+    skills = cfg.get("skills")
+    if not skills:
+        warn(f"{cfg_label}: [skills] is empty or missing — "
+             "engine default (perception) will be available")
+    elif not isinstance(skills, dict):
+        err(f"{cfg_label}: [skills] must be a table mapping skill_id to display name")
+    else:
+        for k, v in skills.items():
+            if not isinstance(k, str) or not isinstance(v, str):
+                err(f"{cfg_label}: skills entry {k!r}: {v!r} — both must be strings")
+
+    hp = cfg.get("new_char_hp")
+    if hp is not None and (not isinstance(hp, int) or hp <= 0):
+        err(f"{cfg_label}: new_char_hp must be a positive integer (got {hp!r})")
+
+    vt = cfg.get("vision_threshold")
+    if vt is not None and (not isinstance(vt, int) or vt < 0):
+        err(f"{cfg_label}: vision_threshold must be a non-negative integer (got {vt!r})")
+
+    currency = cfg.get("currency_name")
+    if currency is not None and not isinstance(currency, str):
+        err(f"{cfg_label}: currency_name must be a string (got {currency!r})")
+
+    style = cfg.get("default_style")
+    if style is not None and not isinstance(style, str):
+        err(f"{cfg_label}: default_style must be a string (got {style!r})")
+
+    slots = cfg.get("equipment_slots")
+    if slots is not None:
+        if not isinstance(slots, list) or not slots:
+            err(f"{cfg_label}: equipment_slots must be a non-empty list of strings")
+        else:
+            for s in slots:
+                if not isinstance(s, str):
+                    err(f"{cfg_label}: equipment_slots entry {s!r} must be a string")
+
+    attrs = cfg.get("player_attrs", [])
+    if not isinstance(attrs, list):
+        err(f"{cfg_label}: player_attrs must be an array of tables ([[player_attrs]])")
+    else:
+        for i, a in enumerate(attrs):
+            if not isinstance(a, dict):
+                err(f"{cfg_label}: player_attrs[{i}] must be a table")
+                continue
+            if not a.get("id"):
+                err(f"{cfg_label}: player_attrs[{i}] missing required field 'id'")
+            disp = a.get("display", "number")
+            if disp not in ("number", "bar"):
+                warn(f"{cfg_label}: player_attrs[{i}] display={disp!r} unknown; "
+                     "use 'number' or 'bar'")
+
+
+def _validate_world_config_py(config_path: Path) -> None:
+    """Validate a legacy config.py world config file (backward compat)."""
+    import importlib.util
+    cfg_label = str(config_path.relative_to(DATA_DIR.parent))
     spec = importlib.util.spec_from_file_location("_val_world_cfg", config_path)
     mod  = importlib.util.module_from_spec(spec)
     try:
@@ -648,6 +725,8 @@ def validate_world_config() -> None:
     except Exception as e:
         err(f"{cfg_label}: failed to load — {e}")
         return
+
+    warn(f"{cfg_label}: legacy config.py detected — consider migrating to config.toml")
 
     if not getattr(mod, "WORLD_NAME", "").strip():
         warn(f"{cfg_label}: WORLD_NAME is not set")
@@ -661,8 +740,7 @@ def validate_world_config() -> None:
     else:
         for k, v in skills.items():
             if not isinstance(k, str) or not isinstance(v, str):
-                err(f"{cfg_label}: SKILLS entry {k!r}: {v!r} — "
-                    "both key and value must be strings")
+                err(f"{cfg_label}: SKILLS entry {k!r}: {v!r} — both must be strings")
 
     hp = getattr(mod, "NEW_CHAR_HP", None)
     if hp is not None and (not isinstance(hp, int) or hp <= 0):
@@ -738,13 +816,31 @@ def _validate_world(world_path: Path) -> None:
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Delve data validator.")
+    parser.add_argument(
+        "--world", metavar="WORLD_ID",
+        help="Validate only this world folder (e.g. first_world). "
+             "Omit to validate all worlds.",
+    )
+    args = parser.parse_args()
+
     print("Delve Data Validator")
     print("=" * 40)
 
     worlds = world_dirs()
     if not worlds:
-        print("[WARN]  No world folders found in data/ (no subfolders with config.py)")
+        print("[WARN]  No world folders found in data/ "
+              "(no subfolders with config.toml or config.py)")
         sys.exit(1)
+
+    # Filter to a single world if --world was given.
+    if args.world:
+        target = DATA_DIR / args.world
+        if target not in worlds:
+            print(f"[ERROR] World '{args.world}' not found in data/ "
+                  f"(no config.toml or config.py there)")
+            sys.exit(1)
+        worlds = [target]
 
     total_errors   = 0
     total_warnings = 0

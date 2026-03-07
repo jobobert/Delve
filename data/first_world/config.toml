@@ -1,0 +1,85 @@
+# data/first_world/config.toml — World configuration for Delve.
+#
+# Edit this file to customise your world. It is read by the engine at startup
+# and overrides all engine defaults. This file is version-controlled and belongs
+# with your world data.
+#
+# See data/WORLD_MANUAL.md for the full field reference.
+
+# ── World identity ─────────────────────────────────────────────────────────────
+# Displayed in the map header and world-specific messages.
+world_name = "Delve"
+
+# ── New character stats ────────────────────────────────────────────────────────
+# Starting HP for every new character (fixed, not rolled).
+# Attack is rolled as 3d6-drop-lowest (range 2-12).
+# Defense is rolled as half of a separate 3d6-drop-lowest (range 1-6), minimum 1.
+new_char_hp = 100
+
+# ── Currency ───────────────────────────────────────────────────────────────────
+# Display name for the in-game currency (used in stats, shop headers, etc.).
+# Note: command keywords "deposit gold" / "withdraw gold" are grammar and unchanged.
+currency_name = "gold"
+
+# ── Fighting styles ────────────────────────────────────────────────────────────
+# ID of the style every new character starts with.
+# Must match a [[style]] id in one of this world's styles.toml files.
+default_style = "brawling"
+
+# ── Vision ─────────────────────────────────────────────────────────────────────
+# Minimum effective light level at which the player can see clearly (0-10 scale).
+# effective_light = room.light + sum of all equipped item light_add values.
+# If effective_light < vision_threshold the player is blind.
+# Scripts can adjust per-player vision via: { op = "adjust_vision", amount = N }
+vision_threshold = 3
+
+# ── Equipment slots ────────────────────────────────────────────────────────────
+# Defines which equipment slots exist (in display order).
+# Item slot = values in TOML must exactly match an entry in this list.
+# Add, remove, or rename entries to fit your world's genre.
+equipment_slots = [
+    "weapon", "head", "chest", "legs", "arms",
+    "pack", "ring", "shield", "cape",
+]
+
+# ── Skills ─────────────────────────────────────────────────────────────────────
+# Maps skill_id (used in scripts and dialogue conditions) to display name.
+# Remove, add, or rename entries freely; the engine picks up changes on restart.
+# If this section is absent or empty, the engine falls back to a single default
+# skill ("perception") so skill checks never error out.
+#
+# Usage in TOML:
+#   condition = { skill = "social", min = 40 }
+#   { op = "skill_check", skill = "stealth", dc = 14, on_pass = [...] }
+[skills]
+stealth    = "Stealth"
+survival   = "Survival"
+perception = "Perception"
+athletics  = "Athletics"
+social     = "Social"
+arcana     = "Arcana"
+mining     = "Mining"
+
+# ── World-defined player attributes ───────────────────────────────────────────
+# Custom numeric attributes tracked per-player and persisted in player.toml.
+# Define as many [[player_attrs]] blocks as your world needs.
+#
+# Fields:
+#   id      — unique identifier used in script ops (no spaces)
+#   min     — minimum value (clamp floor)
+#   max     — maximum value (clamp ceiling)
+#   default — starting value for new characters
+#   display — "number" = raw integer | "bar" = graphical bar on stats screen
+#
+# Script ops:
+#   { op = "set_attr",    name = "attr_id", value = 50 }
+#   { op = "adjust_attr", name = "attr_id", amount = 10 }   # clamps to min/max
+#   { op = "if_attr",     name = "attr_id", min = 10, max = 50, then = [...] }
+#
+# Example (uncomment to activate):
+# [[player_attrs]]
+# id      = "corruption"
+# min     = 0
+# max     = 100
+# default = 0
+# display = "bar"

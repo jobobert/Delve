@@ -247,10 +247,18 @@ def load(path: Path) -> dict:
             current_obj = new_obj
             continue
 
-        # Plain table header:  [key]  (reset context)
+        # Plain table header:  [key]  or  [key.subkey]
+        # Navigate to (or create) the named subtable and make it the current context.
         m = re.fullmatch(r'\[([^\]]+)\]', line)
         if m:
-            current_obj = None
+            key_path = m.group(1).strip()
+            target = result
+            for part in key_path.split("."):
+                part = part.strip()
+                if part not in target or not isinstance(target[part], dict):
+                    target[part] = {}
+                target = target[part]
+            current_obj = target
             continue
 
         # Key = value

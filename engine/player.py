@@ -83,6 +83,30 @@ def item_weight(item: dict) -> int:
     return int(item.get("weight", 0))
 
 
+def effective_light(player: "Player", room: dict | None) -> int:
+    """Return the effective light level for a player in a room.
+
+    effective_light = room.light + sum of light_add values on equipped items.
+    Items can have a positive light_add (torch, lantern) or negative (blindfold).
+    Clamped to 0–10. If room is None, returns 10 (fully lit — no room loaded).
+    """
+    room_light = int(room.get("light", 10)) if room else 10
+    item_light = sum(
+        int(item.get("light_add", 0))
+        for item in player.equipped.values()
+        if item
+    )
+    return max(0, min(10, room_light + item_light))
+
+
+def is_blind(player: "Player", room: dict | None) -> bool:
+    """Return True if the player cannot see clearly in the given room.
+
+    Blind when effective_light < player.vision_threshold.
+    """
+    return effective_light(player, room) < player.vision_threshold
+
+
 class Player:
     def __init__(self, name: str):
         self.name       = name
@@ -149,6 +173,20 @@ class Player:
 
         # Journal entries written by scripts (e.g. wall inscriptions, milestones)
         self.journal: list[dict] = []   # [{"title": str, "text": str}, ...]
+
+        # Vision: minimum effective light level at which the player can see.
+        # Per-player so scripts can grant darkvision or inflict blindness.
+        # Effective light = room.light + sum(equipped item light_add values).
+        self.vision_threshold: int = wc.VISION_THRESHOLD
+
+        # World-defined numeric attributes (defined in config.toml [[player_attrs]]).
+        # Keyed by attr id; values are ints clamped to each attr's min/max.
+        # Missing attrs are filled with defaults when the player is loaded.
+        self.world_attrs: dict[str, int] = {
+            a["id"]: int(a.get("default", 0))
+            for a in wc.PLAYER_ATTRS
+            if a.get("id")
+        }
 
     # ── Weight ────────────────────────────────────────────────────────────────
 
@@ -242,6 +280,8 @@ class Player:
             "commissions":         self._serialise_commissions(),
             "companion":           self._serialise_companion(),
             "journal":             self.journal,
+            "vision_threshold":    self.vision_threshold,
+            "world_attrs":         self.world_attrs,
         }
         toml_dump(self._save_path, data)
 
@@ -300,9 +340,20 @@ class Player:
             if k in p.skills:
                 p.skills[k] = float(v)
         p.status_effects = dict(data.get("status_effects", {}))
-        p.commissions = p._deserialise_commissions(data.get("commissions", []))
-        p.companion   = p._deserialise_companion(data.get("companion", {}))
-        p.journal     = data.get("journal", [])
+        p.commissions       = p._deserialise_commissions(data.get("commissions", []))
+        p.companion         = p._deserialise_companion(data.get("companion", {}))
+        p.journal           = data.get("journal", [])
+        p.vision_threshold  = int(data.get("vision_threshold", wc.VISION_THRESHOLD))
+        # World-defined attrs: start from config defaults, then overlay saved values.
+        # This ensures new attrs added to config.toml get their default on next load.
+        saved_attrs = data.get("world_attrs", {})
+        for attr_def in wc.PLAYER_ATTRS:
+            aid = attr_def.get("id")
+            if not aid:
+                continue
+            if aid in saved_attrs:
+                p.world_attrs[aid] = int(saved_attrs[aid])
+            # else: default already set in __init__
         return p
 
     @classmethod
@@ -327,6 +378,7 @@ class Player:
         p.hp      = wc.NEW_CHAR_HP
         p.attack  = _roll3d6_drop_low()
         p.defense = max(1, _roll3d6_drop_low() // 2)
+        # world_attrs already initialised from wc.PLAYER_ATTRS in __init__
         return p
 
     @classmethod

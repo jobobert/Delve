@@ -102,7 +102,7 @@ touching code. It reflects the actual current state of every file.
 - Both formats can coexist in the same file
 - `next = ""` ends the conversation
 
-**Script ops** — ~47 ops (see `engine/script.py` docstring for full list):
+**Script ops** — 53 ops (see `engine/script.py` docstring for full list):
 `say`, `message`, `set_flag`, `clear_flag`, `give_gold`, `take_gold`, `give_xp`,
 `heal`, `set_hp`, `damage`, `give_item`, `take_item`, `spawn_item`,
 `advance_quest`, `complete_quest`, `teach_style`, `unlock_exit`, `lock_exit`,
@@ -111,7 +111,12 @@ touching code. It reflects the actual current state of every file.
 `if_affinity`, `give_companion`, `dismiss_companion`, `bank_expand`,
 `if_flag`, `if_not_flag`, `if_item`, `if_quest`, `if_quest_complete`, `fail`,
 `require_tag`, `teleport_player`, `move_npc`, `move_item`,
-`if_combat_round`, `if_npc_hp`, `end_combat`, `journal_entry`
+`if_combat_round`, `if_npc_hp`, `end_combat`, `journal_entry`,
+`set_attr`, `adjust_attr`, `if_attr`,
+`set_room_light`, `adjust_light`, `if_light`, `set_vision`, `adjust_vision`,
+`run_script_file`,
+`block_damage`, `multiply_damage`, `counter_damage`, `reduce_damage`,
+`skip_npc_attack`, `apply_combat_bleed`, `heal_self`
 
 ---
 
@@ -146,7 +151,39 @@ To add logging to a new area: `import engine.log as log` then call
 
 ## Known state / recent work
 
-The most recent session completed **WCT Graph Views + Bug Fixes**:
+The most recent session completed **Engine Feature Batch (config.toml, light mechanic, player attrs, TOML passives, standalone scripts)**:
+
+1. **`config.py` → `config.toml`** — world config converted from Python to TOML for both
+   worlds. `engine/world_config.py` tries `config.toml` first, falls back to legacy `config.py`.
+   New fields: `vision_threshold` (default player vision), `[[player_attrs]]` (world-defined numeric
+   player attributes). `engine/toml_io.py` fixed to correctly handle `[table]` section headers.
+
+2. **validate.py fixes** — `--world <id>` flag to validate a single world; `round_script` added
+   to known NPC fields so it no longer triggers "unrecognised field" warnings.
+
+3. **World-defined player attributes** — worlds define custom numeric attrs in `config.toml`
+   `[[player_attrs]]`. Persisted in `player.toml` under `[world_attrs]`. Script ops: `set_attr`,
+   `adjust_attr`, `if_attr`. Stats display: `display = "bar"` or `display = "number"`.
+
+4. **Light mechanic** — rooms have `light = N` (0–10, default 10). Players have
+   `vision_threshold` (default 3, per-player, script-modifiable). Items have `light_add = N`.
+   Blind players see darkness messages in look/examine/map; 20% combat miss chance. Script ops:
+   `set_room_light`, `adjust_light`, `if_light`, `set_vision`, `adjust_vision`.
+
+5. **TOML-driven fighting style passives** — all 15 passives across 7 styles moved from
+   hardcoded `combat.py` blocks to `styles.toml` using `trigger`, `threshold`, `message`, and
+   `on_activate` fields. New `CombatSession._run_passives()` method replaces ~200 lines of
+   hardcoded logic. New combat-only script ops: `block_damage`, `multiply_damage`,
+   `counter_damage`, `reduce_damage`, `skip_npc_attack`, `apply_combat_bleed`, `heal_self`.
+   Chained passives (riposte→parry, counter→dodge, absorb→redirect) use `requires` field.
+
+6. **Standalone script files** — `{ op = "run_script_file", path = "scripts/event.toml" }`
+   runs a world-relative script file inline. New tool `tools/run_script.py` runs a script
+   against a named player from the CLI: `python tools/run_script.py <file> --player <name>`.
+
+---
+
+The session before that completed **WCT Graph Views + Bug Fixes**:
 
 1. **In-browser dialogue graph** (`_showDlgGraph`) — interactive pan/zoom SVG tree of any
    dialogue file, toggled by a "Graph" button in the dialogue editor. Nodes are colour-coded
@@ -278,50 +315,23 @@ The session after that completed **Coordinate Removal + Web Frontend**:
 
 ## Planned engine work (next session)
 
-These are the engine features the user wants implemented next. None exist yet — design them
-with the same data-first, no-external-deps principles.
+### WCT (World Creation Tool)
+- Add editing of fighting style passives (`on_activate`, `trigger`, `message`, `requires`)
+- Add editing of light mechanic (room `light` field, item `light_add`)
+- Add editing of player attributes (`[[player_attrs]]` in config.toml)
+- World-global options editor: styles, skills, currency, equipment slots, etc.
+- Audit all object types for missing fields (compare TOML spec vs editor forms)
+- Fix fighting-style picker (styles not loading in editor)
+- TOML output formatting: human-readable multi-line instead of single-line saves
 
-### 1. Light mechanic
-- Each room has a `light = N` (0 = pitch black, 10 = bright). Default: 10.
-- Player has a `vision_threshold` (default 3). Below this level the player is blind.
-- Items can have a `light_add = N` attribute (positive = torch, negative = blindfold).
-- Script ops: `{ op = "set_room_light", room_id = "...", value = N }`,
-  `{ op = "adjust_light", amount = N }` (affects current room),
-  `{ op = "if_light", max = N, then = [...], else = [...] }`.
-- Dialogue, NPC detection, items, and map rendering should all respect current light level.
+### commands.py
+- Banking UI
+- Crafting commands
+- sleep/rest improvements
 
-### 2. World-defined player attributes
-- World config defines custom numeric attributes: `PLAYER_ATTRS = [{id="corruption", min=0, max=100, default=0}]`.
-- Persisted in `player.toml` alongside skills.
-- Script ops: `{ op = "set_attr", name = "corruption", value = N }`,
-  `{ op = "adjust_attr", name = "corruption", amount = N }` (respects min/max clamp),
-  `{ op = "if_attr", name = "corruption", min = N, max = N, then = [...], else = [...] }`.
-- Optional stats display: `display = "bar"` or `display = "number"` in config.
-
-### 3. Scripted fighting style passives
-- Currently passives (parry, riposte, bleed, dodge, counter, etc.) are hardcoded in `combat.py` lines ~250+.
-- Move them to the TOML style data:
-  ```toml
-  [[passive]]
-  ability    = "parry"
-  threshold  = 30            # proficiency required to unlock
-  message    = "You parry the attack!"
-  on_activate = [{ op = "block_damage" }]
-  ```
-- `{ op = "block_damage" }` is a new combat-only script op that negates the current hit.
-- Engine reads passives from style data at combat time; hardcoded fallback removed.
-
-### 4. Standalone script files
-- Allow running a `.toml` script file as a one-shot event (for major world state changes
-  after big events, or post-quest upgrades).
-- `{ op = "run_script_file", path = "scripts/event_drakes_return.toml" }` as a script op.
-- Or as a standalone tool: `python tools/run_script.py <script.toml> --player <name>`.
-
-### 5. World config.py → TOML
-- Convert `data/<world_id>/config.py` to `data/<world_id>/config.toml`.
-- Update `engine/world_config.py` `init()` to parse TOML instead of importing Python.
-- Update all existing worlds, WCT, and `WORLD_MANUAL.md`.
-- WCT should expose a "World Settings" editor panel for these fields.
+### data / world content
+- `ashwood_contract` step 3 requires `swordplay` style — check why it's not loading in first_world
+- `tools/clean.py --ai` flag to clean AI bot player saves and output files
 
 ---
 
@@ -330,10 +340,12 @@ with the same data-first, no-external-deps principles.
 ```bash
 python main.py                        # play the game
 python tools/validate.py              # check data integrity (run after every edit)
+python tools/validate.py --world first_world   # validate a single world
 python tools/map.py [--zone Z] [--full]          # ASCII map
 python tools/map.py --html [--world W] [--output F]  # self-contained HTML map
 python tools/wct_server.py            # WCT → http://localhost:7373  |  Game → /game
 python tools/offline_bot.py [--world W] [--turns N] [--quest Q]  # offline playtester
+python tools/run_script.py <script.toml> --player <name> [--world <id>]  # run one-shot script
 python tools/ai_player.py play [--goal "..."] [--verbose]
 python tools/clean.py [--all | --cache | --state | --players]
 python tools/md2html.py <input.md>    # convert Markdown to HTML
