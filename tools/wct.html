@@ -4250,14 +4250,16 @@ function _dlgRecordTrans(op, questId, npcId, nodeId, condList, fullScript, out) 
     if (cond.quest_complete) flagsReq.push(`quest_done:${cond.quest_complete}`);
     if (cond.gold)           flagsReq.push(`gold>=${cond.gold}`);
   });
-  const flagsSet = [], otherOps = [];
-  (fullScript||[]).filter(o=>typeof o==='object').forEach(o => {
+  const flagsSet = [], flagsCleared = [], otherOps = [];
+  _flattenOps(fullScript||[]).forEach(o => {
+    if (!o || typeof o !== 'object') return;
     if (o.op === 'set_flag') flagsSet.push(o.flag||'?');
+    else if (o.op === 'clear_flag') flagsCleared.push(o.flag||'?');
     else if (!['advance_quest','complete_quest'].includes(o.op)) {
       const f = _dlgFmtOp(o); if (f) otherOps.push(f);
     }
   });
-  out.push({npc_id:npcId, node_id:nodeId, to_step:toStep, flags_required:flagsReq, flags_set:flagsSet, other_ops:otherOps});
+  out.push({npc_id:npcId, node_id:nodeId, to_step:toStep, flags_required:flagsReq, flags_set:flagsSet, flags_cleared:flagsCleared, other_ops:otherOps});
 }
 
 function _dlgFmtOp(op) {
@@ -4276,7 +4278,22 @@ function _dlgFmtOp(op) {
 }
 
 function _dotFmtScriptOps(script) {
-  return (script || []).map(op => _dlgFmtOp(op)).filter(Boolean);
+  return _flattenOps(script || []).map(op => _dlgFmtOp(op)).filter(Boolean);
+}
+
+// Recursively flatten all ops from nested branch arrays (then/else/on_pass/on_fail)
+function _flattenOps(ops) {
+  const result = [];
+  const recurse = arr => {
+    for (const op of (arr || [])) {
+      if (typeof op !== 'object' || !op) continue;
+      result.push(op);
+      for (const key of ['then', 'else', 'on_pass', 'on_fail'])
+        if (Array.isArray(op[key])) recurse(op[key]);
+    }
+  };
+  recurse(ops);
+  return result;
 }
 
 function _dotFmtCondition(c) {
@@ -4305,7 +4322,7 @@ function exportQuestDot() {
   const C_COND_BG = '#E3F2FD';
   const T_OPEN = '<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4" BGCOLOR="white">';
 
-  // Collect transitions by scanning dialogues + kill_scripts + on_get + on_enter
+  // Collect transitions by scanning dialogues + kill_scripts + on_get + on_use + on_enter
   const transitions = [];
   for (const [, zone] of Object.entries(WORLD_DATA?.zones || {})) {
     // Dialogues
@@ -4315,27 +4332,37 @@ function exportQuestDot() {
       (dlg.node||[]).forEach(n => { if(n.id) nm[n.id] = {...n, response:[]}; });
       (dlg.response||[]).forEach(r => { if(nm[r.node]) nm[r.node].response.push(r); });
       for (const [nid, node] of Object.entries(nm)) {
-        (node.script||[]).filter(o=>typeof o==='object').forEach(op =>
+        _flattenOps(node.script||[]).forEach(op =>
           _dlgRecordTrans(op, questId, npcId, nid, [node.condition], node.script||[], transitions));
         (node.response||[]).forEach(resp =>
-          (resp.script||[]).filter(o=>typeof o==='object').forEach(op =>
+          _flattenOps(resp.script||[]).forEach(op =>
             _dlgRecordTrans(op, questId, npcId, nid, [node.condition, resp.condition], resp.script||[], transitions)));
       }
     }
     // NPC kill_scripts
     for (const npc of (zone.npcs || [])) {
-      (npc.kill_script||[]).filter(o=>typeof o==='object').forEach(op =>
+      _flattenOps(npc.kill_script||[]).forEach(op =>
         _dlgRecordTrans(op, questId, npc.id, 'kill_script', [], npc.kill_script||[], transitions));
     }
-    // Item on_get scripts
+    // Item on_get and on_use scripts
     for (const item of (zone.items || [])) {
-      (item.on_get||[]).filter(o=>typeof o==='object').forEach(op =>
+      _flattenOps(item.on_get||[]).forEach(op =>
         _dlgRecordTrans(op, questId, item.id, 'on_get', [], item.on_get||[], transitions));
+      _flattenOps(item.on_use||[]).forEach(op =>
+        _dlgRecordTrans(op, questId, item.id, 'on_use', [], item.on_use||[], transitions));
     }
     // Room on_enter scripts
     for (const room of (zone.rooms || [])) {
-      (room.on_enter||[]).filter(o=>typeof o==='object').forEach(op =>
+      _flattenOps(room.on_enter||[]).forEach(op =>
         _dlgRecordTrans(op, questId, room.id, 'on_enter', [], room.on_enter||[], transitions));
+    }
+    // Crafting commission on_complete scripts
+    for (const craftFile of (zone.crafting || [])) {
+      for (const comm of (craftFile.commission || [])) {
+        const cid = comm.id || comm.npc_id || 'commission';
+        _flattenOps(comm.on_complete||[]).forEach(op =>
+          _dlgRecordTrans(op, questId, cid, 'on_complete', [], comm.on_complete||[], transitions));
+      }
     }
   }
 
@@ -4356,8 +4383,9 @@ function exportQuestDot() {
 
   const transLabel = t => {
     const p = [`${t.npc_id} / ${t.node_id}`];
-    if(t.flags_required.length) p.push('req: '+t.flags_required.join(', '));
-    if(t.flags_set.length)      p.push('sets: '+t.flags_set.join(', '));
+    if(t.flags_required.length)  p.push('req: '+t.flags_required.join(', '));
+    if(t.flags_set.length)       p.push('sets: '+t.flags_set.join(', '));
+    if(t.flags_cleared?.length)  p.push('clears: '+t.flags_cleared.join(', '));
     t.other_ops.forEach(o => p.push(o));
     return p.join('\n');
   };
@@ -4667,6 +4695,15 @@ function _showDlgGraph(main, d) {
       if (dash) path.setAttribute('stroke-dasharray', dash);
       path.setAttribute('marker-end', `url(#${mid})`);
       edgeG.appendChild(path);
+      const flagOps = _flattenOps(r.script || []).filter(o => o?.op === 'set_flag' || o?.op === 'clear_flag');
+      if (flagOps.length) {
+        const ft = document.createElementNS(NS, 'text');
+        ft.setAttribute('x', (sx + tx) / 2 + 4); ft.setAttribute('y', (sy + ty) / 2);
+        ft.setAttribute('font-size','8'); ft.setAttribute('fill','#c8a96e');
+        ft.setAttribute('font-family','Consolas,monospace');
+        ft.textContent = flagOps.map(o => (o.op === 'set_flag' ? '+' : '-') + (o.flag||'?')).join(' ');
+        edgeG.appendChild(ft);
+      }
     }
   }
 
@@ -4787,7 +4824,7 @@ function _showQuestGraph(main, quest) {
   for (const s of (quest.step || [])) steps[s.index] = s;
   const stepNums = Object.keys(steps).map(Number).sort((a,b) => a - b);
 
-  // Collect transitions from loaded world data (dialogues + kill_scripts + on_get + on_enter)
+  // Collect transitions from loaded world data (dialogues + kill_scripts + on_get + on_use + on_enter)
   const byStep = {};
   if (WORLD_DATA?.zones) {
     const tempTrans = [];
@@ -4801,28 +4838,38 @@ function _showQuestGraph(main, quest) {
         for (const node of (dlg.node || [])) {
           const nid = node.id || node._id || 'root';
           const nc  = node.condition, ns = node.script || [];
-          for (const op of ns)
+          for (const op of _flattenOps(ns))
             _dlgRecordTrans(op, questId, npcId, nid, [nc], ns, tempTrans);
           const resps = nodeRespMap[nid] || node.response || [];
           for (const resp of resps)
-            for (const op of (resp.script || []))
+            for (const op of _flattenOps(resp.script || []))
               _dlgRecordTrans(op, questId, npcId, nid, [nc, resp.condition], resp.script, tempTrans);
         }
       }
       // NPC kill_scripts
       for (const npc of (zone.npcs || [])) {
-        for (const op of (npc.kill_script || []))
+        for (const op of _flattenOps(npc.kill_script || []))
           _dlgRecordTrans(op, questId, npc.id, 'kill_script', [], npc.kill_script, tempTrans);
       }
-      // Item on_get scripts
+      // Item on_get and on_use scripts
       for (const item of (zone.items || [])) {
-        for (const op of (item.on_get || []))
+        for (const op of _flattenOps(item.on_get || []))
           _dlgRecordTrans(op, questId, item.id, 'on_get', [], item.on_get, tempTrans);
+        for (const op of _flattenOps(item.on_use || []))
+          _dlgRecordTrans(op, questId, item.id, 'on_use', [], item.on_use, tempTrans);
       }
       // Room on_enter scripts
       for (const room of (zone.rooms || [])) {
-        for (const op of (room.on_enter || []))
+        for (const op of _flattenOps(room.on_enter || []))
           _dlgRecordTrans(op, questId, room.id, 'on_enter', [], room.on_enter, tempTrans);
+      }
+      // Crafting commission on_complete scripts
+      for (const craftFile of (zone.crafting || [])) {
+        for (const comm of (craftFile.commission || [])) {
+          const cid = comm.id || comm.npc_id || 'commission';
+          for (const op of _flattenOps(comm.on_complete || []))
+            _dlgRecordTrans(op, questId, cid, 'on_complete', [], comm.on_complete, tempTrans);
+        }
       }
     }
     // Group by step number (null = complete_quest)
@@ -4940,6 +4987,18 @@ function _showQuestGraph(main, quest) {
     lt.setAttribute('font-size','9'); lt.setAttribute('fill', col);
     lt.setAttribute('font-family','Consolas,monospace');
     lt.textContent = label; edgeG.appendChild(lt);
+    if (found) {
+      const allFlagsSet = [...new Set(trans.flatMap(t => t.flags_set || []))];
+      const allFlagsClr = [...new Set(trans.flatMap(t => t.flags_cleared || []))];
+      const flagParts = [...allFlagsSet.map(f => '+'+f), ...allFlagsClr.map(f => '-'+f)];
+      if (flagParts.length) {
+        const ft = document.createElementNS(NS, 'text');
+        ft.setAttribute('x', CX + 8); ft.setAttribute('y', (fy + ty) / 2 + 10);
+        ft.setAttribute('font-size','9'); ft.setAttribute('fill','#c8a96e');
+        ft.setAttribute('font-family','Consolas,monospace');
+        ft.textContent = flagParts.join(' '); edgeG.appendChild(ft);
+      }
+    }
   };
 
   if (stepNums.length) {
