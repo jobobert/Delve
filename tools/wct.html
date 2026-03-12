@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Delve — World Creation Tool</title>
 <link rel="stylesheet" href="/css/wct_common.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23111118'/><text x='16' y='23' font-size='20' text-anchor='middle' font-family='monospace' font-weight='bold' fill='%23F29E00'>D</text></svg>">
 </head>
 <body>
 
@@ -13,6 +14,7 @@
   <select class="world-sel" id="world-sel" title="Select world">
     <option value="">-- select world --</option>
   </select>
+  <button class="hbtn" id="btn-config" onclick="openConfig()" disabled title="Edit world configuration (config.toml)">Config</button>
   <button class="hbtn" id="btn-reload" onclick="reloadWorld()" title="Reload world data">Reload</button>
   <button class="hbtn" id="btn-validate" onclick="openValidate()">Validate</button>
   <button class="hbtn" id="btn-map" onclick="toggleMap()" title="Show world map">Map</button>
@@ -39,6 +41,9 @@
       <button class="type-nav-btn" data-type="dialogue" onclick="setActiveType('dialogue')">
         <span class="badge badge-dlg">D</span><span class="type-nav-label">Dialogues</span>
       </button>
+      <button class="type-nav-btn" data-type="style" onclick="setActiveType('style')">
+        <span class="badge badge-style">S</span><span class="type-nav-label">Styles</span>
+      </button>
     </div>
     <div id="tree-resizer"></div>
     <div id="tree-detail">
@@ -53,6 +58,13 @@
     <div class="empty-state">
       <h2>No object selected</h2>
       <p>Choose a world, then click any item in the tree.</p>
+    </div>
+    <div id="error-panel" class="error-panel hidden">
+      <div class="error-panel-header" onclick="toggleErrorPanel()">
+        <span id="error-panel-title">Errors</span>
+        <span id="error-panel-toggle">&#x25B2;</span>
+      </div>
+      <div id="error-panel-body" class="error-panel-body"></div>
     </div>
   </main>
 
@@ -76,7 +88,7 @@
 <div id="map-view">
   <div id="map-toolbar">
     <button class="hbtn" onclick="toggleMap()">&#8592; Editor</button>
-    <select id="map-zone-select" class="field-select" style="width:150px" onchange="renderMap(this.value)">
+    <select id="map-zone-select" class="field-select" style="width:150px" onchange="_mapScale=1;_mapPanX=0;_mapPanY=0;renderMap(this.value)">
       <option value="">All zones</option>
     </select>
     <div id="map-legend"></div>
@@ -88,6 +100,7 @@
     <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none">
       <input type="checkbox" id="map-show-dirs" style="accent-color:var(--accent);cursor:pointer" onchange="renderMap()"> exit labels
     </label>
+    <button class="hbtn" onclick="fitMapAll()" title="Zoom to fit all rooms in view">Fit All</button>
     <button class="hbtn" onclick="exportDot(_mapZoneFilter)" title="Download Graphviz .dot file">Export DOT</button>
   </div>
   <div id="map-body">
@@ -173,6 +186,22 @@
   </div>
 </div>
 
+<!-- World Config editor -->
+<div class="modal-backdrop hidden" id="config-modal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <span class="modal-title">World Configuration</span>
+      <button class="modal-close" onclick="closeModal('config-modal')">&#215;</button>
+    </div>
+    <div class="modal-body" id="config-modal-body" style="max-height:70vh;overflow-y:auto">
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('config-modal')">Cancel</button>
+      <button class="hbtn primary" onclick="saveConfig()">Save config.toml</button>
+    </div>
+  </div>
+</div>
+
 <!-- New object -->
 <div class="modal-backdrop hidden" id="new-modal">
   <div class="modal" style="max-width:420px">
@@ -218,15 +247,13 @@
 <datalist id="dl-quests"></datalist>
 <datalist id="dl-skills"></datalist>
 <datalist id="dl-styles"></datalist>
+<datalist id="dl-flags"></datalist>
 <datalist id="dl-directions">
   <option value="north"><option value="south"><option value="east"><option value="west">
   <option value="northeast"><option value="northwest"><option value="southeast"><option value="southwest">
   <option value="up"><option value="down">
 </datalist>
-<datalist id="dl-status-effects">
-  <option value="poisoned"><option value="blinded"><option value="weakened">
-  <option value="slowed"><option value="protected">
-</datalist>
+<datalist id="dl-status-effects"></datalist>
 
 <script>
 'use strict';
@@ -243,7 +270,8 @@ let ALL_ROOMS  = {};  // id → {name, zone_id, _file}
 let ALL_NPCS   = {};  // id → {name, zone_id, _file}
 let ALL_ITEMS  = {};  // id → {name, zone_id, _file}
 let ALL_QUESTS = {};  // id → {title, zone_id, _file}
-let ALL_TAGS   = [];  // sorted unique tag strings, rebuilt on world load
+let ALL_TAGS      = [];  // sorted unique tag strings, rebuilt on world load
+let TAG_COMMENTS  = {};  // tag → admin comment string, persisted in localStorage
 
 let _ACTIVE_TYPE = 'room';  // which type button is currently selected in nav
 
@@ -318,11 +346,15 @@ async function loadWorld(worldId) {
 
   rebuildDataLists();
   buildXRef();
+  fillDL('dl-flags', Object.keys(FLAG_MAP).sort().map(f => [f, f]), ([f]) => f);
+  buildErrorList();
   renderTypeList(_ACTIVE_TYPE);
+  TAG_COMMENTS = _loadTagComments();
   rebuildTagPalette();
   SELECTED = null; DIRTY = false;
   renderEditor();
   document.getElementById('xref-body').innerHTML = '<div class="xref-empty">Select an object to see where it is used.</div>';
+  document.getElementById('btn-config').disabled = false;
   setStatus(`${WORLD_CONFIG.world_name} loaded`, 'ok');
   _restoreUiState();
 }
@@ -347,7 +379,10 @@ function rebuildDataLists() {
   fillDL('dl-quests', Object.entries(ALL_QUESTS), ([id, q]) => `${q.title || id} (${id})`);
   const skills = Object.entries(WORLD_CONFIG.skills || {});
   fillDL('dl-skills', skills, ([id]) => id);
-  // styles from ALL_ITEMS that have style keyword — approximate; enough for datalist
+  const styles = (WORLD_CONFIG.styles || []).map(s => [s.id, s]);
+  fillDL('dl-styles', styles, ([id, s]) => s.name ? `${s.name} (${id})` : id);
+  const effects = (WORLD_CONFIG.status_effects || []).map(se => [se.id, se]);
+  fillDL('dl-status-effects', effects, ([id, se]) => se.label ? `${se.label} (${id})` : id);
 }
 
 function fillDL(dlId, entries, labelFn) {
@@ -381,6 +416,28 @@ function setActiveType(type) {
   _saveUiState();
 }
 
+// ── Zone expand/collapse persistence ─────────────────────────────────────────
+
+function _zoneStateKey() {
+  return WORLD_ID ? 'wct_zones_' + WORLD_ID : null;
+}
+
+/** Return {zone_id: true/false} from localStorage (true = open). */
+function _loadZoneState() {
+  const key = _zoneStateKey();
+  if (!key) return {};
+  try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (_) { return {}; }
+}
+
+/** Persist one zone's open/closed state to localStorage. */
+function _saveZoneState(zoneId, isOpen) {
+  const key = _zoneStateKey();
+  if (!key) return;
+  const state = _loadZoneState();
+  state[zoneId] = isOpen;
+  localStorage.setItem(key, JSON.stringify(state));
+}
+
 function renderTypeList(type) {
   const list = document.getElementById('detail-list');
   if (!list) return;
@@ -389,19 +446,25 @@ function renderTypeList(type) {
 
   const key      = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type + 's';
   const nameKey  = type === 'quest' ? 'title' : type === 'dialogue' ? '_npc_id' : 'name';
-  const badgeCls = {room:'badge-room',npc:'badge-npc',item:'badge-item',quest:'badge-quest',dialogue:'badge-dlg'}[type];
-  const badgeLtr = {room:'R',npc:'N',item:'I',quest:'Q',dialogue:'D'}[type];
+  const badgeCls = {room:'badge-room',npc:'badge-npc',item:'badge-item',quest:'badge-quest',dialogue:'badge-dlg',style:'badge-style'}[type];
+  const badgeLtr = {room:'R',npc:'N',item:'I',quest:'Q',dialogue:'D',style:'S'}[type];
+
+  const savedState = _loadZoneState();
 
   for (const [zid, zone] of Object.entries(WORLD_DATA.zones || {})) {
     const arr = zone[key] || [];
     if (!arr.length) continue;
 
+    // Default open unless the user explicitly collapsed this zone before.
+    const isOpen = savedState.hasOwnProperty(zid) ? savedState[zid] : true;
+
     const zoneNode = document.createElement('div');
     zoneNode.className = 'zone-node';
     const hdr = document.createElement('div');
-    hdr.className = 'zone-header open';
-    hdr.innerHTML = `<span class="caret">&#9658;</span><span>${zid}</span>`;
-    hdr.addEventListener('click', () => hdr.classList.toggle('open'));
+    hdr.className    = 'zone-header' + (isOpen ? ' open' : '');
+    hdr.dataset.zone = zid;
+    hdr.innerHTML    = `<span class="caret">&#9658;</span><span>${zid}</span>`;
+    hdr.addEventListener('click', () => { const open = hdr.classList.toggle('open'); _saveZoneState(zid, open); });
     zoneNode.appendChild(hdr);
 
     const items = document.createElement('div');
@@ -415,7 +478,12 @@ function renderTypeList(type) {
       el.dataset.type = type;
       el.dataset.id   = id;
       el.dataset.zone = zid;
-      el.innerHTML = `<span class="badge ${badgeCls}">${badgeLtr}</span><span class="item-label">${escHtml(name)}</span>`;
+      let listIcons = '';
+      if (type === 'room') {
+        if (obj.start) listIcons += '<span class="list-icon list-icon-start" title="Start room">&#9733;</span>';
+        if (Array.isArray(obj.flags) && obj.flags.includes('town')) listIcons += '<span class="list-icon list-icon-town" title="Town">&#8962;</span>';
+      }
+      el.innerHTML = `<span class="badge ${badgeCls}">${badgeLtr}</span><span class="item-label">${escHtml(name)}</span>${listIcons}`;
       el.addEventListener('click', () => selectObject(type, zid, obj));
       el.addEventListener('dragstart', e => {
         e.dataTransfer.setData('text/plain', id);
@@ -519,6 +587,9 @@ function rebuildTagPalette() {
     const chip = document.createElement('span');
     chip.className = 'tag-palette-chip';
     chip.textContent = tag;
+    chip.dataset.tag = tag;
+    chip.title       = TAG_COMMENTS[tag] ? TAG_COMMENTS[tag] : 'Click to add notes';
+    if (TAG_COMMENTS[tag]) chip.style.boxShadow = 'inset 0 -2px 0 var(--accent)';
     chip.draggable = true;
     chip.addEventListener('dragstart', e => {
       _dragging = { type: 'tag', id: tag, name: tag };
@@ -532,8 +603,96 @@ function rebuildTagPalette() {
       chip.classList.remove('dragging');
       clearDropHint();
     });
+    chip.addEventListener('click', () => showTagPopup(tag));
     box.appendChild(chip);
   });
+}
+
+// ── Tag admin comments ────────────────────────────────────────────────
+
+function _tagCommentsKey() { return WORLD_ID ? 'wct_tagcomments_' + WORLD_ID : null; }
+
+function _loadTagComments() {
+  const key = _tagCommentsKey();
+  if (!key) return {};
+  try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (_) { return {}; }
+}
+
+function _saveTagComment(tag, text) {
+  const key = _tagCommentsKey();
+  if (!key) return;
+  if (text) TAG_COMMENTS[tag] = text; else delete TAG_COMMENTS[tag];
+  localStorage.setItem(key, JSON.stringify(TAG_COMMENTS));
+}
+
+function showTagPopup(tag) {
+  const existing = document.getElementById('tag-comment-modal');
+  if (existing) existing.remove();
+
+  // Collect usages from WORLD_DATA
+  const usages = [];
+  for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+    (zone.npcs || []).forEach(n => {
+      const t = Array.isArray(n.tags) ? n.tags
+              : (n.tags ? n.tags.split(',').map(s => s.trim()).filter(Boolean) : []);
+      if (t.includes(tag)) usages.push({type:'npc', zone:zid, id:n.id, name:n.name||n.id, field:''});
+    });
+    (zone.items || []).forEach(i => {
+      ['tags','weapon_tags','armor_tags'].forEach(field => {
+        const t = Array.isArray(i[field]) ? i[field] : [];
+        if (t.includes(tag)) usages.push({type:'item', zone:zid, id:i.id, name:i.name||i.id, field});
+      });
+    });
+  }
+
+  const backdrop = document.createElement('div');
+  backdrop.id        = 'tag-comment-modal';
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="modal" style="min-width:380px;max-width:500px">
+      <div class="modal-header">
+        <span class="modal-title">Tag: ${escHtml(tag)}</span>
+        <button class="modal-close" id="tag-modal-close">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Notes</label>
+        <textarea id="tag-comment-ta" style="width:100%;height:70px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:12px;padding:6px;resize:vertical;box-sizing:border-box" placeholder="What does this tag mean, how is it used...">${escHtml(TAG_COMMENTS[tag] || '')}</textarea>
+        <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px">Used by (${usages.length})</div>
+        <div id="tag-usage-list" style="display:flex;flex-direction:column;gap:3px;max-height:180px;overflow-y:auto">
+          ${usages.length ? '' : '<div style="color:var(--text-dim);font-size:12px;font-style:italic">Not used in any NPC or item.</div>'}
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+
+  // Populate usage rows (navigate on click)
+  const ul = document.getElementById('tag-usage-list');
+  usages.forEach(u => {
+    const el   = document.createElement('div');
+    const bcls = u.type === 'npc' ? 'badge-npc' : 'badge-item';
+    const bltr = u.type === 'npc' ? 'N' : 'I';
+    el.style.cssText = 'display:flex;align-items:center;gap:6px;padding:2px 0;cursor:pointer';
+    el.innerHTML = `<span class="badge ${bcls}">${bltr}</span><span style="font-size:12px">${escHtml(u.name)}${u.field ? ' <span style="color:var(--text-dim)">(' + escHtml(u.field) + ')</span>' : ''}</span><span style="font-size:11px;color:var(--text-dim);margin-left:auto">${escHtml(u.zone)}</span>`;
+    el.title = `Go to ${u.name}`;
+    el.addEventListener('click', () => { backdrop.remove(); navigateTo(u.type, u.zone, u.id); });
+    ul.appendChild(el);
+  });
+
+  // Auto-save + refresh chip tooltip/indicator
+  document.getElementById('tag-comment-ta').addEventListener('input', e => {
+    const text = e.target.value.trim();
+    _saveTagComment(tag, text);
+    document.querySelectorAll(`.tag-palette-chip[data-tag="${CSS.escape(tag)}"]`).forEach(c => {
+      c.title           = text || 'Click to add notes';
+      c.style.boxShadow = text ? 'inset 0 -2px 0 var(--accent)' : '';
+    });
+  });
+
+  const closeModal = () => { backdrop.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') closeModal(); };
+  document.addEventListener('keydown', onKey);
+  document.getElementById('tag-modal-close').addEventListener('click', closeModal);
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) closeModal(); });
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -562,9 +721,31 @@ function selectObject(type, zone_id, data) {
   _saveUiState();
 }
 
+let _errorRebuildTimer = null;
 function markDirty() {
   DIRTY = true;
   document.getElementById('btn-save').disabled = false;
+
+  // Sync the edited clone back to WORLD_DATA so buildErrorList() sees current state.
+  // SELECTED.data is a structuredClone (disconnected from zone arrays), so we write
+  // it back by id each time a field changes.
+  if (SELECTED && WORLD_DATA) {
+    const { type, zone_id, data } = SELECTED;
+    const zone = WORLD_DATA.zones?.[zone_id];
+    if (zone) {
+      const typeKey = type === 'npc' ? 'npcs' : type === 'room' ? 'rooms' :
+                      type === 'item' ? 'items' : type === 'quest' ? 'quests' : null;
+      if (typeKey && Array.isArray(zone[typeKey]) && data.id) {
+        const idx = zone[typeKey].findIndex(x => x.id === data.id);
+        if (idx !== -1) zone[typeKey][idx] = data;
+      }
+    }
+  }
+
+  // Rebuild the error panel shortly after each edit (debounced so rapid typing
+  // doesn't thrash — waits 600 ms of inactivity before re-running).
+  clearTimeout(_errorRebuildTimer);
+  _errorRebuildTimer = setTimeout(buildErrorList, 600);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -584,6 +765,7 @@ function renderEditor() {
   else if (type === 'item')     renderItemEditor(main);
   else if (type === 'quest')    renderQuestEditor(main);
   else if (type === 'dialogue') renderDialogueEditor(main);
+  else if (type === 'style')   renderStyleEditor(main);
   else    main.innerHTML = '<div class="empty-state"><h2>Unknown type</h2></div>';
 }
 
@@ -641,13 +823,14 @@ function textareaInput(val, onChange, placeholder) {
   return ta;
 }
 
-function numInput(val, onChange, min, max) {
+function numInput(val, onChange, min, max, step) {
   const inp = document.createElement('input');
   inp.type = 'number'; inp.className = 'field-input';
   inp.style.width = '90px';
   inp.value = val !== undefined ? val : '';
-  if (min !== undefined) inp.min = min;
-  if (max !== undefined) inp.max = max;
+  if (min  !== undefined) inp.min  = min;
+  if (max  !== undefined) inp.max  = max;
+  if (step !== undefined) inp.step = step;
   inp.addEventListener('input', () => { onChange(Number(inp.value)); markDirty(); });
   return inp;
 }
@@ -805,8 +988,10 @@ function chipsWidget(arr, onChange, dlId, acceptType, options) {
 
       const commit = () => {
         const val = inp.value.trim();
-        if (val && !arr.includes(val)) { arr.push(val); onChange([...arr]); rebuild(); markDirty(); }
-        else { addBtn.style.display = ''; inp.remove(); }
+        if (val && !arr.includes(val)) {
+          arr.push(val); onChange([...arr]); rebuild(); markDirty();
+          if (acceptType === 'tag') rebuildTagPalette();
+        } else { addBtn.style.display = ''; inp.remove(); }
       };
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter')  { e.preventDefault(); commit(); }
@@ -839,7 +1024,7 @@ function cleanSpawns(arr) {
 function spawnWidget(d) {
   // Normalize: strings → {id, count:1}
   d.spawns = (Array.isArray(d.spawns) ? d.spawns : (d.spawns ? [d.spawns] : []))
-    .map(s => typeof s === 'string' ? {id: s, count: 1} : {id: s.id || '', count: s.count ?? 1, hostile: s.hostile});
+    .map(s => typeof s === 'string' ? {id: s, count: 1} : {id: s.id || '', count: s.count ?? 1, hostile: s.hostile, spawn_chance: s.spawn_chance});
 
   const container = document.createElement('div');
   container.className = 'spawn-list';
@@ -880,6 +1065,21 @@ function spawnWidget(d) {
       countInp.addEventListener('input', () => { sp.count = Math.max(1, Number(countInp.value) || 1); markDirty(); });
       countWrap.appendChild(countLbl); countWrap.appendChild(countInp);
 
+      const chanceWrap = document.createElement('div'); chanceWrap.className = 'spawn-count-wrap';
+      const chanceLbl = document.createElement('span');
+      chanceLbl.textContent = '%'; chanceLbl.style.cssText = 'font-size:11px;color:var(--text-dim)';
+      const chanceInp = document.createElement('input');
+      chanceInp.type = 'number'; chanceInp.className = 'field-input spawn-count';
+      chanceInp.value = sp.spawn_chance != null ? sp.spawn_chance : 1;
+      chanceInp.min = 0; chanceInp.max = 1; chanceInp.step = 0.05;
+      chanceInp.title = 'Spawn chance 0.0–1.0. 1.0 = always spawns.';
+      chanceInp.addEventListener('input', () => {
+        const v = parseFloat(chanceInp.value);
+        sp.spawn_chance = (!isNaN(v) && v < 1.0) ? Math.min(1, Math.max(0, v)) : undefined;
+        markDirty();
+      });
+      chanceWrap.appendChild(chanceLbl); chanceWrap.appendChild(chanceInp);
+
       const hostileLbl = document.createElement('label');
       hostileLbl.className = 'checkbox-row spawn-hostile';
       const hostileCb = document.createElement('input');
@@ -893,7 +1093,7 @@ function spawnWidget(d) {
       rmBtn.addEventListener('click', () => { d.spawns.splice(i, 1); rebuild(); markDirty(); });
 
       card.appendChild(idInp); card.appendChild(countWrap);
-      card.appendChild(hostileLbl); card.appendChild(rmBtn);
+      card.appendChild(chanceWrap); card.appendChild(hostileLbl); card.appendChild(rmBtn);
       container.appendChild(card);
     });
 
@@ -947,6 +1147,11 @@ function renderRoomEditor(main) {
   }));
   main.appendChild(exitWrap);
 
+  const ROOM_FLAGS = ['town','no_combat','safe_combat','healing','reduced_stats','sleep','no_camp','hazard','no_large_companion'];
+  main.appendChild(sectionTitle('Flags', 'Room behaviour flags. Multiple can be combined.\ntown: marks respawn point   no_combat: blocks attack command\nsafe_combat: zero damage   healing: restores HP per command\nhazard: damage per command   sleep: inn-quality rest here (full HP)\nno_camp: block all resting here (camping not allowed)\nreduced_stats: halved combat stats   no_large_companion: blocks companions'));
+  const flagsArr = Array.isArray(d.flags) ? [...d.flags] : (d.flags ? [d.flags] : []);
+  main.appendChild(chipsWidget(flagsArr, v => { d.flags = v; markDirty(); }, null, 'flag', ROOM_FLAGS));
+
   main.appendChild(sectionTitle('Spawns', 'NPCs placed in this room when the zone first loads.\nDrag NPCs from the list or click "+ add spawn".\ncount: how many instances; hostile: override NPC\'s default.'));
   main.appendChild(spawnWidget(d));
 
@@ -963,6 +1168,8 @@ function renderRoomEditor(main) {
     null, 'Player flag that bypasses hazard damage.\nExample: "has_mining_gear"'));
   main.appendChild(fieldRow('Heal Rate', numInput(d.heal_rate, v => d.heal_rate = v, 0),
     null, 'HP restored per command when the "healing" flag is set. Default: 5.'));
+  main.appendChild(fieldRow('Room Light', numInput(d.light, v => d.light = v, 0, 10),
+    null, 'Room light level 0–10. Default 10 = fully lit.\nEffective light = room.light + sum of equipped item light_add values.\nPlayers are blind when effective light < vision threshold (default 3).'));
 
   main.appendChild(sectionTitle('Scripts'));
   const scriptDiv = document.createElement('div');
@@ -1009,6 +1216,9 @@ function renderNpcEditor(main) {
   const cbRow = document.createElement('div'); cbRow.className = 'field-row inline';
   cbRow.appendChild(checkboxInput(d.hostile, v => d.hostile = v, 'Hostile'));
   main.appendChild(cbRow);
+
+  main.appendChild(fieldRow('Rest Cost', numInput(d.rest_cost, v => d.rest_cost = v || undefined, 0),
+    null, 'Gold cost for the player to rest at this NPC (innkeeper behaviour).\nLeave 0 or blank to disable resting.'));
 
   main.appendChild(sectionTitle('Combat Style'));
   main.appendChild(fieldRow('Style ID', refInput(d.style, 'dl-styles', v => d.style = v, 'style'),
@@ -1087,6 +1297,53 @@ function renderNpcEditor(main) {
   main.appendChild(sectionTitle('Notes'));
   main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => d.admin_comment = v),
     null, 'Developer note. Ignored by the engine at runtime.'));
+}
+
+function renderItemCommands(main, d) {
+  const container = document.createElement('div');
+  const rebuild = () => {
+    container.innerHTML = '';
+    const cmds = Array.isArray(d.commands) ? d.commands : [];
+    cmds.forEach((cmd, i) => {
+      const card = document.createElement('div');
+      card.className = 'accept-card';
+      const hdr = document.createElement('div'); hdr.className = 'accept-card-header';
+      const verbLabel = cmd.verb ? `"${cmd.verb}"` : `Command ${i+1}`;
+      hdr.innerHTML = `<span>${verbLabel}</span>`;
+      const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='Remove';
+      rmBtn.addEventListener('click', () => {
+        d.commands.splice(i, 1);
+        if (!d.commands.length) d.commands = undefined;
+        rebuild(); markDirty();
+      });
+      hdr.appendChild(rmBtn);
+      card.appendChild(hdr);
+
+      card.appendChild(fieldRow('Verb',
+        textInput(cmd.verb || '', v => { cmd.verb = v.trim().toLowerCase(); rebuild(); markDirty(); }),
+        null, 'The command word the player types (e.g. "open", "push", "read").'));
+
+      const visRow = document.createElement('div'); visRow.className = 'field-row inline';
+      visRow.appendChild(checkboxInput(!!cmd.visible, v => { cmd.visible = v || undefined; markDirty(); }, 'Visible'));
+      const visHelp = document.createElement('span');
+      visHelp.style.cssText = 'font-size:11px;color:var(--text-dim);align-self:center';
+      visHelp.textContent = 'Show "(you can: verb)" hint in room and examine output';
+      visRow.appendChild(visHelp);
+      card.appendChild(visRow);
+
+      card.appendChild(fieldRow('Ops', scriptButton('ops', cmd.ops, ops => { cmd.ops = ops; markDirty(); })));
+      container.appendChild(card);
+    });
+    const addBtn = document.createElement('button'); addBtn.className='hbtn'; addBtn.textContent='+ Add Command';
+    addBtn.addEventListener('click', () => {
+      if (!Array.isArray(d.commands)) d.commands = [];
+      d.commands.push({verb: '', ops: []});
+      rebuild(); markDirty();
+    });
+    container.appendChild(addBtn);
+  };
+  rebuild();
+  main.appendChild(container);
 }
 
 function renderGiveAccepts(main, d) {
@@ -1216,12 +1473,27 @@ function renderItemEditor(main) {
   const cbRow = document.createElement('div'); cbRow.className = 'field-row inline';
   cbRow.appendChild(checkboxInput(d.no_drop, v => d.no_drop = v, 'No Drop'));
   cbRow.appendChild(checkboxInput(d.respawn, v => d.respawn = v, 'Respawn'));
+  cbRow.appendChild(checkboxInput(d.scenery, v => d.scenery = v, 'Scenery'));
   main.appendChild(cbRow);
   // Inline help text for checkboxes
   const cbHelp = document.createElement('div');
   cbHelp.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:4px';
-  cbHelp.textContent = 'No Drop: cannot be dropped, kept on death.  Respawn: reappears each zone load.';
+  cbHelp.textContent = 'No Drop: cannot be dropped, kept on death.  Respawn: reappears each zone load.  Scenery: visible but cannot be picked up.';
   main.appendChild(cbHelp);
+
+  main.appendChild(fieldRow('Key Tag', textInput(d.key_tag || '', v => { d.key_tag = v || undefined; markDirty(); }),
+    null, 'Unlocks any door whose lock_tag matches this value.\nLeave blank for non-key items.'));
+  const itemExtraRow = document.createElement('div'); itemExtraRow.className = 'field-row inline';
+  function itemExtraPair(lbl, key, tip) {
+    const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.gap='3px';
+    const l = document.createElement('label'); l.textContent = lbl;
+    if (tip) { const icon = document.createElement('i'); icon.className='help-icon'; icon.textContent='i'; icon.dataset.tip=tip; l.appendChild(icon); }
+    wrap.appendChild(l); wrap.appendChild(numInput(d[key], v => { d[key] = v || undefined; markDirty(); }));
+    return wrap;
+  }
+  itemExtraRow.appendChild(itemExtraPair('Gold Value', 'gold_value', 'Sell price to NPC merchants. 0 or blank = not sellable.'));
+  itemExtraRow.appendChild(itemExtraPair('Light Add', 'light_add', 'Light contribution while equipped (positive = torch, negative = blindfold).\nEffective light = room.light + sum of all equipped item light_add values.'));
+  main.appendChild(itemExtraRow);
 
   main.appendChild(sectionTitle('Tags', 'weapon_tags / armor_tags: used by fighting style matchup bonuses.\nDrag from the Tags palette in the right panel.'));
   const wtags = Array.isArray(d.weapon_tags) ? [...d.weapon_tags] : [];
@@ -1237,6 +1509,12 @@ function renderItemEditor(main) {
   scriptDiv.appendChild(scriptButton('on_get',  d.on_get,  ops => d.on_get  = ops));
   scriptDiv.appendChild(scriptButton('on_drop', d.on_drop, ops => d.on_drop = ops));
   main.appendChild(scriptDiv);
+
+  main.appendChild(sectionTitle('Commands',
+    'Custom verbs the player can type when carrying this item or sharing its room.\n' +
+    'visible = show as a hint in room/examine output.\n' +
+    'ops = script ops to run (same as on_get / on_drop).'));
+  renderItemCommands(main, d);
 
   main.appendChild(sectionTitle('Notes'));
   main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => d.admin_comment = v),
@@ -1320,12 +1598,33 @@ function renderQuestEditor(main) {
 function renderQuestSteps(main, d) {
   d.step = d.step || [];
   const container = document.createElement('div');
+  let _dragSrcIdx = null;
+
   const rebuild = () => {
     container.innerHTML = '';
     d.step.forEach((step, i) => {
       const card = document.createElement('div'); card.className = 'step-card';
+      card.draggable = true;
+      card.style.cursor = 'grab';
+
+      card.addEventListener('dragstart', e => {
+        _dragSrcIdx = i; card.style.opacity = '0.4';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(i));
+      });
+      card.addEventListener('dragend', () => { card.style.opacity = ''; _dragSrcIdx = null; });
+      card.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; card.style.outline = '2px solid var(--amber)'; });
+      card.addEventListener('dragleave', () => { card.style.outline = ''; });
+      card.addEventListener('drop', e => {
+        e.preventDefault(); card.style.outline = '';
+        if (_dragSrcIdx === null || _dragSrcIdx === i) return;
+        const moved = d.step.splice(_dragSrcIdx, 1)[0];
+        d.step.splice(i, 0, moved);
+        rebuild(); markDirty();
+      });
+
       const hdr = document.createElement('div'); hdr.className = 'step-card-header';
-      hdr.innerHTML = `<span>Step ${i+1}</span>`;
+      hdr.innerHTML = `<span>Step ${i+1} <span style="color:var(--text-dim);font-size:11px">drag to reorder</span></span>`;
       const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='Remove';
       rmBtn.addEventListener('click', () => { d.step.splice(i,1); rebuild(); markDirty(); });
       hdr.appendChild(rmBtn); card.appendChild(hdr);
@@ -1335,10 +1634,12 @@ function renderQuestSteps(main, d) {
         null, 'Player flag name set (via set_flag op) when this step is done.\nUsed in dialogue conditions: { flag = "flagname" }'));
       card.appendChild(fieldRow('Hint',            textInput    (step.hint,            v => { d.step[i].hint            = v; markDirty(); }),
         null, 'Optional hint shown in the journal to help guide the player.'));
+      card.appendChild(fieldRow('on_advance', scriptButton('on_advance', step.on_advance, ops => { d.step[i].on_advance = ops; markDirty(); }),
+        null, 'Script ops to run automatically when this step is reached via advance_quest.'));
       container.appendChild(card);
     });
     const addBtn = document.createElement('button'); addBtn.className='hbtn'; addBtn.textContent='+ Add step';
-    addBtn.addEventListener('click', () => { d.step.push({ objective:'', completion_flag:'', hint:'' }); rebuild(); markDirty(); });
+    addBtn.addEventListener('click', () => { d.step.push({ objective:'', completion_flag:'', hint:'', on_advance:[] }); rebuild(); markDirty(); });
     container.appendChild(addBtn);
   };
   rebuild();
@@ -1384,6 +1685,165 @@ function renderQuestRewards(main, d) {
     addBtn.addEventListener('click', () => { d.reward.push({ type:'gold', amount:0 }); rebuild(); markDirty(); });
     container.appendChild(addBtn);
   };
+  rebuild();
+  main.appendChild(container);
+}
+
+// ── Style editor ──────────────────────────────────────────────────────
+
+function _tagsInput(arr, onChange) {
+  // Edits a string[] as a comma-separated text field
+  const inp = document.createElement('input');
+  inp.type = 'text'; inp.className = 'field-input';
+  inp.value = (arr || []).join(', ');
+  inp.placeholder = 'comma-separated tags';
+  inp.addEventListener('input', () => {
+    const v = inp.value.split(',').map(s => s.trim()).filter(Boolean);
+    onChange(v); markDirty();
+  });
+  return inp;
+}
+
+function renderStyleEditor(main) {
+  const d = SELECTED.data;
+  main.appendChild(editorHeader('style', 'editor-type', d.name || d.id || ''));
+
+  // Identity
+  main.appendChild(sectionTitle('Identity'));
+  main.appendChild(fieldRow('ID',         textInput(d.id,         v => { d.id = v; markDirty(); })));
+  main.appendChild(fieldRow('Name',       textInput(d.name,       v => { d.name = v; markDirty(); })));
+  main.appendChild(fieldRow('Short desc', textInput(d.desc_short, v => { d.desc_short = v; markDirty(); })));
+  main.appendChild(fieldRow('Long desc',  textareaInput(d.desc_long, v => { d.desc_long = v; markDirty(); })));
+
+  // Combat matchups
+  main.appendChild(sectionTitle('Combat Matchups', 'NPC tags this style is strong/weak against (comma-separated).'));
+  main.appendChild(fieldRow('Strong vs',         _tagsInput(d.strong_vs, v => { d.strong_vs = v; })));
+  main.appendChild(fieldRow('Weak vs',           _tagsInput(d.weak_vs,   v => { d.weak_vs   = v; })));
+  main.appendChild(fieldRow('Strong multiplier', numInput(d.strong_multiplier, v => { d.strong_multiplier = v; markDirty(); }, 0.1, 5, 0.05),
+    null, 'Damage multiplier vs strong_vs enemies (e.g. 1.5 = +50%).'));
+  main.appendChild(fieldRow('Weak multiplier',   numInput(d.weak_multiplier, v => { d.weak_multiplier = v; markDirty(); }, 0.1, 5, 0.05),
+    null, 'Damage multiplier vs weak_vs enemies (e.g. 0.65 = -35%).'));
+
+  // Base stats
+  main.appendChild(sectionTitle('Base Stats', 'Flat bonuses applied when this style is active.'));
+  const bonusRow = document.createElement('div'); bonusRow.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;';
+  function statPairS(lbl, key, tip, mn, mx, stp) {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+    const l = document.createElement('label'); l.textContent = lbl;
+    if (tip) { const ic = document.createElement('i'); ic.className='help-icon'; ic.textContent='i'; ic.dataset.tip=tip; l.appendChild(ic); }
+    wrap.appendChild(l); wrap.appendChild(numInput(d[key], v => { d[key] = v; markDirty(); }, mn, mx, stp));
+    return wrap;
+  }
+  bonusRow.appendChild(statPairS('Attack Bonus',  'attack_bonus',  null, -10, 20));
+  bonusRow.appendChild(statPairS('Defense Bonus', 'defense_bonus', null, -10, 20));
+  bonusRow.appendChild(statPairS('Difficulty', 'difficulty', 'Proficiency gain divisor (1.0 = normal, 2.0 = twice as slow to master).', 0.1, 10, 0.1));
+  main.appendChild(bonusRow);
+
+  // Equipment affinity
+  main.appendChild(sectionTitle('Equipment Affinity', 'Weapon/armor tags that receive a bonus at full proficiency.'));
+  main.appendChild(fieldRow('Preferred weapon tags', _tagsInput(d.preferred_weapon_tags, v => { d.preferred_weapon_tags = v; })));
+  main.appendChild(fieldRow('Preferred armor tags',  _tagsInput(d.preferred_armor_tags,  v => { d.preferred_armor_tags  = v; })));
+  const affinityRow = document.createElement('div'); affinityRow.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;';
+  function affPair(lbl, key, tip) {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+    const l = document.createElement('label'); l.textContent = lbl;
+    if (tip) { const ic = document.createElement('i'); ic.className='help-icon'; ic.textContent='i'; ic.dataset.tip=tip; l.appendChild(ic); }
+    wrap.appendChild(l); wrap.appendChild(numInput(d[key], v => { d[key] = v; markDirty(); }, 0, 1, 0.05));
+    return wrap;
+  }
+  affinityRow.appendChild(affPair('Weapon bonus', 'weapon_bonus', 'Max % damage bonus from matched weapon at full proficiency (0.25 = 25%).'));
+  affinityRow.appendChild(affPair('Armor bonus',  'armor_bonus',  'Max % defense bonus from matched armor at full proficiency.'));
+  main.appendChild(affinityRow);
+
+  // Learning
+  main.appendChild(sectionTitle('Learning', 'Who teaches this style and minimum player level to learn.'));
+  main.appendChild(fieldRow('Learned from', refInput(d.learned_from || '', 'dl-npcs', v => { d.learned_from = v; markDirty(); }, 'npc'),
+    null, 'NPC id of the trainer. Leave empty for innate/self-taught styles.'));
+  main.appendChild(fieldRow('Learned at', numInput(d.learned_at, v => { d.learned_at = v; markDirty(); }, 0, 100),
+    null, 'Minimum player level to learn this style (0 = any level).'));
+
+  // Passives
+  main.appendChild(sectionTitle('Passives', 'Passive abilities triggered during combat.\nEach fires when trigger matches and player proficiency >= threshold.'));
+  renderStylePassives(main, d);
+}
+
+function renderStylePassives(main, d) {
+  d.passives = d.passives || [];
+  const container = document.createElement('div');
+
+  const rebuild = () => {
+    container.innerHTML = '';
+    d.passives.forEach((p, i) => {
+      const card = document.createElement('div'); card.className = 'step-card';
+      const hdr = document.createElement('div'); hdr.className = 'step-card-header';
+      hdr.innerHTML = `<span>${p.ability || '(passive ' + (i+1) + ')'}</span>`;
+
+      const rmBtn = document.createElement('button'); rmBtn.className = 'hbtn danger'; rmBtn.textContent = 'Remove';
+      rmBtn.addEventListener('click', () => { d.passives.splice(i, 1); rebuild(); markDirty(); });
+      hdr.appendChild(rmBtn); card.appendChild(hdr);
+
+      // Ability id + threshold + trigger row
+      const topRow = document.createElement('div'); topRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;';
+      function passiveField(lbl, el) {
+        const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+        const l = document.createElement('label'); l.textContent = lbl;
+        wrap.appendChild(l); wrap.appendChild(el); return wrap;
+      }
+      const abilityInp = document.createElement('input'); abilityInp.type='text'; abilityInp.className='field-input'; abilityInp.style.width='130px';
+      abilityInp.value = p.ability || ''; abilityInp.placeholder = 'ability id';
+      abilityInp.addEventListener('input', () => { d.passives[i].ability = abilityInp.value; markDirty(); });
+      topRow.appendChild(passiveField('Ability', abilityInp));
+
+      const threshInp = numInput(p.threshold, v => { d.passives[i].threshold = v; markDirty(); }, 0, 100);
+      threshInp.title = 'Proficiency required to unlock (0-100)';
+      topRow.appendChild(passiveField('Threshold (0-100)', threshInp));
+
+      const trigSel = document.createElement('select'); trigSel.className = 'field-select'; trigSel.style.width = '100px';
+      ['attack','defend','always'].forEach(t => {
+        const o = document.createElement('option'); o.value = t; o.textContent = t;
+        if (p.trigger === t) o.selected = true; trigSel.appendChild(o);
+      });
+      trigSel.addEventListener('change', () => { d.passives[i].trigger = trigSel.value; markDirty(); });
+      topRow.appendChild(passiveField('Trigger', trigSel));
+
+      const reqInp = document.createElement('input'); reqInp.type='text'; reqInp.className='field-input'; reqInp.style.width='120px';
+      reqInp.value = p.requires || ''; reqInp.placeholder = '(none)';
+      reqInp.addEventListener('input', () => { d.passives[i].requires = reqInp.value || undefined; markDirty(); });
+      topRow.appendChild(passiveField('Requires (ability)', reqInp));
+
+      card.appendChild(topRow);
+
+      // Message
+      card.appendChild(fieldRow('Message', textInput(p.message, v => { d.passives[i].message = v; markDirty(); }),
+        null, 'Text shown in combat log when the passive fires. Leave empty for silent passives.'));
+
+      // on_activate script ops
+      const opCount = (p.on_activate || []).length;
+      const opsDiv = document.createElement('div'); opsDiv.style.cssText = 'margin-top:4px;';
+      const opsPill = document.createElement('span');
+      opsPill.className = 'script-preview-pill'; opsPill.style.cursor = 'pointer';
+      opsPill.textContent = `on_activate: ${opCount} op${opCount !== 1 ? 's' : ''}`;
+      opsPill.addEventListener('click', () => {
+        openScriptModal('passive on_activate', d.passives[i].on_activate || [], ops => {
+          d.passives[i].on_activate = ops;
+          opsPill.textContent = `on_activate: ${ops.length} op${ops.length !== 1 ? 's' : ''}`;
+          markDirty();
+        });
+      });
+      opsDiv.appendChild(opsPill);
+      card.appendChild(opsDiv);
+
+      container.appendChild(card);
+    });
+
+    const addBtn = document.createElement('button'); addBtn.className = 'hbtn'; addBtn.textContent = '+ Add passive';
+    addBtn.addEventListener('click', () => {
+      d.passives.push({ ability: '', threshold: 50, trigger: 'defend', message: '', on_activate: [] });
+      rebuild(); markDirty();
+    });
+    container.appendChild(addBtn);
+  };
+
   rebuild();
   main.appendChild(container);
 }
@@ -1524,10 +1984,38 @@ function buildDlgNodeCard(node, ni, dlg, rebuild) {
   respSection.appendChild(respLabel);
 
   const respList = document.createElement('div');
+  let _respDragSrc = null;
   const rebuildResps = () => {
     respList.innerHTML = '';
     const myResps = dlg.response.filter(r => r.node === node.id);
-    myResps.forEach(resp => respList.appendChild(buildRespRow(resp, dlg, rebuildResps)));
+    myResps.forEach((resp, ri) => {
+      const wrap = buildRespRow(resp, dlg, rebuildResps);
+      wrap.draggable = true; wrap.style.cursor = 'grab';
+      wrap.addEventListener('dragstart', e => {
+        _respDragSrc = ri; wrap.style.opacity = '0.4';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(ri));
+      });
+      wrap.addEventListener('dragend', () => { wrap.style.opacity = ''; _respDragSrc = null; });
+      wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.style.outline = '2px solid var(--amber)'; });
+      wrap.addEventListener('dragleave', () => { wrap.style.outline = ''; });
+      wrap.addEventListener('drop', e => {
+        e.preventDefault(); wrap.style.outline = '';
+        if (_respDragSrc === null || _respDragSrc === ri) return;
+        // Move within dlg.response, restricted to myResps indices
+        const srcResp = myResps[_respDragSrc];
+        const dstResp = myResps[ri];
+        const srcIdx = dlg.response.indexOf(srcResp);
+        const dstIdx = dlg.response.indexOf(dstResp);
+        if (srcIdx !== -1 && dstIdx !== -1) {
+          dlg.response.splice(srcIdx, 1);
+          const newDst = dlg.response.indexOf(dstResp);
+          dlg.response.splice(newDst, 0, srcResp);
+          rebuildResps(); markDirty();
+        }
+      });
+      respList.appendChild(wrap);
+    });
     const addRespBtn = document.createElement('button'); addRespBtn.className = 'hbtn';
     addRespBtn.textContent = '+ Add response'; addRespBtn.style.marginTop = '6px';
     addRespBtn.addEventListener('click', () => {
@@ -1672,7 +2160,7 @@ function buildCondEditor(resp, condBtn) {
     val2Inp.style.display = ct.fields.length >= 2 ? '' : 'none';
     val2Label.style.display = ct.fields.length >= 2 ? '' : 'none';
     if (ct.fields[0]) {
-      val1Inp.setAttribute('list', ct.fields[0] === 'flag' || ct.fields[0] === 'not_flag' ? '' : ct.fields[0] === 'quest' || ct.fields[0] === 'quest_complete' ? 'dl-quests' : ct.fields[0] === 'skill' ? 'dl-skills' : ct.fields[0] === 'item' ? 'dl-items' : '');
+      val1Inp.setAttribute('list', ct.fields[0] === 'flag' || ct.fields[0] === 'not_flag' ? 'dl-flags' : ct.fields[0] === 'quest' || ct.fields[0] === 'quest_complete' ? 'dl-quests' : ct.fields[0] === 'skill' ? 'dl-skills' : ct.fields[0] === 'item' ? 'dl-items' : '');
       val1Inp.placeholder = ct.fields[0];
       val1Inp.value = resp.condition?.[ct.fields[0]] || '';
     }
@@ -1700,6 +2188,9 @@ function buildCondEditor(resp, condBtn) {
 
   typeSel.addEventListener('change', () => { updateFields(); applyChange(); });
   val1Inp.addEventListener('input', applyChange);
+  val1Inp.addEventListener('dragover', e => { if (_dragging?.type === 'flag') { e.preventDefault(); val1Inp.style.outline = '1px solid var(--accent)'; } });
+  val1Inp.addEventListener('dragleave', () => { val1Inp.style.outline = ''; });
+  val1Inp.addEventListener('drop', e => { e.preventDefault(); val1Inp.style.outline = ''; if (_dragging?.type === 'flag') { val1Inp.value = _dragging.id; applyChange(); } });
   val2Inp.addEventListener('input', applyChange);
   clearBtn.addEventListener('click', () => {
     typeSel.value = ''; resp.condition = undefined;
@@ -1818,7 +2309,7 @@ async function saveSelected() {
 
 function buildFileData(type, file, changedRecord) {
   // Find the zone that owns this file and rebuild the array
-  const recordType = type === 'room' ? 'room' : type === 'npc' ? 'npc' : 'item';
+  const recordType = {room:'room', npc:'npc', item:'item', style:'style'}[type] || type;
   for (const [, zone] of Object.entries(WORLD_DATA.zones || {})) {
     const arr = zone[type + 's'] || [];
     if (!arr.some(r => r._file === file)) continue;
@@ -1865,10 +2356,13 @@ function stripPrivate(obj) {
   for (const [k, v] of Object.entries(obj)) {
     if (!k.startsWith('_')) clean[k] = v;
   }
-  // Remove undefined/null optional fields
+  // Remove undefined/null/empty optional fields
   for (const k of Object.keys(clean)) {
-    if (clean[k] === null || clean[k] === undefined || clean[k] === '') {
-      // Keep id/name/desc always; remove empty optional numeric/string fields
+    const v = clean[k];
+    const isEmpty = v === null || v === undefined || v === ''
+      || (Array.isArray(v) && v.length === 0);
+    if (isEmpty) {
+      // Keep id/name/desc always; remove empty optional fields
       if (!['id','name','desc_short','description'].includes(k)) delete clean[k];
     }
   }
@@ -2505,12 +2999,22 @@ function setupEditorDrop() {
 // Cross-reference index
 // ═══════════════════════════════════════════════════════════════════════
 
+let FLAG_MAP = {};  // flag_name → [{type, zone_id, id, name, ctx}] — all usages world-wide
+
 function buildXRef() {
   XREF = {};
+  FLAG_MAP = {};
 
   const addRef = (targetId, sourceType, sourceZone, sourceId, sourceName, context) => {
     if (!targetId || typeof targetId !== 'string') return;
     (XREF[targetId] = XREF[targetId] || []).push(
+      {type: sourceType, zone_id: sourceZone, id: sourceId, name: sourceName, context}
+    );
+  };
+
+  const addFlag = (flagName, sourceType, sourceZone, sourceId, sourceName, context) => {
+    if (!flagName || typeof flagName !== 'string') return;
+    (FLAG_MAP[flagName] = FLAG_MAP[flagName] || []).push(
       {type: sourceType, zone_id: sourceZone, id: sourceId, name: sourceName, context}
     );
   };
@@ -2529,6 +3033,10 @@ function buildXRef() {
     if (obj.quest_id)     addRef(obj.quest_id,      srcType, srcZone, srcId, srcName, opCtx);
     if (obj.style_id)     addRef(obj.style_id,      srcType, srcZone, srcId, srcName, opCtx);
     if (obj.companion_id) addRef(obj.companion_id,  srcType, srcZone, srcId, srcName, opCtx);
+    // Flag references (set_flag, clear_flag, if_flag, if_not_flag ops; flag/not_flag conditions)
+    if (obj.flag)     addFlag(obj.flag,     srcType, srcZone, srcId, srcName, opCtx || ctx);
+    if (obj.not_flag) addFlag(obj.not_flag, srcType, srcZone, srcId, srcName, opCtx || ctx);
+    if (obj.has_flag) addFlag(obj.has_flag, srcType, srcZone, srcId, srcName, opCtx || ctx);
     // Recurse into child arrays (then/else/on_pass/on_fail/choices/actions/script/node)
     for (const v of Object.values(obj)) {
       if (Array.isArray(v)) v.forEach(c => scanObj(c, srcType, srcZone, srcId, srcName, ctx));
@@ -2659,6 +3167,48 @@ function renderXRef(id) {
     }
   }
 
+  // ── Flags used by the selected entity ──────────────────────────────
+  // Collect all flags referenced by the current entity's scripts/conditions
+  const entityFlags = new Map(); // flag_name → Set of context strings
+  const _collectFlags = (obj) => {
+    if (!obj || typeof obj !== 'object') return;
+    if (Array.isArray(obj)) { obj.forEach(_collectFlags); return; }
+    for (const key of ['flag', 'not_flag', 'has_flag']) {
+      if (obj[key] && typeof obj[key] === 'string') {
+        if (!entityFlags.has(obj[key])) entityFlags.set(obj[key], new Set());
+        entityFlags.get(obj[key]).add(obj.op || key);
+      }
+    }
+    for (const v of Object.values(obj)) { if (Array.isArray(v) || (v && typeof v === 'object')) _collectFlags(v); }
+  };
+  if (SELECTED?.data) _collectFlags(SELECTED.data);
+
+  if (entityFlags.size) {
+    body.appendChild(groupTitle('Flags'));
+    for (const [flagName, ctxSet] of [...entityFlags].sort(([a],[b]) => a.localeCompare(b))) {
+      const usageCount = (FLAG_MAP[flagName] || []).length;
+      const el = document.createElement('div'); el.className = 'xref-item';
+      el.style.cursor = 'pointer';
+      el.innerHTML = `<span class="badge" style="background:#6d4c41;color:#fff;flex-shrink:0;font-size:9px;padding:1px 4px">F</span>
+        <div class="xref-info">
+          <span class="xref-name">${escHtml(flagName)}</span>
+          <span class="xref-ctx">${escHtml([...ctxSet].join(', '))} &bull; ${usageCount} world use${usageCount!==1?'s':''}</span>
+        </div>`;
+      el.title = `Click to show all ${usageCount} use(s) of flag "${flagName}" · Drag into flag condition fields`;
+      el.draggable = true;
+      el.addEventListener('dragstart', e => {
+        _dragging = {type:'flag', id:flagName, name:flagName};
+        e.dataTransfer.setData('wct/type', 'flag');
+        e.dataTransfer.setData('wct/id', flagName);
+        e.dataTransfer.setData('text/plain', flagName);
+        el.classList.add('dragging');
+      });
+      el.addEventListener('dragend', () => { _dragging = null; clearDropHint(); el.classList.remove('dragging'); });
+      el.addEventListener('click', () => _showFlagUsages(flagName));
+      body.appendChild(el);
+    }
+  }
+
   // ── Back-references ────────────────────────────────────────────────
   const refs = XREF[id] || [];
   if (!refs.length) {
@@ -2691,6 +3241,174 @@ function renderXRef(id) {
       body.appendChild(xrefRow(r.type, r.name || r.id, r.context,
         () => navigateTo(r.type, r.zone_id, r.id)));
     });
+  });
+}
+
+// ── Error panel ────────────────────────────────────────────────────────
+
+let _errorPanelCollapsed = false;
+
+function toggleErrorPanel() {
+  _errorPanelCollapsed = !_errorPanelCollapsed;
+  const panel = document.getElementById('error-panel');
+  const tog   = document.getElementById('error-panel-toggle');
+  if (_errorPanelCollapsed) { panel?.classList.add('collapsed'); if(tog) tog.innerHTML = '&#x25BC;'; }
+  else                      { panel?.classList.remove('collapsed'); if(tog) tog.innerHTML = '&#x25B2;'; }
+}
+
+function buildErrorList() {
+  const panel = document.getElementById('error-panel');
+  const body  = document.getElementById('error-panel-body');
+  const title = document.getElementById('error-panel-title');
+  if (!panel || !body) return;
+  if (!WORLD_DATA) { panel.classList.add('hidden'); return; }
+
+  const errs = [];  // {sev:'err'|'warn', msg, fix, type, zone_id, id}
+
+  const addErr  = (msg, fix, type, zone_id, id) => errs.push({sev:'err',  msg, fix, type, zone_id, id});
+  const addWarn = (msg, fix, type, zone_id, id) => errs.push({sev:'warn', msg, fix, type, zone_id, id});
+
+  const allRoomIds = new Set(Object.keys(ALL_ROOMS));
+  const allNpcIds  = new Set(Object.keys(ALL_NPCS));
+  const allItemIds = new Set(Object.keys(ALL_ITEMS));
+
+  for (const [zid, zone] of Object.entries(WORLD_DATA.zones || {})) {
+    // Rooms
+    for (const room of (zone.rooms || [])) {
+      const rid = room.id || '(no id)';
+      if (!room.id) addErr(`Room missing 'id'`, `Add id = "..." to the room`, 'room', zid, rid);
+      if (!room.name) addErr(`Room '${rid}' missing 'name'`, `Add name = "..."`, 'room', zid, rid);
+      if (!room.description) addWarn(`Room '${rid}' missing 'description'`, `Add description = "..."`, 'room', zid, rid);
+      for (const [dir, ev] of Object.entries(room.exits || {})) {
+        const dest = typeof ev === 'string' ? ev : (ev?.to || '');
+        if (dest && !allRoomIds.has(dest))
+          addWarn(`Room '${rid}' exit '${dir}' -> '${dest}' not found`, `Check the exit target id`, 'room', zid, rid);
+      }
+      for (const spawn of (Array.isArray(room.spawns) ? room.spawns : [])) {
+        const nid = typeof spawn === 'string' ? spawn : (spawn?.id || '');
+        if (nid && !allNpcIds.has(nid))
+          addErr(`Room '${rid}' spawns unknown NPC '${nid}'`, `Add NPC '${nid}' or fix the id`, 'room', zid, rid);
+      }
+    }
+
+    // NPCs
+    const _NPC_REQ = ['id','name','hp','max_hp','attack','defense','xp_reward','gold_reward','hostile','tags','style','style_prof','desc_short','desc_long'];
+    for (const npc of (zone.npcs || [])) {
+      const nid = npc.id || '(no id)';
+      for (const f of _NPC_REQ) {
+        if (!(f in npc)) addErr(`NPC '${nid}' missing '${f}'`, `Add ${f} = ... to the NPC`, 'npc', zid, nid);
+      }
+      for (const entry of (npc.shop || [])) {
+        if (entry.item_id && !allItemIds.has(entry.item_id))
+          addErr(`NPC '${nid}' shop: unknown item '${entry.item_id}'`, `Check item id`, 'npc', zid, nid);
+      }
+    }
+
+    // Items
+    for (const item of (zone.items || [])) {
+      const iid = item.id || '(no id)';
+      if (!item.id)   addErr(`Item missing 'id'`, `Add id = "..."`, 'item', zid, iid);
+      if (!item.name) addErr(`Item '${iid}' missing 'name'`, `Add name = "..."`, 'item', zid, iid);
+      // Dead-code / contradiction checks
+      // Note: scenery + on_get is valid (interactive scenery / ore nodes) — engine runs on_get then stops.
+      if (item.scenery && item.slot)
+        addWarn(`Item '${iid}': scenery + slot="${item.slot}" — item can never be equipped`,
+          `Remove the slot field or remove the scenery flag`, 'item', zid, iid);
+      if (item.no_drop && item.on_drop && item.on_drop.length)
+        addWarn(`Item '${iid}': no_drop + on_drop — script will never run`,
+          `Remove on_drop or remove no_drop`, 'item', zid, iid);
+      for (const cmd of (item.commands || []))
+        if (!cmd.verb)
+          addWarn(`Item '${iid}': [[commands]] entry has no verb — will never trigger`,
+            `Add verb = "..." to the command`, 'item', zid, iid);
+    }
+
+    // Dialogues
+    for (const dlg of (zone.dialogues || [])) {
+      const did = dlg._npc_id || '?';
+      const nodes = {};
+      (dlg.node || []).forEach(n => { if (n.id) nodes[n.id] = n; });
+      if (!nodes.root) addErr(`Dialogue '${did}': missing 'root' node`, `Add [[node]] with id = "root"`, 'dialogue', zid, did);
+      // Check flat [[response]] next= refs
+      for (const resp of (dlg.response || [])) {
+        const nxt = resp.next;
+        if (nxt && !nodes[nxt])
+          addErr(`Dialogue '${did}': response next='${nxt}' not found`, `Add a [[node]] with id = "${nxt}" or fix the next= value`, 'dialogue', zid, did);
+      }
+    }
+
+    // Quests
+    for (const quest of (zone.quests || [])) {
+      const qid = quest._id || quest.id || '?';
+      if (quest.giver && !allNpcIds.has(quest.giver))
+        addWarn(`Quest '${qid}': giver '${quest.giver}' not found`, `Add NPC '${quest.giver}' or fix the giver id`, 'quest', zid, qid);
+    }
+  }
+
+  body.innerHTML = '';
+  if (!errs.length) {
+    panel.classList.add('hidden');
+    return;
+  }
+
+  panel.classList.remove('hidden');
+  const eCount = errs.filter(e => e.sev === 'err').length;
+  const wCount = errs.filter(e => e.sev === 'warn').length;
+  if (title) title.textContent = `${eCount ? eCount + ' error(s)' : ''}${eCount && wCount ? ', ' : ''}${wCount ? wCount + ' warning(s)' : ''}`;
+
+  for (const e of errs) {
+    const row = document.createElement('div');
+    row.className = 'error-row';
+    row.innerHTML = `<span class="err-sev ${e.sev}">${e.sev === 'err' ? 'ERR' : 'WRN'}</span>
+      <div style="flex:1">
+        <div class="err-msg">${escHtml(e.msg)}</div>
+        ${e.fix ? `<div class="err-fix">Fix: ${escHtml(e.fix)}</div>` : ''}
+      </div>`;
+    if (e.id && e.type && e.zone_id) {
+      row.title = `Click to navigate to ${e.type} '${e.id}'`;
+      row.addEventListener('click', () => navigateTo(e.type, e.zone_id, e.id));
+    }
+    body.appendChild(row);
+  }
+}
+
+// ── Flag usage popup ──────────────────────────────────────────────────
+
+function _showFlagUsages(flagName) {
+  const usages = FLAG_MAP[flagName] || [];
+  const body = document.getElementById('xref-body');
+  body.innerHTML = '';
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'hbtn'; backBtn.style.cssText = 'margin-bottom:6px;width:100%';
+  backBtn.textContent = '< Back';
+  backBtn.addEventListener('click', () => renderXRef(SELECTED?.data?.id || SELECTED?.data?._id || SELECTED?.data?._npc_id));
+  body.appendChild(backBtn);
+
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:6px;word-break:break-all';
+  hdr.textContent = `Flag: "${flagName}" — ${usages.length} usage(s) in world`;
+  body.appendChild(hdr);
+
+  if (!usages.length) {
+    const empty = document.createElement('div'); empty.className = 'xref-empty';
+    empty.textContent = 'No usages found.'; body.appendChild(empty); return;
+  }
+
+  const labels = {room:'R', npc:'N', item:'I', quest:'Q', dialogue:'D'};
+  const seen = new Set();
+  usages.forEach(u => {
+    const key = u.type + '|' + u.id + '|' + u.context;
+    if (seen.has(key)) return; seen.add(key);
+    const el = document.createElement('div'); el.className = 'xref-item'; el.style.cursor = 'pointer';
+    const letter = labels[u.type] || '?';
+    el.innerHTML = `<span class="badge badge-${u.type}" style="flex-shrink:0">${letter}</span>
+      <div class="xref-info">
+        <span class="xref-name">${escHtml(u.name || u.id)}</span>
+        ${u.context ? `<span class="xref-ctx">${escHtml(u.context)}</span>` : ''}
+      </div>`;
+    el.addEventListener('click', () => navigateTo(u.type, u.zone_id, u.id));
+    body.appendChild(el);
   });
 }
 
@@ -2828,6 +3546,7 @@ function _buildMapLayout() {
       if (!r.id) continue;
       rooms[r.id] = { id: r.id, name: r.name || r.id, zone_id: zid,
                       exits: r.exits || {}, coord: r.coord || null, start: !!r.start,
+                      is_town: Array.isArray(r.flags) && r.flags.includes('town'),
                       npc_count:  Array.isArray(r.spawns) ? r.spawns.length : (r.spawns ? 1 : 0),
                       item_count: Array.isArray(r.items)  ? r.items.length  : (r.items  ? 1 : 0) };
     }
@@ -3103,8 +3822,13 @@ function renderMap(zoneFilter) {
       if (locked) ln.setAttribute('stroke-dasharray', '5,4');
       svg.appendChild(ln);
       if (showDirs) {
-        const tx = ax1 + (ax2-ax1)*0.12;
-        const ty = ay1 + (ay2-ay1)*0.12;
+        // Place label at 15px from source face anchor (not a percentage), so it
+        // stays just outside the room box regardless of line length.
+        const dx = ax2 - ax1, dy = ay2 - ay1;
+        const len = Math.sqrt(dx*dx + dy*dy) || 1;
+        const off = Math.min(18, len * 0.18);  // 18px max, 18% of line for very short exits
+        const tx = ax1 + (dx/len) * off;
+        const ty = ay1 + (dy/len) * off;
         const lt = document.createElementNS(NS, 'text');
         lt.setAttribute('x', tx); lt.setAttribute('y', ty - 3);
         lt.setAttribute('text-anchor', 'middle');
@@ -3155,6 +3879,28 @@ function renderMap(zoneFilter) {
     const id2 = rid.length > 22 ? rid.slice(0,22)+'…' : rid;
     g.appendChild(mkT(id2, CW/2, CH/2+12, 9, '#888', false));
 
+    // Town and start room icons (top-right corner of node)
+    let iconX = CW - 6;
+    if (room.start) {
+      const star = document.createElementNS(NS, 'text');
+      star.setAttribute('x', iconX); star.setAttribute('y', 13);
+      star.setAttribute('text-anchor', 'end'); star.setAttribute('font-size', '11');
+      star.setAttribute('fill', '#FFD700'); star.setAttribute('pointer-events', 'none');
+      star.setAttribute('title', 'Start room');
+      star.textContent = '\u2605';  // filled star
+      g.appendChild(star);
+      iconX -= 13;
+    }
+    if (room.is_town) {
+      const house = document.createElementNS(NS, 'text');
+      house.setAttribute('x', iconX); house.setAttribute('y', 13);
+      house.setAttribute('text-anchor', 'end'); house.setAttribute('font-size', '11');
+      house.setAttribute('fill', '#90CAF9'); house.setAttribute('pointer-events', 'none');
+      house.setAttribute('title', 'Town');
+      house.textContent = '\u2302';  // house symbol
+      g.appendChild(house);
+    }
+
     if (showCounts && (room.npc_count || room.item_count)) {
       const tags = [];
       if (room.npc_count)  tags.push(`N:${room.npc_count}`);
@@ -3174,6 +3920,21 @@ function renderMap(zoneFilter) {
 function _applyMapTransform() {
   const svg = document.getElementById('map-svg');
   if (svg) svg.style.transform = `translate(${_mapPanX}px,${_mapPanY}px) scale(${_mapScale})`;
+}
+
+function fitMapAll() {
+  const canvas = document.getElementById('map-canvas');
+  const svg    = document.getElementById('map-svg');
+  if (!canvas || !svg) return;
+  const cw = canvas.clientWidth  || 800;
+  const ch = canvas.clientHeight || 600;
+  const sw = parseFloat(svg.getAttribute('width'))  || 1;
+  const sh = parseFloat(svg.getAttribute('height')) || 1;
+  // Scale to fill 90% of the canvas, never zoom in beyond 1×
+  _mapScale = Math.min(cw / sw, ch / sh, 1) * 0.90;
+  _mapPanX  = (cw - sw * _mapScale) / 2;
+  _mapPanY  = (ch - sh * _mapScale) / 2;
+  _applyMapTransform();
 }
 
 function _initMapCanvas(canvas) {
@@ -3221,10 +3982,34 @@ function showMapInfo(rid, zoneId) {
   if (!rid || !zoneId) return;
   _mapSelectedRoom = {id: rid, zone_id: zoneId};
 
-  // Highlight the node
-  document.querySelectorAll('.map-room-node').forEach(n => n.classList.remove('map-selected'));
+  // Highlight the selected node and its connected neighbors
+  document.querySelectorAll('.map-room-node').forEach(n => {
+    n.classList.remove('map-selected');
+    n.classList.remove('map-connected');
+  });
   const node = document.querySelector(`.map-room-node[data-id="${CSS.escape(rid)}"]`);
   if (node) node.classList.add('map-selected');
+  // Find connected room IDs from exits and highlight them
+  const _allRoomData = _buildMapLayout();
+  const exitTargets = new Set();
+  const selRoom = _allRoomData[rid];
+  if (selRoom) {
+    for (const ev of Object.values(selRoom.exits || {})) {
+      const dest = typeof ev === 'string' ? ev : (ev?.to || '');
+      if (dest) exitTargets.add(dest);
+    }
+    // Also mark rooms that have an exit TO the selected room
+    for (const [oid, orn] of Object.entries(_allRoomData)) {
+      for (const ev of Object.values(orn.exits || {})) {
+        const dest = typeof ev === 'string' ? ev : (ev?.to || '');
+        if (dest === rid) exitTargets.add(oid);
+      }
+    }
+  }
+  exitTargets.forEach(tid => {
+    const tn = document.querySelector(`.map-room-node[data-id="${CSS.escape(tid)}"]`);
+    if (tn) tn.classList.add('map-connected');
+  });
 
   const zone = WORLD_DATA?.zones?.[zoneId];
   const room = zone?.rooms?.find(r => r.id === rid);
@@ -3512,9 +4297,10 @@ function exportQuestDot() {
   const C_COND_BG = '#E3F2FD';
   const T_OPEN = '<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4" BGCOLOR="white">';
 
-  // Collect transitions by scanning all dialogues
+  // Collect transitions by scanning dialogues + kill_scripts + on_get + on_enter
   const transitions = [];
   for (const [, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+    // Dialogues
     for (const dlg of (zone.dialogues || [])) {
       const npcId = dlg._npc_id || '';
       const nm = {};
@@ -3527,6 +4313,21 @@ function exportQuestDot() {
           (resp.script||[]).filter(o=>typeof o==='object').forEach(op =>
             _dlgRecordTrans(op, questId, npcId, nid, [node.condition, resp.condition], resp.script||[], transitions)));
       }
+    }
+    // NPC kill_scripts
+    for (const npc of (zone.npcs || [])) {
+      (npc.kill_script||[]).filter(o=>typeof o==='object').forEach(op =>
+        _dlgRecordTrans(op, questId, npc.id, 'kill_script', [], npc.kill_script||[], transitions));
+    }
+    // Item on_get scripts
+    for (const item of (zone.items || [])) {
+      (item.on_get||[]).filter(o=>typeof o==='object').forEach(op =>
+        _dlgRecordTrans(op, questId, item.id, 'on_get', [], item.on_get||[], transitions));
+    }
+    // Room on_enter scripts
+    for (const room of (zone.rooms || [])) {
+      (room.on_enter||[]).filter(o=>typeof o==='object').forEach(op =>
+        _dlgRecordTrans(op, questId, room.id, 'on_enter', [], room.on_enter||[], transitions));
     }
   }
 
@@ -3978,14 +4779,14 @@ function _showQuestGraph(main, quest) {
   for (const s of (quest.step || [])) steps[s.index] = s;
   const stepNums = Object.keys(steps).map(Number).sort((a,b) => a - b);
 
-  // Collect transitions from loaded world data
+  // Collect transitions from loaded world data (dialogues + kill_scripts + on_get + on_enter)
   const byStep = {};
   if (WORLD_DATA?.zones) {
     const tempTrans = [];
     for (const zone of Object.values(WORLD_DATA.zones)) {
+      // Dialogues
       for (const dlg of (zone.dialogues || [])) {
         const npcId = dlg._npc_id || '';
-        // Build per-node response map (handles flat [[response]] TOML format)
         const nodeRespMap = {};
         (dlg.node || []).forEach(n => { nodeRespMap[n.id || n._id || 'root'] = []; });
         (dlg.response || []).forEach(r => { const p = r.node || ''; if (nodeRespMap[p]) nodeRespMap[p].push(r); });
@@ -3999,6 +4800,21 @@ function _showQuestGraph(main, quest) {
             for (const op of (resp.script || []))
               _dlgRecordTrans(op, questId, npcId, nid, [nc, resp.condition], resp.script, tempTrans);
         }
+      }
+      // NPC kill_scripts
+      for (const npc of (zone.npcs || [])) {
+        for (const op of (npc.kill_script || []))
+          _dlgRecordTrans(op, questId, npc.id, 'kill_script', [], npc.kill_script, tempTrans);
+      }
+      // Item on_get scripts
+      for (const item of (zone.items || [])) {
+        for (const op of (item.on_get || []))
+          _dlgRecordTrans(op, questId, item.id, 'on_get', [], item.on_get, tempTrans);
+      }
+      // Room on_enter scripts
+      for (const room of (zone.rooms || [])) {
+        for (const op of (room.on_enter || []))
+          _dlgRecordTrans(op, questId, room.id, 'on_enter', [], room.on_enter, tempTrans);
       }
     }
     // Group by step number (null = complete_quest)
@@ -4157,6 +4973,292 @@ function _showQuestGraph(main, quest) {
   main.appendChild(wrap);
 
   wrap._cleanup = _dlgGraphMakePanZoom(canvas, svg);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// World Config editor
+// ═══════════════════════════════════════════════════════════════════════
+
+let _configDraft = null;   // mutable copy of WORLD_CONFIG being edited
+
+function openConfig() {
+  if (!WORLD_CONFIG) return;
+  // Deep-copy so edits don't mutate WORLD_CONFIG directly
+  _configDraft = JSON.parse(JSON.stringify(WORLD_CONFIG));
+  _buildConfigModal();
+  document.getElementById('config-modal').classList.remove('hidden');
+}
+
+function _buildConfigModal() {
+  const body = document.getElementById('config-modal-body');
+  body.innerHTML = '';
+  const d = _configDraft;
+
+  // ── Basic settings ────────────────────────────────────────────────
+  body.appendChild(sectionTitle('Basic Settings'));
+
+  body.appendChild(fieldRow('World Name',
+    textInput(d.world_name, v => d.world_name = v), null,
+    'Display name for the world (shown in status messages and map header).'));
+
+  body.appendChild(fieldRow('Currency Name',
+    textInput(d.currency_name, v => d.currency_name = v), null,
+    'Display name for currency (e.g. "gold", "coin", "credits").'));
+
+  body.appendChild(fieldRow('Default Style',
+    refInput(d.default_style, 'dl-styles', v => d.default_style = v, 'style'), null,
+    'Fighting style ID every new character starts with.'));
+
+  const statRow = document.createElement('div'); statRow.className = 'field-row inline';
+  function cfgNum(lbl, key, tip, min, max) {
+    const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.gap='3px';
+    const l = document.createElement('label'); l.textContent = lbl;
+    if (tip) { const ic = document.createElement('i'); ic.className='help-icon'; ic.textContent='i'; ic.dataset.tip=tip; l.appendChild(ic); }
+    const inp = numInput(d[key], v => d[key] = v, min, max);
+    wrap.appendChild(l); wrap.appendChild(inp);
+    return wrap;
+  }
+  statRow.appendChild(cfgNum('New Char HP',  'new_char_hp',     'Starting HP for every new character.',        1));
+  statRow.appendChild(cfgNum('Vision Threshold', 'vision_threshold', 'Min effective light level to see clearly (0–10).\nEffective light = room.light + equipped light_add.', 0, 10));
+  body.appendChild(statRow);
+
+  // ── Equipment slots ───────────────────────────────────────────────
+  body.appendChild(sectionTitle('Equipment Slots',
+    'Ordered list of equip slot names. Item slot= values must match an entry here.\nDrag to reorder. Add/remove to change what slots exist in your world.'));
+  const slots = Array.isArray(d.equipment_slots) ? [...d.equipment_slots] : [];
+  body.appendChild(_slotsEditor(slots, v => d.equipment_slots = v));
+
+  // ── Skills ────────────────────────────────────────────────────────
+  body.appendChild(sectionTitle('Skills',
+    'Map of skill_id → display name. Used in script skill_check ops and dialogue conditions.\nChanges take effect on engine restart.'));
+  body.appendChild(_skillsEditor(d.skills || {}, v => d.skills = v));
+
+  // ── Player Attributes ─────────────────────────────────────────────
+  body.appendChild(sectionTitle('Player Attributes',
+    'World-defined numeric attributes tracked per-player.\nEach attribute can be set/adjusted/read by scripts.\nSee WORLD_MANUAL §18.'));
+  body.appendChild(_playerAttrsEditor(d.player_attrs || [], v => d.player_attrs = v));
+
+  // ── Status Effects ────────────────────────────────────────────────
+  body.appendChild(sectionTitle('Status Effects',
+    'Named conditions applied/cleared by scripts and combat passives.\nEach effect modifies combat stats or deals per-move damage.\nSee WORLD_MANUAL §11.'));
+  body.appendChild(_statusEffectsEditor(d.status_effects || [], v => d.status_effects = v));
+}
+
+function _slotsEditor(arr, onChange) {
+  const container = document.createElement('div');
+  const rebuild = () => {
+    container.innerHTML = '';
+    arr.forEach((slot, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.className = 'field-input'; inp.value = slot;
+      inp.addEventListener('input', () => { arr[i] = inp.value.trim(); onChange(arr); });
+      const upBtn = document.createElement('button'); upBtn.className='hbtn'; upBtn.textContent='^'; upBtn.title='Move up';
+      upBtn.disabled = i === 0;
+      upBtn.addEventListener('click', () => { if (i > 0) { [arr[i-1], arr[i]] = [arr[i], arr[i-1]]; rebuild(); onChange(arr); } });
+      const dnBtn = document.createElement('button'); dnBtn.className='hbtn'; dnBtn.textContent='v'; dnBtn.title='Move down';
+      dnBtn.disabled = i === arr.length - 1;
+      dnBtn.addEventListener('click', () => { if (i < arr.length-1) { [arr[i], arr[i+1]] = [arr[i+1], arr[i]]; rebuild(); onChange(arr); } });
+      const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='x';
+      rmBtn.addEventListener('click', () => { arr.splice(i, 1); rebuild(); onChange(arr); });
+      row.appendChild(inp); row.appendChild(upBtn); row.appendChild(dnBtn); row.appendChild(rmBtn);
+      container.appendChild(row);
+    });
+    const addBtn = document.createElement('button'); addBtn.className='hbtn'; addBtn.textContent='+ Add slot';
+    addBtn.addEventListener('click', () => { arr.push(''); rebuild(); onChange(arr); });
+    container.appendChild(addBtn);
+  };
+  rebuild();
+  return container;
+}
+
+function _skillsEditor(skills, onChange) {
+  // Work as [[{id, label}]] for ordered display; convert to/from dict
+  let pairs = Object.entries(skills).map(([id, label]) => ({id, label}));
+  const container = document.createElement('div');
+  const rebuild = () => {
+    container.innerHTML = '';
+    pairs.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+      const idInp = document.createElement('input');
+      idInp.type='text'; idInp.className='field-input'; idInp.placeholder='skill_id'; idInp.value=p.id; idInp.style.width='120px';
+      idInp.addEventListener('input', () => { p.id = idInp.value.trim(); _emitSkills(); });
+      const lblInp = document.createElement('input');
+      lblInp.type='text'; lblInp.className='field-input'; lblInp.placeholder='Display Name'; lblInp.value=p.label;
+      lblInp.addEventListener('input', () => { p.label = lblInp.value; _emitSkills(); });
+      const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='x';
+      rmBtn.addEventListener('click', () => { pairs.splice(i, 1); rebuild(); _emitSkills(); });
+      row.appendChild(idInp); row.appendChild(lblInp); row.appendChild(rmBtn);
+      container.appendChild(row);
+    });
+    const addBtn = document.createElement('button'); addBtn.className='hbtn'; addBtn.textContent='+ Add skill';
+    addBtn.addEventListener('click', () => { pairs.push({id:'', label:''}); rebuild(); });
+    container.appendChild(addBtn);
+  };
+  const _emitSkills = () => {
+    const obj = {};
+    pairs.forEach(p => { if (p.id) obj[p.id] = p.label; });
+    onChange(obj);
+  };
+  rebuild();
+  return container;
+}
+
+function _playerAttrsEditor(attrs, onChange) {
+  const container = document.createElement('div');
+  const rebuild = () => {
+    container.innerHTML = '';
+    attrs.forEach((a, i) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'border:1px solid var(--border);border-radius:4px;padding:8px;margin-bottom:6px';
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:6px';
+      const lbl = document.createElement('b'); lbl.textContent = a.id || '(unnamed attr)';
+      const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='Remove';
+      rmBtn.addEventListener('click', () => { attrs.splice(i, 1); rebuild(); onChange(attrs); });
+      hdr.appendChild(lbl); hdr.appendChild(rmBtn); card.appendChild(hdr);
+
+      const r1 = document.createElement('div'); r1.className='field-row inline';
+      const mkPair = (lbl_, key, tip, isNum) => {
+        const w = document.createElement('div'); w.style.display='flex'; w.style.flexDirection='column'; w.style.gap='3px';
+        const l = document.createElement('label'); l.textContent = lbl_;
+        if (tip) { const ic = document.createElement('i'); ic.className='help-icon'; ic.textContent='i'; ic.dataset.tip=tip; l.appendChild(ic); }
+        const inp = isNum
+          ? numInput(a[key], v => { a[key] = v; onChange(attrs); })
+          : textInput(a[key] || '', v => { a[key] = v; if (key === 'id') lbl.textContent = v || '(unnamed attr)'; onChange(attrs); });
+        w.appendChild(l); w.appendChild(inp); return w;
+      };
+      r1.appendChild(mkPair('ID', 'id', 'Snake_case identifier used in script ops (e.g. "corruption").', false));
+
+      const displaySel = document.createElement('select'); displaySel.className='field-select';
+      [['number','Number (raw int)'],['bar','Bar (graphical)']].forEach(([v,t]) => {
+        const o = document.createElement('option'); o.value=v; o.textContent=t;
+        if (a.display === v) o.selected = true;
+        displaySel.appendChild(o);
+      });
+      displaySel.addEventListener('change', () => { a.display = displaySel.value; onChange(attrs); });
+      const dispWrap = document.createElement('div'); dispWrap.style.display='flex'; dispWrap.style.flexDirection='column'; dispWrap.style.gap='3px';
+      const dispLbl = document.createElement('label'); dispLbl.textContent = 'Display';
+      dispWrap.appendChild(dispLbl); dispWrap.appendChild(displaySel);
+      r1.appendChild(dispWrap);
+      card.appendChild(r1);
+
+      const r2 = document.createElement('div'); r2.className='field-row inline'; r2.style.marginTop='4px';
+      r2.appendChild(mkPair('Min', 'min', 'Clamp floor.', true));
+      r2.appendChild(mkPair('Max', 'max', 'Clamp ceiling.', true));
+      r2.appendChild(mkPair('Default', 'default', 'Starting value for new characters.', true));
+      card.appendChild(r2);
+      container.appendChild(card);
+    });
+    const addBtn = document.createElement('button'); addBtn.className='hbtn'; addBtn.textContent='+ Add attribute';
+    addBtn.addEventListener('click', () => {
+      attrs.push({id:'', min:0, max:100, default:0, display:'number'});
+      rebuild(); onChange(attrs);
+    });
+    container.appendChild(addBtn);
+  };
+  rebuild();
+  return container;
+}
+
+function _statusEffectsEditor(effects, onChange) {
+  const container = document.createElement('div');
+  const rebuild = () => {
+    container.innerHTML = '';
+    effects.forEach((e, i) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'border:1px solid var(--border);border-radius:4px;padding:8px;margin-bottom:6px';
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:6px';
+      const lbl = document.createElement('b'); lbl.textContent = e.id || '(unnamed effect)';
+      const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='Remove';
+      rmBtn.addEventListener('click', () => { effects.splice(i, 1); rebuild(); onChange(effects); });
+      hdr.appendChild(lbl); hdr.appendChild(rmBtn); card.appendChild(hdr);
+
+      const mkText = (labelTxt, key, placeholder) => {
+        const w = document.createElement('div'); w.style.cssText = 'display:flex;flex-direction:column;gap:3px;flex:1;';
+        const l = document.createElement('label'); l.textContent = labelTxt;
+        const inp = document.createElement('input'); inp.type='text'; inp.className='field-input';
+        inp.value = e[key] || ''; if (placeholder) inp.placeholder = placeholder;
+        inp.addEventListener('input', () => {
+          e[key] = inp.value;
+          if (key === 'id') lbl.textContent = inp.value || '(unnamed effect)';
+          onChange(effects);
+        });
+        w.appendChild(l); w.appendChild(inp); return w;
+      };
+      const mkNum = (labelTxt, key, tip) => {
+        const w = document.createElement('div'); w.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+        const l = document.createElement('label'); l.textContent = labelTxt;
+        if (tip) { const ic = document.createElement('i'); ic.className='help-icon'; ic.textContent='i'; ic.dataset.tip=tip; l.appendChild(ic); }
+        w.appendChild(l); w.appendChild(numInput(e[key] ?? 0, v => { e[key] = v; onChange(effects); }, -20, 20));
+        return w;
+      };
+
+      const r1 = document.createElement('div'); r1.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;';
+      r1.appendChild(mkText('ID', 'id', 'e.g. poisoned'));
+      r1.appendChild(mkText('Label', 'label', 'display name'));
+      card.appendChild(r1);
+
+      const r2 = document.createElement('div'); r2.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;';
+      r2.appendChild(mkText('Apply message', 'apply_msg', 'shown when applied'));
+      card.appendChild(r2);
+      const r3 = document.createElement('div'); r3.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;';
+      r3.appendChild(mkText('Expiry message', 'expiry_msg', 'shown when it expires'));
+      card.appendChild(r3);
+
+      const r4 = document.createElement('div'); r4.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;';
+      r4.appendChild(mkNum('Atk modifier', 'combat_atk', 'Flat attack change while active (negative = debuff).'));
+      r4.appendChild(mkNum('Def modifier', 'combat_def', 'Flat defense change while active.'));
+      r4.appendChild(mkNum('Dmg/move', 'damage_per_move', 'HP damage per command while active (0 = none).'));
+      card.appendChild(r4);
+      container.appendChild(card);
+    });
+    const addBtn = document.createElement('button'); addBtn.className='hbtn'; addBtn.textContent='+ Add effect';
+    addBtn.addEventListener('click', () => {
+      effects.push({id:'', label:'', apply_msg:'', expiry_msg:'', combat_atk:0, combat_def:0, damage_per_move:0});
+      rebuild(); onChange(effects);
+    });
+    container.appendChild(addBtn);
+  };
+  rebuild();
+  return container;
+}
+
+async function saveConfig() {
+  if (!_configDraft || !WORLD_ID) return;
+  // Build the config object to write — exclude WCT-only fields like 'styles'
+  const cfg = {
+    world_name:       _configDraft.world_name       || 'The World',
+    new_char_hp:      _configDraft.new_char_hp       || 100,
+    currency_name:    _configDraft.currency_name     || 'gold',
+    default_style:    _configDraft.default_style     || 'brawling',
+    vision_threshold: _configDraft.vision_threshold  ?? 3,
+    equipment_slots:  _configDraft.equipment_slots   || [],
+    skills:           _configDraft.skills            || {},
+  };
+  if (_configDraft.player_attrs && _configDraft.player_attrs.length > 0) {
+    cfg.player_attrs = _configDraft.player_attrs;
+  }
+  if (_configDraft.status_effects && _configDraft.status_effects.length > 0) {
+    cfg.status_effect = _configDraft.status_effects;
+  }
+  const res = await fetch('/api/write_config', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({world_id: WORLD_ID, config: cfg}),
+  });
+  const j = await res.json();
+  if (j.ok) {
+    closeModal('config-modal');
+    // Reload world so WORLD_CONFIG reflects new settings
+    await loadWorld(WORLD_ID);
+    setStatus('World config saved', 'ok');
+  } else {
+    setStatus('Save failed: ' + (j.error || '?'), 'err');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════

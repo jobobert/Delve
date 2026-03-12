@@ -1,111 +1,41 @@
-# How this style interacts with the region
-# Umbral Veil is designed to feel native to Gloamreach:
-#
-# Afterimage Strike mirrors the region’s afterimage enemies.
-#
-# Shadow Step rewards dim‑light navigation.
-#
-# Entropy Burst ties directly into entropy seep.
-#
-# Lightbreak interacts with the Entropy Guardian’s bright‑light weakness.
-#
-# Balance Edge reinforces the region’s theme of controlled instability.
-#
-# It also gives players a reason to engage with the light‑level system beyond puzzles.
+# Gloamreach — Fighting Styles
 
+# umbral_veil: a deceptive style that bends light and shadow to create delayed strikes.
+# Native to the Gloamreach Lightbearers. Rewards elusive, disorienting play.
+# Effective against armored and humanoid foes who rely on direct force.
 [[style]]
-id          = "umbral_veil"
-name        = "Umbral Veil"
-desc_short  = "A style that bends light and shadow to create delayed strikes and afterimages."
-desc_long   = """
-Practitioners of Umbral Veil fight between moments, letting shadows strike where they stood a heartbeat ago.
-The style thrives in unstable light, weaving entropy into sudden bursts of power.
-"""
-
-# ---------------------------------------------------------
-# Base Stats
-# ---------------------------------------------------------
-
-[stats]
-attack  = 6
-defense = 3
-dodge   = 8
-crit    = 6
-
-# ---------------------------------------------------------
-# Abilities
-# ---------------------------------------------------------
-
-[[ability]]
-id          = "veil_afterimage_strike"
-name        = "Afterimage Strike"
-desc        = "Your shadow lashes out a moment after your attack, dealing delayed damage."
-cooldown    = 3
-script = [
-  { op = "delay", rounds = 1 },
-  { op = "damage", amount = 6 },
-  { op = "message", tag = "combat", text = "Your afterimage snaps forward, striking from behind." }
-]
-
-[[ability]]
-id          = "veil_shadow_step"
-name        = "Shadow Step"
-desc        = "Step through dim light, gaining a burst of dodge and repositioning."
-cooldown    = 4
-script = [
-  { op = "if_light_at_most", amount = 1, then = [
-    { op = "apply_status", effect = "dodge_up", duration = 2 },
-    { op = "message", tag = "combat", text = "You slip through the dimness, becoming harder to track." }
-  ], else = [
-    { op = "message", tag = "error", text = "The light is too bright to shadow‑step." }
-  ] }
-]
-
-[[ability]]
-id          = "veil_entropy_burst"
-name        = "Entropy Burst"
-desc        = "Release unstable energy, dealing damage that scales with entropy."
-cooldown    = 5
-script = [
-  { op = "if_status", effect = "entropy", then = [
-    { op = "damage", amount = 10 },
-    { op = "message", tag = "combat", text = "Entropy surges outward in a violent burst!" }
-  ], else = [
-    { op = "damage", amount = 5 },
-    { op = "message", tag = "combat", text = "A weak burst of unstable energy ripples outward." }
-  ] }
-]
-
-[[ability]]
-id          = "veil_lightbreak"
-name        = "Lightbreak"
-desc        = "Overload your light source, stunning enemies sensitive to brightness."
-cooldown    = 6
-script = [
-  { op = "if_light_at_least", amount = 3, then = [
-    { op = "apply_status", effect = "stunned", duration = 1 },
-    { op = "message", tag = "combat", text = "Your light flares violently, staggering your foe!" }
-  ], else = [
-    { op = "message", tag = "error", text = "Your light is too dim to trigger Lightbreak." }
-  ] }
-]
-
-# ---------------------------------------------------------
-# Passive Effects
-# ---------------------------------------------------------
+id            = "umbral_veil"
+name          = "Umbral Veil"
+desc          = "A deceptive style that bends light and shadow to create delayed strikes and afterimages. Rewards elusive, disorienting play."
+strong_vs     = ["armored", "humanoid", "slow"]
+weak_vs       = ["beast", "fast", "flying"]
+defense_bonus = 1
+difficulty    = 1.4
+learned_from  = "gr_umbral_weaver"
 
 [[passive]]
-id          = "veil_echo_sense"
-name        = "Echo Sense"
-desc        = "You sense delayed echoes in the caverns, reducing damage from afterimages."
-effects = [
-  { type = "status_resist", effect = "echo", amount = 25 }
+ability   = "afterimage_strike"
+threshold = 50
+trigger   = "attack"
+message   = "Your shadow lashes out a heartbeat behind your strike — a double blow!"
+on_activate = [
+  { op = "apply_status", effect = "confused", duration = 2 },
 ]
 
 [[passive]]
-id          = "veil_balance_edge"
-name        = "Balance Edge"
-desc        = "When your light level is exactly 2, your crit chance increases."
-effects = [
-  { type = "conditional_bonus", condition = "light_equals", amount = 2, stat = "crit", bonus = 3 }
+ability   = "shadow_step"
+threshold = 65
+trigger   = "defend"
+message   = "You slip between moments — the attack passes through your afterimage!"
+on_activate = [
+  { op = "skip_npc_attack" },
+]
+
+[[passive]]
+ability   = "entropy_surge"
+threshold = 75
+trigger   = "attack"
+message   = "Unstable energy surges into your strike!"
+on_activate = [
+  { op = "multiply_damage", multiplier = 1.6 },
 ]

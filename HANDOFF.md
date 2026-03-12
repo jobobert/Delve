@@ -58,7 +58,8 @@ touching code. It reflects the actual current state of every file.
 | `engine/commands.py` | ~2500-line command dispatcher. `CommandProcessor.process(raw)` is the main entry point. `_resolve_npc(target)` finds a live NPC in the current room (filters `hp > 0`). |
 | `engine/combat.py` | `CombatSession(player, npc, bus, room, ctx)`. Call `player_attack()` once per turn. Fully instrumented with `engine/log.py` at DEBUG level. |
 | `engine/dialogue.py` | `run_inline(npc, player, quests, ctx, bus, input_fn)`. Loads tree from `data/<world_id>/<zone>/dialogues/<npc_id>.toml` or falls back to `npc["dialogue"]` string or auto-generates a brush-off line. |
-| `engine/script.py` | `ScriptRunner(ctx).run(ops)`. 45 ops. `fail` aborts cleanly. `require_tag` gates on item tags. |
+| `engine/world_config.py` | `init(world_path)` loads `config.toml` (or legacy `config.py`) and exposes `WORLD_NAME`, `SKILLS`, `NEW_CHAR_HP`, `CURRENCY_NAME`, `DEFAULT_STYLE`, `VISION_THRESHOLD`, `EQUIPMENT_SLOTS`, `PLAYER_ATTRS`, `STATUS_EFFECTS`. `get_status_effect(id)` looks up a named effect. |
+| `engine/script.py` | `ScriptRunner(ctx).run(ops)`. 53 ops. `fail` aborts cleanly. `require_tag` gates on item tags. Combat-only ops (`block_damage`, `multiply_damage`, etc.) require a `combat_ctx` in the context. |
 | `engine/log.py` | `log.configure(...)` at startup. `log.debug/info/warn(category, msg, **kv)`. `log.section(title)`. `log.enter/exit` for bracketed spans. Writes to `delve.log`. |
 | `engine/player.py` | `Player` dataclass. `player.save()` / `Player.load(name)`. Equipped items in `player.equipped` (10 slots). Bank in `player.bank`. Skills in `player.skills`. Prestige in `player.prestige`. |
 | `engine/prestige.py` | Score −999…+999, 10 tiers. `apply_delta`, `tier_name`, `shop_modifier`, `hostile_on_sight`. |
@@ -102,21 +103,25 @@ touching code. It reflects the actual current state of every file.
 - Both formats can coexist in the same file
 - `next = ""` ends the conversation
 
-**Script ops** — 53 ops (see `engine/script.py` docstring for full list):
-`say`, `message`, `set_flag`, `clear_flag`, `give_gold`, `take_gold`, `give_xp`,
-`heal`, `set_hp`, `damage`, `give_item`, `take_item`, `spawn_item`,
-`advance_quest`, `complete_quest`, `teach_style`, `unlock_exit`, `lock_exit`,
-`skill_check`, `if_skill`, `skill_grow`, `apply_status`, `clear_status`,
-`if_status`, `prestige`, `add_affinity`, `remove_affinity`, `if_prestige`,
-`if_affinity`, `give_companion`, `dismiss_companion`, `bank_expand`,
-`if_flag`, `if_not_flag`, `if_item`, `if_quest`, `if_quest_complete`, `fail`,
-`require_tag`, `teleport_player`, `move_npc`, `move_item`,
-`if_combat_round`, `if_npc_hp`, `end_combat`, `journal_entry`,
-`set_attr`, `adjust_attr`, `if_attr`,
-`set_room_light`, `adjust_light`, `if_light`, `set_vision`, `adjust_vision`,
+**Script ops** — 53 ops total (see `engine/script.py` docstring + WORLD_MANUAL Appendix C for full reference):
+
+General ops: `say`, `message`, `set_flag`, `clear_flag`, `if_flag`, `if_not_flag`,
+`give_gold`, `take_gold`, `give_xp`, `heal`, `set_hp`, `damage`,
+`give_item`, `take_item`, `spawn_item`, `if_item`, `require_tag`,
+`advance_quest`, `complete_quest`, `if_quest`, `if_quest_complete`,
+`teach_style`, `unlock_exit`, `lock_exit`, `teleport_player`, `move_npc`, `move_item`,
+`skill_check`, `if_skill`, `skill_grow`,
+`apply_status`, `clear_status`, `if_status`,
+`prestige`, `add_affinity`, `remove_affinity`, `if_prestige`, `if_affinity`,
+`give_companion`, `dismiss_companion`, `bank_expand`, `fail`, `journal_entry`,
 `run_script_file`,
-`block_damage`, `multiply_damage`, `counter_damage`, `reduce_damage`,
-`skip_npc_attack`, `apply_combat_bleed`, `heal_self`
+`set_attr`, `adjust_attr`, `if_attr`,
+`set_room_light`, `adjust_light`, `if_light`, `set_vision`, `adjust_vision`
+
+Round-script ops (NPC `round_script` only): `if_combat_round`, `if_npc_hp`, `end_combat`
+
+Combat passive ops (style `on_activate` only): `block_damage`, `multiply_damage`,
+`counter_damage`, `reduce_damage`, `skip_npc_attack`, `apply_combat_bleed`, `heal_self`
 
 ---
 
@@ -151,7 +156,101 @@ To add logging to a new area: `import engine.log as log` then call
 
 ## Known state / recent work
 
-The most recent session completed **Engine Feature Batch (config.toml, light mechanic, player attrs, TOML passives, standalone scripts)**:
+The most recent session completed **mistfen_expanse zone rewrite** (sixfold_realms):
+
+All mistfen_expanse TOML files rewritten for engine compatibility. `validate.py --world sixfold_realms` passes with 0 errors.
+
+**Files rewritten:**
+- `zone.toml` — engine format, `start_room = "mf_path_reader_camp"`
+- `styles/styles.toml` — `pressure_weave` rewritten + `shadowstrike` + `iron_root` added; all passives in `on_activate` format
+- `npcs.toml` — vault_watcher prestige branch fixed (now applies `protected` not `weakened`); kill_script quest step corrected; added `mf_mire_wolf`, `mf_drift_serpent`, `mf_echo_wraith` (prefixed to avoid collision with riverlands NPCs)
+- `items.toml` — quest step references corrected throughout; `pressure_regulator_fragment` now calls `complete_quest`; all scenery items get `weight = 0`; bog quartz node skill changed `mining` → `crafting`
+- `rooms.toml` — all hazard fields converted to `on_enter` scripts; `mf_anchor_field` on_enter advances quest; loop rooms complete quest + award prestige; drowned approach exit simplified to `show_if` only; enemy spawns distributed across zone
+- `quests/` — both quests: invalid `type = "prestige"` reward removed; prestige moved to room/item scripts
+- `crafting/mf_path_reader_sera.toml` — full engine-format rewrite; commission 2 now uses `bog_quartz + pressure_hollowed_stone` (removed non-existent `mf_raw_quartz`/`mf_swamp_salt`)
+
+**Remaining:** Run `clean.py --all` then `offline_bot.py` to verify end-to-end functionality.
+
+---
+
+The most recent session before that completed **dragon_peaks zone rewrite** (sixfold_realms):
+
+All dragon_peaks TOML files rewritten for engine compatibility. `validate.py --world sixfold_realms` passes with 0 errors.
+
+**Files rewritten:**
+- `zone.toml` — engine format (`name`, `start_room = "dp_highspire_1"`)
+- `styles/styles.toml` — two styles: `brawling` (new) + `sky_piercer` (replaces swordplay); all passives in TOML `on_activate` format
+- `items.toml` — 30+ items; added `dp_raw_ore` + `dp_raw_ore_node`; `resonance_forge_panel` converted from `on_use` to `on_get` (engine requires); `drake_egg` uses `give_companion`; `sky_piercer_glaive` cleaned up
+- `npcs.toml` — 20 NPCs; apex_drake + ashwood_drake style changed to `sky_piercer`; added 7 new enemies from legacy list (cliff_hawk, mountain_bandit, steam_sprite, cave_rat, echo_bat, sky_serpent, lava_sprite)
+- `rooms.toml` — 26 rooms; all hazard_damage/hazard_message converted to `on_enter` scripts; new enemy spawns distributed; `dp_highspire_1` is `start_room` + starts quest; `dp_watch_post` has `no_combat` flag
+- `quests/forgeskypiercer.toml` — format fixed (title/summary/index)
+- `quests/hoardoftheapexdrake.toml` — format fixed (title/summary/giver/index)
+- `crafting/smith_orun.toml` — commission 1 masterwork fixed; commission 2 (dp_resonant_ingot) rewritten in engine format using `drake_scale + dp_raw_ore → resonant_alloy_ingot`
+- `dialogues/vendor_alloys.toml` — removed invalid `open_shop` op node
+- `dialogues/warden_selka.toml` — added `advance_quest` to `about_apex` node (step 2); fixed step number in `give_proof` (step 3)
+- `companions/drake_hatchling.toml` — rewritten to flat engine format (removed `[unlock_condition]` and `[on_join]` TOML sections)
+
+**Key decisions:**
+- `brawling` added as a new style definition for dragon_peaks; `swordplay` references changed to `sky_piercer`
+- Ferry berth is the entry from riverlands but `dp_highspire_1` is `start_room` (town hub)
+- `dp_resonant_ingot` commission uses `drake_scale` (existing item) + `dp_raw_ore` (new item) as materials
+- 7 enemies added from legacy NPC list to fill rooms with hostile variety
+
+**Remaining:** Run `clean.py --all` then `offline_bot.py --world sixfold_realms --zone dragon_peaks` to verify end-to-end functionality.
+
+---
+
+The session before that completed **WCT polish + commands.py features + TOML status effects**:
+
+1. **WCT — Styles editor** — new "S" nav tab in the World Creation Tool. Full editor
+   for all `[[style]]` fields: identity, combat matchups, base stats, equipment affinity,
+   learning (trainer NPC, min level), and a card-per-passive passives editor with ability,
+   threshold, trigger, requires, message, and `on_activate` script pill. Saves back to the
+   style's source `.toml` file. Badge colour: dark rose (`badge-style`).
+
+2. **WCT — Drag-and-drop reordering** — quest steps and dialogue responses can now be
+   reordered by dragging within their editor sections. Each card is `draggable = true`;
+   dragstart/dragover/drop handlers update the underlying array and call `markDirty()`.
+
+3. **Banking UI** — `bank` command shows balance; `deposit gold <N>` / `withdraw gold <N>`
+   move gold between wallet and account; `deposit <item>` / `withdraw <item>` move items;
+   `upgrade` / `upgrade confirm` expands slot capacity. Full error messaging for insufficient
+   funds, full bank, missing items.
+
+4. **Crafting commands** — `commission <npc>` lists available commissions with tier costs;
+   `commissions` shows all active jobs with material status; `give <item> <npc>` submits
+   materials or quest items; `collect <npc>` picks up finished items. Tick-based delay
+   advances on every command (`_tick_commissions(N)`).
+
+5. **Sleep/rest improvements**:
+   - `sleep` now clears **all** active status effects on rest.
+   - Room `on_sleep` / `on_wake` script arrays run before/after healing (flavour hooks).
+   - **Camping**: rooms with neither an innkeeper nor the `sleep` flag allow camping if
+     `no_camp` is absent. Camping heals `min(max_hp, hp + max_hp//2)` and ticks 10
+     crafting turns (vs. full heal + 20 ticks at an inn).
+   - `no_camp` room flag blocks resting entirely outside inns.
+
+6. **Status effects — fully TOML-driven** — worlds now define all status effects in
+   `config.toml` via `[[status_effect]]` blocks (id, label, apply_msg, expiry_msg,
+   combat_atk, combat_def, damage_per_move). Engine defaults apply if no blocks are
+   present. Key changes:
+   - `slowed` combat_def penalty now works (was missing before).
+   - `apply_status` uses `apply_msg` from the world definition (not hardcoded text).
+   - Any effect with `damage_per_move > 0` deals per-move damage (not just `poisoned`).
+   - `engine/world_config.py`: `STATUS_EFFECTS: list[dict]`, `get_status_effect(id)`.
+   - `engine/combat.py`: combat stat modifiers loop over `wc.STATUS_EFFECTS`.
+   - WCT Config modal now includes a Status Effects editor section.
+   - Both worlds have full `[[status_effect]]` blocks in their `config.toml`.
+   - `first_world` adds a custom `cursed` effect (−3 atk, −3 def, 1 hp/move), applied
+     by `anurus_the_returned` via `round_script` from combat round 2.
+
+7. **WORLD_MANUAL.md §16.2** — new "Inspecting Objects in Python" subsection documents
+   how to write standalone Python test scripts using `wc.init()`, `toml_load()`,
+   `World()`, `Player.load()`, and `Player.create_new()` — same pattern as `validate.py`.
+
+---
+
+The session before that completed **Engine Feature Batch (config.toml, light mechanic, player attrs, TOML passives, standalone scripts)**:
 
 1. **`config.py` → `config.toml`** — world config converted from Python to TOML for both
    worlds. `engine/world_config.py` tries `config.toml` first, falls back to legacy `config.py`.
@@ -315,23 +414,16 @@ The session after that completed **Coordinate Removal + Web Frontend**:
 
 ## Planned engine work (next session)
 
-### WCT (World Creation Tool)
-- Add editing of fighting style passives (`on_activate`, `trigger`, `message`, `requires`)
-- Add editing of light mechanic (room `light` field, item `light_add`)
-- Add editing of player attributes (`[[player_attrs]]` in config.toml)
-- World-global options editor: styles, skills, currency, equipment slots, etc.
-- Audit all object types for missing fields (compare TOML spec vs editor forms)
-- Fix fighting-style picker (styles not loading in editor)
-- TOML output formatting: human-readable multi-line instead of single-line saves
+All items in `TODO.md` are currently complete. The most likely next areas are:
 
-### commands.py
-- Banking UI
-- Crafting commands
-- sleep/rest improvements
+### World content
+- Build out `sixfold_realms` zones — the world has a config and backstory
+  (`world_overview.md`) but no zones yet. See `data/sixfold_realms/world_overview.md`
+  for the full setting design.
 
-### data / world content
-- `ashwood_contract` step 3 requires `swordplay` style — check why it's not loading in first_world
-- `tools/clean.py --ai` flag to clean AI bot player saves and output files
+### Engine / tooling (if requested)
+- Any new commands, script ops, or data fields the world content requires
+- WCT: additional editor polish as new data fields are added
 
 ---
 

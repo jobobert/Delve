@@ -1,14 +1,20 @@
+# ---------------------------------------------------------
+# SCENERY / INTERACTIVE ITEMS
+# ---------------------------------------------------------
+
 [[item]]
 id          = "vh_memory_root_cluster"
 name        = "Memory Root Cluster"
 desc_short  = "A tangle of roots that hum with stored impressions."
 desc_long   = "Touching the roots triggers faint echoes of past events. Some reveal hidden paths."
 slot        = ""
+weight      = 0
 scenery     = true
 respawn     = true
 on_get      = [
-  { op = "message", tag = "dialogue", text = "A whisper brushes your mind: 'The true path bends east…'" },
+  { op = "message", tag = "dialogue", text = "A whisper brushes your mind: 'The true path bends east...'" },
   { op = "set_flag", flag = "vh_true_path" },
+  { op = "advance_quest", quest_id = "vh_growth_regulator", step = 1 },
 ]
 
 [[item]]
@@ -17,10 +23,11 @@ name        = "Fallen Log"
 desc_short  = "A heavy log blocking the path."
 desc_long   = "It looks like it could be rolled aside with enough leverage."
 slot        = ""
+weight      = 0
 scenery     = true
 respawn     = true
 on_get      = [
-  { op = "skill_check", skill = "athletics", dc = 10,
+  { op = "skill_check", skill = "survival", dc = 10,
     on_pass = [
       { op = "message", tag = "system", text = "You heave the log aside." },
       { op = "set_flag", flag = "vh_log_moved" },
@@ -31,13 +38,13 @@ on_get      = [
   },
 ]
 
-
 [[item]]
 id          = "vh_vine_wall"
 name        = "Vine Wall"
 desc_short  = "A dense wall of twitching vines."
-desc_long   = "The vines react to movement. They might retract if soothed or cut."
+desc_long   = "The vines react to movement. They might retract if soothed."
 slot        = ""
+weight      = 0
 scenery     = true
 respawn     = true
 on_get      = [
@@ -49,28 +56,85 @@ on_get      = [
   ] },
 ]
 
+# Heartwood Tree — bark gathering node
+[[item]]
+id          = "vh_heartwood_tree"
+name        = "Ancient Heartwood Tree"
+desc_short  = "A vast tree whose bark pulses faintly with living energy."
+desc_long   = "Root-Tenders harvest bark from these trees with care and reverence."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "skill_check", skill = "survival", dc = 8,
+    on_pass = [
+      { op = "give_item",  item_id = "vh_heartwood_bark" },
+      { op = "skill_grow", skill = "survival", amount = 2 },
+      { op = "message", tag = "system", text = "You peel a strip of living bark cleanly from the tree." },
+    ],
+    on_fail = [
+      { op = "give_item",  item_id = "vh_heartwood_bark" },
+      { op = "message", tag = "system", text = "You take some bark, though the tree resists slightly." },
+    ],
+  },
+]
+
+# Growth Forge — crafting station (scenery; interact via 'commission' command)
+[[item]]
+id          = "vh_growth_forge"
+name        = "Growth Forge"
+desc_short  = "A living forge grown from Heartwood roots."
+desc_long   = "This organic forge channels heat through living wood, allowing the shaping of bio-alloys and living tools. Its pulse synchronizes with the forest's growth cycle."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+tags        = ["heartwood_structure", "crafting_station"]
+on_get      = [
+  { op = "message", tag = "system", text = "The forge pulses with slow, rhythmic light. Speak with Thalen to commission work here." },
+]
+
+
+# ---------------------------------------------------------
+# EQUIPPABLE ITEMS
+# ---------------------------------------------------------
+
 [[item]]
 id          = "vh_pollen_mask"
 name        = "Pollen Mask"
 desc_short  = "A woven mask that filters golden pollen."
-desc_long   = "Root‑tenders craft these to survive the pollen drifts."
+desc_long   = "Root-tenders craft these to survive the pollen drifts. Carrying it is enough to benefit."
 slot        = "head"
 weight      = 1
 respawn     = false
 tags        = ["pollen_resist"]
 effects     = [
-  { type = "stat_bonus", stat = "defense", amount = 2 }
-]
-on_equip    = [
-  { op = "set_flag", flag = "vh_pollen_resist" }
-]
-on_drop     = [
-  { op = "clear_flag", flag = "vh_pollen_resist" }
+  { type = "stat_bonus", stat = "defense", amount = 2 },
 ]
 
 [[item]]
+id          = "heartwood_carapace"
+name        = "Heartwood Carapace"
+desc_short  = "Living armor grown from Heartwood bark."
+desc_long   = "A symbiotic armor that adapts to its wearer. It pulses with quiet strength."
+slot        = "body"
+weight      = 3
+respawn     = false
+tags        = ["organic", "heartwood", "resonant"]
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 8 },
+  { type = "stat_bonus", stat = "max_hp",  amount = 10 },
+]
+
+
+# ---------------------------------------------------------
+# CONSUMABLES / TOOLS
+# ---------------------------------------------------------
+
+[[item]]
 id          = "vh_vine_charm"
-name        = "Vine‑Calming Charm"
+name        = "Vine-Calming Charm"
 desc_short  = "A charm of braided roots."
 desc_long   = "It emits a faint pulse that soothes aggressive vines."
 slot        = ""
@@ -78,8 +142,33 @@ weight      = 0
 respawn     = false
 tags        = ["vine_safe"]
 on_get      = [
-  { op = "set_flag", flag = "vh_vine_safe" }
+  { op = "set_flag", flag = "vh_vine_safe" },
 ]
+
+[[item]]
+id          = "vh_root_echo_trigger"
+name        = "Root-Echo Trigger"
+desc_short  = "A seed-crystal that resonates with Heartwood roots."
+desc_long   = "When placed near certain growth nodes, it causes roots to shift or reveal hidden paths. Used by Heartwood wardens to navigate the Warrens."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["heartwood_tool", "resonance"]
+
+[[item]]
+id          = "vh_resin_sachet"
+name        = "Resin Sachet"
+desc_short  = "A small pouch of calming resin."
+desc_long   = "Used by Heartwood wardens to pacify aggressive vines or soothe living tools."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["heartwood_material", "consumable"]
+
+
+# ---------------------------------------------------------
+# RAW MATERIALS
+# ---------------------------------------------------------
 
 [[item]]
 id          = "vh_heartwood_bark"
@@ -111,27 +200,10 @@ weight      = 0
 respawn     = false
 tags        = ["growth_tool"]
 
-[[item]]
-id          = "heartwood_carapace"
-name        = "Heartwood Carapace"
-desc_short  = "Living armor grown from Heartwood bark."
-desc_long   = "A symbiotic armor that adapts to its wearer. It pulses with quiet strength."
-slot        = "chest"
-weight      = 3
-respawn     = false
-armor_tags  = ["organic", "heartwood", "resonant"]
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = 8 },
-  { type = "stat_bonus", stat = "max_hp", amount = 10 },
-  { type = "on_hit", ability = "stun", chance = 0.05, magnitude = 1 },
-  { type = "on_equip", message = "The armor tightens gently, syncing with your heartbeat." }
-]
-on_equip    = [
-  { op = "set_flag", flag = "vh_carapace_equipped" }
-]
-on_drop     = [
-  { op = "clear_flag", flag = "vh_carapace_equipped" }
-]
+
+# ---------------------------------------------------------
+# QUEST ITEMS
+# ---------------------------------------------------------
 
 [[item]]
 id          = "growth_regulator_fragment"
@@ -143,37 +215,7 @@ weight      = 0
 respawn     = false
 tags        = ["device_piece"]
 on_get      = [
-  { op = "advance_quest", quest_id = "vh_growth_regulator", step = 3 },
+  { op = "advance_quest",  quest_id = "vh_growth_regulator", step = 3 },
+  { op = "complete_quest", quest_id = "vh_growth_regulator" },
   { op = "prestige", amount = 3, reason = "recovered the Growth Regulator fragment" },
 ]
-
-[[item]]
-id          = "vh_root_echo_trigger"
-name        = "Root‑Echo Trigger"
-desc_short  = "A seed‑crystal that resonates with Heartwood roots."
-desc_long   = "When placed near certain growth nodes, it causes roots to shift or reveal hidden paths. Used by Heartwood wardens to navigate the Warrens."
-slot        = ""
-weight      = 0
-respawn     = false
-tags        = ["heartwood_tool", "resonance"]
-
-[[item]]
-id          = "vh_growth_forge"
-name        = "Growth Forge"
-desc_short  = "A living forge grown from Heartwood roots."
-desc_long   = "This organic forge channels heat through living wood, allowing druids to shape bio‑alloys and living tools. Its pulse synchronizes with the forest’s growth cycle."
-slot        = ""
-weight      = 5
-respawn     = false
-tags        = ["heartwood_structure", "crafting_station"]
-
-[[item]]
-id          = "vh_resin_sachet"
-name        = "Resin Sachet"
-desc_short  = "A small pouch of calming resin."
-desc_long   = "Used by Heartwood wardens to pacify aggressive vines or soothe living tools."
-slot        = ""
-weight      = 0
-respawn     = false
-tags        = ["heartwood_material", "consumable"]
-

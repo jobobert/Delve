@@ -22,8 +22,11 @@ next = "give_proof"
 # NODE: about_apex
 # -------------------------
 [[node]]
-id   = "about_apex"
-line = "'The Apex is old. It remembers the architects. It will not give up the conductor lightly.'"
+id     = "about_apex"
+line   = "'The Apex is old. It remembers the architects. It will not give up the conductor lightly.'"
+script = [
+  { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 2 },
+]
 
 [[response]]
 node = "about_apex"
@@ -86,7 +89,7 @@ script = [
     { op = "take_item", item_id = "drakebone_fragment" },
     { op = "message", tag = "dialogue", text = "'This will do. You have my attention.'" },
     { op = "prestige", amount = 8, reason = "presented drakebone to Selka" },
-    { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 2 },
+    { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 3 },
   ], else = [
     { op = "message", tag = "dialogue", text = "'You have nothing of note. Return when you do.'" },
   ] },

@@ -4,8 +4,9 @@ World content lives entirely in TOML files under `data/`. No engine changes are
 needed to add rooms, NPCs, items, quests, or dialogue — drop the files in and
 restart.
 
-A **world** is a subfolder of `data/` that contains a `config.py`. Worlds are
-selected at startup; each player save records which world it belongs to.
+A **world** is a subfolder of `data/` that contains a `config.toml` (or legacy
+`config.py`). Worlds are selected at startup; each player save records which world
+it belongs to.
 
 For a full authoring reference (TOML formats, all script ops, condition keys,
 etc.) see [WORLD_MANUAL.md](WORLD_MANUAL.md) and [engine/README.md](../engine/README.md).
@@ -21,8 +22,9 @@ data/
 │       ├── player.toml        Character save (cross-world; includes world_id field)
 │       └── zone_state/        This player's live zone snapshots (gitignored)
 │
-└── <world_id>/                World folder — identified by the presence of config.py
-    ├── config.py              World name, skills, currency, default style, equipment slots
+└── <world_id>/                World folder — identified by the presence of config.toml
+    ├── config.toml            World name, skills, currency, default style, equipment slots,
+    │                          vision_threshold, [[player_attrs]], [[status_effect]]
     │
     ├── <zone_id>/             One folder per zone; folder name = zone ID
     │   ├── zone.toml          Optional zone metadata (display name, start room, …)
@@ -38,8 +40,9 @@ data/
     └── …                      Additional zone folders
 ```
 
-> The engine discovers worlds by scanning `data/` for subfolders containing `config.py`.
-> Within each world it discovers zones by subfolder presence. No registry to update.
+> The engine discovers worlds by scanning `data/` for subfolders containing `config.toml`
+> (or legacy `config.py`). Within each world it discovers zones by subfolder presence.
+> No registry to update.
 
 ---
 
@@ -211,8 +214,9 @@ attack     = 4
 
 **Required:** `id`, `name`, `desc_short`, `slot`, `weight`
 
-**Equipment slots:** `weapon` · `head` · `chest` · `legs` · `arms` · `armor` ·
+**Equipment slots** (first_world defaults): `weapon` · `head` · `chest` · `legs` · `arms` ·
 `pack` · `ring` · `shield` · `cape`
+Slots are world-configurable via `equipment_slots` in `config.toml`.
 
 Use `slot = ""` for non-equippable items (consumables, quest items, resources).
 
@@ -432,6 +436,8 @@ exits = { north = {
 | `healing` | Player regenerates HP while in this room |
 | `town` | Auto-sets player bind point on first entry |
 | `reduced_stats` | Both sides use half attack/defense |
+| `sleep` | Room has inn-quality rest (full HP, 20 crafting ticks) |
+| `no_camp` | Camping/resting blocked entirely outside inns |
 
 ---
 

@@ -13,8 +13,8 @@ next = "calibrate"
 id   = "calibrate"
 line = "'Growth cycle stabilized.'"
 script = [
-  { op = "add_resonance", amount = 10 },
-  { op = "set_flag", flag = "cc_growth_aligned" }
+  { op = "adjust_attr", name = "resonance", amount = 15 },
+  { op = "set_flag",    flag = "cc_growth_aligned" },
 ]
 
 [[response]]

@@ -1,31 +1,92 @@
+# Mistfen Expanse — Fighting Styles
+
+# pressure_weave: deceptive spacing style native to the Mistfen Path-Readers.
+# Rewards patience and reactive play; effective against armored or large opponents
+# who cannot close distance reliably.
 [[style]]
-id   = "pressure_weave"
-name = "Pressure Weave"
-desc = "A deceptive style that manipulates distance, timing, and spatial pressure."
+id           = "pressure_weave"
+name         = "Pressure Weave"
+desc         = "A deceptive style that manipulates distance, timing, and spatial pressure to exhaust and disorient opponents."
+strong_vs    = ["armored", "large", "slow"]
+weak_vs      = ["fast", "beast", "small"]
+defense_bonus = 1
+difficulty   = 1.3
+learned_from = "mf_path_reader_sera"
 
-affinities = {
-  weapon_tags = ["dagger", "short_blade"],
-  armor_tags  = ["cloth", "leather"]
-}
+[[passive]]
+ability   = "pressure_spike"
+threshold = 50
+trigger   = "attack"
+message   = "A pressure spike catches your opponent off-guard!"
+on_activate = [
+  { op = "apply_status", effect = "weakened", duration = 2 },
+]
 
-growth = {
-  on_dodge   = 2.0
-  on_miss    = 1.0
-  on_hit     = 1.2
-}
+[[passive]]
+ability   = "phase_step"
+threshold = 75
+trigger   = "defend"
+message   = "You shift through the pressure and slip the attack!"
+on_activate = [
+  { op = "skip_npc_attack" },
+]
 
-abilities = [
-  { id = "phase_step",
-    type = "stance",
-    desc = "Shift your position, increasing dodge by 12% for 2 rounds.",
-    trigger = { on_command = "stance phase" },
-    effect  = { stat = "dodge", amount = 12, duration = 2 }
-  },
 
-  { id = "pressure_spike",
-    type = "on_hit",
-    desc = "8% chance to apply a brief stagger, reducing enemy attack.",
-    chance = 0.08,
-    effect = { type = "debuff", stat = "attack", amount = -3, duration = 2 }
-  }
+# shadowstrike: an opportunistic style used by Mistfen smugglers and those who
+# prefer to act when opponents are not expecting it.
+[[style]]
+id           = "shadowstrike"
+name         = "Shadowstrike"
+desc         = "A quick, opportunistic style built on deception. Excels against slow or armored targets caught off-guard."
+strong_vs    = ["slow", "armored", "humanoid"]
+weak_vs      = ["fast", "beast", "flying"]
+defense_bonus = 0
+difficulty   = 1.2
+
+[[passive]]
+ability   = "shadow_slip"
+threshold = 50
+trigger   = "defend"
+message   = "You melt into shadow and the blow passes through empty air!"
+on_activate = [
+  { op = "skip_npc_attack" },
+]
+
+[[passive]]
+ability   = "backstab"
+threshold = 75
+trigger   = "attack"
+message   = "A precise strike finds the gap!"
+on_activate = [
+  { op = "multiply_damage", multiplier = 1.6 },
+]
+
+
+# iron_root: a guardian style of deep defensive stances and crushing counter-force.
+# The preferred combat form of constructs and vault wardens throughout the Sixfold Realms.
+[[style]]
+id           = "iron_root"
+name         = "Iron Root"
+desc         = "An immovable defensive style that turns the opponent's force against them. Difficult to master; near-impossible to break."
+strong_vs    = ["humanoid", "small", "slow"]
+weak_vs      = ["fast", "flying", "beast"]
+defense_bonus = 3
+difficulty   = 1.5
+
+[[passive]]
+ability   = "root_stance"
+threshold = 25
+trigger   = "defend"
+message   = "Iron Root holds — the blow is absorbed!"
+on_activate = [
+  { op = "block_damage" },
+]
+
+[[passive]]
+ability   = "crushing_grip"
+threshold = 60
+trigger   = "attack"
+message   = "A crushing, methodical strike!"
+on_activate = [
+  { op = "multiply_damage", multiplier = 1.5 },
 ]

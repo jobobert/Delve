@@ -1,29 +1,23 @@
-id          = "forge_sky_piercer"
-name        = "Forge the Sky-Piercer"
-description = "Gather materials and work with Orun to craft the Sky-Piercer Glaive."
-start_flag  = ""
+id      = "forge_sky_piercer"
+title   = "Forge the Sky-Piercer"
+giver   = "smith_orun"
+summary = "Gather materials from the Emberfall vents and work with Orun to craft the legendary Sky-Piercer Glaive."
 
 [[step]]
-id          = 1
-name        = "Collect Materials"
-objective   = "Bring Orun: 1 resonant_alloy_ingot, 1 drakebone_fragment, 1 volcanic_glass_shard."
-hint        = "Mine the Emberfall vents and hunt drakes."
+index     = 1
+objective = "Gather: 1 resonant alloy ingot, 1 drakebone fragment, 1 volcanic glass shard."
+hint      = "Mine the Emberfall vents and hunt drakes. Orun also sells some materials."
 
 [[step]]
-id          = 2
-name        = "Stabilize the Forge"
-objective   = "Use the Resonance Forge Panel in Hearthforge Ruin to align the vents."
-hint        = "A resonant ingot or skilled hands can lock the panel."
+index     = 2
+objective = "Use the Resonance Forge Panel in Hearthforge Ruin to align the vents."
+hint      = "A resonant ingot placed in the cradle will lock the panel. Skilled hands can manage without one."
 
 [[step]]
-id          = 3
-name        = "Claim the Glaive"
-objective   = "Receive the Sky-Piercer Glaive from Orun."
-hint        = "Return to Orun after stabilizing the forge."
+index     = 3
+objective = "Commission the Sky-Piercer Glaive from Orun and collect it when ready."
+hint      = "Return to Orun after stabilising the forge. Use 'commission' to place the order."
 
 [[reward]]
-xp          = 300
-gold        = 0
-prestige    = 10
-items       = ["sky_piercer_glaive"]
-text        = "Orun hands you the Sky-Piercer, its edge singing with trapped wind."
+type   = "xp"
+amount = 300

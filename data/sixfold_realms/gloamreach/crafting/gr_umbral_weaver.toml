@@ -1,87 +1,82 @@
-# How this commission fits into the region
-# The Weaver’s dialogue already checks for the materials and triggers the crafting flow.
-#
-# The Umbral Mantle gains its final stats through the quality tier system, keeping it consistent with Heartwood and Mistfen.
-#
-# The prestige requirement reinforces the idea that Gloamreach respects balance and control, not brute force.
-#
-# The shadow_step proc in the top tier ties directly into the region’s light‑and‑shadow mechanics.
+# Commission 1: Weave the Umbral Mantle (required for gr_mantle quest)
+[[commission]]
+id             = "gr_weave_mantle"
+npc_id         = "gr_umbral_weaver"
+label          = "Weave Umbral Mantle"
+desc           = "The Umbral Weaver binds shadow-ore and entropy residue into a mantle of shifting darkness."
+slot           = ""
+weapon_tags    = []
+materials      = ["gr_shadow_ore", "gr_entropy_residue"]
+turns_required = 12
+gold_cost      = 0
+on_complete = [
+  { op = "message", tag = "crafting", text = "The Weaver draws the shadows tight, weaving them into a mantle that shifts with the light." },
+  { op = "give_item", item_id = "umbral_mantle" },
+  { op = "advance_quest", quest_id = "gr_mantle", step = 2 },
+  { op = "advance_quest", quest_id = "gr_mantle", step = 3 },
+  { op = "complete_quest", quest_id = "gr_mantle" },
+  { op = "prestige", amount = 2, reason = "mastered the caverns' instability" },
+]
 
-id   = "gr_umbral_weaver"
-name = "Umbral Mantle Weaving"
-desc = "A shadow‑weaving process that binds shadow‑ore and entropy residue into a mantle of shifting darkness."
-
-# ---------------------------------------------------------
-# Requirements
-# ---------------------------------------------------------
-
-[[requirement]]
-item_id = "gr_shadow_ore"
-count   = 1
-
-[[requirement]]
-item_id = "gr_entropy_residue"
-count   = 1
-
-# Optional prestige requirement — Gloamreach respects balance and control
-[[requirement]]
-prestige_min = 3
-
-
-# ---------------------------------------------------------
-# Quality Tiers
-# ---------------------------------------------------------
-
-# Tier 1 — unstable weave
+# --- Quality Tiers ---
 [[quality]]
 name        = "Frayed Weave"
 min_quality = 0
 max_quality = 39
-effects = [
+effects     = [
   { type = "stat_bonus", stat = "defense", amount = -1 },
-  { type = "stat_bonus", stat = "dodge", amount = -3 }
+  { type = "stat_bonus", stat = "max_hp",  amount = -3 },
 ]
 
-# Tier 2 — stable weave
 [[quality]]
 name        = "Balanced Weave"
 min_quality = 40
 max_quality = 79
-effects = []
+effects     = []
 
-# Tier 3 — perfect weave
 [[quality]]
 name        = "Umbral Perfection"
 min_quality = 80
 max_quality = 100
-effects = [
+effects     = [
   { type = "stat_bonus", stat = "defense", amount = 2 },
-  { type = "stat_bonus", stat = "dodge", amount = 5 },
-  { type = "on_enter_room", ability = "shadow_step", chance = 0.05 }
+  { type = "stat_bonus", stat = "max_hp",  amount = 5 },
 ]
 
 
-# ---------------------------------------------------------
-# Resulting Item
-# ---------------------------------------------------------
+# Commission 2: Shadow-Crystal Polish (refinement of shadow materials)
+[[commission]]
+id             = "gr_crystal_polish"
+npc_id         = "gr_umbral_weaver"
+label          = "Shadow-Crystal Polish"
+desc           = "The Weaver can refine raw shadow-ore into a polished shard useful for crafting and light control."
+slot           = ""
+weapon_tags    = []
+materials      = ["gr_shadow_ore", "gr_shadecloth_scrap"]
+turns_required = 8
+gold_cost      = 0
+on_complete = [
+  { op = "message", tag = "crafting", text = "The Weaver polishes the ore until it gleams with dark light." },
+  { op = "give_item", item_id = "gr_nullstone_shard" },
+]
 
-[[result]]
-item_id = "umbral_mantle"
-count   = 1
+# --- Quality Tiers ---
+[[quality]]
+name        = "Dull Polish"
+min_quality = 0
+max_quality = 39
+effects     = []
 
+[[quality]]
+name        = "Clean Polish"
+min_quality = 40
+max_quality = 79
+effects     = []
 
-# ---------------------------------------------------------
-# Crafting Script
-# ---------------------------------------------------------
-
-script = [
-  { op = "take_item", item_id = "gr_shadow_ore" },
-  { op = "take_item", item_id = "gr_entropy_residue" },
-
-  { op = "give_item", item_id = "umbral_mantle" },
-
-  { op = "message", tag = "crafting",
-    text = "The Weaver draws the shadows tight, weaving them into a mantle that shifts with the light." },
-
-  { op = "advance_quest", quest_id = "gr_mantle", step = 2 }
+[[quality]]
+name        = "Perfect Polish"
+min_quality = 80
+max_quality = 100
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 1 },
 ]

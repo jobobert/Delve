@@ -47,10 +47,79 @@ def _encode(v: Any) -> str:
 
 
 def dump(path: Path, data: dict) -> None:
-    """Write a flat dict to a TOML file."""
+    """Write a structured dict to a TOML file.
+
+    Top-level lists of dicts are written as [[section]] array-of-tables so the
+    output is human-readable (one field per line).  All other values — scalars,
+    inline tables, mixed lists — are written as regular key = value pairs.
+
+    Any leading comment block from the existing file is preserved so that
+    human-authored file headers are not lost on save.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    lines = [f"{k} = {_encode(v)}" for k, v in data.items()]
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    # ── Preserve leading file comments ────────────────────────────────────────
+    header_lines: list[str] = []
+    if path.exists():
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            stripped = raw.strip()
+            if stripped.startswith("#") or stripped == "":
+                header_lines.append(raw)
+            else:
+                break
+        # Drop trailing blank lines from the header; we'll add our own separator
+        while header_lines and header_lines[-1].strip() == "":
+            header_lines.pop()
+
+    # ── Build output ──────────────────────────────────────────────────────────
+    out: list[str] = []
+    if header_lines:
+        out.extend(header_lines)
+        out.append("")   # blank separator between header and data
+
+    # Categorise top-level keys by value type:
+    #   scalar_keys  → written as  key = value  (strings, ints, lists of scalars, …)
+    #   table_keys   → written as  [key] / key = val / …  (plain dict = sub-table)
+    #   aot_keys     → written as  [[key]] / …            (list of dicts)
+    scalar_keys: list[str] = []
+    table_keys:  list[str] = []
+    aot_keys:    list[str] = []
+    for k, v in data.items():
+        if isinstance(v, dict):
+            table_keys.append(k)
+        elif isinstance(v, list) and v and all(isinstance(i, dict) for i in v):
+            aot_keys.append(k)
+        else:
+            scalar_keys.append(k)
+
+    # Write scalars first
+    for k in scalar_keys:
+        out.append(f"{k} = {_encode(data[k])}")
+
+    if scalar_keys and (table_keys or aot_keys):
+        out.append("")   # blank line before first section
+
+    # Write [table] sections
+    for k in table_keys:
+        out.append(f"[{k}]")
+        for fk, fv in data[k].items():
+            out.append(f"{fk} = {_encode(fv)}")
+        out.append("")   # blank line after section
+
+    # Write [[array-of-tables]] sections
+    for k in aot_keys:
+        for obj in data[k]:
+            # Strip internal WCT metadata keys (prefixed with _)
+            entries = {ek: ev for ek, ev in obj.items() if not ek.startswith("_")}
+            out.append(f"[[{k}]]")
+            for fk, fv in entries.items():
+                out.append(f"{fk} = {_encode(fv)}")
+            out.append("")   # blank line between records
+
+    # Remove any trailing blank lines then add a final newline
+    while out and out[-1] == "":
+        out.pop()
+    path.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
 # ── Reader helpers ────────────────────────────────────────────────────────────

@@ -1,28 +1,19 @@
+# Commission 1: Tune the Echo Compass (required for Pressure Below quest)
 [[commission]]
-id    = "mf_tune_echo_compass"
-title = "Tune the Echo Compass"
-desc  = "Use Mistfen materials to stabilise an Echo Compass for the Drowned Vault."
-repeatable = false
-
-giver_npc = "mf_path_reader_sera"
-
-requires = [
-  { item_id = "echo_compass",           qty = 1 },
-  { item_id = "bog_quartz",             qty = 2 },
-  { item_id = "pressure_hollowed_stone", qty = 1 },
-]
-
-produces = [
-  { item_id = "echo_compass_tuned", qty = 1 },
-]
-
-on_accept = [
-  { op = "message", tag = "quest", text = "Sera agrees to help you tune the compass—if you bring the right materials." },
-]
-
+id             = "mf_tune_echo_compass"
+npc_id         = "mf_path_reader_sera"
+label          = "Tune the Echo Compass"
+desc           = "Sera can stabilise an Echo Compass using Mistfen materials so it will respond to the Echo Gate."
+slot           = ""
+weapon_tags    = []
+materials      = ["echo_compass", "bog_quartz", "pressure_hollowed_stone"]
+turns_required = 10
+gold_cost      = 0
 on_complete = [
+  { op = "message", tag = "crafting", text = "Sera hums softly as the compass needle settles. 'There. It will hold now.'" },
+  { op = "give_item", item_id = "echo_compass_tuned" },
   { op = "set_flag",  flag = "mf_echo_gate_unlocked" },
-  { op = "prestige",  amount = 1, reason = "worked with the Path‑Readers to stabilise the Mistfen" },
+  { op = "prestige",  amount = 1, reason = "worked with the Path-Readers to stabilise the Mistfen" },
 ]
 
 # --- Quality Tiers ---
@@ -30,46 +21,45 @@ on_complete = [
 name        = "Distorted Tuning"
 min_quality = 0
 max_quality = 39
-effects = [
-  { type = "status_resist", effect = "confused", amount = -10 }
-]
+effects     = []
 
 [[quality]]
 name        = "Standard Tuning"
 min_quality = 40
 max_quality = 79
-effects = []
+effects     = []
 
 [[quality]]
 name        = "Perfect Tuning"
 min_quality = 80
 max_quality = 100
-effects = [
-  { type = "status_resist", effect = "confused", amount = 20 }
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 1 }
 ]
 
+
+# Commission 2: Bog-Quartz Heart Refinement (cross-zone material for Verdant Heartwood)
 [[commission]]
-id   = "mf_quartz_heart"
-name = "Bog‑Quartz Heart Refinement"
-desc = "A Mistfen refinement that stabilizes a quartz core into a resonant heart."
+id             = "mf_quartz_heart"
+npc_id         = "mf_path_reader_sera"
+label          = "Bog-Quartz Heart Refinement"
+desc           = "A Mistfen refinement that stabilises a quartz core into a resonant heart, useful in later zones."
+slot           = ""
+weapon_tags    = []
+materials      = ["bog_quartz", "pressure_hollowed_stone"]
+turns_required = 12
+gold_cost      = 0
+on_complete = [
+  { op = "message", tag = "crafting", text = "The quartz stabilises, pulsing with a soft inner glow." },
+  { op = "give_item", item_id = "mf_quartz_heart" },
+]
 
-[[requirement]]
-item_id = "mf_raw_quartz"
-count   = 1
-
-[[requirement]]
-item_id = "mf_swamp_salt"
-count   = 1
-
-# -----------------------
-# Quality Tiers
-# -----------------------
-
+# --- Quality Tiers ---
 [[quality]]
 name        = "Clouded Resonance"
 min_quality = 0
 max_quality = 39
-effects = [
+effects     = [
   { type = "stat_bonus", stat = "max_hp", amount = -2 }
 ]
 
@@ -77,24 +67,12 @@ effects = [
 name        = "Stable Resonance"
 min_quality = 40
 max_quality = 79
-effects = []
+effects     = []
 
 [[quality]]
 name        = "Pure Resonance"
 min_quality = 80
 max_quality = 100
-effects = [
-  { type = "stat_bonus", stat = "max_hp", amount = 3 },
-  { type = "on_enter_room", ability = "mist_sense", chance = 0.05 }
-]
-
-[[result]]
-item_id = "mf_quartz_heart"
-count   = 1
-
-script = [
-  { op = "take_item", item_id = "mf_raw_quartz" },
-  { op = "take_item", item_id = "mf_swamp_salt" },
-  { op = "give_item", item_id = "mf_quartz_heart" },
-  { op = "message", tag = "crafting", text = "The quartz stabilizes, pulsing with a soft inner glow." }
+effects     = [
+  { type = "stat_bonus", stat = "max_hp", amount = 3 }
 ]

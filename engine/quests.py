@@ -149,13 +149,19 @@ class QuestTracker:
 
     def advance(self, quest_id: str, step: int,
                 ctx: "GameContext | None" = None) -> bool:
-        """Move quest to a specific step."""
+        """Move quest to a specific step and run on_advance scripts for that step."""
         quest = get(quest_id)
         if not quest or self.is_complete(quest_id):
             return False
         self.player.active_quests[quest_id] = step
         if ctx:
             self._emit_step(quest, step, ctx)
+            # Run on_advance script ops for this step if defined
+            steps = {s["index"]: s for s in quest.get("step", [])}
+            on_advance = steps.get(step, {}).get("on_advance", [])
+            if on_advance:
+                from engine.script import ScriptRunner
+                ScriptRunner(ctx).run(on_advance)
         return True
 
     def complete(self, quest_id: str, ctx: "GameContext | None" = None) -> bool:

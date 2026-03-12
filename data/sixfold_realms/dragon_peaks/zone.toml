@@ -1,10 +1,2 @@
-[[region]]
-id          = "dragon_peaks"
-name        = "Dragon Peaks"
-description = """
-Jagged mountains and steaming vents rise into thin air. Wind-carved bridges and
-resonant forges dot the cliffs. The Peaks hum with volatile heat and territorial drakes.
-"""
-
-recommended_level  = 3
-admin_comment      = "Piece Effect: Attracts dragons and amplifies territorial aggression.  Notes: High mobility enemies, environmental hazards, early boss encounters."
+name       = "Dragon Peaks"
+start_room = "dp_highspire_1"

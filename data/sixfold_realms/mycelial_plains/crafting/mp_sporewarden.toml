@@ -1,104 +1,83 @@
+# Commission 1: Weave the Sporewarden Mantle (required for mp_mantle quest)
 [[commission]]
-id   = "mp_sporewarden"
-name = "Sporewarden Mantle Weaving"
-desc = "A fungal weaving process that binds clarity and memory into a protective mantle."
-
-# ---------------------------------------------------------
-# Requirements
-# ---------------------------------------------------------
-
-[[requirement]]
-item_id = "mp_fungal_fiber"
-count   = 1
-
-[[requirement]]
-item_id = "mp_clarity_cap"
-count   = 1
-
-# Optional prestige requirement — the Plains reward clarity and discipline
-[[requirement]]
-prestige_min = 3
+id             = "mp_weave_mantle"
+npc_id         = "mp_sporewarden"
+label          = "Weave Sporewarden Mantle"
+desc           = "The Sporewarden binds fungal fiber and clarity caps into a mantle that shields the mind from spore exposure."
+slot           = ""
+weapon_tags    = []
+materials      = ["mp_fungal_fiber", "mp_clarity_cap"]
+turns_required = 12
+gold_cost      = 0
+on_complete = [
+  { op = "message", tag = "crafting", text = "The Sporewarden weaves the mantle with slow, deliberate motions. The fibers hum with clarity." },
+  { op = "give_item", item_id = "sporewarden_mantle" },
+  { op = "advance_quest", quest_id = "mp_mantle", step = 2 },
+  { op = "advance_quest", quest_id = "mp_mantle", step = 3 },
+  { op = "complete_quest", quest_id = "mp_mantle" },
+  { op = "prestige", amount = 2, reason = "mastered the Plains' cognitive instability" },
+]
 
 # --- Quality Tiers ---
 [[quality]]
 name        = "Fraying Weave"
 min_quality = 0
 max_quality = 39
-effects = [
-  { type = "status_resist", effect = "spores", amount = 10 }
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = -1 },
+  { type = "stat_bonus", stat = "max_hp",  amount = -4 },
 ]
 
 [[quality]]
 name        = "Balanced Weave"
 min_quality = 40
 max_quality = 79
-effects = [
-  { type = "status_resist", effect = "spores", amount = 20 }
-]
+effects     = []
 
 [[quality]]
 name        = "Claritybound Mantle"
 min_quality = 80
 max_quality = 100
-effects = [
-  { type = "stat_bonus", stat = "perception", amount = 2 },
-  { type = "status_resist", effect = "spores", amount = 30 }
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+  { type = "stat_bonus", stat = "max_hp",  amount = 5 },
 ]
 
-# ---------------------------------------------------------
-# Quality Tiers
-# ---------------------------------------------------------
 
-# Tier 1 — Unstable Weave
+# Commission 2: Brew Clarity Tonic (consumable supply run)
+[[commission]]
+id             = "mp_brew_clarity"
+npc_id         = "mp_sporewarden"
+label          = "Brew Clarity Tonic"
+desc           = "The Sporewarden distills memory spores and mycelial resin into a potent clarity brew — stronger than what the market sells."
+slot           = ""
+weapon_tags    = []
+materials      = ["mp_memory_spores", "mp_mycelial_resin"]
+turns_required = 8
+gold_cost      = 0
+on_complete = [
+  { op = "message", tag = "crafting", text = "The Sporewarden seals a small vial. 'This will hold the worst fog at bay.'" },
+  { op = "give_item", item_id = "mp_clarity_brew" },
+  { op = "give_item", item_id = "mp_clarity_brew" },
+]
+
+# --- Quality Tiers ---
 [[quality]]
-name        = "Fraying Weave"
+name        = "Weak Brew"
 min_quality = 0
 max_quality = 39
-effects = [
-  { type = "stat_bonus", stat = "perception", amount = -1 },
-  { type = "status_resist", effect = "spores", amount = 10 }
-]
+effects     = []
 
-# Tier 2 — Balanced Weave
 [[quality]]
-name        = "Balanced Weave"
+name        = "Clear Brew"
 min_quality = 40
 max_quality = 79
-effects = [
-  { type = "status_resist", effect = "spores", amount = 20 }
-]
+effects     = []
 
-# Tier 3 — Perfect Weave
 [[quality]]
-name        = "Claritybound Mantle"
+name        = "Potent Brew"
 min_quality = 80
 max_quality = 100
-effects = [
-  { type = "stat_bonus", stat = "perception", amount = 2 },
-  { type = "status_resist", effect = "spores", amount = 30 }
-]
-
-
-# ---------------------------------------------------------
-# Resulting Item
-# ---------------------------------------------------------
-
-[[result]]
-item_id = "sporewarden_mantle"
-count   = 1
-
-
-# ---------------------------------------------------------
-# Crafting Script
-# ---------------------------------------------------------
-
-script = [
-  { op = "take_item", item_id = "mp_fungal_fiber" },
-  { op = "take_item", item_id = "mp_clarity_cap" },
-
-  { op = "give_item", item_id = "sporewarden_mantle" },
-
-  { op = "message", tag = "crafting", text = "The Sporewarden weaves the mantle with slow, deliberate motions. The fibers hum with clarity." },
-
-  { op = "advance_quest", quest_id = "mp_mantle", step = 2 }
+effects     = [
+  { type = "stat_bonus", stat = "max_hp", amount = 3 },
 ]

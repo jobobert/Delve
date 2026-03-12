@@ -1,9 +1,11 @@
+# --- Friendly / Neutral NPCs ---
+
 [[npc]]
 id          = "mf_path_reader_sera"
-name        = "Path‑Reader Sera"
-desc_short  = "A calm figure with eyes half‑closed, listening to the swamp."
-desc_long   = "Sera’s posture is relaxed but precise, as if every breath is measured against the Mistfen’s pulse."
-tags        = ["humanoid", "prestige_neutral"]
+name        = "Path-Reader Sera"
+desc_short  = "A calm figure with eyes half-closed, listening to the swamp."
+desc_long   = "Sera's posture is relaxed but precise, as if every breath is measured against the Mistfen's pulse."
+tags        = ["humanoid"]
 style       = "pressure_weave"
 style_prof  = 40
 hp          = 60
@@ -13,12 +15,17 @@ defense     = 8
 xp_reward   = 0
 gold_reward = 0
 hostile     = false
+shop = [
+  { item_id = "anchor_stone",      price = 30 },
+  { item_id = "echo_compass",      price = 50 },
+  { item_id = "mf_anchor_pebble",  price = 15 },
+]
 
 [[npc]]
 id          = "mf_swamp_smuggler"
 name        = "Mistfen Smuggler"
 desc_short  = "A hooded figure watching the paths with practiced wariness."
-desc_long   = "Mud‑stained boots, quick eyes, and a habit of standing where the mist is thickest."
+desc_long   = "Mud-stained boots, quick eyes, and a habit of standing where the mist is thickest."
 tags        = ["humanoid", "criminal"]
 style       = "shadowstrike"
 style_prof  = 35
@@ -29,13 +36,18 @@ defense     = 7
 xp_reward   = 55
 gold_reward = 18
 hostile     = false
+respawn     = true
+respawn_time = 8
+
+
+# --- Hostile NPCs ---
 
 [[npc]]
 id          = "mf_vault_watcher"
 name        = "Vault Watcher"
-desc_short  = "A pressure‑wreathed guardian formed of water and stone."
+desc_short  = "A pressure-wreathed guardian formed of water and stone."
 desc_long   = "Its shape shifts with each breath you take, as if your lungs are part of its body."
-tags        = ["construct", "armored"]
+tags        = ["construct", "armored", "large"]
 style       = "iron_root"
 style_prof  = 50
 hp          = 90
@@ -45,23 +57,24 @@ defense     = 12
 xp_reward   = 140
 gold_reward = 0
 hostile     = true
+respawn     = false
 kill_script = [
   { op = "set_flag",      flag = "mf_vault_watcher_slain" },
-  { op = "advance_quest", quest_id = "mf_pressure_below", step = 2 },
+  { op = "advance_quest", quest_id = "mf_pressure_below", step = 3 },
   { op = "message", tag = "combat_kill", text = "The Vault Watcher collapses into still water." },
 ]
 round_script = [
-  # High‑prestige branch: guardian eases off a bit
+  # High-prestige branch: guardian eases off — buffs the player with protection
   { op = "if_prestige", min = 10, then = [
     { op = "if_combat_round", min = 2, then = [
       { op = "if_npc_hp", max = 70, then = [
         { op = "say", text = "Stabilising presence detected. Reducing pressure." },
-        { op = "apply_status", effect = "weakened", duration = 2 },
+        { op = "apply_status", effect = "protected", duration = 2 },
       ] },
     ] },
   ] },
 
-  # Low‑prestige branch: guardian hits harder
+  # Low-prestige branch: guardian hits harder
   { op = "if_prestige", max = -5, then = [
     { op = "if_combat_round", min = 2, then = [
       { op = "say", text = "Destabilising intruder. Increasing pressure." },
@@ -69,12 +82,97 @@ round_script = [
     ] },
   ] },
 
-  # Existing behaviour (kept as a neutral fallback)
+  # Neutral fallback: weakens when low HP
   { op = "if_combat_round", min = 3, then = [
     { op = "if_npc_hp", max = 40, then = [
-      { op = "say", text = "Pressure… equalising…" },
+      { op = "say", text = "Pressure... equalising..." },
       { op = "apply_status", effect = "weakened", duration = 3 },
     ] },
   ] },
 ]
 
+
+# --- Enemy NPCs ---
+
+[[npc]]
+id          = "mf_mire_wolf"
+name        = "Mire Wolf"
+desc_short  = "A large, mud-matted wolf whose eyes glow faintly in the mist."
+desc_long   = "Adapted to the Mistfen's unstable terrain, these wolves move with eerie confidence through the loops and stretches."
+tags        = ["beast", "large"]
+style       = "pressure_weave"
+style_prof  = 15
+hp          = 38
+max_hp      = 38
+attack      = 9
+defense     = 5
+xp_reward   = 50
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 5
+kill_script = [
+  { op = "give_item", item_id = "pressure_hollowed_stone" },
+  { op = "message", tag = "combat_kill", text = "The wolf dissolves into the mist. A hollowed stone is left behind." },
+]
+round_script = [
+  { op = "if_combat_round", min = 3, then = [
+    { op = "say", text = "The wolf throws back its head and howls." },
+    { op = "apply_status", effect = "slowed", duration = 2 },
+  ] },
+]
+
+[[npc]]
+id          = "mf_drift_serpent"
+name        = "Drift Serpent"
+desc_short  = "A pale serpent that seems to drift through the air like smoke."
+desc_long   = "Its body phases in and out of visibility. Striking it feels like hitting running water."
+tags        = ["beast", "small", "fast"]
+style       = "pressure_weave"
+style_prof  = 18
+hp          = 30
+max_hp      = 30
+attack      = 10
+defense     = 6
+xp_reward   = 45
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 5
+kill_script = [
+  { op = "give_item", item_id = "bog_quartz" },
+  { op = "message", tag = "combat_kill", text = "The serpent disperses into mist, leaving a shard of bog quartz." },
+]
+round_script = [
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "The serpent coils and strikes with venomous precision." },
+    { op = "apply_status", effect = "poisoned", duration = 3 },
+  ] },
+]
+
+[[npc]]
+id          = "mf_echo_wraith"
+name        = "Echo Wraith"
+desc_short  = "A flickering shape that repeats your movements a half-second behind."
+desc_long   = "Where the mist loops create echoes in space, these are echoes of something that once lived here. They resent intrusion."
+tags        = ["undead", "fast"]
+style       = "pressure_weave"
+style_prof  = 22
+hp          = 48
+max_hp      = 48
+attack      = 12
+defense     = 8
+xp_reward   = 80
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 7
+kill_script = [
+  { op = "message", tag = "combat_kill", text = "The wraith stutters, loops one final time, and dissipates." },
+]
+round_script = [
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "Your echo reaches you before you move — the wraith has learned your patterns." },
+    { op = "apply_status", effect = "confused", duration = 2 },
+  ] },
+]

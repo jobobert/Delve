@@ -1,34 +1,32 @@
-id          = "hoard_of_the_apex_drake"
-name        = "The Hoard of the Apex Drake"
-description = "Recover the Thermal Conductor from the Apex Drake's hoard."
-start_flag  = ""
+id      = "hoard_of_the_apex_drake"
+title   = "The Hoard of the Apex Drake"
+giver   = "warden_selka"
+summary = "Recover the Thermal Conductor from the Apex Drake's hoard."
 
 [[step]]
-id          = 1
-name        = "Scout the Peaks"
-objective   = "Speak with Warden Selka and learn how the Apex reacts to outsiders."
-hint        = "Selka respects proof of skill."
+index     = 1
+objective = "Scout the Peaks: speak with Warden Selka and learn how the Apex reacts to outsiders."
+hint      = "Selka is stationed at the watch post above Highspire."
 
 [[step]]
-id          = 2
-name        = "Gather Proof"
-objective   = "Bring a drakebone fragment or resonant alloy to Selka or Orun."
-hint        = "Hunting drakes or mining vents yields the materials."
+index     = 2
+objective = "Gather proof of skill: bring a drakebone fragment to Selka."
+hint      = "Hunting drakes or mining the vents yields the materials."
 
 [[step]]
-id          = 3
-name        = "Enter the Apex Domain"
-objective   = "Unlock the Thermal Conduit Gate and reach the Hearth of the Apex."
-hint        = "Align the resonance forge or defeat the guard to open the gate."
+index     = 3
+objective = "Unlock the Thermal Conduit Gate and reach the Hearth of the Apex."
+hint      = "Align the resonance forge or defeat the apex guard to open the gate."
 
 [[step]]
-id          = 4
-name        = "Claim the Conductor"
-objective   = "Retrieve the Thermal Conductor from the Hearth of the Apex."
-hint        = "Be prepared: the Apex will not give it up easily."
+index     = 4
+objective = "Retrieve the Thermal Conductor from the Hearth of the Apex."
+hint      = "Be prepared: the Apex will not give it up easily."
 
 [[reward]]
-xp          = 800
-gold        = 200
-prestige    = 20
-text        = "You have recovered the Thermal Conductor and proven yourself in the Peaks."
+type   = "xp"
+amount = 800
+
+[[reward]]
+type   = "gold"
+amount = 200

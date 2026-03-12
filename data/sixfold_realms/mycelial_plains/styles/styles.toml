@@ -1,23 +1,41 @@
+# Mycelial Plains — Fighting Styles
+
+# mindweft: a predictive, resonance-driven style native to the Mycelial Plains.
+# Practitioners read their opponent's intent before the strike lands.
+# Strong against methodical, deliberate fighters; weak against erratic beasts.
 [[style]]
-id          = "mindweft"
-name        = "Mindweft"
-desc_short  = "A predictive, resonance‑driven combat style."
-desc_long   = "Mindweft practitioners weave intuition, pattern recognition, and micro‑movements into a fluid style that anticipates attacks before they land. Originating in the Mycelial Plains, it has since been generalized into a resonance‑based discipline usable anywhere."
-strong_vs   = ["flowcurrent", "rootbind"]
-weak_vs     = ["sky_piercer"]
-multipliers = { attack = 1.0, defense = 1.0 }
-bonuses     = { perception = 2 }
-difficulty  = "advanced"
-preferred_weapon_tags = ["light", "finesse"]
-preferred_armor_tags  = ["cloth", "mycelial"]
-learning_source       = "trainer"
+id            = "mindweft"
+name          = "Mindweft"
+desc          = "A predictive style that weaves intuition and pattern recognition into fluid, anticipatory combat. Practitioners seem to move before the attack arrives."
+strong_vs     = ["humanoid", "slow", "armored"]
+weak_vs       = ["fast", "beast", "flying"]
+defense_bonus = 2
+difficulty    = 1.3
+learned_from  = "mp_sporewarden"
 
-[[style.passive]]
-ability    = "anticipate"
-threshold  = 0
-desc       = "Small chance to reduce incoming damage by predicting the attack pattern."
+[[passive]]
+ability   = "anticipate"
+threshold = 40
+trigger   = "defend"
+message   = "You read the attack before it lands — stepping clear!"
+on_activate = [
+  { op = "skip_npc_attack" },
+]
 
-[[style.passive]]
-ability    = "cognitive_flow"
-threshold  = 20
-desc       = "Increases perception further as the user maintains momentum in combat."
+[[passive]]
+ability   = "cognitive_flow"
+threshold = 65
+trigger   = "attack"
+message   = "Momentum flows through your strike!"
+on_activate = [
+  { op = "multiply_damage", multiplier = 1.5 },
+]
+
+[[passive]]
+ability   = "spore_resonance"
+threshold = 80
+trigger   = "defend"
+message   = "Fungal awareness floods your senses — you absorb the blow!"
+on_activate = [
+  { op = "apply_status", effect = "protected", duration = 2 },
+]

@@ -1,31 +1,63 @@
+# dragon_peaks/styles/styles.toml
+#
+# Styles defined here are available world-wide in sixfold_realms.
+#
+# sky_piercer — the Peaks' signature aerial combat style; taught by Warden Selka
+# brawling    — raw fighting; default for untrained or generic humanoid NPCs
+
 [[style]]
-id   = "sky_piercer"
-name = "Sky‑Piercer"
-desc = "A high‑altitude style of leaping strikes and wind‑aligned aggression."
+id                = "brawling"
+name              = "Brawling"
+desc_short        = "Raw mountain fighting. Works best against unprepared humanoids."
+desc_long         = "No ceremony, no footwork — just force. Mountain brawling rewards stamina and aggression over technique. It holds up poorly against armored or fast opponents but punishes anything slow enough to hit twice."
+strong_vs         = ["humanoid", "slow"]
+weak_vs           = ["armored", "fast", "beast"]
+strong_multiplier = 1.4
+weak_multiplier   = 0.7
+attack_bonus      = 0
+defense_bonus     = 0
+difficulty        = 1.0
+preferred_weapon_tags = ["fist", "blunt", "brawling"]
+preferred_armor_tags  = ["light"]
+weapon_bonus      = 0.20
+armor_bonus       = 0.10
+learned_from      = ""
+learned_at        = 0
+passives = [
+  { ability = "haymaker",  threshold = 50, trigger = "attack",
+    message  = "You wind up and throw everything into it!",
+    on_activate = [{op = "multiply_damage", multiplier = 1.75}] },
+  { ability = "ironhide",  threshold = 75, trigger = "defend",
+    message  = "You tighten your stance and take the blow on your terms.",
+    on_activate = [{op = "block_damage"}] },
+]
 
-affinities = {
-  weapon_tags = ["polearm", "glaive", "spear"],
-  armor_tags  = ["light", "scale"]
-}
-
-growth = {
-  on_hit     = 1.5
-  on_crit    = 2.0
-  on_kill    = 3.0
-}
-
-abilities = [
-  { id = "wind_step",
-    type = "stance",
-    desc = "Leap into a higher stance, increasing crit chance by 8% for 3 rounds.",
-    trigger = { on_command = "stance wind" },
-    effect  = { stat = "crit", amount = 8, duration = 3 }
-  },
-
-  { id = "skyfall",
-    type = "on_crit",
-    desc = "10% chance on critical hit to deal an additional burst of wind damage.",
-    chance = 0.10,
-    effect = { type = "bonus_damage", magnitude = 6 }
-  }
+[[style]]
+id                = "sky_piercer"
+name              = "Sky-Piercer"
+desc_short        = "A high-altitude style of wind-aligned strikes and aerial aggression."
+desc_long         = "Developed by the Peaks' scouts and drake-hunters, Sky-Piercer turns elevation into a weapon. Practitioners read thermals, launch overhead strikes, and use the momentum of a fall to deliver devastating blows. It excels against large, slow-moving targets but struggles against quick opponents that stay grounded."
+strong_vs         = ["large", "beast", "slow"]
+weak_vs           = ["small", "fast", "armored"]
+strong_multiplier = 1.4
+weak_multiplier   = 0.7
+attack_bonus      = 0
+defense_bonus     = 2
+difficulty        = 1.5
+preferred_weapon_tags = ["polearm", "spear", "glaive"]
+preferred_armor_tags  = ["light", "leather"]
+weapon_bonus      = 0.25
+armor_bonus       = 0.15
+learned_from      = "warden_selka"
+learned_at        = 2
+passives = [
+  { ability = "wind_deflect",   threshold = 25, trigger = "defend",
+    message  = "You spin with the blow, letting the wind carry it past.",
+    on_activate = [{op = "block_damage"}] },
+  { ability = "skyfall",        threshold = 50, trigger = "attack",
+    message  = "You launch into a plunging dive strike — the full weight of the fall behind it!",
+    on_activate = [{op = "multiply_damage", multiplier = 1.8}] },
+  { ability = "thermal_surge",  threshold = 75, trigger = "attack", requires = "skyfall",
+    message  = "The thermal updraft catches your momentum — a devastating follow-through!",
+    on_activate = [{op = "counter_damage", multiplier = 0.4}] },
 ]

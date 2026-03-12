@@ -1,17 +1,14 @@
-# This quest leads the player through the Heartwood’s deeper mysteries and culminates in defeating the Core Guardian.
+# The Heartwood's Pulse — main zone quest.
 #
-# Notes on integration:
-#
-# Step 1 is advanced by the Memory Root Cluster’s on_get script (which sets vh_true_path).
-#
-# Step 2 is advanced by the Core Guardian’s kill_script.
-#
-# Step 3 is advanced by the fragment’s on_get script.
+# Step 1 advanced by the Memory Root Cluster on_get (sets vh_true_path).
+# Step 2 advanced by the Core Guardian kill_script.
+# Step 3 advanced + quest completed by growth_regulator_fragment on_get.
+# Prestige is awarded in growth_regulator_fragment on_get.
 
 id      = "vh_growth_regulator"
-title   = "The Heartwood’s Pulse"
+title   = "The Heartwood's Pulse"
 giver   = "vh_root_tender_lyren"
-summary = "The Heartwood Core holds a fragment of the ancient Regulator. To claim it, you must navigate the forest’s memories and face its guardian."
+summary = "The Heartwood Core holds a fragment of the ancient Regulator. To claim it, you must navigate the forest's memories and face its guardian."
 
 [[step]]
 index     = 1
@@ -26,16 +23,11 @@ hint      = "The guardian waits in the Inner Sanctum."
 [[step]]
 index     = 3
 objective = "Claim the Growth Regulator Fragment."
-hint      = "Take the fragment from the pulsing root‑heart."
+hint      = "Take the fragment from the pulsing root-heart."
 
 [[reward]]
 type   = "xp"
 amount = 400
-
-[[reward]]
-type   = "prestige"
-amount = 3
-reason = "restored balance to the Heartwood"
 
 [[reward]]
 type   = "gold"

@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 import textwrap
 import sys
+import time
 from pathlib import Path
 
 from engine.events import EventBus, Event
@@ -203,6 +204,12 @@ class CLIFrontend:
                     tag=msg.tag, text_len=len(msg.text),
                     text_preview=msg.text[:60] if msg.text else "(empty)",
                     rendered_len=len(rendered), will_print=bool(rendered or msg.tag == Tag.BLANK))
+        if msg.tag == Tag.PAUSE:
+            # Cutscene pause — flush stdout then sleep for the requested duration.
+            sys.stdout.flush()
+            time.sleep(float(msg.text))
+            return
+
         if rendered or msg.tag == Tag.BLANK:
             print(rendered)
 

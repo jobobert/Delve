@@ -6,8 +6,8 @@ lines = [
 
 [[response]]
 node = "root"
-text = "Show me what you have for sale."
-next = "open_shop"
+text = "Show me what you have for sale. (use 'list')"
+next = "wares"
 
 [[response]]
 node = "root"
@@ -20,17 +20,14 @@ text = "Nothing right now."
 next = ""
 
 
-# --- Open Shop ---
+# --- Wares ---
 [[node]]
-id   = "open_shop"
-line = "'Take a look. Everything here’s priced fair and meant to last.'"
-script = [
-  { op = "open_shop", shop_id = "vendor_supplies" }
-]
+id   = "wares"
+line = "'Everything here's priced fair and meant to last. Use 'list' to browse.'"
 
 [[response]]
-node = "open_shop"
-text = "Let me browse."
+node = "wares"
+text = "I'll take a look."
 next = ""
 
 
@@ -39,7 +36,7 @@ next = ""
 id   = "sourcing"
 lines = [
   "'Riverlands traders bring me most of it. Hunters from the Peaks drop off odds and ends, and the Heartwood folk trade resin and tools when the paths are clear.'",
-  "'If you’re heading out, check your packs twice. The world’s wide, and it doesn’t forgive forgetfulness.'"
+  "'If you're heading out, check your packs twice. The world's wide, and it doesn't forgive forgetfulness.'"
 ]
 
 [[response]]

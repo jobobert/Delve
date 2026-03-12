@@ -40,7 +40,7 @@ touch Python to create content. Rooms, NPCs, items, dialogue, and quests are all
 in TOML files under `data/`. The engine loads them at runtime.
 
 **Key facts:**
-- A **world** is a subfolder of `data/` that contains a `config.py` (e.g. `data/sixfold_realms/`).
+- A **world** is a subfolder of `data/` that contains a `config.toml` (e.g. `data/sixfold_realms/`).
 - **Zones** are subfolders of the world folder. Each zone streams in/out of memory independently.
 - All NPC and item state is lazy — NPCs spawn on first player visit, not at startup.
 - Zone state (NPC HP, moved items) persists per-player to `data/players/<name>/zone_state/<zone_id>.json`.
@@ -52,7 +52,7 @@ in TOML files under `data/`. The engine loads them at runtime.
 
 ## 2. Zone Structure & File Layout
 
-A **world** is a subfolder of `data/` identified by a `config.py` inside it. **Zones** are
+A **world** is a subfolder of `data/` identified by a `config.toml` inside it. **Zones** are
 subfolders of the world. The zone folder's name becomes the zone ID.
 
 ```
@@ -62,8 +62,8 @@ data/
       player.toml              # Character save (cross-world; records world_id)
       zone_state/              # Live zone snapshots — per-player (gitignored)
         <zone_id>.json
-  <world_id>/                  # World folder — identified by config.py
-    config.py                  # World name, skills, currency, default style, slots
+  <world_id>/                  # World folder — identified by config.toml
+    config.toml                # World name, skills, currency, default style, slots, vision_threshold, player_attrs, status_effects
     <zone_id>/                 # One folder per zone; folder name = zone ID
       zone.toml                # Optional: display name and description
       rooms.toml               # [[room]] entries
@@ -122,6 +122,7 @@ mining     = "Mining"
 | `equipment_slots` | list | Ordered list of valid equipment slot names |
 | `[skills]` | table | `skill_id = "Display Name"` pairs for skills in this world |
 | `[[player_attrs]]` | array | World-defined custom numeric player attributes (optional) |
+| `[[status_effect]]` | array | World-defined status effects — see [Section 11](#11-status-effects) |
 
 The engine falls back to built-in defaults for any field that is absent.
 
@@ -170,6 +171,8 @@ Rooms are defined in `[[room]]` blocks inside a zone's `rooms.toml`.
 | `flags` | list | No | `[]` | Room behaviour flags — see [Appendix A](#appendix-a--room-flags) |
 | `start` | bool | Zone needs one | `false` | Marks the starting room; validator requires exactly one per world |
 | `on_enter` | array | No | `[]` | Script ops run each time the player enters the room |
+| `on_sleep` | array | No | `[]` | Script ops run when the player sleeps here (before healing — use for flavor, check conditions) |
+| `on_wake` | array | No | `[]` | Script ops run when the player wakes up here (after healing — use for morning flavor, weather, events) |
 | `heal_rate` | int | No | `5` | HP restored per command (only when `healing` flag set) |
 | `hazard_damage` | int | No | `2` | Passive HP damage per command (only when `hazard` flag set) |
 | `hazard_message` | string | No | `"The environment bites at you."` | Flavour text for each hazard tick |
@@ -543,6 +546,7 @@ Items are defined in `[[item]]` blocks in a zone's `items.toml`.
 | `effects` | list | No | Passive or triggered effects — see [Section 6.2](#62-item-effects) |
 | `on_get` | array | No | Script run when player picks up this item |
 | `on_drop` | array | No | Script run when player drops this item |
+| `commands` | list | No | Custom verbs the player can type — see [Section 6.4](#64-item-commands) |
 
 ### 6.2 Item Effects
 
@@ -654,6 +658,64 @@ on_get   = [
 ]
 ```
 
+### 6.4 Item Commands
+
+Items can define custom verbs that the player can type when they have the item in
+their inventory **or** are in the same room as it. This lets you create interactive
+scenery and puzzle objects without any engine changes.
+
+Each command is a `[[commands]]` block inside the `[[item]]` block:
+
+```toml
+[[item]]
+id         = "old_chest"
+name       = "Old Chest"
+desc_short = "A heavy oak chest, banded with rusted iron."
+slot       = ""
+scenery    = true      # can't be picked up
+
+[[item.commands]]
+verb    = "open"
+visible = true         # shows as "(you can: open)" in room and examine output
+ops     = [
+  { op = "if_flag", flag = "chest_unlocked",
+    then = [
+      { op = "message", text = "You lift the heavy lid." },
+      { op = "give_item", item_id = "silver_key" },
+      { op = "set_flag",  flag = "chest_looted" },
+    ],
+    else = [
+      { op = "message", text = "The chest is locked tight." },
+    ]
+  },
+]
+
+[[item.commands]]
+verb    = "examine"
+visible = false        # hidden — player must discover it
+ops     = [
+  { op = "if_flag", flag = "chest_unlocked",
+    then = [{ op = "message", text = "The lock mechanism has been forced." }],
+    else = [{ op = "message", text = "The lock bears a crest: three moons." }],
+  },
+]
+```
+
+**Command fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `verb` | string | **Yes** | The command word the player types |
+| `visible` | bool | No | `true` = shown in room and examine output; `false` (default) = hidden |
+| `ops` | array | No | Script ops to run (empty ops = no-op but verb is still consumed) |
+
+**Scope rules:**
+- Inventory items: command available anywhere (player carries the item)
+- Room items (including scenery): command available only in that room
+- If both an inventory item and a room item define the same verb, the inventory
+  item wins (checked first)
+- Built-in engine verbs always take priority over item commands
+
 ---
 
 ## 7. The Script Engine
@@ -680,7 +742,10 @@ kill_script = [
 | NPC | `round_script` | After each combat round (both alive) |
 | Item | `on_get` | Player picks up item |
 | Item | `on_drop` | Player drops item |
+| Item | `commands[].ops` | Player types the item's custom verb |
 | Room | `on_enter` | Player enters the room |
+| Room | `on_sleep` | Player sleeps/rests here — fires before healing |
+| Room | `on_wake` | Player wakes up here — fires after healing |
 | Exit dict | `on_exit` | Player leaves via this exit (source room) |
 | Exit dict | `on_enter` | Player arrives via this exit (destination room) |
 | Exit dict | `on_look` | Player examines the exit direction |
@@ -707,6 +772,7 @@ Every script runs with access to the current state:
 | `give_accepts[].script` | Yes (the giver NPC) | No |
 | `on_get` / `on_drop` (item) | No | No |
 | `on_enter` (room / exit) | No | No |
+| `on_sleep` / `on_wake` (room) | No | No |
 | Dialogue `script` / response `script` | Yes (the speaker NPC) | No |
 
 > **Note:** `if_combat_round`, `if_npc_hp`, and `end_combat` only make sense inside
@@ -728,7 +794,7 @@ Both are caught cleanly — no exception reaches the player.
 { op = "require_tag", tag = "pickaxe", fail_message = "You need a pickaxe to mine here." }
 ```
 
-### 7.5 All Script Operations (~47 ops)
+### 7.5 All Script Operations (~63 ops)
 
 > **Quick tip:** For a condensed reference of every op and its attributes, see
 > [Appendix C](#appendix-c--all-script-ops-quick-reference) at the end of this document.
@@ -1015,7 +1081,7 @@ Displays the companion's `join_message`. Replaces any existing companion.
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `skill` | string | — | A skill ID defined in the world's `config.py` (e.g. `perception`, `stealth`, `mining`) |
+| `skill` | string | — | A skill ID defined in the world's `config.toml` (e.g. `perception`, `stealth`, `mining`) |
 | `dc` | int | `10` | Difficulty class (roll ≥ dc to pass) |
 | `on_pass` | array | `[]` | Script ops on success |
 | `on_fail` | array | `[]` | Script ops on failure |
@@ -1070,7 +1136,7 @@ Displays "Mining 5 → 7" when the integer part increases.
 
 | Attribute | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `effect` | string | Yes | `poisoned`, `blinded`, `weakened`, `slowed`, `protected` |
+| `effect` | string | Yes | A status effect `id` defined in the world's `config.toml` `[[status_effect]]` blocks |
 | `duration` | int | — | Turns remaining; `-1` = permanent until cleared |
 
 See [Section 11](#11-status-effects) for what each effect does.
@@ -1232,6 +1298,39 @@ Both are optional — omit whichever branch you don't need.
   else = [{ op = "say", text = "The dragon still threatens us." }],
 }
 ```
+
+---
+
+#### CUTSCENE
+
+**`pause`** — Pause briefly for dramatic effect
+
+```toml
+{ op = "pause", seconds = 0.5 }
+```
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `seconds` | float | `0.5` | Duration in seconds; reasonable values are 0.2–1.0 |
+
+Emits a timing signal that the frontend sleeps on. The engine itself never
+calls `time.sleep()` — a headless or web frontend can ignore it safely.
+
+*Typical pattern — gated first-entry cutscene:*
+```toml
+on_enter = [
+  { op = "if_not_flag", flag = "cave_intro_seen", then = [
+    { op = "message", tag = "system",   text = "The cold hits you before you see the chamber." },
+    { op = "pause", seconds = 0.5 },
+    { op = "message", tag = "room_desc", text = "Something massive stirs in the darkness." },
+    { op = "pause", seconds = 0.4 },
+    { op = "message", tag = "room_desc", text = "Eyes open. Many of them." },
+    { op = "set_flag", flag = "cave_intro_seen" },
+  ] },
+]
+```
+
+The `if_not_flag` guard ensures the cutscene plays only on the first visit.
 
 ---
 
@@ -1613,6 +1712,7 @@ item_id = "millhaven_commendation"
 | `step.index` | int | Step number (must be ≥ 1); gaps are fine |
 | `step.objective` | string | What the player must do |
 | `step.hint` | string | Optional hint shown in journal |
+| `step.on_advance` | array | Script ops run automatically when this step is reached |
 | `[[reward]]` | — | Awards given when quest is completed |
 | `reward.type` | `"gold"`, `"xp"`, `"item"` | Reward type |
 | `reward.amount` | int | For gold/xp |
@@ -1633,6 +1733,22 @@ kill_script = [{ op = "advance_quest", quest_id = "ashwood_contract", step = 6 }
 script = [{ op = "complete_quest", quest_id = "ashwood_contract" }]
 ```
 
+**`on_advance` — automatic step scripts**
+
+Each quest step can carry an `on_advance` array that fires automatically the moment
+the player reaches that step (run by the engine as part of `advance_quest`). Use it
+to give items, send messages, or trigger world changes the instant a milestone is hit:
+
+```toml
+[[step]]
+index      = 3
+objective  = "Retrieve the signet ring."
+on_advance = [
+  { op = "message", text = "The hermit's directions flash through your memory.", tag = "quest" },
+  { op = "give_item", item_id = "hermit_map" },
+]
+```
+
 ### 9.5 Quest Conditions in Dialogue
 
 ```toml
@@ -1650,8 +1766,8 @@ condition = { not_quest = "ashwood_contract" }
 
 ## 10. Skills
 
-Skills are **world-configurable** — the full list is defined in `SKILLS` inside the world's
-`config.py`. The engine uses whatever skills are listed there; no engine code changes are needed.
+Skills are **world-configurable** — the full list is defined in the `[skills]` table inside the
+world's `config.toml`. The engine uses whatever skills are listed there; no engine code changes are needed.
 
 ### 10.1 Skills in The Sixfold Realms
 
@@ -1727,15 +1843,54 @@ show_if = { op = "min_skill", skill = "perception", value = 60 }
 Status effects are applied via script and expire after a set number of turns (or are
 permanent until cleared).
 
-| Effect | Applied by | In-combat | Per-move | Expiry message |
-|--------|-----------|-----------|----------|----------------|
-| `poisoned` | script | — | 3 HP damage | "The poison runs its course." |
-| `blinded` | script | −4 attack | — | "Your vision clears." |
-| `weakened` | script | −4 attack | — | "Your strength returns." |
-| `slowed` | script | — | — | "The sluggishness lifts." |
-| `protected` | script | +3 defense | — | "The protective ward fades." |
+Status effects are **fully world-defined** in `config.toml` as `[[status_effect]]` blocks.
+Each world ships its own set; the engine has a fallback effect list.
 
-**Duration:** Turns remaining (one per command). `-1` = permanent until `clear_status`.
+### Defining status effects in config.toml
+
+```toml
+[[status_effect]]
+id              = "poisoned"       # key used in script ops
+label           = "Poisoned"       # display name on stats screen
+apply_msg       = "Poison courses through you."
+expiry_msg      = "The poison runs its course."
+combat_atk      = 0               # attack modifier while active (negative = debuff)
+combat_def      = 0               # defense modifier while active
+damage_per_move = 3               # HP damage per command tick (0 = none)
+
+[[status_effect]]
+id              = "hexed"
+label           = "Hexed"
+apply_msg       = "A dark curse settles on you."
+expiry_msg      = "The hex lifts."
+combat_atk      = -3
+combat_def      = -2
+damage_per_move = 0
+```
+
+If a world defines no `[[status_effect]]` blocks, the engine falls back to five built-in
+defaults (poisoned, blinded, weakened, slowed, protected) so the game remains playable
+without configuration.
+
+### Default effects (first_world baseline)
+
+| Effect | `combat_atk` | `combat_def` | `damage_per_move` |
+|--------|:------------:|:------------:|:-----------------:|
+| `poisoned` | 0 | 0 | 3 HP/move |
+| `blinded` | −4 | 0 | — |
+| `weakened` | −4 | 0 | — |
+| `slowed` | 0 | −3 | — |
+| `protected` | 0 | +3 | — |
+
+**Duration:** Turns remaining (one per active command). `-1` = permanent until `clear_status`.
+
+> **Read-only commands don't tick.** Passive information commands (`look`, `inventory`,
+> `stats`, `map`, `journal`, `skills`, `help`, `examine`, `commissions`, `bank`,
+> `alias`/`aliases`, `save`) do **not** advance status effect durations or deal
+> `damage_per_move` damage. Only commands that interact with the world (movement, combat,
+> picking up items, talking, buying, crafting) count as a turn for status purposes.
+> This means a player checking their stats or map while poisoned is not penalised for
+> doing so.
 
 ```toml
 # Apply for 5 turns
@@ -2101,6 +2256,72 @@ Run with `--world <id>` to check a single world:
 python tools/validate.py --world first_world
 ```
 
+### 16.2 Inspecting Objects in Python
+
+You can load world objects directly in a Python script for debugging and one-off
+testing — the same way `validate.py` does it internally. Run these scripts from
+the project root so that `import engine.*` resolves correctly.
+
+**Minimal bootstrap — load config and inspect a TOML record:**
+
+```python
+import sys
+from pathlib import Path
+
+sys.path.insert(0, ".")                          # project root on sys.path
+from engine.toml_io import load as toml_load
+import engine.world_config as wc
+
+DATA_DIR  = Path("data")
+WORLD_ID  = "first_world"
+world_path = DATA_DIR / WORLD_ID
+
+wc.init(world_path)   # load config.toml — must be called before any engine code
+
+# Load a TOML file and pull one record by id
+data = toml_load(world_path / "blackfen" / "npcs.toml")
+npc  = next((n for n in data.get("npc", []) if n["id"] == "anurus_the_returned"), None)
+print(npc)
+```
+
+**Load the live World object (room lookups, exits, NPC spawns):**
+
+```python
+from engine.world import World
+
+world = World(world_path)
+room  = world.get_room("millhaven_square")
+print(room["name"], "light:", room.get("light", 10))
+
+# Iterate every item in every zone
+for zone_id, zone in world.zones.items():
+    for item in zone.get("items", {}).values():
+        print(zone_id, item["id"], item.get("slot", "—"))
+```
+
+**Load a saved player:**
+
+```python
+from engine.player import Player
+
+player = Player.load("YourCharacter")
+print(player.name, "HP:", player.hp, "/", player.max_hp)
+print("Equipped:", player.equipped)
+print("Skills:",  player.skills)
+```
+
+**Create a throwaway player for testing (not saved unless you call `player.save()`):**
+
+```python
+player = Player.create_new("TestChar")
+player.world_id = WORLD_ID
+# Inspect or mutate freely; omit player.save() to discard all changes.
+```
+
+**Tip:** the engine never calls `print()` directly — all output flows through
+`EventBus` / `Msg`. Inspecting engine state in a script is silent by default
+unless you `print()` the results yourself.
+
 ---
 
 ## 17. Light Mechanic
@@ -2286,9 +2507,41 @@ Add any of these string values to a room's `flags` array.
 | `safe_combat` | Player takes zero damage, but XP and gold are awarded normally. Use for training rooms. |
 | `healing` | Player regains `heal_rate` HP per command (default 5). Combine with `heal_rate` field. |
 | `reduced_stats` | All combatants fight with half attack and defense. Use for sparring rings or dampened magic areas. |
-| `sleep` | Player can `sleep`/`rest` here without an innkeeper NPC. Use for campsites, player homes. |
+| `sleep` | **Inn-quality rest** — `sleep`/`rest` here restores full HP (same as a paid inn). Use for campsites the player has made safe, player homes, or free rest areas. |
+| `no_camp` | Blocks **all** resting in this room (even camping). Use for indoor spaces, dungeons, or anywhere that should require an inn. Without this flag, the player can always camp anywhere (with reduced healing — see below). |
 | `hazard` | Deals `hazard_damage` HP per command (default 2). Use for poison, fire, or caustic areas. Combine with `hazard_damage`, `hazard_message`, `hazard_exempt_flag`. |
 | `no_large_companion` | Blocks utility and combat companions. Use for tight caves, cliff faces, or crawl spaces. Narrative companions always enter. |
+
+### Rest & Camping
+
+The `sleep` / `rest` command has three modes:
+
+| Situation | HP restored | Crafting ticks | Status effects |
+|-----------|-------------|----------------|----------------|
+| Innkeeper NPC present (paid) | Full max HP | 20 | All cleared |
+| Room has `sleep` flag (free) | Full max HP | 20 | All cleared |
+| **Camping** (any other room, no `no_camp` flag) | Up to +½ max HP | 10 | All cleared |
+
+**Camping** is allowed by default anywhere that doesn't have `no_camp`. It always clears status
+effects (a full night's rest resolves them) but only heals up to half your maximum HP — sleeping
+rough without a proper bed is restorative but not complete recovery.
+
+Use `on_sleep` and `on_wake` room scripts to add flavor:
+
+```toml
+# An inn room
+on_sleep = [{ op = "message", text = "The innkeeper dims the lantern as you settle in.", tag = "dialogue" }]
+on_wake  = [{ op = "message", text = "Morning light filters through the shutters.", tag = "system" }]
+
+# A wilderness campsite
+on_sleep = [{ op = "message", text = "You build a small fire and wrap yourself in your cloak.", tag = "system" }]
+on_wake  = [
+  { op = "message", text = "Dawn breaks grey over the hills. The fire has long since died.", tag = "system" },
+  { op = "if_flag", flag = "storm_warning", then = [
+      { op = "message", text = "The storm that was building last night has passed.", tag = "system" }
+  ]},
+]
+```
 
 Multiple flags can be combined:
 ```toml
@@ -2324,7 +2577,7 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 
 ## Appendix C — All Script Ops (Quick Reference)
 
-53 ops total. Unknown op names are **silently ignored** — forward-compatible with new engine versions.
+63 ops total. Unknown op names are **silently ignored** — forward-compatible with new engine versions.
 
 **Output**
 
@@ -2402,7 +2655,7 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 
 | Op | Key attributes | Description |
 |----|---------------|-------------|
-| `apply_status` | `effect`, `duration` | Apply status effect (poisoned / blinded / weakened / slowed / protected) |
+| `apply_status` | `effect`, `duration` | Apply a world-defined status effect by id (see §11) |
 | `clear_status` | `effect` | Remove status effect |
 | `if_status` | `effect`, `then`, `else` | Branch on effect presence |
 
@@ -2416,11 +2669,12 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 | `if_prestige` | `min`, `max`, `then`, `else` | Branch on prestige range |
 | `if_affinity` | `tag`, `then`, `else` | Branch on affinity |
 
-**Bank & flow control**
+**Bank, cutscene & flow control**
 
 | Op | Key attributes | Description |
 |----|---------------|-------------|
 | `bank_expand` | `tier` | Expand bank slots |
+| `pause` | `seconds` | Cutscene timing pause (frontend sleeps N seconds) |
 | `fail` | — | Abort script immediately |
 | `journal_entry` | `title`, `text` | Add player journal entry |
 | `run_script_file` | `path` | Run ops from a world-relative TOML file (see §19) |

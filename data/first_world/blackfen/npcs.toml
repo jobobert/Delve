@@ -185,6 +185,14 @@ max_hp   = 65
 gold_reward = 20
 xp_reward   = 200
 
+[[round_script]]
+op  = "if_combat_round"
+min = 2
+then = [
+  {op = "message", text = "Anurus speaks a forbidden word — a curse settles into your bones.", tag = "combat"},
+  {op = "apply_status", effect = "cursed", duration = 6},
+]
+
 [[kill_script]]
 op   = "message"
 text = "The skeleton collapses, robes settling over a pile of old bones. The staff remains upright for a moment, then falls."

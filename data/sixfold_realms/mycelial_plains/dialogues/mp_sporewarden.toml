@@ -1,7 +1,7 @@
 [[node]]
 id    = "root"
 lines = [
-  "The Sporewarden’s cloak rustles softly. 'You seek protection from the Plains? Then you must weave clarity into form.'"
+  "The Sporewarden's cloak rustles softly. 'You seek protection from the Plains? Then you must weave clarity into form.'"
 ]
 
 [[response]]
@@ -11,8 +11,8 @@ next = "materials"
 
 [[response]]
 node = "root"
-text = "I have the materials."
-next = "check"
+text = "How do I commission the mantle?"
+next = "commission_how"
 
 [[response]]
 node = "root"
@@ -23,37 +23,25 @@ next = "explain"
 # --- Materials ---
 [[node]]
 id   = "materials"
-line = "'Fungal Fiber and Clarity Caps. Bring them, and I will weave the mantle.'"
-
-[[response]]
-node = "materials"
-text = "I’ll gather them."
-next = ""
-
-
-# --- Check ---
-[[node]]
-id   = "check"
-line = "The Sporewarden examines your materials."
+line = "'Fungal Fiber and Clarity Caps. Bring them, and I will weave the mantle. Use the commission command when you are ready.'"
 script = [
-  { op = "if_item", item_id = "mp_fungal_fiber", then = [
-    { op = "if_item", item_id = "mp_clarity_cap", then = [
-      { op = "take_item", item_id = "mp_fungal_fiber" },
-      { op = "take_item", item_id = "mp_clarity_cap" },
-      { op = "give_item", item_id = "sporewarden_mantle" },
-      { op = "message", tag = "crafting", text = "The Sporewarden weaves the mantle with practiced grace." },
-      { op = "advance_quest", quest_id = "mp_mantle", step = 2 }
-    ], else = [
-      { op = "message", tag = "error", text = "'You lack the clarity cap.'" }
-    ] }
-  ], else = [
-    { op = "message", tag = "error", text = "'You lack the fungal fiber.'" }
-  ] }
+  { op = "start_quest", quest_id = "mp_mantle" },
 ]
 
 [[response]]
-node = "check"
-text = "Thank you."
+node = "materials"
+text = "I'll gather them."
+next = ""
+
+
+# --- Commission How ---
+[[node]]
+id   = "commission_how"
+line = "'Type commission to see what I can make for you. Bring the materials and return when you are ready.'"
+
+[[response]]
+node = "commission_how"
+text = "Understood."
 next = ""
 
 
@@ -64,5 +52,5 @@ line = "'The mantle shields your thoughts. It helps you walk where others forget
 
 [[response]]
 node = "explain"
-text = "I’ll put it to good use."
+text = "I'll put it to good use."
 next = ""

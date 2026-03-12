@@ -38,8 +38,9 @@ CLIFrontend.run()
        ├─ look up verb in dispatch dict → handler(verb, args)
        │
        ├─ _apply_room_effects()        room on_enter scripts (once per visit)
-       ├─ _tick_status_effects()       decrement status durations
-       └─ _apply_status_damage()       bleed / burn tick damage
+       ├─ if verb not in _NO_TICK_COMMANDS:  read-only verbs (look, inventory, map, …)
+       │    _tick_status_effects()           skip status ticks — no poison/burn damage
+       └─    _apply_status_damage()          for passive info commands
 ```
 
 ### Output path
@@ -139,7 +140,8 @@ ScriptRunner(ctx).run(ops)
 | `prestige.py` | Score −999…+999, 10 tiers. `apply_delta`, `tier_name`, `shop_modifier`, `hostile_on_sight`. |
 | `quests.py` | `QuestTracker` — load quest TOML files, track step progress, emit journal updates. |
 | `room_flags.py` | Room flag constants: `safe_combat`, `no_combat`, `healing`, `town`, `reduced_stats`. |
-| `script.py` | `ScriptRunner(ctx).run(ops)`. 45 ops. `fail` aborts cleanly. `require_tag` gates on item tag. |
+| `script.py` | `ScriptRunner(ctx).run(ops)`. 63 ops. `fail` aborts cleanly. `require_tag` gates on item tag. Combat-only ops require `GameContext.combat_ctx`. |
+| `world_config.py` | `init(world_path)` loads world `config.toml` (or legacy `config.py`) and exposes `WORLD_NAME`, `SKILLS`, `NEW_CHAR_HP`, `CURRENCY_NAME`, `DEFAULT_STYLE`, `VISION_THRESHOLD`, `EQUIPMENT_SLOTS`, `PLAYER_ATTRS`, `STATUS_EFFECTS`. `get_status_effect(id)` returns the named effect dict. Must be called before `World()`. |
 | `skills.py` | Seven adventuring skills (0–100). `grow(skill, amount)`, `check(skill, dc)` → d20 + bonus vs DC. |
 | `styles.py` | 7 fighting styles with matchup tables, gear affinity, and passive abilities unlocking at proficiency thresholds. |
 | `toml_io.py` | **Custom TOML parser** — superset of spec. Supports multi-line inline tables and triple-quoted strings. Standard `tomllib` will fail on these files. **Always use `from engine.toml_io import load`.** |
@@ -285,28 +287,35 @@ negative → guards hostile at −50, surcharges below −25, criminal factions 
 
 ### Script engine (script.py)
 
-45 ops used in NPC dialogue, kill scripts, round scripts, `give_accepts` handlers,
-item `on_get` and `on_drop` arrays, room `on_enter` arrays, and door event arrays. Scripts abort
-cleanly when `fail` fires.
+63 ops used in NPC dialogue, kill scripts, round scripts, `give_accepts` handlers,
+item `on_get`/`on_drop` arrays, room `on_enter`/`on_sleep`/`on_wake` arrays, and
+door event arrays. Scripts abort cleanly when `fail` fires.
 
 ```
-Output:         say, message
-Player state:   set_flag, clear_flag, give_gold, take_gold, give_xp,
-                heal, set_hp, damage
-Inventory:      give_item, take_item, spawn_item
-Quests:         advance_quest, complete_quest
-Styles:         teach_style
-World:          unlock_exit, lock_exit,
-                teleport_player, move_npc, move_item
-Skills:         skill_check, if_skill, skill_grow
-Status effects: apply_status, clear_status, if_status
-Prestige:       prestige, add_affinity, remove_affinity, if_prestige, if_affinity
-Companions:     give_companion, dismiss_companion
-Bank:           bank_expand
-Conditionals:   if_flag, if_not_flag, if_item, if_quest, if_quest_complete,
-                if_skill, if_status, if_affinity, if_prestige,
-                if_combat_round, if_npc_hp
-Flow control:   fail, require_tag, end_combat
+Output:              say, message
+Player state:        set_flag, clear_flag, give_gold, take_gold, give_xp,
+                     heal, set_hp, damage
+Inventory:           give_item, take_item, spawn_item
+Quests:              advance_quest, complete_quest
+Styles:              teach_style
+World:               unlock_exit, lock_exit,
+                     teleport_player, move_npc, move_item
+Skills:              skill_check, if_skill, skill_grow
+Status effects:      apply_status, clear_status, if_status
+Prestige:            prestige, add_affinity, remove_affinity, if_prestige, if_affinity
+Companions:          give_companion, dismiss_companion
+Bank:                bank_expand
+Light:               set_room_light, adjust_light, if_light, set_vision, adjust_vision
+Player attributes:   set_attr, adjust_attr, if_attr
+Cutscene:            pause
+Script files:        run_script_file
+Conditionals:        if_flag, if_not_flag, if_item, if_quest, if_quest_complete,
+                     if_skill, if_status, if_affinity, if_prestige,
+                     if_combat_round, if_npc_hp, if_light, if_attr
+Flow control:        fail, require_tag, end_combat, journal_entry
+Combat-only passives (on_activate only):
+                     block_damage, multiply_damage, counter_damage, reduce_damage,
+                     skip_npc_attack, apply_combat_bleed, heal_self
 ```
 
 **`fail`** — aborts the entire script immediately:
@@ -405,10 +414,14 @@ Each fight is a `CombatSession`. One call to `player_attack()` = one full round:
 4. Bleed ticks (if active on either side)
 5. Check win/loss conditions
 
-Room flags affect combat:
+Room flags:
 - `safe_combat` — player takes zero damage (training rooms)
 - `no_combat` — attack command blocked before this code is reached
 - `reduced_stats` — both sides use half attack/defense
+- `healing` — player regenerates HP while in this room
+- `town` — auto-sets player bind point on first entry
+- `sleep` — room has an inn-quality bed (full heal on rest)
+- `no_camp` — camping/resting blocked entirely (wilderness hazard zones)
 
 ### Mining system
 
@@ -509,6 +522,9 @@ Available categories: `combat`, `autoattack`, `dialogue`, `script`, `world`,
 2. Write `_cmd_foo(self, verb, args)`
 3. Add a line to `_cmd_help`'s lines list
 4. Register aliases if needed
+5. If the command is **read-only** (no world state change), add the verb (and any
+   aliases) to `_NO_TICK_COMMANDS` at the top of `commands.py` so status effects
+   and hazards don't tick while the player checks information.
 
 ## Adding a new frontend
 

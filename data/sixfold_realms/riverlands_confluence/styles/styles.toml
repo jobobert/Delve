@@ -1,46 +1,42 @@
-# The engine scans data/*/styles/*.toml at startup and merges all found styles
-# into one global dict. Future zones may define their own styles here too.
+# riverlands_confluence/styles/styles.toml
 #
-# Field reference
-# ───────────────
-# difficulty            = proficiency gain divisor (1.0 = normal, 2.0 = twice as slow)
-# preferred_weapon_tags = weapon tag affinities — matching gear gives damage bonus
-# preferred_armor_tags  = armor tag affinities — matching gear gives defense bonus
-# weapon_bonus / armor_bonus = max % bonus at full proficiency (0.0 = none, 0.30 = 30%)
-# learned_from          = npc id of the trainer, or "" if self-taught / innate
-# learned_at            = minimum player level to learn
+# Flowcurrent — the Riverlands' native fighting discipline.
+# A fluid, adaptive style that matches an opponent's rhythm and redirects
+# their force rather than meeting it head-on. Practised by ferrymen, river
+# scouts, and travellers who learned that the current is never truly stopped —
+# only guided.
+#
+# Passive chain:
+#   25  sidestep  — slip aside, negating a blow entirely (defend)
+#   50  redirect  — when sidestepping, guide their momentum into a counter-strike (defend, requires sidestep)
+#   75  current_flow — flowing offensive strike that amplifies damage (attack)
 
 [[style]]
-id   = "flowcurrent"
-name = "Flowcurrent"
-desc = "A fluid, reactive style that redirects force and turns an opponent’s momentum against them."
-
-# Weapons and armor that synergize with the style
-affinities = {
-  weapon_tags = ["staff", "light_blade", "fist"],
-  armor_tags  = ["cloth", "leather"]
-}
-
-# How proficiency grows
-growth = {
-  on_hit     = 1.0
-  on_dodge   = 1.5
-  on_parry   = 2.0
-}
-
-# Active abilities and conditional effects
-abilities = [
-  { id = "flow_shift",
-    type = "stance",
-    desc = "Entering Flow Shift increases dodge by 10% for 2 rounds.",
-    trigger = { on_command = "stance flow" },
-    effect  = { stat = "dodge", amount = 10, duration = 2 }
-  },
-
-  { id = "redirect",
-    type = "on_hit_taken",
-    desc = "5% chance to reduce incoming damage by half and counter for minor damage.",
-    chance = 0.05,
-    effect = { type = "counter", magnitude = 3 }
-  }
+id                = "flowcurrent"
+name              = "Flowcurrent"
+desc_short        = "Fluid river-fighting. Redirects force, excels against fast opponents."
+desc_long         = "Flowcurrent treats every fight like navigating a rapid — you read the current, yield where you must, and strike where the water finds its own path. Developed by Riverlands ferrymen and scouts, it works best against fast, mobile opponents whose momentum can be turned against them. Armoured or sluggish foes resist its redirection entirely."
+strong_vs         = ["fast", "humanoid", "beast"]
+weak_vs           = ["armored", "large", "slow"]
+strong_multiplier = 1.35
+weak_multiplier   = 0.75
+attack_bonus      = 0
+defense_bonus     = 2
+difficulty        = 1.5
+preferred_weapon_tags = ["staff", "light_blade", "fist"]
+preferred_armor_tags  = ["cloth", "leather"]
+weapon_bonus      = 0.20
+armor_bonus       = 0.15
+learned_from      = ""
+learned_at        = 0
+passives = [
+  { ability = "sidestep",     threshold = 25, trigger = "defend",
+    message = "You slip aside, letting the blow pass through empty air.",
+    on_activate = [{op = "block_damage"}] },
+  { ability = "redirect",     threshold = 50, trigger = "defend", requires = "sidestep",
+    message = "You guide their momentum — and send it right back.",
+    on_activate = [{op = "counter_damage", multiplier = 0.5}] },
+  { ability = "current_flow", threshold = 75, trigger = "attack",
+    message = "You strike in one unbroken motion — impossible to brace against.",
+    on_activate = [{op = "multiply_damage", multiplier = 1.5}] },
 ]

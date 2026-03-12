@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# ROOT-TENDER NPCs (guides, puzzle-gaters, prestige-aware)
+# ROOT-TENDER NPCs (guides, quest-givers)
 # ---------------------------------------------------------
 
 [[npc]]
@@ -7,7 +7,7 @@ id          = "vh_root_tender_lyren"
 name        = "Root-Tender Lyren"
 desc_short  = "A calm figure woven with living bark patterns."
 desc_long   = "Lyren listens to the forest more than they speak. Their eyes reflect shifting green light."
-tags        = ["humanoid", "prestige_neutral"]
+tags        = ["humanoid"]
 style       = "rootbind"
 style_prof  = 35
 hp          = 70
@@ -22,9 +22,9 @@ dialogue    = "vh_root_tender_lyren"
 [[npc]]
 id          = "vh_root_tender_syl"
 name        = "Root-Tender Syl"
-desc_short  = "A soft-spoken caretaker of the Heartwood’s upper canopy."
-desc_long   = "Syl’s hands glow faintly with restorative sap. They move with the rhythm of the trees."
-tags        = ["humanoid", "prestige_neutral"]
+desc_short  = "A soft-spoken caretaker of the Heartwood's upper canopy."
+desc_long   = "Syl's hands glow faintly with restorative sap. They move with the rhythm of the trees."
+tags        = ["humanoid"]
 style       = "rootbind"
 style_prof  = 40
 hp          = 75
@@ -38,56 +38,6 @@ dialogue    = "vh_root_tender_syl"
 
 
 # ---------------------------------------------------------
-# SYMBIOTIC CREATURES (environmental hazards, semi-hostile)
-# ---------------------------------------------------------
-
-[[npc]]
-id          = "vh_symbiote"
-name        = "Bioluminescent Symbiote"
-desc_short  = "A glowing creature fused with fungal growths."
-desc_long   = "Its movements are slow but deliberate. Spores drift from its back with every step."
-tags        = ["beast", "organic", "sporeborne"]
-style       = "rootbind"
-style_prof  = 20
-hp          = 55
-max_hp      = 55
-attack      = 12
-defense     = 6
-xp_reward   = 45
-gold_reward = 0
-hostile     = true
-round_script = [
-  { op = "if_combat_round", min = 2, then = [
-    { op = "say", text = "The symbiote releases a cloud of spores!" },
-    { op = "apply_status", effect = "weakened", duration = 2 },
-  ] },
-]
-
-
-[[npc]]
-id          = "vh_vine_stalker"
-name        = "Vine Stalker"
-desc_short  = "A humanoid shape made entirely of twisting vines."
-desc_long   = "It moves with jerking, plantlike motions. Vines lash outward with surprising force."
-tags        = ["construct", "organic", "vine"]
-style       = "rootbind"
-style_prof  = 30
-hp          = 80
-max_hp      = 80
-attack      = 14
-defense     = 10
-xp_reward   = 60
-gold_reward = 0
-hostile     = true
-round_script = [
-  { op = "if_combat_round", min = 3, then = [
-    { op = "say", text = "The vines constrict around you!" },
-    { op = "apply_status", effect = "stunned", duration = 1 },
-  ] },
-]
-
-
-# ---------------------------------------------------------
 # HEARTWOOD SHAPER (crafting + Carapace quest)
 # ---------------------------------------------------------
 
@@ -95,8 +45,8 @@ round_script = [
 id          = "vh_heartwood_shaper"
 name        = "Heartwood Shaper Thalen"
 desc_short  = "A master crafter who shapes living bark into armor."
-desc_long   = "Thalen’s arms are wrapped in living wood. They speak with the authority of the forest itself."
-tags        = ["humanoid", "prestige_neutral"]
+desc_long   = "Thalen's arms are wrapped in living wood. They speak with the authority of the forest itself."
+tags        = ["humanoid"]
 style       = "rootbind"
 style_prof  = 50
 hp          = 85
@@ -107,11 +57,141 @@ xp_reward   = 0
 gold_reward = 0
 hostile     = false
 dialogue    = "vh_heartwood_shaper"
-# crafting file: crafting/vh_heartwood_shaper.toml
 
 
 # ---------------------------------------------------------
-# CORE GUARDIAN (boss tied to Growth Regulator Fragment)
+# ENEMIES — lesser creatures
+# ---------------------------------------------------------
+
+[[npc]]
+id          = "vh_symbiote"
+name        = "Bioluminescent Symbiote"
+desc_short  = "A glowing creature fused with fungal growths."
+desc_long   = "Its movements are slow but deliberate. Spores drift from its back with every step."
+tags        = ["beast", "organic"]
+style       = "rootbind"
+style_prof  = 20
+hp          = 55
+max_hp      = 55
+attack      = 12
+defense     = 6
+xp_reward   = 45
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 6
+round_script = [
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "The symbiote releases a cloud of spores!" },
+    { op = "apply_status", effect = "weakened", duration = 2 },
+  ] },
+]
+
+[[npc]]
+id          = "vh_vine_stalker"
+name        = "Vine Stalker"
+desc_short  = "A humanoid shape made entirely of twisting vines."
+desc_long   = "It moves with jerking, plantlike motions. Vines lash outward with surprising force."
+tags        = ["construct", "organic"]
+style       = "rootbind"
+style_prof  = 30
+hp          = 80
+max_hp      = 80
+attack      = 14
+defense     = 10
+xp_reward   = 60
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 7
+round_script = [
+  { op = "if_combat_round", min = 3, then = [
+    { op = "say", text = "The vines constrict around you!" },
+    { op = "apply_status", effect = "slowed", duration = 2 },
+  ] },
+]
+
+[[npc]]
+id          = "vh_root_crawler"
+name        = "Root Crawler"
+desc_short  = "A low-slung creature that moves on a mass of writhing roots."
+desc_long   = "Its body is barely visible beneath the tangle. It travels silently through packed soil."
+tags        = ["beast", "organic", "small"]
+style       = "rootbind"
+style_prof  = 18
+hp          = 40
+max_hp      = 40
+attack      = 11
+defense     = 5
+xp_reward   = 35
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 5
+kill_script = [
+  { op = "give_item", item_id = "vh_sap_resin" },
+]
+round_script = [
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "Roots surge from the ground toward your feet!" },
+    { op = "apply_status", effect = "slowed", duration = 2 },
+  ] },
+]
+
+[[npc]]
+id          = "vh_pollen_sprite"
+name        = "Pollen Sprite"
+desc_short  = "A darting creature trailing clouds of golden pollen."
+desc_long   = "It moves faster than it looks. The pollen it sheds stings eyes and slows breath."
+tags        = ["beast", "fast", "small"]
+style       = "rootbind"
+style_prof  = 22
+hp          = 28
+max_hp      = 28
+attack      = 13
+defense     = 4
+xp_reward   = 30
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 5
+round_script = [
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "A burst of pollen clouds your vision!" },
+    { op = "apply_status", effect = "weakened", duration = 2 },
+  ] },
+]
+
+[[npc]]
+id          = "vh_bark_golem"
+name        = "Bark Golem"
+desc_short  = "A slow-moving construct of compressed bark and root."
+desc_long   = "The golem's footsteps shake the ground. It guards the deeper passages without intelligence or mercy."
+tags        = ["construct", "armored", "large"]
+style       = "rootbind"
+style_prof  = 35
+hp          = 95
+max_hp      = 95
+attack      = 17
+defense     = 15
+xp_reward   = 80
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 10
+kill_script = [
+  { op = "give_item", item_id = "vh_heartwood_bark" },
+]
+round_script = [
+  { op = "if_combat_round", min = 3, then = [
+    { op = "say", text = "The golem slams the ground, sending roots through the floor!" },
+    { op = "apply_status", effect = "slowed", duration = 3 },
+  ] },
+]
+
+
+# ---------------------------------------------------------
+# CORE GUARDIAN (boss — tied to Growth Regulator Fragment)
 # ---------------------------------------------------------
 
 [[npc]]
@@ -129,23 +209,24 @@ defense     = 18
 xp_reward   = 200
 gold_reward = 0
 hostile     = true
+dialogue    = "vh_core_guardian"
 
 kill_script = [
-  { op = "set_flag", flag = "vh_core_guardian_slain" },
+  { op = "set_flag",      flag = "vh_core_guardian_slain" },
   { op = "advance_quest", quest_id = "vh_growth_regulator", step = 2 },
   { op = "message", tag = "combat_kill", text = "The guardian collapses, roots withdrawing into the earth." },
 ]
 
 round_script = [
-  # Regeneration pulse
+  # The guardian draws on the forest's strength — weakening the challenger
   { op = "if_combat_round", min = 2, then = [
     { op = "say", text = "The guardian draws strength from the Heartwood!" },
-    { op = "heal", amount = 5 },
+    { op = "apply_status", effect = "weakened", duration = 2 },
   ] },
 
-  # Rootbind constriction
+  # Rootbind constriction — slows your movement
   { op = "if_combat_round", min = 4, then = [
     { op = "say", text = "Roots surge upward, trying to bind you!" },
-    { op = "apply_status", effect = "weakened", duration = 2 },
+    { op = "apply_status", effect = "slowed", duration = 2 },
   ] },
 ]

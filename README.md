@@ -36,7 +36,7 @@ mud/
 ├── frontend/            CLI renderer and configuration
 ├── data/                All TOML world data — see data/README.md for full details
 │   ├── players/         Cross-world player saves
-│   └── <world_id>/      World folder (contains config.py + zone subfolders)
+│   └── <world_id>/      World folder (contains config.toml + zone subfolders)
 ├── tools/               Authoring and maintenance utilities
 ├── main.py              Entry point — selects and launches a frontend
 ├── config.py            Root-level re-export of frontend/config.py
@@ -71,17 +71,18 @@ Multi-step, tracked per-character. Quest flags, script ops, and dialogue
 conditions interact to gate content and reward completion.
 
 ### Script engine
-45 ops embedded in dialogue responses, NPC kill scripts, round scripts,
-`give_accepts` handlers, item `on_get`/`on_drop` arrays, room `on_enter`
-arrays, and door event arrays. Covers output, player state, inventory, quests,
-styles, world state, skills, status effects, prestige, companions, bank,
-conditionals, and flow control.
+53 ops embedded in dialogue responses, NPC kill scripts, round scripts,
+`give_accepts` handlers, item `on_get`/`on_drop` arrays, room `on_enter`,
+`on_sleep`, `on_wake` arrays, and door event arrays. Covers output, player
+state, inventory, quests, styles, world state, skills, status effects,
+prestige, companions, bank, light, player attributes, conditionals, and flow
+control. See `data/WORLD_MANUAL.md` Appendix C for the full op reference.
 
 ### Skills
-Skills are world-configurable — defined per-world in `data/<world_id>/config.py`.
-The Sixfold Realms ships with seven: `stealth` · `survival` · `perception` · `athletics` ·
-`social` · `arcana` · `mining`. Each 0–100, growing through use. Bonus = `skill ÷ 10`
-on a d20 vs DC.
+Skills are world-configurable — defined per-world in `data/<world_id>/config.toml`
+under `[skills]`. Each 0–100, growing through use. Bonus = `skill ÷ 10` on a d20 vs DC.
+`first_world` ships with seven: `stealth` · `survival` · `perception` · `athletics` ·
+`social` · `arcana` · `mining`.
 
 ### Prestige
 Signed integer (−999…+999) representing reputation. Moves through story events.
@@ -103,6 +104,24 @@ quests. Multiple bankers in the world share one account per character.
 ### Companions
 Three tiers: narrative (story only), utility (exploration abilities), combat
 (attacks once per round alongside the player). One active at a time.
+
+### Light mechanic
+Rooms have a `light` level (0–10, default 10). Items can add or subtract from
+effective light via `light_add`. Players have a `vision_threshold` (default 3,
+script-modifiable). When `effective_light < vision_threshold` the player is blind:
+room descriptions are replaced, map shows `[???]`, and combat accuracy drops 20%.
+
+### Status effects
+Worlds define named conditions in `config.toml` via `[[status_effect]]` blocks:
+id, label, messages, combat_atk/def modifiers, and damage_per_move. The engine
+ships built-in defaults (poisoned, blinded, weakened, slowed, protected) used by
+any world that does not define its own blocks. Sleeping clears all active effects.
+
+### Sleep and rest
+`sleep` heals the player and ticks crafting progress. At an inn (innkeeper NPC or
+`sleep` room flag): full HP restored, 20 crafting ticks. Camping (elsewhere, unless
+`no_camp` flag is set): heals half max HP, 10 crafting ticks. Room `on_sleep` and
+`on_wake` script arrays provide flavour hooks. All status effects are cleared on rest.
 
 ### Mining
 Ore nodes are scenery items with `on_get` scripts. Requires a `pickaxe`-tagged

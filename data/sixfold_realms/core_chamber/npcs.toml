@@ -1,5 +1,27 @@
 # ---------------------------------------------------------
-# Overseer — Final Form
+# CENTRAL CRYSTAL — interactable pseudo-NPC
+# ---------------------------------------------------------
+
+[[npc]]
+id          = "cc_crystal"
+name        = "Central Crystal"
+desc_short  = "The heart of the Sixfold Regulator."
+desc_long   = "It pulses weakly, awaiting alignment. Its surface reflects all five subsystems simultaneously."
+tags        = ["object", "resonance"]
+style       = ""
+style_prof  = 0
+hp          = 1
+max_hp      = 1
+attack      = 0
+defense     = 0
+hostile     = false
+xp_reward   = 100
+gold_reward = 0
+dialogue    = "cc_crystal"
+
+
+# ---------------------------------------------------------
+# OVERSEER — Final Form (boss)
 # ---------------------------------------------------------
 
 [[npc]]
@@ -7,7 +29,7 @@ id          = "cc_overseer_final"
 name        = "The Overseer"
 desc_short  = "A towering resonance construct formed from all five subsystems."
 desc_long   = "Its body shifts between light, shadow, heat, pressure, growth, and memory. It is not hostile by nature, but its directive is absolute: prevent catastrophic overload."
-tags        = ["construct", "boss", "resonance"]
+tags        = ["construct", "boss", "resonance", "large", "armored"]
 style       = "resonance_core"
 style_prof  = 80
 hp          = 300
@@ -17,28 +39,33 @@ defense     = 18
 hostile     = true
 xp_reward   = 500
 gold_reward = 0
-
-# The Overseer reacts to resonance stability.
-round_script = [
-  { op = "if_resonance_at_most", amount = 40, then = [
-    { op = "say", text = "Resonance unstable. Shutdown required." },
-    { op = "damage", amount = 12 }
-  ] },
-  { op = "if_resonance_at_least", amount = 80, then = [
-    { op = "say", text = "Stability rising. Recalibration possible." },
-    { op = "heal", amount = 10 }
-  ] }
-]
+dialogue    = "cc_overseer_final"
 
 kill_script = [
-  { op = "set_flag", flag = "cc_overseer_defeated" },
-  { op = "advance_quest", quest_id = "cc_finale", step = 2 },
-  { op = "message", tag = "combat_kill", text = "The Overseer dissolves into harmonic light." }
+  { op = "set_flag",      flag = "cc_overseer_defeated" },
+  { op = "advance_quest", quest_id = "cc_finale", step = 3 },
+  { op = "give_item",     item_id = "cc_lattice_band" },
+  { op = "message", tag = "combat_kill", text = "The Overseer dissolves into harmonic light, its directive finally silenced." },
+]
+
+round_script = [
+  # Low resonance — Overseer exploits the instability to deal bonus damage
+  { op = "if_attr", name = "resonance", max = 40, then = [
+    { op = "say", text = "Resonance unstable. Shutdown protocol initiated." },
+    { op = "damage", amount = 12 },
+  ] },
+  # High resonance at round 5+ — player gains protective shimmer
+  { op = "if_attr", name = "resonance", min = 80, then = [
+    { op = "if_combat_round", min = 5, then = [
+      { op = "say", text = "Stability rising. Recalibration imminent." },
+      { op = "apply_status", effect = "protected", duration = 2 },
+    ] },
+  ] },
 ]
 
 
 # ---------------------------------------------------------
-# Overseer Echoes — Region Projections
+# OVERSEER ECHOES — Region Projections (enemies, no respawn)
 # ---------------------------------------------------------
 
 [[npc]]
@@ -46,7 +73,7 @@ id          = "cc_echo_light"
 name        = "Light Echo"
 desc_short  = "A projection of the Gloamreach subsystem."
 desc_long   = "A humanoid silhouette made of refracted light. It flickers with unstable brilliance."
-tags        = ["construct", "echo"]
+tags        = ["construct", "echo", "fast"]
 style       = "umbral_veil"
 style_prof  = 40
 hp          = 80
@@ -56,8 +83,16 @@ defense     = 8
 hostile     = true
 xp_reward   = 60
 gold_reward = 0
+respawn     = false
+dialogue    = "cc_echo_light"
+kill_script = [
+  { op = "give_item", item_id = "cc_resonance_shard" },
+]
 round_script = [
-  { op = "damage", amount = 6 }
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "The echo fractures into blinding shards!" },
+    { op = "apply_status", effect = "blinded", duration = 1 },
+  ] },
 ]
 
 [[npc]]
@@ -75,8 +110,16 @@ defense     = 9
 hostile     = true
 xp_reward   = 60
 gold_reward = 0
+respawn     = false
+dialogue    = "cc_echo_pressure"
+kill_script = [
+  { op = "give_item", item_id = "cc_resonance_shard" },
+]
 round_script = [
-  { op = "apply_status", effect = "confused", duration = 1 }
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "The echo warps space around you!" },
+    { op = "apply_status", effect = "confused", duration = 1 },
+  ] },
 ]
 
 [[npc]]
@@ -84,7 +127,7 @@ id          = "cc_echo_growth"
 name        = "Growth Echo"
 desc_short  = "A projection of the Heartwood subsystem."
 desc_long   = "Vines and branches coil into a humanoid shape, pulsing with life."
-tags        = ["construct", "echo"]
+tags        = ["construct", "echo", "armored"]
 style       = "rootbind"
 style_prof  = 40
 hp          = 90
@@ -94,16 +137,24 @@ defense     = 12
 hostile     = true
 xp_reward   = 60
 gold_reward = 0
+respawn     = false
+dialogue    = "cc_echo_growth"
+kill_script = [
+  { op = "give_item", item_id = "cc_resonance_shard" },
+]
 round_script = [
-  { op = "heal", amount = 5 }
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "The echo's vines constrict, slowing your movements!" },
+    { op = "apply_status", effect = "slowed", duration = 2 },
+  ] },
 ]
 
 [[npc]]
 id          = "cc_echo_heat"
 name        = "Heat Echo"
 desc_short  = "A projection of the Dragon Peaks subsystem."
-desc_long   = "A molten silhouette radiating intense heat."
-tags        = ["construct", "echo"]
+desc_long   = "A molten silhouette radiating intense heat. Approaching it is uncomfortable."
+tags        = ["construct", "echo", "large"]
 style       = "sky_piercer"
 style_prof  = 40
 hp          = 95
@@ -113,15 +164,23 @@ defense     = 10
 hostile     = true
 xp_reward   = 60
 gold_reward = 0
+respawn     = false
+dialogue    = "cc_echo_heat"
+kill_script = [
+  { op = "give_item", item_id = "cc_resonance_shard" },
+]
 round_script = [
-  { op = "damage", amount = 8 }
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "The echo releases a blast of thermal energy!" },
+    { op = "damage", amount = 8 },
+  ] },
 ]
 
 [[npc]]
 id          = "cc_echo_memory"
 name        = "Memory Echo"
 desc_short  = "A projection of the Mycelial Plains subsystem."
-desc_long   = "A shifting figure made of drifting spores and half‑formed memories."
+desc_long   = "A shifting figure made of drifting spores and half-formed memories."
 tags        = ["construct", "echo"]
 style       = "mindweft"
 style_prof  = 40
@@ -132,21 +191,29 @@ defense     = 9
 hostile     = true
 xp_reward   = 60
 gold_reward = 0
+respawn     = false
+dialogue    = "cc_echo_memory"
+kill_script = [
+  { op = "give_item", item_id = "cc_resonance_shard" },
+]
 round_script = [
-  { op = "apply_status", effect = "spores", duration = 1 }
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "The echo floods your mind with fragmented memories!" },
+    { op = "apply_status", effect = "confused", duration = 2 },
+  ] },
 ]
 
 
 # ---------------------------------------------------------
-# Resonance Constructs — Lattice Guardians
+# RESONANCE CONSTRUCTS — Lattice Guardians (respawning)
 # ---------------------------------------------------------
 
 [[npc]]
 id          = "cc_resonance_wisp"
 name        = "Resonance Wisp"
 desc_short  = "A small construct of drifting harmonic energy."
-desc_long   = "It flickers between frequencies, reacting to your presence."
-tags        = ["construct"]
+desc_long   = "It flickers between frequencies, reacting to nearby instability."
+tags        = ["construct", "small", "fast"]
 style       = "mindweft"
 style_prof  = 20
 hp          = 40
@@ -156,17 +223,25 @@ defense     = 4
 hostile     = true
 xp_reward   = 20
 gold_reward = 0
+respawn     = true
+respawn_time = 5
+kill_script = [
+  { op = "give_item", item_id = "cc_resonance_shard" },
+]
 round_script = [
-  { op = "damage", amount = 3 }
+  { op = "if_combat_round", min = 2, then = [
+    { op = "say", text = "The wisp pulses with unstable harmonic energy!" },
+    { op = "damage", amount = 4 },
+  ] },
 ]
 
 [[npc]]
 id          = "cc_resonance_sentinel"
 name        = "Resonance Sentinel"
 desc_short  = "A guardian construct that stabilizes the Lattice."
-desc_long   = "Its body is made of interlocking geometric plates that hum with energy."
-tags        = ["construct"]
-style       = "pressure_weave"
+desc_long   = "Its body is made of interlocking geometric plates that hum with resonance energy."
+tags        = ["construct", "armored", "large"]
+style       = "flowcurrent"
 style_prof  = 35
 hp          = 110
 max_hp      = 110
@@ -175,22 +250,28 @@ defense     = 14
 hostile     = true
 xp_reward   = 90
 gold_reward = 0
+respawn     = true
+respawn_time = 10
+kill_script = [
+  { op = "give_item", item_id = "cc_harmonic_core" },
+]
 round_script = [
-  { op = "if_resonance_at_most", amount = 50, then = [
-    { op = "damage", amount = 10 }
-  ] }
+  { op = "if_attr", name = "resonance", max = 50, then = [
+    { op = "say", text = "The sentinel senses the instability and surges with power!" },
+    { op = "damage", amount = 10 },
+  ] },
 ]
 
 
 # ---------------------------------------------------------
-# Calibration Sentinels — One per subsystem
+# CALIBRATION SENTINELS — One per subsystem (friendly)
 # ---------------------------------------------------------
 
 [[npc]]
 id          = "cc_light_sentinel"
 name        = "Light Calibration Sentinel"
 desc_short  = "A construct that guards the light calibration node."
-desc_long   = "Its body refracts into prismatic shards."
+desc_long   = "Its body refracts into prismatic shards. It turns toward you with calm precision."
 tags        = ["construct"]
 style       = "umbral_veil"
 style_prof  = 30
@@ -198,15 +279,16 @@ hp          = 70
 max_hp      = 70
 attack      = 12
 defense     = 8
-hostile     = true
-xp_reward   = 40
+hostile     = false
+xp_reward   = 0
 gold_reward = 0
+dialogue    = "cc_light_sentinel"
 
 [[npc]]
 id          = "cc_pressure_sentinel"
 name        = "Pressure Calibration Sentinel"
 desc_short  = "A construct that distorts the air around it."
-desc_long   = "Its limbs stretch and compress unnaturally."
+desc_long   = "Its limbs stretch and compress unnaturally, but it holds still as you approach."
 tags        = ["construct"]
 style       = "flowcurrent"
 style_prof  = 30
@@ -214,15 +296,16 @@ hp          = 75
 max_hp      = 75
 attack      = 11
 defense     = 9
-hostile     = true
-xp_reward   = 40
+hostile     = false
+xp_reward   = 0
 gold_reward = 0
+dialogue    = "cc_pressure_sentinel"
 
 [[npc]]
 id          = "cc_growth_sentinel"
 name        = "Growth Calibration Sentinel"
 desc_short  = "A construct of woven roots and bark."
-desc_long   = "It pulses with the rhythm of the Heartwood."
+desc_long   = "It pulses with the rhythm of the Heartwood, roots coiling slowly at its feet."
 tags        = ["construct"]
 style       = "rootbind"
 style_prof  = 30
@@ -230,15 +313,16 @@ hp          = 80
 max_hp      = 80
 attack      = 10
 defense     = 12
-hostile     = true
-xp_reward   = 40
+hostile     = false
+xp_reward   = 0
 gold_reward = 0
+dialogue    = "cc_growth_sentinel"
 
 [[npc]]
 id          = "cc_heat_sentinel"
 name        = "Heat Calibration Sentinel"
 desc_short  = "A construct of molten alloy and steam."
-desc_long   = "Its body radiates intense heat."
+desc_long   = "Its body radiates intense heat. Small vents along its frame exhale rhythmically."
 tags        = ["construct"]
 style       = "sky_piercer"
 style_prof  = 30
@@ -246,15 +330,16 @@ hp          = 85
 max_hp      = 85
 attack      = 14
 defense     = 10
-hostile     = true
-xp_reward   = 40
+hostile     = false
+xp_reward   = 0
 gold_reward = 0
+dialogue    = "cc_heat_sentinel"
 
 [[npc]]
 id          = "cc_memory_sentinel"
 name        = "Memory Calibration Sentinel"
 desc_short  = "A construct of drifting spores and crystalline nodes."
-desc_long   = "It whispers fragments of forgotten thoughts."
+desc_long   = "It whispers fragments of forgotten thoughts. When it looks at you, you feel remembered."
 tags        = ["construct"]
 style       = "mindweft"
 style_prof  = 30
@@ -262,28 +347,7 @@ hp          = 75
 max_hp      = 75
 attack      = 11
 defense     = 9
-hostile     = true
-xp_reward   = 40
-gold_reward = 0
-
-
-# ---------------------------------------------------------
-# Central Crystal — Interactable pseudo-NPC
-# ---------------------------------------------------------
-
-[[npc]]
-id          = "cc_crystal"
-name        = "Central Crystal"
-desc_short  = "The heart of the Sixfold Regulator."
-desc_long   = "It pulses weakly, awaiting alignment. Its surface reflects all five subsystems."
-tags        = ["object", "resonance"]
-style       = ""
-style_prof  = 0
-hp          = 1
-max_hp      = 1
-attack      = 0
-defense     = 0
 hostile     = false
-dialogue    = "cc_crystal"
+xp_reward   = 0
 gold_reward = 0
-xp_reward   = 100
+dialogue    = "cc_memory_sentinel"

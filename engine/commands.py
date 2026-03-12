@@ -69,6 +69,34 @@ from engine.map_builder import build_map_data, exit_dest as _map_exit_dest
 # Equipment slot names and currency name come from world_config (set by init()).
 # Access _wc.EQUIPMENT_SLOTS and _wc.CURRENCY_NAME at call time, not import time.
 
+# Commands that do not advance status effect timers or deal damage_per_move.
+# These are read-only / informational commands where it would be jarring for
+# poison to tick or a torch to burn down simply because the player checked
+# their inventory or read a quest journal.
+_NO_TICK_COMMANDS: frozenset[str] = frozenset({
+    # View character info
+    "inventory", "i",
+    "stats", "status", "score",
+    "skills", "skill",
+    "equipment", "eq",
+    # Navigation / world info
+    "look", "l",
+    "examine",
+    "map",
+    # Quest / journal
+    "journal", "j",
+    "quests",
+    # Shop browsing (no purchase yet)
+    "list", "wares", "shop",
+    "commissions",
+    # Banking overview (not deposit/withdraw)
+    "bank", "balance",
+    # Meta
+    "help",
+    "alias", "aliases",
+    "save",
+})
+
 DIRECTIONS = {
     # Cardinals
     "n": "north", "s": "south", "e": "east", "w": "west",
@@ -202,16 +230,42 @@ class CommandProcessor:
         handler = self._commands.get(verb)
         if handler:
             handler(verb, args)
-        else:
+        elif not self._try_item_command(verb, args):
             self._out(Tag.ERROR, f"Unknown command '{raw}'. Type 'help' for a list.")
         self._apply_room_effects()
-        self._tick_status_effects()
-        self._apply_status_damage()
+        # Passive/read-only commands don't advance status effect timers or
+        # deal damage_per_move — only movement and active commands count.
+        if verb not in _NO_TICK_COMMANDS:
+            self._tick_status_effects()
+            self._apply_status_damage()
 
     def do_look(self) -> None:
         # Mark current room as visited whenever we look at it
         self.player.visited_rooms.add(self.player.room_id)
         self._cmd_look("look", "")
+
+    # ── Item commands ─────────────────────────────────────────────────────────
+
+    def _item_commands_for(self, item: dict) -> list[dict]:
+        """Return the [[commands]] list for an item, or []."""
+        return item.get("commands", [])
+
+    def _try_item_command(self, verb: str, args: str) -> bool:
+        """Check inventory and room items for a matching [[commands]] entry and
+        run its ops.  Returns True if a command was found and executed."""
+        room = self._current_room()
+        candidates: list[dict] = list(self.player.inventory)
+        if room:
+            candidates += room.get("items", [])
+        for item in candidates:
+            for cmd in self._item_commands_for(item):
+                if cmd.get("verb", "").lower() == verb:
+                    ops = cmd.get("ops", [])
+                    if ops:
+                        from engine.script import ScriptRunner
+                        ScriptRunner(self._ctx).run(ops)
+                    return True
+        return False
 
     # ── Output helpers ───────────────────────────────────────────────────────
 
@@ -431,7 +485,15 @@ class CommandProcessor:
             by_prefix: dict[str, list[str]] = defaultdict(list)
             for i in items:
                 prefix = i.get("display_prefix", "On the ground")
-                by_prefix[prefix].append(i.get("name", "?"))
+                # Append any visible item commands as a hint
+                visible_cmds = [
+                    c["verb"] for c in self._item_commands_for(i)
+                    if c.get("visible") and c.get("verb")
+                ]
+                label = i.get("name", "?")
+                if visible_cmds:
+                    label += f" (you can: {', '.join(visible_cmds)})"
+                by_prefix[prefix].append(label)
             for prefix, names in by_prefix.items():
                 self._out(Tag.ITEM, f"{prefix}: {', '.join(names)}")
 
@@ -591,6 +653,13 @@ class CommandProcessor:
             self._out(Tag.STATS, f"  Weapon type: {', '.join(wtags)}")
         if atags:
             self._out(Tag.STATS, f"  Armor type: {', '.join(atags)}")
+        # Show visible item commands (hidden commands are intentionally omitted)
+        visible_cmds = [
+            c["verb"] for c in self._item_commands_for(item)
+            if c.get("visible") and c.get("verb")
+        ]
+        if visible_cmds:
+            self._out(Tag.STATS, f"  You can: {', '.join(visible_cmds)}")
 
     def _cmd_go(self, verb: str, args: str) -> None:
         direction = DIRECTIONS.get(args.strip())
@@ -716,24 +785,24 @@ class CommandProcessor:
                 self.player.status_effects[effect] = turns
         for eff in expired:
             del self.player.status_effects[eff]
-            clear_msgs = {
-                "poisoned":  "The poison runs its course. You feel yourself again.",
-                "blinded":   "Your vision clears.",
-                "weakened":  "Your strength returns.",
-                "slowed":    "The sensation of sluggishness lifts.",
-                "protected": "The protective ward fades.",
-            }
-            self._out(Tag.SYSTEM, clear_msgs.get(eff, f"The {eff} condition ends."))
+            se_def = _wc.get_status_effect(eff)
+            msg = se_def["expiry_msg"] if se_def else f"The {eff} condition ends."
+            self._out(Tag.SYSTEM, msg)
 
     def _apply_status_damage(self) -> None:
-        """Apply per-move damage from active status effects."""
-        if "poisoned" in self.player.status_effects:
-            dmg = 3
+        """Apply per-move damage from active status effects (damage_per_move > 0)."""
+        for se_def in _wc.STATUS_EFFECTS:
+            dmg = se_def.get("damage_per_move", 0)
+            if dmg <= 0:
+                continue
+            if se_def["id"] not in self.player.status_effects:
+                continue
             self.player.hp = max(0, self.player.hp - dmg)
             self._out(Tag.COMBAT_RECV,
-                      f"Poison gnaws at you. (-{dmg} HP — {self.player.hp}/{self.player.max_hp})")
+                      f"{se_def['label']} damages you. "
+                      f"(-{dmg} HP — {self.player.hp}/{self.player.max_hp})")
             if not self.player.is_alive:
-                self._out(Tag.COMBAT_DEATH, "The poison claims you.")
+                self._out(Tag.COMBAT_DEATH, f"The {se_def['id']} claims you.")
 
     def _cmd_status(self, verb: str, args: str) -> None:
         """Combined character sheet: stats + equipped + inventory in one view."""
@@ -877,10 +946,16 @@ class CommandProcessor:
         if found_item is None:
             self._out(Tag.ERROR, f"You don't see '{args}' here.")
             return
-        # Scenery items cannot be picked up
+        # Scenery items cannot be picked up — but if they have an on_get script
+        # (e.g. ore nodes, interactive scenery), run the script first, then stop.
         if found_item.get("scenery", False):
-            self._out(Tag.ERROR,
-                      f"You can't pick up {found_item['name']} — it's not going anywhere.")
+            on_get_scene = found_item.get("on_get", [])
+            if on_get_scene:
+                from engine.script import ScriptRunner
+                ScriptRunner(self._ctx).run(on_get_scene)
+            else:
+                self._out(Tag.ERROR,
+                          f"You can't pick up {found_item['name']} — it's not going anywhere.")
             return
         # Weight check
         w = item_weight(found_item)
@@ -896,8 +971,9 @@ class CommandProcessor:
         gold_val = found_item.get("gold_value", 0)
         if gold_val:
             self.player.gold += gold_val
+            cur = _wc.CURRENCY_NAME
             self._out(Tag.REWARD_GOLD,
-                      f"You collect {found_item['name']} ({gold_val}g). ({self.player.gold}g total)")
+                      f"You collect {found_item['name']} ({gold_val} {cur}). ({self.player.gold} {cur} total)")
         else:
             self.player.add_item(found_item)
             self._out(Tag.ITEM, f"You pick up {found_item['name']}.")
@@ -1258,7 +1334,7 @@ class CommandProcessor:
                 "  list / wares / shop     — Show nearby shop wares",
                 "  buy <item>              — Buy from a merchant",
                 "  sell <item>             — Sell to a merchant",
-                "  sleep / rest            — Rest at an inn (costs gold)",
+                f"  sleep / rest            — Rest at an inn (costs {_wc.CURRENCY_NAME})",
             ],
             "crafting": [
                 "── Crafting Commissions ──────────────────────────────",
@@ -1299,13 +1375,13 @@ class CommandProcessor:
                 "  alias                   — List your aliases",
                 "  unalias <word>          — Remove an alias",
                 "── Bank ──────────────────────────────────────────────",
-                "  bank / balance          — View stored items, gold, and capacity",
+                f"  bank / balance          — View stored items, {_wc.CURRENCY_NAME}, and capacity",
                 "  deposit <item>          — Store item (uses a slot)",
-                "  deposit gold <N>        — Store gold with the banker",
-                "  deposit all gold        — Store all gold on hand",
+                f"  deposit {_wc.CURRENCY_NAME} <N>  — Store {_wc.CURRENCY_NAME} with the banker",
+                f"  deposit all {_wc.CURRENCY_NAME}  — Store all {_wc.CURRENCY_NAME} on hand",
                 "  withdraw <item>         — Retrieve item",
-                "  withdraw gold <N>       — Retrieve stored gold",
-                "  upgrade [confirm]       — Expand account capacity for gold",
+                f"  withdraw {_wc.CURRENCY_NAME} <N> — Retrieve stored {_wc.CURRENCY_NAME}",
+                f"  upgrade [confirm]       — Expand account capacity for {_wc.CURRENCY_NAME}",
             ],
             "gear": [
                 "── Gear & Inventory ──────────────────────────────────",
@@ -1637,6 +1713,7 @@ class CommandProcessor:
             self._out(Tag.ERROR, "There's no one here to trade with.")
             return
         self._blank()
+        abbrev = _wc.CURRENCY_ABBREV
         self._out(Tag.SHOP, f"{npc['name']} offers:")
         self._out(Tag.SHOP, f"  {'Item':<22} {'Price':>6}  Description")
         self._out(Tag.SHOP, f"  {'─'*22} {'─'*6}  {'─'*24}")
@@ -1648,7 +1725,7 @@ class CommandProcessor:
                 w = item_weight(tmpl)
                 w_str = f" {w}st" if w else ""
                 self._out(Tag.SHOP,
-                          f"  {tmpl['name']:<22} {price:>5}g  {_short(tmpl)}{w_str}")
+                          f"  {tmpl['name']:<22} {price:>5}{abbrev}  {_short(tmpl)}{w_str}")
         self._out(Tag.SHOP, f"  (You have {self.player.gold} {_wc.CURRENCY_NAME})")
 
     def _cmd_buy(self, verb: str, args: str) -> None:
@@ -1690,24 +1767,25 @@ class CommandProcessor:
             price_note = " (prestige discount)"
         elif mod > 1.0:
             price_note = " (prestige surcharge)"
+        cur = _wc.CURRENCY_NAME
         if self.player.gold < price:
             self._out(Tag.ERROR,
                       f"You can't afford {tmpl['name']}. "
-                      f"({price}g needed{price_note}, you have {self.player.gold}g)")
+                      f"({price} {cur} needed{price_note}, you have {self.player.gold} {cur})")
             return
         if not self.player.can_carry(tmpl):
-            w   = item_weight(tmpl)
-            cap = self.player.carry_capacity
-            cur = self.player.current_weight
+            w    = item_weight(tmpl)
+            cap  = self.player.carry_capacity
+            cw   = self.player.current_weight
             self._out(Tag.ERROR,
                       f"You can't carry {tmpl['name']} ({w} stones). "
-                      f"Already carrying {cur}/{cap}.")
+                      f"Already carrying {cw}/{cap}.")
             return
         self.player.gold -= price
         self.player.add_item(copy.deepcopy(tmpl))
         self._out(Tag.SHOP,
-                  f"You buy {tmpl['name']} for {price}g{price_note}. "
-                  f"({self.player.gold}g remaining)")
+                  f"You buy {tmpl['name']} for {price} {cur}{price_note}. "
+                  f"({self.player.gold} {cur} remaining)")
 
     def _cmd_sell(self, verb: str, args: str) -> None:
         if not args:
@@ -1739,9 +1817,10 @@ class CommandProcessor:
             if eq and eq.get("id") == item.get("id"):
                 self.player.equipped[slot] = None
         self.player.gold += sell_price
+        cur = _wc.CURRENCY_NAME
         self._out(Tag.SHOP,
-                  f"You sell {item['name']} for {sell_price}g. "
-                  f"({self.player.gold}g total)")
+                  f"You sell {item['name']} for {sell_price} {cur}. "
+                  f"({self.player.gold} {cur} total)")
 
     # ─────────────────────────────────────────────────────────────────────────
     # INN — sleep / rest
@@ -1751,39 +1830,74 @@ class CommandProcessor:
         room = self._current_room()
         if not room:
             return
+        flags = room.get("flags", [])
         # Check for innkeeper NPC with rest_cost
         innkeeper = next(
             (n for n in room.get("_npcs", [])
              if n.get("hp", 1) > 0 and "rest_cost" in n),
             None
         )
-        # Also allow sleeping in rooms with a "sleep" flag
-        can_sleep_free = "sleep" in room.get("flags", [])
-        if not innkeeper and not can_sleep_free:
+        is_inn = innkeeper or "sleep" in flags
+
+        # no_camp flag: this room explicitly blocks all resting
+        if not is_inn and "no_camp" in flags:
             self._out(Tag.SYSTEM,
                       "There's nowhere to sleep here. Find an inn.")
             return
+
+        # Handle innkeeper payment
         if innkeeper:
             cost = int(innkeeper.get("rest_cost", 5))
+            cur  = _wc.CURRENCY_NAME
             if self.player.gold < cost:
                 self._out(Tag.ERROR,
-                          f"{innkeeper['name']} says: 'That'll be {cost} gold for a bed.'")
+                          f"{innkeeper['name']} says: 'That'll be {cost} {cur} for a bed.'")
                 self._out(Tag.DIALOGUE,
-                          f"  'Come back when you've got the coin.'")
+                          "  'Come back when you've got the coin.'")
                 return
             self.player.gold -= cost
             self._out(Tag.DIALOGUE,
-                      f"{innkeeper['name']} takes {cost} gold and hands you a key.")
-        self.player.hp = self.player.max_hp
-        self._out(Tag.SYSTEM,
-                  "You find a comfortable bed and sleep deeply.")
-        self._out(Tag.SYSTEM,
-                  f"You wake rested and restored. "
-                  f"({self.player.hp}/{self.player.max_hp} HP)")
+                      f"{innkeeper['name']} takes {cost} {cur} and hands you a key.")
+
+        # Run on_sleep room script before resting (flavor, custom conditions)
+        on_sleep = room.get("on_sleep", [])
+        if on_sleep:
+            from engine.script import ScriptRunner
+            ScriptRunner(self._ctx).run(on_sleep)
+
+        # Heal and report
+        if is_inn:
+            self.player.hp = self.player.max_hp
+            self._out(Tag.SYSTEM, "You find a comfortable bed and sleep deeply.")
+        else:
+            # Camping: partial heal — restore up to half max HP
+            self.player.hp = min(self.player.max_hp,
+                                 self.player.hp + self.player.max_hp // 2)
+            self._out(Tag.SYSTEM,
+                      "You make camp and rest through the night.")
+
+        # A full night's rest clears all status effects
+        self.player.status_effects.clear()
+
+        # Run on_wake room script after resting (morning flavor, random events)
+        on_wake = room.get("on_wake", [])
+        if on_wake:
+            from engine.script import ScriptRunner
+            ScriptRunner(self._ctx).run(on_wake)
+
+        if is_inn:
+            self._out(Tag.SYSTEM,
+                      f"You wake rested and restored. "
+                      f"({self.player.hp}/{self.player.max_hp} HP)")
+        else:
+            self._out(Tag.SYSTEM,
+                      f"You wake stiff but somewhat rested. "
+                      f"({self.player.hp}/{self.player.max_hp} HP)")
+
         # Companion recovery
         self._companion_rest_recovery()
-        # Rest counts as 20 turns of crafting progress
-        self._tick_commissions(20)
+        # Inn rest = 20 turns of crafting progress; camping = 10
+        self._tick_commissions(20 if is_inn else 10)
 
     # ─────────────────────────────────────────────────────────────────────────
     # MAP
@@ -2123,7 +2237,8 @@ class CommandProcessor:
         used = len(self.player.bank)
         cap  = self.player.bank_slots
         bg   = getattr(self.player, "banked_gold", 0)
-        self._out(Tag.SYSTEM, f"  Slots: {used}/{cap}  ·  Banked gold: {bg}g  ·  On hand: {self.player.gold}g")
+        cur  = _wc.CURRENCY_NAME
+        self._out(Tag.SYSTEM, f"  Slots: {used}/{cap}  ·  Banked {cur}: {bg}  ·  On hand: {self.player.gold} {cur}")
         if used >= cap:
             self._out(Tag.SYSTEM, "  (Account full — ask the banker about expansion)")
         self._out(Tag.SYSTEM, "──────────────────────────────────────────")
@@ -2155,25 +2270,26 @@ class CommandProcessor:
                       f"Your account is already at maximum capacity ({current} slots).")
             return
         next_slots, cost = next_tier
+        cur = _wc.CURRENCY_NAME
         if args.strip().lower() in ("confirm", "yes", "y"):
             if self.player.gold < cost:
                 self._out(Tag.ERROR,
-                          f"You need {cost}g to expand to {next_slots} slots. "
-                          f"(You have {self.player.gold}g)")
+                          f"You need {cost} {cur} to expand to {next_slots} slots. "
+                          f"(You have {self.player.gold} {cur})")
                 return
             self.player.gold      -= cost
             self.player.bank_slots = next_slots
             self._out(Tag.REWARD_GOLD,
-                      f"Account expanded to {next_slots} slots. (-{cost}g)")
+                      f"Account expanded to {next_slots} slots. (-{cost} {cur})")
         else:
             self._out(Tag.SYSTEM,
-                      f"Expand your account from {current} to {next_slots} slots for {cost}g?")
+                      f"Expand your account from {current} to {next_slots} slots for {cost} {cur}?")
             self._out(Tag.SYSTEM,  "  Type 'upgrade confirm' to proceed.")
             # Show all tiers
             self._out(Tag.SYSTEM, "  Expansion tiers:")
             for slots, c in tiers:
-                label = " ← current" if slots == current else (" ← next" if slots == next_slots else "")
-                self._out(Tag.SYSTEM, f"    {slots:3} slots  —  {c}g{label}")
+                label = " <- current" if slots == current else (" <- next" if slots == next_slots else "")
+                self._out(Tag.SYSTEM, f"    {slots:3} slots  —  {c} {cur}{label}")
 
     def _cmd_deposit(self, verb: str, args: str) -> None:
         """deposit <item>  — Move an item from inventory to your bank account.
@@ -2183,14 +2299,20 @@ class CommandProcessor:
             self._out(Tag.ERROR, "There is no bank here.")
             return
         if not args.strip():
-            self._out(Tag.ERROR, "Deposit what? (e.g. 'deposit sword' or 'deposit gold 50')")
+            cur = _wc.CURRENCY_NAME
+            self._out(Tag.ERROR, f"Deposit what? (e.g. 'deposit sword' or 'deposit {cur} 50')")
             return
         # ── Gold deposit ───────────────────────────────────────────────────────
+        cur        = _wc.CURRENCY_NAME
         lower_args = args.strip().lower()
-        if lower_args == "all gold" or lower_args == "gold all":
+        # Normalise legacy "gold" keyword to the world's currency name
+        if lower_args.startswith("gold"):
+            lower_args = cur.lower() + lower_args[4:]
+        cur_kw = cur.lower()
+        if lower_args in (f"all {cur_kw}", f"{cur_kw} all"):
             amount = self.player.gold
-        elif lower_args.startswith("gold ") or lower_args.startswith("gold"):
-            rest = lower_args[4:].strip()
+        elif lower_args.startswith(cur_kw):
+            rest = lower_args[len(cur_kw):].strip()
             if not rest or rest == "all":
                 amount = self.player.gold
             else:
@@ -2199,10 +2321,10 @@ class CommandProcessor:
                 except ValueError:
                     amount = None
             if amount is None:
-                self._out(Tag.ERROR, "deposit gold <amount>  — e.g. 'deposit gold 50'")
+                self._out(Tag.ERROR, f"deposit {cur} <amount>  — e.g. 'deposit {cur} 50'")
                 return
         else:
-            amount = None   # not a gold deposit — fall through to item logic
+            amount = None   # not a currency deposit — fall through to item logic
 
         if amount is not None:
             if amount <= 0:
@@ -2210,13 +2332,13 @@ class CommandProcessor:
                 return
             if amount > self.player.gold:
                 self._out(Tag.ERROR,
-                          f"You only have {self.player.gold}g. Cannot deposit {amount}g.")
+                          f"You only have {self.player.gold} {cur}. Cannot deposit {amount} {cur}.")
                 return
             self.player.gold         -= amount
             self.player.banked_gold  = getattr(self.player, "banked_gold", 0) + amount
             self._out(Tag.REWARD_GOLD,
-                      f"You deposit {amount}g with the banker. "
-                      f"(Banked: {self.player.banked_gold}g | On hand: {self.player.gold}g)")
+                      f"You deposit {amount} {cur} with the banker. "
+                      f"(Banked: {self.player.banked_gold} {cur} | On hand: {self.player.gold} {cur})")
             return
         item = self._resolve_item_inv(args)
         if item is None:
@@ -2249,14 +2371,20 @@ class CommandProcessor:
             self._out(Tag.ERROR, "There is no bank here.")
             return
         if not args.strip():
-            self._out(Tag.ERROR, "Withdraw what? (e.g. 'withdraw sword' or 'withdraw gold 50')")
+            cur = _wc.CURRENCY_NAME
+            self._out(Tag.ERROR, f"Withdraw what? (e.g. 'withdraw sword' or 'withdraw {cur} 50')")
             return
         # ── Gold withdrawal ────────────────────────────────────────────────────
+        cur        = _wc.CURRENCY_NAME
         lower_args = args.strip().lower()
-        if lower_args == "all gold" or lower_args == "gold all":
+        # Normalise legacy "gold" keyword to the world's currency name
+        if lower_args.startswith("gold"):
+            lower_args = cur.lower() + lower_args[4:]
+        cur_kw = cur.lower()
+        if lower_args in (f"all {cur_kw}", f"{cur_kw} all"):
             amount = getattr(self.player, "banked_gold", 0)
-        elif lower_args.startswith("gold"):
-            rest = lower_args[4:].strip()
+        elif lower_args.startswith(cur_kw):
+            rest = lower_args[len(cur_kw):].strip()
             if not rest or rest == "all":
                 amount = getattr(self.player, "banked_gold", 0)
             else:
@@ -2265,7 +2393,7 @@ class CommandProcessor:
                 except ValueError:
                     amount = None
             if amount is None:
-                self._out(Tag.ERROR, "withdraw gold <amount>  — e.g. 'withdraw gold 50'")
+                self._out(Tag.ERROR, f"withdraw {cur} <amount>  — e.g. 'withdraw {cur} 50'")
                 return
         else:
             amount = None
@@ -2277,13 +2405,13 @@ class CommandProcessor:
                 return
             if amount > banked:
                 self._out(Tag.ERROR,
-                          f"You only have {banked}g banked. Cannot withdraw {amount}g.")
+                          f"You only have {banked} {cur} banked. Cannot withdraw {amount} {cur}.")
                 return
             self.player.banked_gold -= amount
             self.player.gold        += amount
             self._out(Tag.REWARD_GOLD,
-                      f"You withdraw {amount}g. "
-                      f"(Banked: {self.player.banked_gold}g | On hand: {self.player.gold}g)")
+                      f"You withdraw {amount} {cur}. "
+                      f"(Banked: {self.player.banked_gold} {cur} | On hand: {self.player.gold} {cur})")
             return
         item = self._resolve_item_bank(args)
         if item is None:
@@ -2466,7 +2594,7 @@ class CommandProcessor:
                       f"  [{i}] {c.get('label', '?')}  —  {c.get('desc', '')}")
             cost_parts = [f"materials: {mats}"]
             if gold:
-                cost_parts.append(f"{gold}g deposit")
+                cost_parts.append(f"{gold} {_wc.CURRENCY_NAME} deposit")
             cost_parts.append(f"~{turns} moves")
             self._out(Tag.SYSTEM, f"       ({', '.join(cost_parts)})")
         self._out(Tag.SYSTEM,
@@ -2501,13 +2629,14 @@ class CommandProcessor:
         # Deduct upfront gold cost
         gold_cost = int(chosen.get("gold_cost", 0))
         if gold_cost and self.player.gold < gold_cost:
+            cur = _wc.CURRENCY_NAME
             self._out(Tag.ERROR,
-                      f"You need {gold_cost} gold for the deposit. "
-                      f"(You have {self.player.gold}g)")
+                      f"You need {gold_cost} {cur} for the deposit. "
+                      f"(You have {self.player.gold} {cur})")
             return
         if gold_cost:
             self.player.gold -= gold_cost
-            self._out(Tag.SYSTEM, f"  You pay {gold_cost}g deposit.")
+            self._out(Tag.SYSTEM, f"  You pay {gold_cost} {_wc.CURRENCY_NAME} deposit.")
 
         rec = crafting_mod.start_commission(self.player, chosen)
         mats = crafting_mod.materials_still_needed(rec)

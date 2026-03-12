@@ -28,10 +28,21 @@ Default values (used when no config file is found or a field is missing)
   SKILLS            {"perception": "Perception"}   — one skill so checks never error
   NEW_CHAR_HP       100
   CURRENCY_NAME     "gold"
+  CURRENCY_ABBREV   "g"    — short suffix used in compact price displays (e.g. "50g")
   DEFAULT_STYLE     "brawling"
   VISION_THRESHOLD  3                              — minimum light level to see clearly
   EQUIPMENT_SLOTS   ("weapon","head","chest","legs","arms","pack","ring","shield","cape")
   PLAYER_ATTRS      []                             — world-defined numeric player attributes
+  STATUS_EFFECTS    [...]                          — world-defined status effects (see below)
+
+Status effect fields (per [[status_effect]] block in config.toml):
+  id              — string key used in apply_status / clear_status / if_status ops
+  label           — display name shown on the stats screen
+  apply_msg       — message printed when the effect is applied
+  expiry_msg      — message printed when the effect expires naturally
+  combat_atk      — flat attack modifier while active (negative = debuff)
+  combat_def      — flat defense modifier while active (negative = debuff)
+  damage_per_move — HP damage dealt to player on each command tick
 """
 
 from __future__ import annotations
@@ -46,6 +57,7 @@ _DEFAULTS: dict = {
     "SKILLS":           {"perception": "Perception"},
     "NEW_CHAR_HP":      100,
     "CURRENCY_NAME":    "gold",
+    "CURRENCY_ABBREV":  "g",
     "DEFAULT_STYLE":    "brawling",
     "VISION_THRESHOLD": 3,
     "EQUIPMENT_SLOTS":  (
@@ -53,6 +65,29 @@ _DEFAULTS: dict = {
         "pack", "ring", "shield", "cape",
     ),
     "PLAYER_ATTRS":     [],
+    # Built-in status effects — used when the world defines no [[status_effect]] blocks.
+    "STATUS_EFFECTS": [
+        {"id": "poisoned",  "label": "Poisoned",
+         "apply_msg":  "Poison courses through you.",
+         "expiry_msg": "The poison runs its course. You feel yourself again.",
+         "combat_atk": 0, "combat_def": 0, "damage_per_move": 3},
+        {"id": "blinded",   "label": "Blinded",
+         "apply_msg":  "Your vision goes dark.",
+         "expiry_msg": "Your vision clears.",
+         "combat_atk": -4, "combat_def": 0, "damage_per_move": 0},
+        {"id": "weakened",  "label": "Weakened",
+         "apply_msg":  "Weakness floods your limbs.",
+         "expiry_msg": "Your strength returns.",
+         "combat_atk": -4, "combat_def": 0, "damage_per_move": 0},
+        {"id": "slowed",    "label": "Slowed",
+         "apply_msg":  "Your movements become sluggish.",
+         "expiry_msg": "The sluggishness lifts.",
+         "combat_atk": 0, "combat_def": -3, "damage_per_move": 0},
+        {"id": "protected", "label": "Protected",
+         "apply_msg":  "A ward settles over you.",
+         "expiry_msg": "The protective ward fades.",
+         "combat_atk": 0, "combat_def": 3, "damage_per_move": 0},
+    ],
 }
 
 # ── Module-level constants — defaults until init() is called ──────────────────
@@ -61,10 +96,12 @@ WORLD_NAME:       str            = _DEFAULTS["WORLD_NAME"]
 SKILLS:           dict[str, str] = dict(_DEFAULTS["SKILLS"])
 NEW_CHAR_HP:      int            = _DEFAULTS["NEW_CHAR_HP"]
 CURRENCY_NAME:    str            = _DEFAULTS["CURRENCY_NAME"]
+CURRENCY_ABBREV:  str            = _DEFAULTS["CURRENCY_ABBREV"]
 DEFAULT_STYLE:    str            = _DEFAULTS["DEFAULT_STYLE"]
 VISION_THRESHOLD: int            = _DEFAULTS["VISION_THRESHOLD"]
 EQUIPMENT_SLOTS:  tuple[str,...] = _DEFAULTS["EQUIPMENT_SLOTS"]
 PLAYER_ATTRS:     list[dict]     = list(_DEFAULTS["PLAYER_ATTRS"])
+STATUS_EFFECTS:   list[dict]     = list(_DEFAULTS["STATUS_EFFECTS"])
 
 _world_path: Path | None = None
 
@@ -116,14 +153,42 @@ def _has_config(world_path: Path) -> bool:
 
 # ── Init helpers ──────────────────────────────────────────────────────────────
 
+def _load_status_effects(raw: list) -> list[dict]:
+    """Normalise a list of raw status effect dicts, filling in missing fields."""
+    out = []
+    for se in raw:
+        if not isinstance(se, dict) or not se.get("id"):
+            continue
+        sid = str(se["id"])
+        out.append({
+            "id":              sid,
+            "label":           str(se.get("label", sid.capitalize())),
+            "apply_msg":       str(se.get("apply_msg",  f"You are now {sid}.")),
+            "expiry_msg":      str(se.get("expiry_msg", f"The {sid} condition ends.")),
+            "combat_atk":      int(se.get("combat_atk",      0)),
+            "combat_def":      int(se.get("combat_def",      0)),
+            "damage_per_move": int(se.get("damage_per_move", 0)),
+        })
+    return out
+
+
+def get_status_effect(effect_id: str) -> "dict | None":
+    """Return the status effect definition for the given id, or None if unknown."""
+    for se in STATUS_EFFECTS:
+        if se["id"] == effect_id:
+            return se
+    return None
+
+
 def _init_from_toml(cfg: dict) -> None:
     """Populate module constants from a parsed config.toml dict."""
-    global WORLD_NAME, SKILLS, NEW_CHAR_HP, CURRENCY_NAME
-    global DEFAULT_STYLE, VISION_THRESHOLD, EQUIPMENT_SLOTS, PLAYER_ATTRS
+    global WORLD_NAME, SKILLS, NEW_CHAR_HP, CURRENCY_NAME, CURRENCY_ABBREV
+    global DEFAULT_STYLE, VISION_THRESHOLD, EQUIPMENT_SLOTS, PLAYER_ATTRS, STATUS_EFFECTS
 
     WORLD_NAME       = str(_get_t(cfg, "world_name",       _DEFAULTS["WORLD_NAME"]))
     NEW_CHAR_HP      = int(_get_t(cfg, "new_char_hp",      _DEFAULTS["NEW_CHAR_HP"]))
     CURRENCY_NAME    = str(_get_t(cfg, "currency_name",    _DEFAULTS["CURRENCY_NAME"]))
+    CURRENCY_ABBREV  = str(_get_t(cfg, "currency_abbrev",  CURRENCY_NAME[:1] or "g"))
     DEFAULT_STYLE    = str(_get_t(cfg, "default_style",    _DEFAULTS["DEFAULT_STYLE"]))
     VISION_THRESHOLD = int(_get_t(cfg, "vision_threshold", _DEFAULTS["VISION_THRESHOLD"]))
 
@@ -145,15 +210,22 @@ def _init_from_toml(cfg: dict) -> None:
     else:
         PLAYER_ATTRS = []
 
+    raw_se = cfg.get("status_effect", [])
+    if isinstance(raw_se, list) and raw_se:
+        STATUS_EFFECTS = _load_status_effects(raw_se)
+    else:
+        STATUS_EFFECTS = list(_DEFAULTS["STATUS_EFFECTS"])
+
 
 def _init_from_py(cfg) -> None:
     """Populate module constants from a legacy config.py module (backward compat)."""
-    global WORLD_NAME, SKILLS, NEW_CHAR_HP, CURRENCY_NAME
-    global DEFAULT_STYLE, VISION_THRESHOLD, EQUIPMENT_SLOTS, PLAYER_ATTRS
+    global WORLD_NAME, SKILLS, NEW_CHAR_HP, CURRENCY_NAME, CURRENCY_ABBREV
+    global DEFAULT_STYLE, VISION_THRESHOLD, EQUIPMENT_SLOTS, PLAYER_ATTRS, STATUS_EFFECTS
 
     WORLD_NAME       = str(_get_p(cfg, "WORLD_NAME",       _DEFAULTS["WORLD_NAME"]))
     NEW_CHAR_HP      = int(_get_p(cfg, "NEW_CHAR_HP",      _DEFAULTS["NEW_CHAR_HP"]))
     CURRENCY_NAME    = str(_get_p(cfg, "CURRENCY_NAME",    _DEFAULTS["CURRENCY_NAME"]))
+    CURRENCY_ABBREV  = str(_get_p(cfg, "CURRENCY_ABBREV",  CURRENCY_NAME[:1] or "g"))
     DEFAULT_STYLE    = str(_get_p(cfg, "DEFAULT_STYLE",    _DEFAULTS["DEFAULT_STYLE"]))
     VISION_THRESHOLD = int(_get_p(cfg, "VISION_THRESHOLD", _DEFAULTS["VISION_THRESHOLD"]))
 
@@ -174,6 +246,8 @@ def _init_from_py(cfg) -> None:
         PLAYER_ATTRS = [dict(a) for a in raw_attrs if isinstance(a, dict)]
     else:
         PLAYER_ATTRS = []
+
+    STATUS_EFFECTS = list(_DEFAULTS["STATUS_EFFECTS"])
 
 
 # ── Public API ────────────────────────────────────────────────────────────────

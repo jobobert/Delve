@@ -6,7 +6,7 @@ summary = "Enter the Drowned Vault and recover the Pressure Regulator fragment f
 [[step]]
 index     = 1
 objective = "Obtain and tune an Echo Compass at the Resonance Pillar."
-hint      = "You’ll need an Echo Compass and the pillar in the Anchor Field."
+hint      = "You'll need an Echo Compass and the pillar in the Anchor Field."
 
 [[step]]
 index     = 2
@@ -21,8 +21,3 @@ hint      = "Take the fragment once the guardian is defeated."
 [[reward]]
 type   = "xp"
 amount = 350
-
-[[reward]]
-type    = "prestige"
-amount  = 3
-reason  = "recovered the Pressure Regulator fragment"

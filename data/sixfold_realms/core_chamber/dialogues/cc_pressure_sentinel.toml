@@ -13,8 +13,8 @@ next = "calibrate"
 id   = "calibrate"
 line = "'Airflow normalized.'"
 script = [
-  { op = "add_resonance", amount = 10 },
-  { op = "set_flag", flag = "cc_pressure_aligned" }
+  { op = "adjust_attr", name = "resonance", amount = 15 },
+  { op = "set_flag",    flag = "cc_pressure_aligned" },
 ]
 
 [[response]]

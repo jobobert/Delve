@@ -1,13 +1,28 @@
 [[node]]
-id    = "root"
-lines = [
-  "Sela adjusts her surveying tools. 'Looking to chart your path? I’ve maps of every region we can safely reach.'"
-]
+id = "root"
+line = "Sela adjusts her surveying tools. 'Looking to chart your path? I've maps of every region we can safely reach.'"
+
+[[node]]
+id = "wares"
+line = "'Every line's drawn from firsthand travel. Use 'list' to browse — I'll wait.'"
+
+[[node]]
+id = "mapping_info"
+lines = ["'Carefully,' she says with a wry smile. 'The Peaks shift with the winds, the Mistfen loops on itself, and the Heartwood grows new paths overnight.'", "'But patterns emerge if you watch long enough. The land speaks — my job is to listen.'"]
+
+[[node]]
+id = "epilogue_react"
+line = "Sela taps her quill against her notebook. 'The world feels different since you returned from the Core...'"
+
+[[node]]
+id = "epilogue_detail"
+line = "'Depends on what you chose down there...'"
+script = [{op = "if_flag", flag = "cc_reboot_restore", then = [{op = "say", text = "Paths feel steadier. Landmarks stay put. Mapping might finally get easier."}]}, {op = "if_flag", flag = "cc_reboot_disable", then = [{op = "say", text = "The land's wilder, but honest. Harder to map, but more alive. I'll adapt."}]}]
 
 [[response]]
 node = "root"
-text = "Show me your maps."
-next = "open_shop"
+text = "Show me your maps. (use 'list')"
+next = "wares"
 
 [[response]]
 node = "root"
@@ -18,65 +33,27 @@ next = "mapping_info"
 node = "root"
 text = "What do you think about the world after the Core Chamber?"
 next = "epilogue_react"
+condition = {flag = "cc_all_calibrated"}
 
 [[response]]
 node = "root"
 text = "Nothing right now."
 next = ""
 
-
-# --- Open Shop ---
-[[node]]
-id   = "open_shop"
-line = "'Take a look. Every line’s drawn from firsthand travel.'"
-script = [
-  { op = "open_shop", shop_id = "sela_mapmaker" }
-]
-
 [[response]]
-node = "open_shop"
-text = "Let me browse."
+node = "wares"
+text = "I'll take a look."
 next = ""
-
-
-# --- Mapping Info ---
-[[node]]
-id   = "mapping_info"
-lines = [
-  "'Carefully,' she says with a wry smile. 'The Peaks shift with the winds, the Mistfen loops on itself, and the Heartwood grows new paths overnight.'",
-  "'But patterns emerge if you watch long enough. The land speaks—my job is to listen.'"
-]
 
 [[response]]
 node = "mapping_info"
 text = "That sounds like difficult work."
 next = ""
 
-
-# --- Epilogue Reaction ---
-[[node]]
-id   = "epilogue_react"
-lines = [
-  "Sela taps her quill against her notebook. 'The world feels different since you returned from the Core…'"
-]
-
 [[response]]
 node = "epilogue_react"
 text = "Different how?"
 next = "epilogue_detail"
-
-
-[[node]]
-id   = "epilogue_detail"
-line = "'Depends on what you chose down there…'"
-script = [
-  { op = "if_flag", flag = "cc_reboot_restore", then = [
-    { op = "say", text = "Paths feel steadier. Landmarks stay put. Mapping might finally get easier." }
-  ] },
-  { op = "if_flag", flag = "cc_reboot_disable", then = [
-    { op = "say", text = "The land’s wilder, but honest. Harder to map, but more alive. I’ll adapt." }
-  ] }
-]
 
 [[response]]
 node = "epilogue_detail"

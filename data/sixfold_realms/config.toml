@@ -7,46 +7,28 @@
 # See data/WORLD_MANUAL.md for the full field reference.
 
 # ── World identity ─────────────────────────────────────────────────────────────
-# Displayed in the map header and world-specific messages.
 world_name = "The Sixfold Realms"
 
 # ── New character stats ────────────────────────────────────────────────────────
-# Starting HP for every new character (fixed, not rolled).
-# Attack is rolled as 3d6-drop-lowest (range 2-12).
-# Defense is rolled as half of a separate 3d6-drop-lowest (range 1-6), minimum 1.
 new_char_hp = 100
 
 # ── Currency ───────────────────────────────────────────────────────────────────
-# Display name for the in-game currency (used in stats, shop headers, etc.).
-currency_name = "marks"
+currency_name   = "marks"
+currency_abbrev = "mk"
 
 # ── Fighting styles ────────────────────────────────────────────────────────────
-# ID of the style every new character starts with.
-# Must match a [[style]] id in one of this world's styles.toml files.
-default_style = "brawling"
+default_style = "flowcurrent"
 
 # ── Vision ─────────────────────────────────────────────────────────────────────
-# Minimum effective light level at which the player can see clearly (0-10 scale).
-# effective_light = room.light + sum of all equipped item light_add values.
-# If effective_light < vision_threshold the player is blind.
-# Scripts can adjust per-player vision via: { op = "adjust_vision", amount = N }
 vision_threshold = 3
 
 # ── Equipment slots ────────────────────────────────────────────────────────────
-# Defines which equipment slots exist (in display order).
-# Item slot = values in TOML must exactly match an entry in this list.
 equipment_slots = [
     "head", "body", "hands", "feet",
     "weapon", "offhand", "neck", "ring",
 ]
 
 # ── Skills ─────────────────────────────────────────────────────────────────────
-# Maps skill_id (used in scripts and dialogue conditions) to display name.
-# Remove, add, or rename entries freely; the engine picks up changes on restart.
-#
-# Usage in TOML:
-#   condition = { skill = "diplomacy", min = 40 }
-#   { op = "skill_check", skill = "navigation", dc = 14, on_pass = [...] }
 [skills]
 perception = "Perception"
 navigation = "Navigation"
@@ -56,25 +38,101 @@ lore       = "Lore"
 crafting   = "Crafting"
 
 # ── World-defined player attributes ───────────────────────────────────────────
-# Custom numeric attributes tracked per-player and persisted in player.toml.
-# Define as many [[player_attrs]] blocks as your world needs.
-#
-# Fields:
-#   id      — unique identifier used in script ops (no spaces)
-#   min     — minimum value (clamp floor)
-#   max     — maximum value (clamp ceiling)
-#   default — starting value for new characters
-#   display — "number" = raw integer | "bar" = graphical bar on stats screen
-#
-# Script ops:
-#   { op = "set_attr",    name = "attr_id", value = 50 }
-#   { op = "adjust_attr", name = "attr_id", amount = 10 }   # clamps to min/max
-#   { op = "if_attr",     name = "attr_id", min = 10, max = 50, then = [...] }
-#
-# Example (uncomment to activate):
-# [[player_attrs]]
-# id      = "corruption"
-# min     = 0
-# max     = 100
-# default = 0
-# display = "bar"
+# spore_exposure: tracks cognitive impairment from Mycelial Plains fungal spores.
+# Increases in spore-dense rooms; reduced by clarity brews and safe zones.
+# Used to gate the Memory Garden and certain NPC interactions in Region 5.
+
+[[player_attrs]]
+id      = "spore_exposure"
+min     = 0
+max     = 100
+default = 0
+display = "bar"
+
+# resonance: tracks stability inside the Core Chamber.
+# Starts at 100 (reset on entry), drains as the player descends.
+# Restored by calibrating the five subsystem sentinels.
+# Required minimum: 60 to pass Calibration Gate, 80 to reach Crystal Chamber.
+
+[[player_attrs]]
+id      = "resonance"
+min     = 0
+max     = 100
+default = 100
+display = "bar"
+
+# ── Status effects ──────────────────────────────────────────────────────────────
+# Named conditions applied/cleared by scripts and combat passives.
+# Fields: id, label, apply_msg, expiry_msg, combat_atk, combat_def, damage_per_move
+
+[[status_effect]]
+id              = "poisoned"
+label           = "Poisoned"
+apply_msg       = "Venom seeps through your veins."
+expiry_msg      = "The venom finally clears from your blood."
+combat_atk      = 0
+combat_def      = 0
+damage_per_move = 3
+
+[[status_effect]]
+id              = "blinded"
+label           = "Blinded"
+apply_msg       = "Darkness closes in around you."
+expiry_msg      = "Light returns to your eyes."
+combat_atk      = -4
+combat_def      = 0
+damage_per_move = 0
+
+[[status_effect]]
+id              = "weakened"
+label           = "Weakened"
+apply_msg       = "Your strength drains away."
+expiry_msg      = "Vigour returns to your limbs."
+combat_atk      = -4
+combat_def      = 0
+damage_per_move = 0
+
+[[status_effect]]
+id              = "slowed"
+label           = "Slowed"
+apply_msg       = "A heaviness settles over your movements."
+expiry_msg      = "The heaviness lifts and you move freely again."
+combat_atk      = 0
+combat_def      = -3
+damage_per_move = 0
+
+[[status_effect]]
+id              = "protected"
+label           = "Protected"
+apply_msg       = "A shimmer of protection surrounds you."
+expiry_msg      = "The protective shimmer fades."
+combat_atk      = 0
+combat_def      = 3
+damage_per_move = 0
+
+[[status_effect]]
+id              = "confused"
+label           = "Confused"
+apply_msg       = "The world blurs at the edges — you struggle to focus."
+expiry_msg      = "Your thoughts clear."
+combat_atk      = -2
+combat_def      = -2
+damage_per_move = 0
+
+[[status_effect]]
+id              = "spores"
+label           = "Spore-touched"
+apply_msg       = "A cloud of spores settles over you, clouding your senses."
+expiry_msg      = "The spore haze lifts from your mind."
+combat_atk      = -1
+combat_def      = 0
+damage_per_move = 2
+
+[[status_effect]]
+id              = "entropy"
+label           = "Entropic"
+apply_msg       = "Unstable energy seeps into your body, disrupting your focus."
+expiry_msg      = "The entropic interference fades."
+combat_atk      = -2
+combat_def      = -2
+damage_per_move = 1

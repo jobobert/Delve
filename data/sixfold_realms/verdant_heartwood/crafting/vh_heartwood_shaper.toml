@@ -1,65 +1,82 @@
-# How this integrates with the region
-# Thalen’s dialogue already calls give_item when the materials are present, but the crafting commission formalizes the process so the forge itself can be interacted with.
-#
-# The Growth Forge room (vh_core2) can reference this commission by ID if you want players to interact directly with the forge instead of Thalen.
-#
-# The Carapace quest advances automatically when the commission succeeds.
-#
-# The prestige requirement reinforces the Heartwood’s theme of harmony and respect.
+# Commission 1: Grow the Heartwood Carapace (required for vh_carapace quest)
 [[commission]]
-id   = "vh_heartwood_shaper"
-name = "Heartwood Carapace Growth"
-desc = "A living-forge commission that grows the Heartwood Carapace from organic materials."
+id             = "vh_grow_carapace"
+npc_id         = "vh_heartwood_shaper"
+label          = "Grow Heartwood Carapace"
+desc           = "Thalen grows a living armor from Heartwood Bark, Sap Resin, and a Bog-Quartz Heart at the Growth Forge."
+slot           = ""
+weapon_tags    = []
+materials      = ["vh_heartwood_bark", "vh_sap_resin", "mf_quartz_heart"]
+turns_required = 15
+gold_cost      = 0
+on_complete = [
+  { op = "message", tag = "crafting", text = "The forge pulses, weaving bark and resin into a symbiotic armor. 'It is yours,' Thalen says. 'Let it learn you.'" },
+  { op = "give_item", item_id = "heartwood_carapace" },
+  { op = "advance_quest", quest_id = "vh_carapace", step = 2 },
+  { op = "advance_quest", quest_id = "vh_carapace", step = 3 },
+  { op = "complete_quest", quest_id = "vh_carapace" },
+  { op = "prestige", amount = 2, reason = "earned the Heartwood's trust" },
+]
 
-[[requirement]]
-item_id = "vh_heartwood_bark"
-count   = 1
-
-[[requirement]]
-item_id = "vh_sap_resin"
-count   = 1
-
-[[requirement]]
-item_id = "mf_quartz_heart"
-count   = 1
-
-[[requirement]]
-prestige_min = 3
-
+# --- Quality Tiers ---
 [[quality]]
 name        = "Unsteady Growth"
 min_quality = 0
 max_quality = 39
-effects = [
+effects     = [
   { type = "stat_bonus", stat = "defense", amount = -1 },
-  { type = "stat_bonus", stat = "max_hp", amount = -3 }
+  { type = "stat_bonus", stat = "max_hp",  amount = -3 },
 ]
 
 [[quality]]
 name        = "Harmonized Growth"
 min_quality = 40
 max_quality = 79
-effects = []
+effects     = []
 
 [[quality]]
 name        = "Symbiotic Perfection"
 min_quality = 80
 max_quality = 100
-effects = [
+effects     = [
   { type = "stat_bonus", stat = "defense", amount = 2 },
-  { type = "stat_bonus", stat = "max_hp", amount = 5 },
-  { type = "on_hit", ability = "regen", chance = 0.05, magnitude = 2 }
+  { type = "stat_bonus", stat = "max_hp",  amount = 5 },
 ]
 
-[[result]]
-item_id = "heartwood_carapace"
-count   = 1
 
-script = [
-  { op = "take_item", item_id = "vh_heartwood_bark" },
-  { op = "take_item", item_id = "vh_sap_resin" },
-  { op = "take_item", item_id = "mf_quartz_heart" },
-  { op = "give_item", item_id = "heartwood_carapace" },
-  { op = "message", tag = "crafting", text = "The living forge pulses, weaving bark and resin into a symbiotic armor." },
-  { op = "advance_quest", quest_id = "vh_carapace", step = 2 }
+# Commission 2: Bark Shaping (material refinement for further crafting)
+[[commission]]
+id             = "vh_bark_shaping"
+npc_id         = "vh_heartwood_shaper"
+label          = "Bark Shaping"
+desc           = "Thalen can shape raw Heartwood Bark using Sap Resin, producing a refined slab."
+slot           = ""
+weapon_tags    = []
+materials      = ["vh_heartwood_bark", "vh_sap_resin"]
+turns_required = 8
+gold_cost      = 0
+on_complete = [
+  { op = "message", tag = "crafting", text = "Thalen runs a hand along the bark. It hardens and darkens slightly." },
+  { op = "give_item", item_id = "vh_heartwood_bark" },
+]
+
+# --- Quality Tiers ---
+[[quality]]
+name        = "Rough Shaping"
+min_quality = 0
+max_quality = 39
+effects     = []
+
+[[quality]]
+name        = "Clean Shaping"
+min_quality = 40
+max_quality = 79
+effects     = []
+
+[[quality]]
+name        = "Master Shaping"
+min_quality = 80
+max_quality = 100
+effects     = [
+  { type = "stat_bonus", stat = "max_hp", amount = 2 },
 ]

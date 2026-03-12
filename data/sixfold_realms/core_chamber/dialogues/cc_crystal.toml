@@ -18,10 +18,13 @@ next = "disable"
 # --- Restore Path ---
 [[node]]
 id   = "restore"
-line = "'Directive accepted. Reboot sequence initializing.'"
+line = "'Directive accepted. Reboot sequence initializing. Resonance restored to all regions.'"
 script = [
-  { op = "set_flag", flag = "cc_reboot_restore" },
-  { op = "advance_quest", quest_id = "cc_finale", step = 3 }
+  { op = "set_flag",       flag = "cc_reboot_restore" },
+  { op = "set_flag",       flag = "cc_crystal_activated" },
+  { op = "advance_quest",  quest_id = "cc_finale", step = 4 },
+  { op = "complete_quest", quest_id = "cc_finale" },
+  { op = "prestige", amount = 5, reason = "restored balance to the Sixfold Realms" },
 ]
 
 [[response]]
@@ -33,10 +36,13 @@ next = ""
 # --- Disable Path ---
 [[node]]
 id   = "disable"
-line = "'Directive accepted. Shutdown sequence initializing.'"
+line = "'Directive accepted. Shutdown sequence initializing. Resonance dissipating.'"
 script = [
-  { op = "set_flag", flag = "cc_reboot_disable" },
-  { op = "advance_quest", quest_id = "cc_finale", step = 3 }
+  { op = "set_flag",       flag = "cc_reboot_disable" },
+  { op = "set_flag",       flag = "cc_crystal_activated" },
+  { op = "advance_quest",  quest_id = "cc_finale", step = 4 },
+  { op = "complete_quest", quest_id = "cc_finale" },
+  { op = "prestige", amount = 5, reason = "chose the fate of the Sixfold Realms" },
 ]
 
 [[response]]

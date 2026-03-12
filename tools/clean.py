@@ -4,18 +4,22 @@ tools/clean.py — Reset Delve to a clean state.
 
 Usage:
   python tools/clean.py              # interactive (asks before deleting players)
-  python tools/clean.py --all        # delete everything including players, no prompt
+  python tools/clean.py --all        # delete everything including players and AI output, no prompt
   python tools/clean.py --cache      # __pycache__ only
   python tools/clean.py --state      # zone state only
   python tools/clean.py --players    # player saves only
+  python tools/clean.py --ai         # AI session output only (tools/ai_sessions/)
   python tools/clean.py --help       # this message
 
 What gets cleaned
-─────────────────
+-----------------
   __pycache__     Compiled .pyc bytecode in engine/, frontend/, tools/, root
   zone_state      data/players/<name>/zone_state/*.json  (live NPC HP / item state)
-  players         data/players/<name>/   (entire player folder) — requires --all or
+  players         data/players/<name>/   (entire player folder) -- requires --all or
                   --players flag, OR confirmation prompt in interactive mode
+  ai              tools/ai_sessions/*.html and *.jsonl  (offline_bot.py output)
+                  Also triggered by --all. Player saves created by the bot are
+                  ordinary player folders -- remove them with --players.
 """
 
 import sys
@@ -51,6 +55,16 @@ def _player_files() -> list[Path]:
         if p.is_dir() and (p / "player.toml").exists()
     )
 
+def _ai_session_files() -> list[Path]:
+    """Return all HTML and JSONL files produced by offline_bot.py."""
+    sessions_dir = ROOT / "tools" / "ai_sessions"
+    if not sessions_dir.exists():
+        return []
+    return sorted(
+        f for f in sessions_dir.iterdir()
+        if f.is_file() and f.suffix in {".html", ".jsonl"}
+    )
+
 
 # ── Clean actions ─────────────────────────────────────────────────────────────
 
@@ -81,6 +95,15 @@ def clean_players(verbose: bool = True) -> int:
             print(f"  removed  {folder.relative_to(ROOT)}/")
     return len(folders)
 
+def clean_ai(verbose: bool = True) -> int:
+    """Remove offline_bot.py session output files from tools/ai_sessions/."""
+    files = _ai_session_files()
+    for f in files:
+        f.unlink()
+        if verbose:
+            print(f"  removed  {f.relative_to(ROOT)}")
+    return len(files)
+
 
 # ── Summary helpers ───────────────────────────────────────────────────────────
 
@@ -88,11 +111,14 @@ def _summarise() -> None:
     cache   = _cache_dirs()
     state   = _zone_state_files()
     players = _player_files()
+    ai      = _ai_session_files()
     print(f"  __pycache__ dirs : {len(cache)}")
     print(f"  zone state files : {len(state)}")
     player_names = ", ".join(f.parent.name for f in players) if players else ""
     print(f"  player saves     : {len(players)}"
           + (f"  ({player_names})" if player_names else ""))
+    print(f"  AI session files : {len(ai)}"
+          + (f"  (tools/ai_sessions/)" if ai else ""))
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -108,13 +134,14 @@ def main() -> None:
     do_cache   = "--cache"   in args or "--all" in args or not args
     do_state   = "--state"   in args or "--all" in args or not args
     do_players = "--players" in args or "--all" in args
+    do_ai      = "--ai"      in args or "--all" in args
 
     print("Delve Clean Tool")
     print("=" * 40)
     _summarise()
     print()
 
-    if not any([do_cache, do_state, do_players]):
+    if not any([do_cache, do_state, do_players, do_ai]):
         print("Nothing selected. Use --help for options.")
         return
 
@@ -132,19 +159,25 @@ def main() -> None:
     if do_cache:
         print("Clearing __pycache__...")
         n = clean_cache()
-        print(f"  → {n} director{'y' if n == 1 else 'ies'} removed")
+        print(f"  -> {n} director{'y' if n == 1 else 'ies'} removed")
         total += n
 
     if do_state:
         print("Clearing zone state...")
         n = clean_zone_state()
-        print(f"  → {n} file{'s' if n != 1 else ''} removed")
+        print(f"  -> {n} file{'s' if n != 1 else ''} removed")
         total += n
 
     if do_players:
         print("Clearing player saves...")
         n = clean_players()
-        print(f"  → {n} save{'s' if n != 1 else ''} removed")
+        print(f"  -> {n} save{'s' if n != 1 else ''} removed")
+        total += n
+
+    if do_ai:
+        print("Clearing AI session output...")
+        n = clean_ai()
+        print(f"  -> {n} file{'s' if n != 1 else ''} removed")
         total += n
 
     print()

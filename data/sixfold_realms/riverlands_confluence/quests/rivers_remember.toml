@@ -1,28 +1,27 @@
-id          = "rivers_remember"
-name        = "The Rivers Remember"
-description = "Kale believes the rivers are carrying echoes from the fractured realms."
-start_flag  = ""   # auto-start via advance_quest in scripts
+id      = "rivers_remember"
+title   = "The Rivers Remember"
+giver   = "kale_ferryman"
+summary = "Kale believes the rivers are carrying echoes from the fractured realms. Follow where the waters lead."
 
 [[step]]
-id          = 1
-name        = "Listen to the Confluence"
-objective   = "Explore Ferrydock Square and speak with Ferryman Kale."
-hint        = "He watches the currents more than the people."
+index     = 1
+objective = "Explore Ferrydock Square and speak with Ferryman Kale."
+hint      = "He watches the currents more than the people."
 
 [[step]]
-id          = 2
-name        = "Follow the Echoes"
-objective   = "Investigate the mural promenade and search for hidden passages."
-hint        = "Some seams in stone are more than weathering."
+index     = 2
+objective = "Investigate the mural promenade and search for hidden passages."
+hint      = "Some seams in stone are more than weathering."
 
 [[step]]
-id          = 3
-name        = "Read the Heart's Whisper"
-objective   = "Descend to the echoing chamber and decipher the inscription."
-hint        = "The words may not be loud, but they are deep."
+index     = 3
+objective = "Descend to the echoing chamber and decipher the inscription."
+hint      = "The words may not be loud, but they are deep."
 
 [[reward]]
-xp          = 80
-gold        = 20
-prestige    = 5
-text        = "You have begun to understand how the rivers tie the realms together."
+type   = "xp"
+amount = 80
+
+[[reward]]
+type   = "gold"
+amount = 20

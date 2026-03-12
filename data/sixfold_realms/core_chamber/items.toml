@@ -1,1 +1,42 @@
-item = [{id = "item_core_diagnostic_key", name = "Core Diagnostic Key", desc_short = "A tool used to access the device’s diagnostic systems.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_psychoactive_spore", name = "Psychoactive Spore", desc_short = "A spore that reacts to psychic energy within the Core.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = [], type = "misc"}, {id = "item_thermal_regulator", name = "Thermal Regulator", desc_short = "A component used to stabilize the device’s heat output.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_core_alignment_rod", name = "Core Alignment Rod", desc_short = "A precision tool required to realign the device’s central crystal.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_device_piece_6", name = "Device Piece: Central Conductor", desc_short = "The final and most important component of the ancient device.", weight = 0, respawn = false, no_drop = true, tags = ["device_piece"], effects = [], value = 0, on_get = [], type = "misc"}]
+# ---------------------------------------------------------
+# DROPS — Resonance Constructs
+# ---------------------------------------------------------
+
+[[item]]
+id          = "cc_resonance_shard"
+name        = "Resonance Shard"
+desc_short  = "A fragment of crystallized harmonic energy."
+desc_long   = "It hums faintly with overlapping frequencies — light, heat, pressure, growth, and memory, all at once."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["resonance_material"]
+
+[[item]]
+id          = "cc_harmonic_core"
+name        = "Harmonic Core"
+desc_short  = "A stabilized knot of resonance energy, dense and warm."
+desc_long   = "Pulled from a resonance sentinel. The geometry within it shifts when you look away."
+slot        = ""
+weight      = 0
+respawn     = false
+tags        = ["resonance_material"]
+
+
+# ---------------------------------------------------------
+# EQUIPPABLE — Lattice reward
+# ---------------------------------------------------------
+
+[[item]]
+id          = "cc_lattice_band"
+name        = "Lattice Band"
+desc_short  = "A ring shaped from five interlocking metals, one per subsystem."
+desc_long   = "Wearing it steadies the mind inside the Core. Crafted by the device itself."
+slot        = "ring"
+weight      = 0
+respawn     = false
+tags        = ["resonance"]
+effects     = [
+  { type = "stat_bonus", stat = "defense", amount = 3 },
+  { type = "stat_bonus", stat = "max_hp",  amount = 10 },
+]

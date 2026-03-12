@@ -1,13 +1,11 @@
-# (You can complete step 3 via a small script on any loop room: check mf_anchor_attuned and mf_anchors_in_the_mire active, then complete_quest.)
-
 id      = "mf_anchors_in_the_mire"
 title   = "Anchors in the Mire"
 giver   = "mf_path_reader_sera"
-summary = "Sera told you that Anchor Stones can pin the Mistfen’s looping paths. You must earn one and attune it."
+summary = "Sera told you that Anchor Stones can pin the Mistfen's looping paths. You must earn one and attune it."
 
 [[step]]
 index     = 1
-objective = "Reach the Anchor Field east of Sera’s camp."
+objective = "Reach the Anchor Field east of Sera's camp."
 hint      = "From the camp, go east into the mist."
 
 [[step]]
@@ -27,8 +25,3 @@ amount = 200
 [[reward]]
 type   = "gold"
 amount = 40
-
-[[reward]]
-type    = "prestige"
-amount  = 2
-reason  = "stabilised the Mistfen loops"

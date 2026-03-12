@@ -22,8 +22,11 @@ next = "explain"
 
 # --- Materials ---
 [[node]]
-id   = "materials"
-line = "'Shadow‑Ore and Entropy Residue. Bring them, and I will weave the mantle.'"
+id     = "materials"
+line   = "'Shadow-Ore and Entropy Residue. Bring them, and I will weave the mantle.'"
+script = [
+  { op = "start_quest", quest_id = "gr_mantle" },
+]
 
 [[response]]
 node = "materials"

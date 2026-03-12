@@ -1,7 +1,2 @@
-id          = "verdant_heartwood"
-name        = "Verdant Heartwood"
-description = """
-A living forest grown wild after the Regulator failed. Roots remember, vines react,
-and growth cycles shift with every breath. The Heartwood Core lies deep within,
-guarded by ancient symbiotic life and the forest’s own will.
-"""
+name       = "Verdant Heartwood"
+start_room = "vh_edge"

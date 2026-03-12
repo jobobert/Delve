@@ -189,7 +189,80 @@ body {
 .line.blank { height: 0.55em; display: block; }
 .echo       { color: #3a5a6a; }
 
-/* ── Sidebar ─────────────────────────────────────────────────────────────────── */
+/* ── Character panel (left) ──────────────────────────────────────────────────── */
+#char-panel {
+  width: 200px;
+  min-width: 200px;
+  border-right: 1px solid #242424;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #161616;
+  flex-shrink: 0;
+  transition: width 0.2s ease, min-width 0.2s ease;
+}
+
+#char-panel.collapsed {
+  width: 0;
+  min-width: 0;
+}
+
+#char-panel::-webkit-scrollbar       { width: 4px; }
+#char-panel::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+
+.cp-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78em;
+  padding: 0.15rem 0.55rem;
+  transition: background 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cp-btn:hover { background: #202020; }
+.cp-btn.equip-btn   { color: #c89464; }
+.cp-btn.inv-btn     { color: #a0c8a0; }
+
+.cp-label {
+  color: #505050;
+  font-size: 0.7em;
+  padding: 0.12rem 0.55rem 0.05rem;
+  letter-spacing: 0.05em;
+}
+
+.status-chip {
+  font-size: 0.76em;
+  padding: 0.1rem 0.55rem;
+  color: #d08040;
+}
+
+.attr-row {
+  padding: 0.15rem 0.55rem;
+  font-size: 0.76em;
+}
+.attr-name { color: #787878; margin-bottom: 0.1rem; }
+.attr-bar-wrap {
+  background: #2a2a2a;
+  border-radius: 2px;
+  height: 5px;
+  margin-bottom: 0.15rem;
+}
+.attr-bar {
+  background: #5090c8;
+  border-radius: 2px;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.attr-val { color: #a0b8d0; }
+
+/* ── Sidebar (right) ─────────────────────────────────────────────────────────── */
 #sidebar {
   width: 220px;
   min-width: 220px;
@@ -305,6 +378,23 @@ body {
 }
 .exit-link:hover { color: #78e896; }
 
+/* ── Clickable dialogue responses ────────────────────────────────────────────── */
+.dlg-option {
+  display: block;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: #dcc8a0;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  width: 100%;
+}
+.dlg-option:hover { color: #f5e0b4; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px; }
+
 /* ── Tag colours — mirror the CLI palette ────────────────────────────────────── */
 .tag-room_name    { color: #ffdc64; font-weight: bold; }
 .tag-room_divider { color: #645a3c; }
@@ -401,6 +491,7 @@ body {
 <!-- ── Game panel ───────────────────────────────────────────────────────────── -->
 <div id="game-panel" hidden>
   <div id="status-bar">
+    <button id="char-toggle" title="Toggle character panel">&gt;&gt;</button>
     <span id="s-player"></span>
     <span id="s-hp"></span>
     <span id="s-sep">|</span>
@@ -409,6 +500,24 @@ body {
     <button id="quit-btn">Quit</button>
   </div>
   <div id="main-area">
+    <div id="char-panel" class="collapsed">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Equipped</div>
+        <div id="equip-content"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Inventory</div>
+        <div id="inv-content"></div>
+      </div>
+      <div class="sidebar-section" id="status-section">
+        <div class="sidebar-label">Status</div>
+        <div id="status-content"></div>
+      </div>
+      <div class="sidebar-section" id="attrs-section">
+        <div class="sidebar-label">Attributes</div>
+        <div id="attrs-content"></div>
+      </div>
+    </div>
     <div id="output"></div>
     <div id="sidebar">
       <div class="sidebar-section" id="map-section">
@@ -439,25 +548,33 @@ body {
 // ── DOM references ────────────────────────────────────────────────────────────
 
 const $ = (id) => document.getElementById(id);
-const loginPanel   = $('login-panel');
-const gamePanel    = $('game-panel');
-const worldSel     = $('world-select');
-const playerIn     = $('player-name');
-const charInfo     = $('char-info');
-const connectBtn   = $('connect-btn');
-const loginErr     = $('login-error');
-const outputEl     = $('output');
-const cmdIn        = $('cmd-input');
-const sendBtn      = $('send-btn');
-const quitBtn      = $('quit-btn');
-const sPlayer      = $('s-player');
-const sHp          = $('s-hp');
-const sRoom        = $('s-room');
-const sidebarEl    = $('sidebar');
+const loginPanel    = $('login-panel');
+const gamePanel     = $('game-panel');
+const worldSel      = $('world-select');
+const playerIn      = $('player-name');
+const charInfo      = $('char-info');
+const connectBtn    = $('connect-btn');
+const loginErr      = $('login-error');
+const outputEl      = $('output');
+const cmdIn         = $('cmd-input');
+const sendBtn       = $('send-btn');
+const quitBtn       = $('quit-btn');
+const sPlayer       = $('s-player');
+const sHp           = $('s-hp');
+const sRoom         = $('s-room');
+const sidebarEl     = $('sidebar');
 const sidebarToggle = $('sidebar-toggle');
-const mapDisplay   = $('map-display');
-const exitsBtns    = $('exits-btns');
-const hereContent  = $('here-content');
+const mapDisplay    = $('map-display');
+const exitsBtns     = $('exits-btns');
+const hereContent   = $('here-content');
+const charPanel     = $('char-panel');
+const charToggle    = $('char-toggle');
+const equipContent  = $('equip-content');
+const invContent    = $('inv-content');
+const statusSection = $('status-section');
+const statusContent = $('status-content');
+const attrsSection  = $('attrs-section');
+const attrsContent  = $('attrs-content');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -472,6 +589,10 @@ let atBottom        = true;
 // ── Direction patterns for clickable exit words ───────────────────────────────
 
 const DIR_RE = /\b(north|south|east|west|northeast|northwest|southeast|southwest|up|down)\b/gi;
+
+// ── Dialogue option pattern:  "  [1] Some response text" ─────────────────────
+
+const DLGOPT_RE = /^\s*\[(\d+)\]\s/;
 
 // ── Sidebar state ─────────────────────────────────────────────────────────────
 
@@ -489,6 +610,114 @@ sidebarToggle.addEventListener('click', () => {
   localStorage.setItem('delve_sidebar_open', String(!isNowCollapsed));
 });
 
+// ── Character panel (left) ────────────────────────────────────────────────────
+
+function initCharPanel() {
+  const open = localStorage.getItem('delve_charpanel_open') === 'true';
+  if (open) {
+    charPanel.classList.remove('collapsed');
+    charToggle.textContent = '<<';
+  }
+}
+
+charToggle.addEventListener('click', () => {
+  const isNowCollapsed = charPanel.classList.toggle('collapsed');
+  charToggle.textContent = isNowCollapsed ? '>>' : '<<';
+  localStorage.setItem('delve_charpanel_open', String(!isNowCollapsed));
+});
+
+function _emptySpan(text) {
+  const el = document.createElement('span');
+  el.className   = 'here-empty';
+  el.textContent = text;
+  return el;
+}
+
+function updateCharPanel(snap) {
+  const key = JSON.stringify(snap);
+  if (updateCharPanel._last === key) return;
+  updateCharPanel._last = key;
+
+  const equipped = snap.equipped  || [];
+  const inv      = snap.inventory || [];
+  const effects  = snap.status_effects || [];
+  const attrs    = snap.world_attrs    || [];
+
+  // ── Equipped ──────────────────────────────────────────────────────────────
+  equipContent.innerHTML = '';
+  if (equipped.length === 0) {
+    equipContent.appendChild(_emptySpan('nothing'));
+  } else {
+    equipped.forEach(e => {
+      const btn = document.createElement('button');
+      btn.className   = 'cp-btn equip-btn';
+      btn.textContent = `[${e.slot}] ${e.name}`;
+      btn.title       = `unequip ${e.slot}`;
+      btn.addEventListener('click', () => sendCmd(`unequip ${e.slot}`));
+      equipContent.appendChild(btn);
+    });
+  }
+
+  // ── Inventory ─────────────────────────────────────────────────────────────
+  invContent.innerHTML = '';
+  if (inv.length === 0) {
+    invContent.appendChild(_emptySpan('empty'));
+  } else {
+    inv.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className   = 'cp-btn inv-btn';
+      btn.textContent = item.name;
+      if (item.equip_slot) {
+        btn.title = `equip ${item.name}`;
+        btn.addEventListener('click', () => sendCmd(`equip ${item.name}`));
+      } else {
+        btn.title = `use ${item.name}`;
+        btn.addEventListener('click', () => sendCmd(`use ${item.name}`));
+      }
+      invContent.appendChild(btn);
+    });
+  }
+
+  // ── Status effects ────────────────────────────────────────────────────────
+  statusContent.innerHTML = '';
+  if (effects.length === 0) {
+    statusSection.style.display = 'none';
+  } else {
+    statusSection.style.display = '';
+    effects.forEach(ef => {
+      const el = document.createElement('div');
+      el.className   = 'status-chip';
+      el.textContent = `${ef.name} (${ef.turns_left})`;
+      statusContent.appendChild(el);
+    });
+  }
+
+  // ── World attributes ──────────────────────────────────────────────────────
+  attrsContent.innerHTML = '';
+  if (attrs.length === 0) {
+    attrsSection.style.display = 'none';
+  } else {
+    attrsSection.style.display = '';
+    attrs.forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'attr-row';
+      if (a.display === 'bar') {
+        const range = a.max - a.min || 1;
+        const pct   = Math.max(0, Math.min(100, (a.value - a.min) / range * 100));
+        row.innerHTML =
+          `<div class="attr-name">${a.name}</div>` +
+          `<div class="attr-bar-wrap"><div class="attr-bar" style="width:${pct.toFixed(1)}%"></div></div>` +
+          `<div class="attr-val">${a.value} / ${a.max}</div>`;
+      } else {
+        row.innerHTML =
+          `<div class="attr-name">${a.name}</div>` +
+          `<div class="attr-val">${a.value}</div>`;
+      }
+      attrsContent.appendChild(row);
+    });
+  }
+}
+
 // ── Sidebar update (from room_snapshot events) ────────────────────────────────
 
 function updateSidebar(snap) {
@@ -496,10 +725,7 @@ function updateSidebar(snap) {
   exitsBtns.innerHTML = '';
   const exits = snap.exits || [];
   if (exits.length === 0) {
-    const em = document.createElement('span');
-    em.className = 'here-empty';
-    em.textContent = 'none';
-    exitsBtns.appendChild(em);
+    exitsBtns.appendChild(_emptySpan('none'));
   }
   exits.forEach(e => {
     const btn = document.createElement('button');
@@ -515,10 +741,7 @@ function updateSidebar(snap) {
   const npcs  = snap.npcs  || [];
   const items = snap.items || [];
   if (npcs.length === 0 && items.length === 0) {
-    const em = document.createElement('span');
-    em.className = 'here-empty';
-    em.textContent = 'nothing of note';
-    hereContent.appendChild(em);
+    hereContent.appendChild(_emptySpan('nothing of note'));
   }
   npcs.forEach(npc => {
     const btn = document.createElement('button');
@@ -607,6 +830,22 @@ function addLine(tag, text) {
     return;
   }
 
+  // Dialogue numbered options become clickable buttons
+  if (tag === 'dialogue') {
+    const m = DLGOPT_RE.exec(text);
+    if (m) {
+      const num = m[1];
+      const btn = document.createElement('button');
+      btn.className   = 'dlg-option';
+      btn.textContent = text;
+      btn.title       = `Select option ${num}`;
+      btn.addEventListener('click', () => sendCmd(num));
+      outputEl.appendChild(btn);
+      scrollDown();
+      return;
+    }
+  }
+
   const el = document.createElement('div');
   el.className   = `line tag-${tag}`;
   el.textContent = text;
@@ -647,6 +886,9 @@ function startSSE() {
         break;
       case 'room_snapshot':
         updateSidebar(ev);
+        break;
+      case 'char_snapshot':
+        updateCharPanel(ev);
         break;
       case 'prompt':
         flushSidebarMap();
@@ -778,6 +1020,7 @@ function showGame() {
   loginPanel.style.display = 'none';
   gamePanel.removeAttribute('hidden');
   initSidebar();
+  initCharPanel();
   cmdIn.focus();
   startSSE();
   updateStatus();

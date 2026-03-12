@@ -1,11 +1,30 @@
+# =========================================================
+# GLOAMREACH — ROOMS
+# =========================================================
+# Light mechanic: equip gr_bright_lantern (light_add=2) to pass bright-gated exits.
+# Equip gr_shadow_crystal (light_add=-1) to pass dim-gated exits (no bright lantern).
+# =========================================================
+
+# ---------------------------------------------------------
+# TWILIGHT APPROACH (1–7)
+# ---------------------------------------------------------
+
 [[room]]
 id          = "gr_entrance"
 name        = "Twilight Mouth"
 description = "A cavern mouth where daylight dims unnaturally. Your light feels strangely heavy."
 flags       = ["town"]
+npcs        = ["gr_lightbearer_alen", "gr_lightbearer_sira"]
+shop        = [
+  { item_id = "gr_dim_lantern",      price = 20 },
+  { item_id = "gr_bright_lantern",   price = 40 },
+  { item_id = "gr_shadow_crystal",   price = 30 },
+  { item_id = "gr_echo_tuning_fork", price = 15 },
+  { item_id = "gr_afterimage_trap",  price = 10 },
+]
 exits       = { east = "gr_approach1" }
 on_enter    = [
-  { op = "message", tag = "system", text = "Your light flickers as you cross the threshold." }
+  { op = "message", tag = "system", text = "Your light flickers as you cross the threshold." },
 ]
 
 [[room]]
@@ -17,39 +36,40 @@ exits       = { west = "gr_entrance", east = "gr_approach2" }
 [[room]]
 id          = "gr_approach2"
 name        = "Twilight Approach — Lightlock Gate"
-description = "A stone archway etched with runes that brighten or dim depending on your light level."
+description = "A stone archway etched with runes that brighten or dim depending on your light level. The runes glow steadily — a bright light opens the way."
 exits       = {
   west = "gr_approach1",
-  east = { to = "gr_approach3", show_if = { op = "light_at_least", amount = 2 } }
+  east = { to = "gr_approach3", show_if = { op = "has_item", item_id = "gr_bright_lantern" } },
 }
-on_enter = [
-  { op = "if_light_at_least", amount = 2, then = [
-    { op = "message", tag = "system", text = "The runes brighten and the archway hums softly." }
+on_enter    = [
+  { op = "if_light", max = 1, then = [
+    { op = "message", tag = "error", text = "The runes remain dark. You need a brighter light to pass." },
   ], else = [
-    { op = "message", tag = "error", text = "The runes remain dark. You need more light." }
-  ] }
+    { op = "message", tag = "system", text = "The runes brighten and the archway hums softly." },
+  ] },
 ]
 
 [[room]]
 id          = "gr_approach3"
 name        = "Twilight Approach — Shadowfall"
 description = "A narrow ledge where shadows fall upward, drifting like smoke."
+spawns      = ["gr_afterimage"]
 exits       = { west = "gr_approach2", east = "gr_approach4" }
 
 [[room]]
 id          = "gr_approach4"
 name        = "Twilight Approach — Dim Crossing"
-description = "A stone bridge over a chasm. The far side is visible only when your light is low."
+description = "A stone bridge over a chasm. The far side is only visible when your light is low — the shadow crystal reveals the path."
 exits       = {
   west = "gr_approach3",
-  east = { to = "gr_approach5", show_if = { op = "light_at_most", amount = 1 } }
+  east = { to = "gr_approach5", show_if = { op = "has_item", item_id = "gr_shadow_crystal" } },
 }
-on_enter = [
-  { op = "if_light_at_most", amount = 1, then = [
-    { op = "message", tag = "system", text = "The far side of the bridge fades into view." }
+on_enter    = [
+  { op = "if_light", max = 1, then = [
+    { op = "message", tag = "system", text = "The far side of the bridge fades into view in the dimness." },
   ], else = [
-    { op = "message", tag = "error", text = "Your light is too bright; the far side remains hidden." }
-  ] }
+    { op = "message", tag = "error", text = "Your light is too bright — the far side remains hidden." },
+  ] },
 ]
 
 [[room]]
@@ -62,12 +82,12 @@ exits       = { west = "gr_approach4", east = "gr_approach6" }
 id          = "gr_approach6"
 name        = "Twilight Approach — Afterimage Bend"
 description = "A bend in the cavern where your shadow lags behind you."
+spawns      = ["gr_gloam_hound"]
 exits       = { west = "gr_approach5", east = "gr_approach7" }
-on_enter = [
-  { op = "if_light_at_least", amount = 3, then = [
-    { op = "spawn", npc_id = "gr_afterimage" },
-    { op = "message", tag = "system", text = "Your shadow tears free and forms an afterimage!" }
-  ] }
+on_enter    = [
+  { op = "if_light", max = 2, then = [], else = [
+    { op = "message", tag = "system", text = "Your shadow tears free and forms an afterimage — you feel watched." },
+  ] },
 ]
 
 [[room]]
@@ -76,37 +96,45 @@ name        = "Twilight Approach — Descent"
 description = "A sloping tunnel leading deeper into the caverns."
 exits       = { west = "gr_approach6", down = "gr_warrens1" }
 
+
+# ---------------------------------------------------------
+# ECHO WARRENS (8–16)
+# ---------------------------------------------------------
+
 [[room]]
 id          = "gr_warrens1"
 name        = "Echo Warrens — First Hollow"
 description = "A hollow chamber where your voice echoes before you speak."
+spawns      = ["gr_gloam_hound"]
 exits       = { up = "gr_approach7", east = "gr_warrens2" }
 
 [[room]]
 id          = "gr_warrens2"
 name        = "Echo Warrens — Afterecho Hall"
 description = "Your footsteps repeat a moment after you take them."
+spawns      = ["gr_entropy_wisp"]
 exits       = { west = "gr_warrens1", east = "gr_warrens3" }
-on_enter = [
-  { op = "if_light_at_most", amount = 1, then = [
+on_enter    = [
+  { op = "if_light", max = 1, then = [
     { op = "apply_status", effect = "entropy", duration = 2 },
-    { op = "message", tag = "hazard", text = "Entropy seeps into your limbs." }
-  ] }
+    { op = "message", tag = "system", text = "Entropy seeps into your limbs in the darkness." },
+  ] },
 ]
 
 [[room]]
 id          = "gr_warrens3"
 name        = "Echo Warrens — Shadow Gate"
-description = "A gate of pure shadow that solidifies only in dim light."
+description = "A gate of pure shadow that solidifies only in dim light — the shadow crystal reveals its opening."
 exits       = {
   west = "gr_warrens2",
-  east = { to = "gr_warrens4", show_if = { op = "light_at_most", amount = 1 } }
+  east = { to = "gr_warrens4", show_if = { op = "has_item", item_id = "gr_shadow_crystal" } },
 }
 
 [[room]]
 id          = "gr_warrens4"
 name        = "Echo Warrens — Mirror Split"
 description = "A chamber where your reflection appears on the wrong wall."
+npcs        = ["gr_echo_hermit"]
 exits       = { west = "gr_warrens3", east = "gr_warrens5" }
 
 [[room]]
@@ -115,30 +143,35 @@ name        = "Echo Warrens — Echo Loop"
 description = "A looping corridor that repeats unless disrupted by bright light."
 exits       = {
   west = "gr_warrens4",
-  east = { to = "gr_warrens6", show_if = { op = "light_at_least", amount = 2 } }
+  east = { to = "gr_warrens6", show_if = { op = "has_item", item_id = "gr_bright_lantern" } },
 }
-on_enter = [
-  { op = "if_light_at_least", amount = 2, then = [
-    { op = "message", tag = "system", text = "Your light disrupts the echo loop." }
+on_enter    = [
+  { op = "if_light", max = 1, then = [
+    { op = "message", tag = "error", text = "The corridor repeats itself. You need brighter light to break the loop." },
+    { op = "teleport_player", room_id = "gr_warrens4" },
   ], else = [
-    { op = "teleport", room_id = "gr_warrens4" },
-    { op = "message", tag = "error", text = "The corridor repeats itself." }
-  ] }
+    { op = "message", tag = "system", text = "Your light disrupts the echo loop." },
+  ] },
 ]
 
 [[room]]
 id          = "gr_warrens6"
 name        = "Echo Warrens — Shadowfall Pit"
 description = "A pit where shadows fall like water."
+npcs        = ["gr_umbral_weaver"]
+items       = ["gr_shadow_ore_vein"]
 exits       = { west = "gr_warrens5", east = "gr_warrens7" }
 
 [[room]]
 id          = "gr_warrens7"
 name        = "Echo Warrens — Entropic Vein"
 description = "A vein of black crystal pulses with unstable energy."
+spawns      = ["gr_entropy_wisp"]
+items       = ["gr_entropy_pool_node"]
 exits       = { west = "gr_warrens6", east = "gr_warrens8" }
-on_enter = [
-  { op = "apply_status", effect = "entropy", duration = 3 }
+on_enter    = [
+  { op = "apply_status", effect = "entropy", duration = 3 },
+  { op = "message", tag = "system", text = "Entropic energy radiates from the crystal vein." },
 ]
 
 [[room]]
@@ -147,30 +180,35 @@ name        = "Echo Warrens — Descent to Sink"
 description = "A narrow shaft leading into deeper darkness."
 exits       = { west = "gr_warrens7", down = "gr_sink1" }
 
+
+# ---------------------------------------------------------
+# ENTROPY SINK (17–20)
+# ---------------------------------------------------------
+
 [[room]]
 id          = "gr_sink1"
 name        = "Entropy Sink — Threshold"
 description = "The air is thick with entropy. Your light dims as if smothered."
+spawns      = ["gr_void_tender"]
 exits       = { up = "gr_warrens8", east = "gr_sink2" }
-on_enter = [
-  { op = "add_light", amount = -1 }
+on_enter    = [
+  { op = "adjust_light", amount = -1 },
+  { op = "message", tag = "system", text = "Your light dims as entropy smothers the room." },
 ]
 
 [[room]]
 id          = "gr_sink2"
 name        = "Entropy Sink — Blackwater Crossing"
 description = "A pool of black water reflects nothing."
+spawns      = ["gr_afterimage"]
 exits       = { west = "gr_sink1", east = "gr_sink3" }
-on_enter = [
-  { op = "if_light_at_least", amount = 2, then = [
-    { op = "spawn", npc_id = "gr_afterimage" }
-  ] }
-]
 
 [[room]]
 id          = "gr_sink3"
 name        = "Entropy Sink — Shadow Maw"
 description = "A cavern where shadows gather into a hungry mass."
+spawns      = ["gr_entropy_husk"]
+items       = ["gr_entropy_pool_node"]
 exits       = { west = "gr_sink2", east = "gr_sink4" }
 
 [[room]]
@@ -178,6 +216,11 @@ id          = "gr_sink4"
 name        = "Entropy Sink — Entropic Spiral"
 description = "A spiraling descent carved by entropy itself."
 exits       = { west = "gr_sink3", down = "gr_core_entrance" }
+
+
+# ---------------------------------------------------------
+# GLOAM CORE (21–24)
+# ---------------------------------------------------------
 
 [[room]]
 id          = "gr_core_entrance"
@@ -189,16 +232,16 @@ exits       = { up = "gr_sink4", east = "gr_core1" }
 id          = "gr_core1"
 name        = "Gloam Core — Umbral Hall"
 description = "Shadows detach from the walls and drift like smoke."
+spawns      = ["gr_void_tender"]
+items       = ["gr_shadow_ore_vein"]
 exits       = { west = "gr_core_entrance", east = "gr_core2" }
 
 [[room]]
 id          = "gr_core2"
 name        = "Gloam Core — Entropy Heart"
-description = "A pulsing mass of shadow‑crystal radiates unstable energy."
+description = "A pulsing mass of shadow-crystal radiates unstable energy."
+spawns      = ["gr_entropy_guardian"]
 exits       = { west = "gr_core1", east = "gr_core3" }
-on_enter = [
-  { op = "spawn", npc_id = "gr_entropy_guardian" }
-]
 
 [[room]]
 id          = "gr_core3"
@@ -206,3 +249,9 @@ name        = "Gloam Core — Fragment Chamber"
 description = "A shard of the Regulator floats in a column of dim light."
 items       = ["shadow_regulator_fragment"]
 exits       = { west = "gr_core2" }
+on_enter    = [
+  { op = "if_not_flag", flag = "gr_fragment_seen", then = [
+    { op = "message", tag = "quest", text = "The Shadow Regulator Fragment hovers before you." },
+    { op = "set_flag", flag = "gr_fragment_seen" },
+  ] },
+]

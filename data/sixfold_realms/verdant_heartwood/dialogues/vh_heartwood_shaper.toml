@@ -22,8 +22,11 @@ next = "fragment_path"
 
 # --- Carapace crafting ---
 [[node]]
-id   = "carapace_intro"
-line = "'The Carapace is not forged. It is grown. Bring me bark, resin, and a resonant heart.'"
+id     = "carapace_intro"
+line   = "'The Carapace is not forged. It is grown. Bring me bark, resin, and a resonant heart.'"
+script = [
+  { op = "start_quest", quest_id = "vh_carapace" },
+]
 
 [[response]]
 node = "carapace_intro"

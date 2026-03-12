@@ -19,15 +19,20 @@ node = "root"
 text = "Have you heard of a strange fragment?"
 next = "fragment_hint"
 
+[[response]]
+node = "root"
+text = "I have recovered all five fragments."
+next = "finale_start"
+
 
 # --- State ---
 [[node]]
 id   = "state"
 line = "'Some days are clearer than others. The spores… they make it hard to think.'"
 script = [
-  { op = "if_spores_at_least", amount = 30, then = [
-    { op = "message", tag = "system", text = "Dellen squints at you. 'You look worse off than me.'" }
-  ] }
+  { op = "if_attr", name = "spore_exposure", min = 30, then = [
+    { op = "message", tag = "system", text = "Dellen squints at you. 'You look worse off than me.'" },
+  ] },
 ]
 
 [[response]]
@@ -59,9 +64,26 @@ next = ""
 # --- Fragment Hint ---
 [[node]]
 id   = "fragment_hint"
-line = "'A ruin lies deeper in the fields. Folks say it holds old memories… and something important.'"
+line = "’A ruin lies deeper in the fields. Folks say it holds old memories… and something important.’"
+script = [
+  { op = "start_quest", quest_id = "mp_fragment" },
+]
 
 [[response]]
 node = "fragment_hint"
 text = "I’ll look into it."
+next = ""
+
+
+# --- Finale ---
+[[node]]
+id   = "finale_start"
+line = "Dellen’s eyes clear for a moment — more lucid than you’ve seen him. ‘All five? Then the Core Chamber awaits you. Follow the resonance down. The Regulator can be saved — or ended. That choice belongs to whoever reaches it.’"
+script = [
+  { op = "start_quest", quest_id = "cc_finale" },
+]
+
+[[response]]
+node = "finale_start"
+text = "I’ll descend into the Core Chamber."
 next = ""

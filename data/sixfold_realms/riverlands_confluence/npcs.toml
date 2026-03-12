@@ -1,55 +1,59 @@
-#npc = [{id = "enemy_river_serpent", name = "River Serpent", desc_short = "", hostile = true, tags = ["animal", "large"], style_prof = 0, hp = 45, max_hp = 45, attack = 12, defense = 8, xp_reward = 0, gold_reward = 0, shop = [], give_accepts = [], rest_cost = 0, kill_script = [], respawn_time = 0}, {id = "enemy_river_wolf", name = "River Wolf", desc_short = "", hostile = true, tags = ["animal", "fast"], style_prof = 0, hp = 40, max_hp = 40, attack = 13, defense = 9, xp_reward = 0, gold_reward = 0, shop = [], give_accepts = [], rest_cost = 0, kill_script = [], respawn_time = 0}, {id = "enemy_current_wraith", name = "Current Wraith", desc_short = "", hostile = false, tags = [], style_prof = 0, hp = 50, max_hp = 50, attack = 14, defense = 10, xp_reward = 0, gold_reward = 0, shop = [], give_accepts = [], rest_cost = 0, kill_script = [], respawn_time = 0}, {id = "enemy_mire_spirit", name = "Mire Spirit", desc_short = "", hostile = true, tags = ["faction_hostile", "fast", "small"], style_prof = 0, hp = 35, max_hp = 35, attack = 11, defense = 8, xp_reward = 20, gold_reward = 0, shop = [], give_accepts = [], rest_cost = 0, kill_script = [], respawn_time = 0}, {id = "npc_ferryman_kale", name = "Ferryman Kale", desc_short = "", hostile = false, tags = ["humanoid", "faction_friendly", "male"], style_prof = 0, hp = 100, max_hp = 100, attack = 100, defense = 100, xp_reward = 0, gold_reward = 0, shop = [], give_accepts = [], rest_cost = 0, kill_script = [], respawn_time = 0}, {id = "npc_mapmaker_sela", name = "Sela the Mapmaker", desc_short = "", hostile = false, tags = ["humanoid", "female"], style_prof = 0, hp = 100, max_hp = 100, attack = 100, defense = 100, xp_reward = 0, gold_reward = 0, shop = [{item_id = "item_river_map_fragment", price = 2}], give_accepts = [], rest_cost = 0, kill_script = [], respawn_time = 0}, {id = "npc_druid_theren", name = "Theren the River Druid", desc_short = "A tall man, veiled in robes of varying green. You almost miss his silhouette against the foliage.", desc_long = "The druid, whom you recognize as such by his robes, layered with multiple green hues, and his staff. All druids carry staffs like his.", hostile = false, tags = ["humanoid", "fast", "faction_friendly", "male"], style_prof = 100, hp = 100, max_hp = 100, attack = 25, defense = 20, xp_reward = 0, gold_reward = 0, shop = [], give_accepts = [], rest_cost = 0, kill_script = [], respawn_time = 0, description = "A tall man, veiled in robes of varying green. You almost miss his silhouette against the foliage.", style = "river_bend"}, {id = "npc_smuggler_joren", name = "Joren the Smuggler", desc_short = "", hostile = false, tags = ["humanoid", "male"], style_prof = 0, hp = 100, max_hp = 100, attack = 100, defense = 100, xp_reward = 0, gold_reward = 0, shop = [], give_accepts = [], rest_cost = 0, kill_script = [], respawn_time = 0}]
+# riverlands_confluence/npcs.toml
+#
+# Friendly NPCs: kale_ferryman, sela_mapmaker, vendor_supplies,
+#                innkeeper_mara, river_child, crafter_boatwright
+# Enemies:       mire_wolf, drift_serpent, echo_wraith
 
-# Ferryman Kale — quest giver, lore, style teacher later
+# ── Ferryman Kale — quest giver, lore ───────────────────────────────────────
+
 [[npc]]
 id          = "kale_ferryman"
 name        = "Ferryman Kale"
 desc_short  = "A weathered ferryman with river lines etched into his face."
-desc_long   = "Kale's eyes track the currents more than the people, as if listening to something only he can hear."
-tags        = ["humanoid", "prestige_neutral"]
-style       = "brawling"
+desc_long   = "Kale's eyes track the currents more than the people, as if listening to something only he can hear. His hands are rope-calloused, his boots permanently waterlogged."
+tags        = ["humanoid", "townsfolk"]
+style       = "flowcurrent"
 style_prof  = 30
 hp          = 40
 max_hp      = 40
 attack      = 8
 defense     = 6
-xp_reward   = 20
-gold_reward = 5
+xp_reward   = 0
+gold_reward = 0
 hostile     = false
-dialogue    = "The rivers remember more than we do, traveller."
 
 give_accepts = [
   {
     item_id = "resonant_token",
     message = "Kale turns the token over in his hand, listening. 'So the echoes have found you too.'",
     script  = [
-      { op = "set_flag", flag = "rl_kale_trusts_you" },
-      { op = "prestige", amount = 5, reason = "shared a relic of the old rivers" },
+      { op = "set_flag",  flag = "rl_kale_trusts_you" },
+      { op = "prestige",  amount = 5, reason = "shared a relic of the old rivers" },
       { op = "give_gold", amount = 10 },
-      { op = "advance_quest", quest_id = "rivers_remember", step = 2 },
     ],
   },
 ]
 
-# Mapmaker Sela — shop + quest hook
+# ── Mapmaker Sela — shop, lore ───────────────────────────────────────────────
+
 [[npc]]
 id          = "sela_mapmaker"
 name        = "Mapmaker Sela"
 desc_short  = "A sharp-eyed cartographer surrounded by half-finished maps."
-desc_long   = "Lines of ink crisscross her table, some crossed out, others circled with frustration."
-tags        = ["humanoid"]
-style       = "brawling"
+desc_long   = "Lines of ink crisscross her table, some crossed out, others circled with frustration. She glances at you without pausing her work."
+tags        = ["humanoid", "townsfolk"]
+style       = "flowcurrent"
 style_prof  = 10
 hp          = 30
 max_hp      = 30
 attack      = 5
 defense     = 4
-xp_reward   = 15
-gold_reward = 3
+xp_reward   = 0
+gold_reward = 0
 hostile     = false
 
 shop = [
-  { item_id = "clarity_stew", price = 6 },
+  { item_id = "clarity_stew",   price = 6 },
   { item_id = "resonant_token", price = 40 },
 ]
 
@@ -58,87 +62,183 @@ kill_script = [
   { op = "set_flag", flag = "rl_sela_dead" },
 ]
 
-# Vendor — general supplies
+# ── Vendor Supplies — general goods ─────────────────────────────────────────
+
 [[npc]]
 id          = "vendor_supplies"
 name        = "Stallkeeper Brann"
 desc_short  = "A stocky merchant arranging goods with practiced efficiency."
-desc_long   = "Brann's stall holds ropes, hooks, and jars labeled in a neat hand."
-tags        = ["humanoid"]
-style       = "brawling"
+desc_long   = "Brann's stall holds ropes, hooks, and jars labeled in a neat hand. He nods when you approach, no words wasted."
+tags        = ["humanoid", "townsfolk"]
+style       = "flowcurrent"
 style_prof  = 15
 hp          = 35
 max_hp      = 35
 attack      = 6
 defense     = 5
-xp_reward   = 18
-gold_reward = 4
+xp_reward   = 0
+gold_reward = 0
 hostile     = false
 
 shop = [
-  { item_id = "clarity_stew", price = 8 },
-  { item_id = "ferryman_hook", price = 25 },
-  {item_id = "rl_travel_rations", price   = 5},
-  {item_id = "rl_water_flask", price   = 3},
-  {item_id = "rl_torch_bundle", price   = 4},
-  {item_id = "rl_rope_coil", price   = 6},
-  {item_id = "rl_basic_repair_kit", price   = 8 },
-  {item_id = "rl_small_pouch", price   = 2},
-  {item_id = "rl_minor_tonic", price   = 6},
-  {item_id = "rl_antifog_oil", price   = 7},
-  {item_id = "mf_anchor_pebble", price   = 12},
-  {item_id = "vh_resin_sachet", price   = 10},
-  {item_id = "gr_shadecloth_scrap", price   = 9}
-  ]
+  { item_id = "clarity_stew",       price = 8  },
+  { item_id = "ferryman_hook",      price = 25 },
+  { item_id = "rl_travel_rations",  price = 5  },
+  { item_id = "rl_water_flask",     price = 3  },
+  { item_id = "rl_torch_bundle",    price = 4  },
+  { item_id = "rl_rope_coil",       price = 6  },
+  { item_id = "rl_basic_repair_kit", price = 8 },
+  { item_id = "rl_small_pouch",     price = 2  },
+  { item_id = "rl_minor_tonic",     price = 6  },
+  { item_id = "rl_antifog_oil",     price = 7  },
+]
 
-# Innkeeper — rest_cost
+# ── Innkeeper Mara — rest ────────────────────────────────────────────────────
+
 [[npc]]
 id          = "innkeeper_mara"
 name        = "Innkeeper Mara"
 desc_short  = "A broad-shouldered woman with tired eyes and a ready smile."
-desc_long   = "Mara moves with the efficiency of someone who has kept this place running through worse than bad weather."
-tags        = ["humanoid"]
-style       = "brawling"
+desc_long   = "Mara moves with the efficiency of someone who has kept this place running through worse than bad weather. A set of keys hangs at her belt."
+tags        = ["humanoid", "townsfolk"]
+style       = "flowcurrent"
 style_prof  = 20
 hp          = 45
 max_hp      = 45
 attack      = 7
 defense     = 7
-xp_reward   = 20
-gold_reward = 5
+xp_reward   = 0
+gold_reward = 0
 hostile     = false
 rest_cost   = 5
 
-# River Child — flavour + future companion hook
+# ── River Child — flavour ────────────────────────────────────────────────────
+
 [[npc]]
 id          = "river_child"
 name        = "River Child"
 desc_short  = "A barefoot child tossing pebbles into the water."
-desc_long   = "They watch the ripples with intense concentration, as if expecting an answer."
-tags        = ["humanoid", "small"]
-style       = "brawling"
+desc_long   = "They watch the ripples with intense concentration, as if expecting an answer. When they notice you watching, they don't flinch."
+tags        = ["humanoid", "small", "townsfolk"]
+style       = "flowcurrent"
 style_prof  = 5
 hp          = 20
 max_hp      = 20
-attack      = 3
+attack      = 2
 defense     = 2
-xp_reward   = 5
+xp_reward   = 0
 gold_reward = 0
 hostile     = false
 dialogue    = "Sometimes the river whispers names. Sometimes it forgets them."
+
+# ── Loran the Boatwright — crafting, lore ───────────────────────────────────
 
 [[npc]]
 id          = "crafter_boatwright"
 name        = "Loran the Boatwright"
 desc_short  = "A skilled craftsman who builds and repairs river vessels."
 desc_long   = "Loran has spent decades shaping hulls and patching ferries. His hands are calloused, and his eyes are sharp with experience."
-tags        = ["townsfolk", "crafter"]
-style       = ""
+tags        = ["humanoid", "townsfolk", "crafter"]
+style       = "flowcurrent"
 style_prof  = 10
 hp          = 30
 max_hp      = 30
 attack      = 4
 defense     = 3
+xp_reward   = 0
+gold_reward = 0
 hostile     = false
-xp_reward   = 15
-gold_reward = 5
+
+# ── ENEMIES ──────────────────────────────────────────────────────────────────
+
+# Mire Wolf — spawns at lower piers. Riverlands scavenger drawn to the dock
+# refuse. Fast and aggressive, but fragile. Flowcurrent players handle it well.
+
+[[npc]]
+id          = "mire_wolf"
+name        = "Mire Wolf"
+desc_short  = "A lean, river-damp wolf that has learned to stalk the docks."
+desc_long   = "Its grey coat is slick with spray, its eyes pale and calculating. It circles wide before committing, watching for an opening."
+tags        = ["beast", "fast"]
+style       = "flowcurrent"
+style_prof  = 20
+hp          = 28
+max_hp      = 28
+attack      = 8
+defense     = 3
+xp_reward   = 18
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 5
+
+kill_script = [
+  { op = "message", tag = "combat_death", text = "The mire wolf slumps and slides off the pier edge into the churning water below." },
+]
+
+# Drift Serpent — spawns at unstable current. An eel-like creature native to
+# the confluence's chaotic waters. Attacks with a numbing toxin.
+
+[[npc]]
+id          = "drift_serpent"
+name        = "Drift Serpent"
+desc_short  = "A long, pale serpent that rides the impossible currents beneath the planking."
+desc_long   = "It moves like liquid, like the river itself shaped into something with intent. Its bite carries a faint numbing cold."
+tags        = ["beast", "fast", "small"]
+style       = "flowcurrent"
+style_prof  = 25
+hp          = 22
+max_hp      = 22
+attack      = 9
+defense     = 4
+xp_reward   = 20
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 5
+
+kill_script = [
+  { op = "message", tag = "combat_death", text = "The drift serpent unravels and is carried away by the current." },
+]
+
+round_script = [
+  { op = "if_combat_round", min = 2, then = [
+    { op = "if_npc_hp", max = 15, then = [
+      { op = "apply_status", effect = "poisoned", duration = 3 },
+      { op = "message", tag = "combat", text = "The serpent's bite carries a cold sting — poison seeps in." },
+    ] },
+  ] },
+]
+
+# Echo Wraith — spawns on the hidden stair. A resonance entity born from
+# centuries of accumulated harmonic energy in the bedrock. Semi-translucent,
+# cold to the touch, and disorienting to fight.
+
+[[npc]]
+id          = "echo_wraith"
+name        = "Echo Wraith"
+desc_short  = "A translucent shape that ripples like a reflection on disturbed water."
+desc_long   = "Not quite solid, not quite absent. It moves with eerie patience, its form shifting between the shadow of a person and the shape of something older."
+tags        = ["undead", "fast", "small"]
+style       = "flowcurrent"
+style_prof  = 35
+hp          = 38
+max_hp      = 38
+attack      = 11
+defense     = 6
+xp_reward   = 30
+gold_reward = 0
+hostile     = true
+respawn     = true
+respawn_time = 8
+
+kill_script = [
+  { op = "message", tag = "combat_death", text = "The echo wraith disperses into a scatter of dying harmonics, leaving nothing behind but a faint ringing in your ears." },
+]
+
+round_script = [
+  { op = "if_combat_round", min = 3, then = [
+    { op = "apply_status", effect = "confused", duration = 2 },
+    { op = "message", tag = "combat", text = "The wraith's presence blurs your senses — the world goes sideways for a moment." },
+  ] },
+]

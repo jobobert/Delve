@@ -1,212 +1,285 @@
+# =========================================================
+# CORE CHAMBER — ROOMS
+# =========================================================
+# Resonance mechanic: adjust_attr name="resonance" tracks stability (0-100).
+# Resets to 100 on cc_entrance entry.
+# Drains during descent; restored by calibrating sentinel NPCs (+15 each).
+# Calibration Gate (cc_descent7 -> cc_lattice1): requires resonance >= 60.
+# Nexus Gate: requires all 5 calibration flags set (checked in on_enter).
+# Crystal Chamber: gated by cc_overseer_defeated flag.
+# =========================================================
+
+
+# ---------------------------------------------------------
+# DESCENT (1-7)
+# ---------------------------------------------------------
+
 [[room]]
 id          = "cc_entrance"
 name        = "Chamber Threshold"
-description = "A circular platform suspended over darkness. Resonance hums beneath your feet."
+description = "A circular platform suspended over darkness. Resonance hums beneath your feet, calibrating to your presence."
 exits       = { down = "cc_descent1" }
 on_enter    = [
-  { op = "add_resonance", amount = -2 }
+  { op = "set_attr",      name = "resonance", value = 100 },
+  { op = "advance_quest", quest_id = "cc_finale", step = 1 },
+  { op = "message", tag = "system", text = "Resonance stabilizes to full. The descent begins." },
 ]
 
 [[room]]
 id          = "cc_descent1"
 name        = "Descent — Echoing Shaft"
 description = "The walls shimmer with faint memories of the regions above."
+spawns      = ["cc_resonance_wisp"]
 exits       = { up = "cc_entrance", down = "cc_descent2" }
 on_enter    = [
-  { op = "add_resonance", amount = -1 }
+  { op = "adjust_attr", name = "resonance", amount = -2 },
 ]
 
 [[room]]
 id          = "cc_descent2"
 name        = "Descent — Pressure Vein"
-description = "A pulse of air pushes against you, like the Mistfen’s distortions."
+description = "A pulse of air pushes against you, like the Mistfen's distortions."
+spawns      = ["cc_resonance_wisp"]
 exits       = { up = "cc_descent1", down = "cc_descent3" }
 on_enter    = [
-  { op = "add_resonance", amount = -2 }
+  { op = "adjust_attr", name = "resonance", amount = -2 },
 ]
 
 [[room]]
 id          = "cc_descent3"
 name        = "Descent — Overgrowth Scar"
 description = "Vines and roots cling to the walls, twitching faintly."
+spawns      = ["cc_resonance_wisp"]
 exits       = { up = "cc_descent2", down = "cc_descent4" }
 on_enter    = [
-  { op = "add_resonance", amount = -1 }
+  { op = "adjust_attr", name = "resonance", amount = -2 },
 ]
 
 [[room]]
 id          = "cc_descent4"
 name        = "Descent — Thermal Rift"
-description = "Heat radiates from cracks in the floor. The air shimmers."
+description = "Heat radiates from cracks in the floor. The air shimmers with instability."
+spawns      = ["cc_resonance_sentinel"]
 exits       = { up = "cc_descent3", down = "cc_descent5" }
 on_enter    = [
-  { op = "add_resonance", amount = -3 }
+  { op = "adjust_attr", name = "resonance", amount = -4 },
 ]
 
 [[room]]
 id          = "cc_descent5"
 name        = "Descent — Shadow Echo"
-description = "Darkness pools unnaturally, bending around your light."
+description = "Darkness pools unnaturally, bending around any light source."
+spawns      = ["cc_resonance_wisp"]
 exits       = { up = "cc_descent4", down = "cc_descent6" }
 on_enter    = [
-  { op = "add_resonance", amount = -2 }
+  { op = "adjust_attr", name = "resonance", amount = -3 },
 ]
 
 [[room]]
 id          = "cc_descent6"
 name        = "Descent — Memory Drift"
-description = "The walls shift when unobserved. You feel the Plains’ influence."
+description = "The walls shift when unobserved. You feel the Plains' influence echoing through stone."
+spawns      = ["cc_resonance_wisp"]
 exits       = { up = "cc_descent5", down = "cc_descent7" }
 on_enter    = [
-  { op = "add_resonance", amount = -2 }
+  { op = "adjust_attr", name = "resonance", amount = -2 },
 ]
 
 [[room]]
 id          = "cc_descent7"
 name        = "Descent — Calibration Gate"
-description = "Five pedestals await the device pieces you recovered."
+description = "Five pedestals stand before an archway carved with the symbols of each region. The gate hums, awaiting stable resonance."
 exits       = {
-  up = "cc_descent6",
-  down = { to = "cc_lattice1", show_if = { op = "resonance_at_least", amount = 60 } }
+  up   = "cc_descent6",
+  down = { to = "cc_lattice1", show_if = { op = "has_flag", flag = "cc_gate_stable" } },
 }
-on_enter = [
-  { op = "if_resonance_at_most", amount = 59, then = [
-    { op = "message", tag = "error", text = "The gate rejects unstable resonance." }
-  ] }
+on_enter    = [
+  { op = "if_attr", name = "resonance", min = 60, then = [
+    { op = "set_flag", flag = "cc_gate_stable" },
+    { op = "message", tag = "system", text = "The gate resonates with your stability. It opens." },
+  ], else = [
+    { op = "message", tag = "error", text = "The gate rejects unstable resonance. Calibrate in the Lattice above." },
+  ] },
 ]
+
+
+# ---------------------------------------------------------
+# RESONANCE LATTICE (hub + 5 calibration branches)
+# ---------------------------------------------------------
 
 [[room]]
 id          = "cc_lattice1"
 name        = "Lattice — Convergence Hub"
-description = "Paths branch in five directions, each echoing a region’s influence."
+description = "Paths branch in five directions, each echoing a region's influence. The Overseer's presence presses from below."
+spawns      = ["cc_resonance_sentinel"]
 exits       = {
   north = "cc_light_calibration",
   east  = "cc_pressure_calibration",
   south = "cc_growth_calibration",
   west  = "cc_heat_calibration",
-  down  = "cc_memory_calibration"
+  up    = "cc_memory_calibration",
+  down  = { to = "cc_nexus_entrance", show_if = { op = "has_flag", flag = "cc_all_calibrated" } },
 }
-on_enter = [
-  { op = "add_resonance", amount = -1 }
+on_enter    = [
+  { op = "adjust_attr", name = "resonance", amount = -1 },
 ]
+
 
 # --- LIGHT (Gloamreach) ---
 [[room]]
 id          = "cc_light_calibration"
 name        = "Calibration — Light"
-description = "Mirrors and crystals float in midair, scattering beams of shifting color."
+description = "Mirrors and crystals float in midair, scattering beams of shifting color. A prismatic sentinel watches over the node."
+npcs        = ["cc_light_sentinel"]
+spawns      = ["cc_echo_light"]
 exits       = { south = "cc_lattice1" }
 on_enter    = [
-  { op = "add_resonance", amount = -5 }
+  { op = "adjust_attr", name = "resonance", amount = -3 },
 ]
-on_use = [
-  { op = "add_resonance", amount = 15 },
-  { op = "set_flag", flag = "cc_light_aligned" }
-]
+
 
 # --- PRESSURE (Mistfen) ---
 [[room]]
 id          = "cc_pressure_calibration"
 name        = "Calibration — Pressure"
-description = "Air currents twist unpredictably, bending sound and space."
+description = "Air currents twist unpredictably, bending sound and space around the alignment node."
+npcs        = ["cc_pressure_sentinel"]
+spawns      = ["cc_echo_pressure"]
 exits       = { west = "cc_lattice1" }
 on_enter    = [
-  { op = "add_resonance", amount = -5 }
+  { op = "adjust_attr", name = "resonance", amount = -3 },
 ]
-on_use = [
-  { op = "add_resonance", amount = 15 },
-  { op = "set_flag", flag = "cc_pressure_aligned" }
-]
+
 
 # --- GROWTH (Heartwood) ---
 [[room]]
 id          = "cc_growth_calibration"
 name        = "Calibration — Growth"
-description = "Vines coil around ancient machinery, pulsing with life."
+description = "Vines coil around ancient machinery, pulsing with life. The growth node breathes slowly."
+npcs        = ["cc_growth_sentinel"]
+spawns      = ["cc_echo_growth"]
 exits       = { north = "cc_lattice1" }
 on_enter    = [
-  { op = "add_resonance", amount = -5 }
+  { op = "adjust_attr", name = "resonance", amount = -3 },
 ]
-on_use = [
-  { op = "add_resonance", amount = 15 },
-  { op = "set_flag", flag = "cc_growth_aligned" }
-]
+
 
 # --- HEAT (Dragon Peaks) ---
 [[room]]
 id          = "cc_heat_calibration"
 name        = "Calibration — Heat"
-description = "Thermal vents flare rhythmically, like a beating heart."
+description = "Thermal vents flare rhythmically, like a beating heart. The heat node glows deep orange."
+npcs        = ["cc_heat_sentinel"]
+spawns      = ["cc_echo_heat"]
 exits       = { east = "cc_lattice1" }
 on_enter    = [
-  { op = "add_resonance", amount = -5 }
+  { op = "adjust_attr", name = "resonance", amount = -3 },
 ]
-on_use = [
-  { op = "add_resonance", amount = 15 },
-  { op = "set_flag", flag = "cc_heat_aligned" }
-]
+
 
 # --- MEMORY (Mycelial Plains) ---
 [[room]]
 id          = "cc_memory_calibration"
 name        = "Calibration — Memory"
-description = "Fungal nodes glow softly, whispering fragments of forgotten knowledge."
-exits       = { up = "cc_lattice1" }
+description = "Fungal nodes glow softly, whispering fragments of forgotten knowledge. The memory sentinel stands in quiet contemplation."
+npcs        = ["cc_memory_sentinel"]
+spawns      = ["cc_echo_memory"]
+exits       = { down = "cc_lattice1" }
 on_enter    = [
-  { op = "add_resonance", amount = -5 }
+  { op = "adjust_attr", name = "resonance", amount = -3 },
 ]
-on_use = [
-  { op = "add_resonance", amount = 15 },
-  { op = "set_flag", flag = "cc_memory_aligned" }
-]
+
+
+# ---------------------------------------------------------
+# NEXUS (Overseer's domain)
+# ---------------------------------------------------------
 
 [[room]]
 id          = "cc_nexus_entrance"
 name        = "Nexus — Outer Ring"
-description = "The air vibrates with unstable resonance. The Overseer senses your presence."
-exits       = { east = "cc_nexus1", west = "cc_lattice1" }
+description = "The air vibrates with unstable resonance. The Overseer senses your presence. There is no turning back."
+spawns      = ["cc_resonance_wisp"]
+exits       = { east = "cc_nexus1", up = "cc_lattice1" }
 on_enter    = [
-  { op = "add_resonance", amount = -3 }
+  { op = "if_not_flag", flag = "cc_light_aligned", then = [
+    { op = "message", tag = "error", text = "The Light subsystem is not calibrated. The nexus rejects you." },
+    { op = "teleport_player", room_id = "cc_lattice1" },
+  ] },
+  { op = "if_not_flag", flag = "cc_pressure_aligned", then = [
+    { op = "message", tag = "error", text = "The Pressure subsystem is not calibrated. The nexus rejects you." },
+    { op = "teleport_player", room_id = "cc_lattice1" },
+  ] },
+  { op = "if_not_flag", flag = "cc_growth_aligned", then = [
+    { op = "message", tag = "error", text = "The Growth subsystem is not calibrated. The nexus rejects you." },
+    { op = "teleport_player", room_id = "cc_lattice1" },
+  ] },
+  { op = "if_not_flag", flag = "cc_heat_aligned", then = [
+    { op = "message", tag = "error", text = "The Heat subsystem is not calibrated. The nexus rejects you." },
+    { op = "teleport_player", room_id = "cc_lattice1" },
+  ] },
+  { op = "if_not_flag", flag = "cc_memory_aligned", then = [
+    { op = "message", tag = "error", text = "The Memory subsystem is not calibrated. The nexus rejects you." },
+    { op = "teleport_player", room_id = "cc_lattice1" },
+  ] },
+  { op = "set_flag",      flag = "cc_all_calibrated" },
+  { op = "advance_quest", quest_id = "cc_finale", step = 2 },
+  { op = "adjust_attr",   name = "resonance", amount = -3 },
+  { op = "message", tag = "quest", text = "All five subsystems calibrated. The Overseer awaits." },
 ]
 
 [[room]]
 id          = "cc_nexus1"
 name        = "Nexus — Inner Ring"
-description = "Energy arcs between floating pillars. The central crystal glows faintly."
+description = "Energy arcs between floating pillars. The central crystal glows faintly through the archway ahead."
+spawns      = ["cc_resonance_sentinel"]
 exits       = { west = "cc_nexus_entrance", east = "cc_overseer_arena" }
 on_enter    = [
-  { op = "add_resonance", amount = -3 }
+  { op = "adjust_attr", name = "resonance", amount = -3 },
 ]
 
 [[room]]
 id          = "cc_overseer_arena"
-name        = "Overseer’s Arena"
-description = "A vast chamber where resonance gathers into a towering construct."
-exits       = { west = "cc_nexus1", east = "cc_crystal_chamber" }
+name        = "Overseer's Arena"
+description = "A vast chamber where resonance gathers into a towering construct of shifting light and shadow."
+spawns      = ["cc_overseer_final"]
+exits       = {
+  west = "cc_nexus1",
+  east = { to = "cc_crystal_chamber", show_if = { op = "has_flag", flag = "cc_overseer_defeated" } },
+}
 on_enter    = [
-  { op = "spawn", npc_id = "cc_overseer_final" }
+  { op = "if_not_flag", flag = "cc_overseer_defeated", then = [
+    { op = "adjust_attr", name = "resonance", amount = -5 },
+    { op = "message", tag = "combat", text = "The Overseer turns toward you, its form cycling through all five frequencies." },
+  ] },
 ]
+
+
+# ---------------------------------------------------------
+# CRYSTAL CHAMBER & REBOOT
+# ---------------------------------------------------------
 
 [[room]]
 id          = "cc_crystal_chamber"
 name        = "Crystal Chamber"
-description = "The central crystal awaits realignment. Its light flickers weakly."
-exits       = {
-  west = "cc_overseer_arena",
-  east = { to = "cc_reboot_chamber", show_if = { op = "resonance_at_least", amount = 80 } }
-}
-on_enter = [
-  { op = "if_resonance_at_most", amount = 79, then = [
-    { op = "message", tag = "error", text = "The crystal rejects unstable resonance." }
-  ] }
+description = "The central crystal awaits realignment. Its light flickers weakly, five hues cycling in slow rotation."
+npcs        = ["cc_crystal"]
+exits       = { west = "cc_overseer_arena", east = "cc_reboot_chamber" }
+on_enter    = [
+  { op = "if_not_flag", flag = "cc_crystal_activated", then = [
+    { op = "message", tag = "quest", text = "The Central Crystal pulses with anticipation. Speak to it to complete the alignment." },
+  ] },
 ]
 
 [[room]]
 id          = "cc_reboot_chamber"
 name        = "Reboot Chamber"
-description = "A circular platform surrounded by rising energy. The device awaits your choice."
+description = "A circular platform surrounded by rising resonance energy. The device hums with renewed purpose."
 exits       = { west = "cc_crystal_chamber" }
 on_enter    = [
-  { op = "message", tag = "system", text = "The Sixfold Regulator awaits your command." }
+  { op = "if_flag", flag = "cc_reboot_restore", then = [
+    { op = "message", tag = "system", text = "The Sixfold Regulator pulses with renewed life. The world breathes easier." },
+  ] },
+  { op = "if_flag", flag = "cc_reboot_disable", then = [
+    { op = "message", tag = "system", text = "The device winds down in silence. The resonance fades, leaving only quiet." },
+  ] },
 ]
-

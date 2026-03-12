@@ -87,6 +87,7 @@ class Tag:
     ERROR        = "error"         # Error and invalid-command feedback
     BLANK        = "blank"         # Empty line / visual spacer
     AMBIGUOUS    = "ambiguous"     # Multiple matches — disambiguation prompt
+    PAUSE        = "pause"         # Cutscene timing pause; text = seconds as a float string
 
 
 @dataclass

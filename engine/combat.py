@@ -149,11 +149,15 @@ class CombatSession:
             p_atk = max(1, p_atk // 2)
             p_def = max(0, p_def // 2)
 
-        # Status effect modifiers
+        # Status effect modifiers — driven by world_config STATUS_EFFECTS
         se = self.player.status_effects
-        if "blinded"   in se: p_atk = max(1, p_atk - 4)
-        if "weakened"  in se: p_atk = max(1, p_atk - 4)
-        if "protected" in se: p_def += 3
+        for _se in wc.STATUS_EFFECTS:
+            if _se["id"] not in se:
+                continue
+            if _se["combat_atk"]:
+                p_atk = max(1, p_atk + _se["combat_atk"])
+            if _se["combat_def"]:
+                p_def = max(0, p_def + _se["combat_def"])
 
         log.debug("combat", "player_stats",
                   base_atk=self.player.effective_attack,
@@ -599,7 +603,7 @@ class CombatSession:
                           f"  XP applied to debt. ({self.player.xp_debt} remaining)")
             else:
                 self._out(Tag.REWARD_XP, f"  You gain {xp} XP.")
-        if gold: self._out(Tag.REWARD_GOLD,  f"  You find {gold} gold.")
+        if gold: self._out(Tag.REWARD_GOLD,  f"  You find {gold} {wc.CURRENCY_NAME}.")
         if leveled:
             self._out(Tag.REWARD_XP,
                       f"✦ Level up! You are now level {self.player.level}. HP fully restored.")

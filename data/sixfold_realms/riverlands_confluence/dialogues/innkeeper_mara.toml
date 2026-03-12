@@ -1,0 +1,94 @@
+[[node]]
+id    = "root"
+lines = [
+  "Mara wipes down the bar without looking up. 'Room or a meal? Either way, you've come to the right place.'"
+]
+
+[[response]]
+node = "root"
+text = "I'd like a room for the night."
+next = "room_info"
+
+[[response]]
+node = "root"
+text = "What's the news around the confluence?"
+next = "gossip"
+
+[[response]]
+node = "root"
+text = "Tell me about the inn."
+next = "about_inn"
+
+[[response]]
+node = "root"
+text = "Nothing today."
+next = ""
+
+
+# --- Room Info ---
+[[node]]
+id   = "room_info"
+line = "'Rooms are upstairs. Go up and use 'sleep' to rest — costs five marks, heals you proper. Leave when you're ready.'"
+
+[[response]]
+node = "room_info"
+text = "Thanks. I'll head up."
+next = ""
+
+
+# --- Gossip ---
+[[node]]
+id   = "gossip"
+lines = [
+  "'Three things on everyone's lips: the ferries stopped running proper, the currents are doing something strange near the lower piers, and someone found an old stair under the mural promenade that no one remembers building.'",
+  "'I don't ask too many questions. People drink more when they're unsettled.'"
+]
+
+[[response]]
+node = "gossip"
+text = "The stair sounds worth investigating."
+next = "gossip_stair"
+
+[[response]]
+node = "gossip"
+text = "Good philosophy."
+next = ""
+
+
+[[node]]
+id   = "gossip_stair"
+line = "'If you go down there, be careful. Kale says the resonance in the bedrock isn't natural. I don't know what that means, but he says it quiet and serious, so I believe him.'"
+
+[[response]]
+node = "gossip_stair"
+text = "I'll keep that in mind."
+next = ""
+
+
+# --- About the Inn ---
+[[node]]
+id   = "about_inn"
+lines = [
+  "'Been here thirty years. Survived two floods, one river rerouting, and whatever this current business is.'",
+  "'As long as the confluence draws travellers, I'll have something to offer them.'"
+]
+
+[[response]]
+node = "about_inn"
+text = "Impressive. You seem like someone who knows how to endure."
+next = "about_mara"
+
+[[response]]
+node = "about_inn"
+text = "Good to know the inn will be here."
+next = ""
+
+
+[[node]]
+id   = "about_mara"
+line = "She smiles — just barely. 'I've had practice.'"
+
+[[response]]
+node = "about_mara"
+text = "Fair enough."
+next = ""

@@ -17,6 +17,7 @@ None require external packages except where marked.
 | `ai_player.py` | Autonomous AI playtester via Anthropic API | `ANTHROPIC_API_KEY` |
 | `offline_bot.py` | Deterministic offline playtester (no API key needed) | — |
 | `wct_server.py` | Local web server: World Creation Tool + web game client | — |
+| `run_script.py` | Run a world script file against a named player from the CLI | — |
 | `md2html.py` | Convert a Markdown file to a self-contained HTML page | — |
 
 ---
@@ -192,13 +193,11 @@ dot -Tpdf output/quest/quest_ashwood_contract.dot -o ashwood.pdf
 - **Blue edges** — normal transitions, labeled with NPC / node, flags required,
   and flags set.
 - **Green edge** — the final `complete_quest` transition.
-- **Dashed red edges** — no dialogue trigger found for this transition.
-  The quest either needs a new dialogue node, or the trigger is in a
-  `kill_script` / `on_enter` hook not scanned by this tool.
+- **Dashed red edges** — no trigger found for this transition anywhere
+  (dialogue, kill_script, on_enter, on_get). The quest step is unimplemented.
 
-Note: `quest_graph.py` only scans **dialogue files** for triggers.  Quests
-advanced via NPC `kill_script`, room `on_enter`, or item `on_get`/`on_drop`
-will show warning edges even if a trigger does exist.
+Trigger scanning covers **dialogue files**, NPC `kill_script`, room `on_enter`,
+and item `on_get` — so warning edges only appear for steps with no trigger anywhere.
 
 ---
 
@@ -232,6 +231,34 @@ Session logs (JSON) are written to `tools/ai_sessions/` and are git-ignored.
 
 ---
 
+## offline_bot.py
+
+A deterministic offline playtester — no AI, no API key. Reads zone TOML data
+directly to make decisions (explore rooms, fight enemies, pick up items, talk
+to NPCs). Useful for smoke-testing engine changes and data integrity without
+any external services.
+
+```
+python tools/offline_bot.py
+python tools/offline_bot.py --world first_world --turns 500 --name BotName
+python tools/offline_bot.py --world first_world --quest ashwood_contract
+python tools/offline_bot.py --world first_world --zone ashwood --verbose
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--world` | first found | World folder name |
+| `--turns` | `200` | Max commands to run |
+| `--name` | `Bot` | Character name |
+| `--quest` | — | Focus exploration toward completing this quest |
+| `--zone` | — | Restrict exploration to a single zone |
+| `--verbose` | off | Print command-by-command trace to stdout |
+
+Outputs an HTML session log to `tools/ai_sessions/ai_<world>_<timestamp>.html`
+and appends stats to `tools/ai_sessions/stats.jsonl`.
+
+---
+
 ## wct_server.py
 
 Starts a local HTTP server that serves two tools on the same port:
@@ -253,20 +280,28 @@ run concurrently with WCT requests.
 
 ### WCT features
 
-- **Editor** — rooms, NPCs, items, quests, dialogues with full field editing,
-  script op editor, exit editor, ref picker
-- **Map view** — interactive SVG map (pan/zoom), per-zone colour coding, room
-  detail panel, one-click edit; optional NPC/item count badges and exit-direction
-  labels on edges
-- **Dialogue graph** — click **Graph** in any dialogue editor to toggle an in-browser
-  interactive SVG tree: nodes colour-coded by script op, conditional edges in blue,
-  click any node for a detail panel showing text / conditions / ops / responses
-- **Quest graph** — click **Graph** in any quest editor to toggle an in-browser
-  interactive SVG step-flow diagram: START → steps → COMPLETE, with edges annotated
-  from the dialogue files that drive each transition (⚠ warnings where no trigger is found)
-- **DOT export** — download Graphviz `.dot` files for the full world map (map
-  toolbar), any NPC's dialogue tree (dialogue **Export DOT** button), or any quest's
-  step flow (quest **Export DOT** button)
+- **Editor** — rooms, NPCs, items, quests, dialogues, fighting styles, and status effects
+  with full field editing, script op editor, exit editor, ref picker, drag-and-drop
+  quest steps and dialogue responses
+- **Map view** — interactive SVG map (pan/zoom), per-zone colour coding, room detail
+  panel, one-click edit; NPC/item count badges, exit-direction labels, start-room ★ and
+  town ⌂ icons, connected-room gold highlight on selection; zone switch resets pan/zoom
+- **Dialogue graph** — click **Graph** in any dialogue editor for an in-browser interactive
+  SVG tree: nodes colour-coded by script op, conditional edges in blue, click any node
+  for a detail panel showing text / conditions / ops / responses
+- **Quest graph** — click **Graph** in any quest editor for an in-browser interactive
+  SVG step-flow diagram: START → steps → COMPLETE, with edge labels showing the source
+  (dialogue / kill_script / on_get / on_enter) that drives each transition; ⚠ warnings
+  where no trigger is found anywhere
+- **References panel** — right-pane cross-reference index shows all entities that
+  reference the selected object, plus a **Flags** section listing every flag the entity
+  reads or writes (with world-wide usage count, clickable for a full usage list)
+- **Error panel** — collapsible panel at the bottom of the editor; lists ERR/WRN rows
+  for missing fields, unknown refs, dialogue issues, and quest giver mismatches;
+  each row is clickable and navigates to the offending entity
+- **DOT export** — download Graphviz `.dot` files for the full world map (map toolbar),
+  any NPC's dialogue tree (dialogue **Export DOT** button), or any quest's step flow
+  (quest **Export DOT** button)
 - **Validate** — run `validate.py` from inside the browser
 - **UI state** — selected object, panel widths, and sidebar collapse state are
   saved per-world in `localStorage`

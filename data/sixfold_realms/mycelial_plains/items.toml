@@ -1,7 +1,5 @@
-#item = [{id = "item_clarity_brew", name = "Clarity Brew", desc_short = "A tonic that temporarily clears spore-induced mental fog.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_glowcap_spore", name = "Glowcap Spore", desc_short = "A glowing spore used in alchemical mixtures.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_mycelial_thread", name = "Mycelial Thread", desc_short = "A strong fungal fiber used in crafting.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_lumen_marrow", name = "Lumen Marrow", desc_short = "A glowing substance harvested from bioluminescent fungi.", weight = 0, respawn = false, no_drop = false, tags = [], effects = [], value = 0, on_get = []}, {id = "item_device_piece_5", name = "Device Piece: Cognitive Regulator", desc_short = "A device component that stabilizes memory and thought patterns.", weight = 0, respawn = false, no_drop = false, tags = ["device_piece"], effects = [], value = 0, on_get = [], type = "misc"}]
-
 # ---------------------------------------------------------
-# Clarity & Anti-Spore Items
+# CLARITY & ANTI-SPORE ITEMS
 # ---------------------------------------------------------
 
 [[item]]
@@ -12,26 +10,29 @@ desc_long   = "Brewed from clarity caps and bitterroot. Temporarily cuts through
 slot        = ""
 weight      = 0
 respawn     = false
+gold_value  = 8
 on_use      = [
-  { op = "add_spores", amount = -20 },
-  { op = "message", tag = "system", text = "Your thoughts sharpen as the brew takes effect." }
+  { op = "adjust_attr", name = "spore_exposure", amount = -20 },
+  { op = "message", tag = "system", text = "Your thoughts sharpen as the brew takes effect." },
 ]
 
 [[item]]
 id          = "mp_fungal_mask"
 name        = "Fungal Mask"
 desc_short  = "A cloth mask treated with anti-spore resin."
-desc_long   = "Reduces spore inhalation and helps maintain clarity in dense bloom zones."
+desc_long   = "Reduces spore inhalation. Wearing it slows the accumulation of spore exposure in bloom zones."
 slot        = "head"
 weight      = 0
 respawn     = false
+gold_value  = 15
+tags        = ["cloth"]
 effects     = [
-  { type = "status_resist", effect = "spores", amount = 25 }
+  { type = "stat_bonus", stat = "defense", amount = 1 },
 ]
 
 
 # ---------------------------------------------------------
-# Memory Interaction Tools
+# MEMORY INTERACTION TOOLS
 # ---------------------------------------------------------
 
 [[item]]
@@ -42,9 +43,11 @@ desc_long   = "Striking it stabilizes nearby memory nodes and reduces drift."
 slot        = ""
 weight      = 0
 respawn     = false
+gold_value  = 15
 on_use      = [
-  { op = "set_flag", flag = "mp_memory_stabilized" },
-  { op = "message", tag = "system", text = "The tuning fork hums, anchoring your thoughts." }
+  { op = "set_flag",      flag = "mp_memory_stabilized" },
+  { op = "advance_quest", quest_id = "mp_fragment", step = 1 },
+  { op = "message", tag = "system", text = "The tuning fork hums, anchoring your thoughts." },
 ]
 
 [[item]]
@@ -55,11 +58,87 @@ desc_long   = "Used to read memory spores embedded in ancient structures."
 slot        = ""
 weight      = 0
 respawn     = false
+gold_value  = 10
 tags        = ["memory_tool"]
 
 
 # ---------------------------------------------------------
-# Region Materials
+# GATHERING NODES (scenery)
+# ---------------------------------------------------------
+
+[[item]]
+id          = "mp_fungal_cluster"
+name        = "Fungal Cluster"
+desc_short  = "A dense cluster of fibrous mushroom stalks."
+desc_long   = "The stalks can be stripped of their long, durable fibers. Useful in weaving and rope work."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "skill_check", skill = "survival", dc = 8,
+    on_pass = [
+      { op = "give_item",  item_id = "mp_fungal_fiber" },
+      { op = "skill_grow", skill = "survival", amount = 2 },
+      { op = "message", tag = "system", text = "You strip several long fibers from the cluster." },
+    ],
+    on_fail = [
+      { op = "give_item",  item_id = "mp_fungal_fiber" },
+      { op = "message", tag = "system", text = "You manage to pull a few fibers free, though the cluster resists." },
+    ],
+  },
+]
+
+[[item]]
+id          = "mp_clarity_grove_node"
+name        = "Clarity Cap Grove"
+desc_short  = "A cluster of pale caps growing in clean air."
+desc_long   = "These mushrooms grow only where the spore density is low, making them prized by brewers."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "skill_check", skill = "survival", dc = 6,
+    on_pass = [
+      { op = "give_item",  item_id = "mp_clarity_cap" },
+      { op = "skill_grow", skill = "survival", amount = 2 },
+      { op = "message", tag = "system", text = "You harvest a fresh clarity cap, its scent sharp and bracing." },
+    ],
+    on_fail = [
+      { op = "give_item",  item_id = "mp_clarity_cap" },
+      { op = "message", tag = "system", text = "You pick a clarity cap, bruising it slightly in the process." },
+    ],
+  },
+]
+
+[[item]]
+id          = "mp_memory_spore_node"
+name        = "Memory Spore Cloud"
+desc_short  = "A drifting cloud of shimmering spores near an ancient structure."
+desc_long   = "The spores carry encoded fragments of old thoughts. Carefully collected, they can be used in crafting."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+on_get      = [
+  { op = "skill_check", skill = "lore", dc = 10,
+    on_pass = [
+      { op = "give_item",  item_id = "mp_memory_spores" },
+      { op = "skill_grow", skill = "lore", amount = 2 },
+      { op = "message", tag = "system", text = "You carefully capture a cluster of memory spores." },
+    ],
+    on_fail = [
+      { op = "give_item",  item_id = "mp_memory_spores" },
+      { op = "adjust_attr", name = "spore_exposure", amount = 5 },
+      { op = "message", tag = "system", text = "You gather the spores, but breathe in more than intended." },
+    ],
+  },
+]
+
+
+# ---------------------------------------------------------
+# RAW MATERIALS
 # ---------------------------------------------------------
 
 [[item]]
@@ -75,8 +154,8 @@ tags        = ["mycelial_material"]
 [[item]]
 id          = "mp_clarity_cap"
 name        = "Clarity Cap"
-desc_short  = "A pale mushroom with sharp, minty scent."
-desc_long   = "The primary ingredient in clarity brews."
+desc_short  = "A pale mushroom with a sharp, minty scent."
+desc_long   = "The primary ingredient in clarity brews. Grows only in clean air."
 slot        = ""
 weight      = 0
 respawn     = false
@@ -104,32 +183,26 @@ tags        = ["mycelial_material"]
 
 
 # ---------------------------------------------------------
-# Signature Armor — Sporewarden Mantle
+# SIGNATURE ARMOR — Sporewarden Mantle
 # ---------------------------------------------------------
 
 [[item]]
 id          = "sporewarden_mantle"
 name        = "Sporewarden Mantle"
 desc_short  = "A mantle woven from fungal fibers and clarity caps."
-desc_long   = "It resists spore exposure and sharpens perception, helping its wearer navigate the Plains."
-slot        = "chest"
+desc_long   = "It resists spore exposure and sharpens the mind, helping its wearer navigate the shifting Plains."
+slot        = "body"
 weight      = 1
 respawn     = false
-armor_tags  = ["cloth", "light"]
+tags        = ["cloth", "light"]
 effects     = [
-  { type = "stat_bonus", stat = "perception", amount = 2 },
-  { type = "status_resist", effect = "spores", amount = 30 }
-]
-on_equip    = [
-  { op = "set_flag", flag = "mp_mantle_equipped" }
-]
-on_drop     = [
-  { op = "clear_flag", flag = "mp_mantle_equipped" }
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+  { type = "stat_bonus", stat = "max_hp",  amount = 8 },
 ]
 
 
 # ---------------------------------------------------------
-# Device Piece — Cognitive Regulator Fragment
+# DEVICE PIECE — Cognitive Regulator Fragment
 # ---------------------------------------------------------
 
 [[item]]
@@ -142,6 +215,7 @@ weight      = 0
 respawn     = false
 tags        = ["device_piece"]
 on_get      = [
-  { op = "advance_quest", quest_id = "mp_fragment", step = 3 },
-  { op = "prestige", amount = 3, reason = "recovered the Cognitive Regulator Fragment" }
+  { op = "advance_quest",  quest_id = "mp_fragment", step = 3 },
+  { op = "complete_quest", quest_id = "mp_fragment" },
+  { op = "prestige", amount = 3, reason = "recovered the Cognitive Regulator Fragment" },
 ]

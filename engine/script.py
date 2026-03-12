@@ -243,21 +243,25 @@ class ScriptRunner:
 
         # ── Gold / XP / HP ────────────────────────────────────────────────────
         elif name == "give_gold":
+            import engine.world_config as _wc
             amount = int(op.get("amount", 0))
             p.gold += amount
             if amount:
-                emit(Tag.REWARD_GOLD, f"  You receive {amount} gold. ({p.gold}g total)")
+                cur = _wc.CURRENCY_NAME
+                emit(Tag.REWARD_GOLD, f"  You receive {amount} {cur}. ({p.gold} {cur} total)")
 
         elif name == "take_gold":
             # Deducts gold; checks balance first.
+            import engine.world_config as _wc
             amount = int(op.get("amount", 0))
+            cur = _wc.CURRENCY_NAME
             if p.gold >= amount:
                 p.gold -= amount
                 if not op.get("silent"):
-                    emit(Tag.REWARD_GOLD, f"  You pay {amount} gold.")
+                    emit(Tag.REWARD_GOLD, f"  You pay {amount} {cur}.")
             else:
                 emit(Tag.ERROR,
-                     f"  You don't have enough gold! (need {amount}, have {p.gold})")
+                     f"  You don't have enough {cur}! (need {amount}, have {p.gold})")
 
         elif name == "give_xp":
             amount = int(op.get("amount", 0))
@@ -428,7 +432,10 @@ class ScriptRunner:
             duration = int(op.get("duration", 3))
             if effect:
                 p.status_effects[effect] = duration
-                emit(Tag.SYSTEM, f"  You are now {effect}.")
+                import engine.world_config as _wc
+                se_def = _wc.get_status_effect(effect)
+                msg = se_def["apply_msg"] if se_def else f"You are now {effect}."
+                emit(Tag.SYSTEM, msg)
 
         elif name == "clear_status":
             effect = op.get("effect", "")
@@ -617,6 +624,14 @@ class ScriptRunner:
             # Signals the active CombatSession to end the fight after this script run.
             # CombatSession clears the flag and closes the round.
             p.flags.add("_end_combat")
+
+        # ── Cutscene pause ────────────────────────────────────────────────────
+        elif name == "pause":
+            # { op = "pause", seconds = 0.5 }
+            # Emits a PAUSE message; the frontend is responsible for sleeping.
+            # The engine itself never calls time.sleep() to keep it decoupled.
+            seconds = op.get("seconds", 0.5)
+            emit(Tag.PAUSE, str(float(seconds)))
 
         # ── Journal ───────────────────────────────────────────────────────────
         elif name == "journal_entry":

@@ -218,6 +218,21 @@ def validate_items(items):
         on_get = item.get("on_get", [])
         if on_get:
             _check_script_item_refs(on_get, items, f"Item '{iid}'")
+        # Dead-code / contradiction checks
+        is_scenery = item.get("scenery", False)
+        # scenery + on_get is the valid interactive-scenery pattern (ore nodes, etc.)
+        # — engine now runs on_get then stops, so this is intentional; no warning.
+        if is_scenery and item.get("slot"):
+            warn(f"Item '{iid}' is scenery (unpickable) but has slot='{item['slot']}' — "
+                 f"it can never be equipped")
+        if item.get("no_drop") and item.get("on_drop"):
+            warn(f"Item '{iid}' has no_drop=true but also has on_drop — "
+                 f"the script will never run")
+        # commands[] sanity
+        for cmd in item.get("commands", []):
+            if not cmd.get("verb"):
+                warn(f"Item '{iid}' has a [[commands]] entry with no verb — "
+                     f"it will never be triggered")
 
 
 _NPC_REQUIRED = ("id", "name", "hp", "max_hp", "attack", "defense",
@@ -226,7 +241,7 @@ _NPC_REQUIRED = ("id", "name", "hp", "max_hp", "attack", "defense",
 
 _NPC_KNOWN = set(_NPC_REQUIRED) | {
     "shop", "rest_cost", "dialogue", "spawn_chance",
-    "respawn_time", "kill_script", "gear_affinity",
+    "respawn", "respawn_time", "kill_script", "gear_affinity",
     "admin_comment", "give_accepts", "round_script",
 }
 
@@ -299,6 +314,95 @@ def validate_quests(quests, npcs):
         giver = quest.get("giver", "")
         if giver and giver not in npcs:
             warn(f"Quest '{qid}' giver NPC '{giver}' not found")
+
+
+def _collect_all_quest_ops() -> dict[str, set]:
+    """
+    Scan every script source in the world for advance_quest / complete_quest ops.
+    Returns dict: quest_id → set of step numbers that have a trigger (None = complete_quest).
+    """
+    triggered: dict[str, set] = {}
+
+    def _scan(ops: list) -> None:
+        if not isinstance(ops, list):
+            return
+        for op in ops:
+            if not isinstance(op, dict):
+                continue
+            name = op.get("op", "")
+            qid  = op.get("quest_id", "")
+            if not qid:
+                continue
+            if name == "advance_quest":
+                triggered.setdefault(qid, set()).add(int(op.get("step", 0)))
+            elif name == "complete_quest":
+                triggered.setdefault(qid, set()).add(None)
+            # Recurse into branch arrays
+            for key in ("then", "else", "on_pass", "on_fail"):
+                branch = op.get(key)
+                if isinstance(branch, list):
+                    _scan(branch)
+
+    for zone_folder in zone_dirs():
+        # NPC kill_scripts
+        for path in sorted(zone_folder.glob("*.toml")):
+            data = load_safe(path)
+            if not data:
+                continue
+            for npc in data.get("npc", []):
+                _scan(npc.get("kill_script", []))
+                for entry in npc.get("give_accepts", []):
+                    _scan(entry.get("script", []))
+            # Item on_get
+            for item in data.get("item", []):
+                _scan(item.get("on_get", []))
+            # Room on_enter
+            for room in data.get("room", []):
+                _scan(room.get("on_enter", []))
+
+        # Dialogue scripts
+        dlg_dir = zone_folder / "dialogues"
+        if dlg_dir.exists():
+            for path in sorted(dlg_dir.glob("*.toml")):
+                data = load_safe(path)
+                if not data:
+                    continue
+                for node in data.get("node", []):
+                    _scan(node.get("script", []))
+                for resp in data.get("response", []):
+                    _scan(resp.get("script", []))
+
+        # Crafting on_complete
+        crafting_dir = zone_folder / "crafting"
+        if crafting_dir.exists():
+            for path in sorted(crafting_dir.glob("*.toml")):
+                data = load_safe(path)
+                if not data:
+                    continue
+                for c in data.get("commission", []):
+                    _scan(c.get("on_complete", []))
+
+    return triggered
+
+
+def validate_quest_triggers(quests: dict) -> None:
+    """Warn if any quest step or completion has no advance_quest / complete_quest trigger found."""
+    triggered = _collect_all_quest_ops()
+    for qid, quest in quests.items():
+        steps = quest.get("step", [])
+        # Check start_quest exists somewhere (informational warn only)
+        for s in steps:
+            step_num = s.get("index")
+            if step_num is None:
+                continue
+            step_triggers = triggered.get(qid, set())
+            if step_num not in step_triggers:
+                warn(f"Quest '{qid}' step {step_num} has no advance_quest trigger "
+                     f"found in any script, kill_script, on_get, or on_enter")
+        # Check complete_quest exists
+        if steps:
+            if None not in triggered.get(qid, set()):
+                warn(f"Quest '{qid}' has no complete_quest trigger found anywhere")
 
 
 def validate_companions() -> None:
@@ -788,6 +892,7 @@ def _validate_world(world_path: Path) -> None:
     validate_items(items)
     validate_npcs(npcs, items, styles)
     validate_quests(quests, npcs)
+    validate_quest_triggers(quests)
 
     # Collect zone ids that actually have rooms
     zones_with_rooms = set()
@@ -812,7 +917,7 @@ def _validate_world(world_path: Path) -> None:
     if not starts:
         warn("No room marked 'start = true'")
     elif len(starts) > 1:
-        warn(f"Multiple start rooms: {[r['id'] for r in starts]}")
+        err(f"Multiple rooms marked 'start = true': {[r['id'] for r in starts]}")
 
 
 def main():

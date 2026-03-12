@@ -41,25 +41,29 @@ def reload() -> None:
     """
     Scan all zone folders for styles/ subdirectories and load every
     *.toml file found. First definition of a style id wins.
-    Zone folders are processed alphabetically.
+    Layout: data/<world_id>/<zone>/styles/*.toml
+    World and zone folders are processed alphabetically.
     """
     global _STYLES
     _STYLES = {}
-    for zone_folder in sorted(DATA_DIR.iterdir()):
-        if not zone_folder.is_dir() or zone_folder.name in _SKIP_DIRS:
+    for world_dir in sorted(DATA_DIR.iterdir()):
+        if not world_dir.is_dir() or world_dir.name in _SKIP_DIRS:
             continue
-        styles_dir = zone_folder / "styles"
-        if not styles_dir.exists():
-            continue
-        for path in sorted(styles_dir.glob("*.toml")):
-            try:
-                data = toml_load(path)
-            except Exception:
+        for zone_folder in sorted(world_dir.iterdir()):
+            if not zone_folder.is_dir():
                 continue
-            for style in data.get("style", []):
-                sid = style.get("id", "")
-                if sid and sid not in _STYLES:
-                    _STYLES[sid] = style
+            styles_dir = zone_folder / "styles"
+            if not styles_dir.exists():
+                continue
+            for path in sorted(styles_dir.glob("*.toml")):
+                try:
+                    data = toml_load(path)
+                except Exception:
+                    continue
+                for style in data.get("style", []):
+                    sid = style.get("id", "")
+                    if sid and sid not in _STYLES:
+                        _STYLES[sid] = style
 
 
 def get_all() -> dict[str, dict]:

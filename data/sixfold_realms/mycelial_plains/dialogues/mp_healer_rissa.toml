@@ -25,8 +25,8 @@ next = "garden_hint"
 id   = "help"
 line = "'Drink this. It should clear your thoughts.'"
 script = [
-  { op = "add_spores", amount = -15 },
-  { op = "message", tag = "system", text = "Your mind sharpens." }
+  { op = "adjust_attr", name = "spore_exposure", amount = -15 },
+  { op = "message", tag = "system", text = "Your mind sharpens." },
 ]
 
 [[response]]

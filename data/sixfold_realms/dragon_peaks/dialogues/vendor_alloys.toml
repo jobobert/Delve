@@ -7,7 +7,7 @@ lines = [
 [[response]]
 node = "root"
 text = "Show me what you have for sale."
-next = "open_shop"
+next = "shop_info"
 
 [[response]]
 node = "root"
@@ -20,17 +20,14 @@ text = "Nothing right now."
 next = ""
 
 
-# --- Open Shop ---
+# --- Shop Info ---
 [[node]]
-id   = "open_shop"
-line = "'Take a look. Finest alloys this side of the Peaks.'"
-script = [
-  { op = "open_shop", shop_id = "vendor_alloys" }
-]
+id   = "shop_info"
+line = "'Finest alloys this side of the Peaks. Use the shop command to browse my wares.'"
 
 [[response]]
-node = "open_shop"
-text = "Let me browse."
+node = "shop_info"
+text = "Thanks."
 next = ""
 
 
@@ -38,7 +35,7 @@ next = ""
 [[node]]
 id   = "crafting_info"
 lines = [
-  "'Drakebone, heat crystals, resonant ore… none of it behaves unless you know how to listen to the metal.'",
+  "'Drakebone, heat crystals, resonant ore — none of it behaves unless you know how to listen to the metal.'",
   "'Every ingot has a mood. Get it wrong, and it shatters. Get it right, and it sings.'"
 ]
 

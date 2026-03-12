@@ -44,6 +44,66 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
 
+# ── Game session helpers ──────────────────────────────────────────────────────
+
+def _char_snapshot_data(player) -> dict:
+    """Build a char_snapshot payload dict from a live Player object."""
+    equipped = []
+    equipped_obj_ids: set[int] = set()
+    for slot, item in (player.equipped or {}).items():
+        if item:
+            equipped_obj_ids.add(id(item))
+            equipped.append({
+                "slot": slot,
+                "id":   item.get("id", ""),
+                "name": item.get("name", slot),
+            })
+
+    # player.inventory contains ALL items including equipped ones (same object
+    # references).  Filter by Python identity so equipped items don't appear
+    # twice — once in Equipped, once in Inventory.
+    inventory = []
+    for item in (player.inventory or []):
+        if id(item) in equipped_obj_ids:
+            continue
+        inventory.append({
+            "id":         item.get("id", ""),
+            "name":       item.get("name", item.get("id", "")),
+            "equip_slot": item.get("equip_slot", ""),
+        })
+
+    # Status effects: wc.STATUS_EFFECTS uses "label" not "name".
+    status_effects = []
+    for eid, turns in (player.status_effects or {}).items():
+        effect_def = wc.get_status_effect(eid) or {}
+        status_effects.append({
+            "id":         eid,
+            "name":       effect_def.get("label", eid),
+            "turns_left": turns if isinstance(turns, int) else 0,
+        })
+
+    world_attrs = []
+    for attr_def in (wc.PLAYER_ATTRS or []):
+        aid   = attr_def.get("id", "")
+        value = (player.world_attrs or {}).get(aid, attr_def.get("default", 0))
+        world_attrs.append({
+            "id":      aid,
+            "name":    attr_def.get("name", aid),
+            "value":   value,
+            "min":     attr_def.get("min", 0),
+            "max":     attr_def.get("max", 100),
+            "display": attr_def.get("display", "number"),
+        })
+
+    return {
+        "type":           "char_snapshot",
+        "equipped":       equipped,
+        "inventory":      inventory,
+        "status_effects": status_effects,
+        "world_attrs":    world_attrs,
+    }
+
+
 # ── Game session ──────────────────────────────────────────────────────────────
 
 _game_session: "GameSession | None" = None
@@ -69,9 +129,10 @@ class GameSession:
         self.player_name  = player_name
         self.input_queue  = queue.Queue()
         self.output_queue = queue.Queue()
-        self.alive        = True
-        self._player      = None   # set once engine initialises in _run
-        self._processor   = None   # set once engine initialises in _run
+        self.alive              = True
+        self._player            = None   # set once engine initialises in _run
+        self._processor         = None   # set once engine initialises in _run
+        self._last_char_snapshot = None  # cached by game thread; read safely by HTTP thread
         self._thread = threading.Thread(
             target=self._run, daemon=True, name=f"game-{player_name}"
         )
@@ -107,6 +168,7 @@ class GameSession:
                                                input_fn=self._input_fn)
             self._processor.do_look()
             self._emit_room_snapshot(world, player)
+            self._emit_char_snapshot(player)
 
             while not self._processor.quit_requested:
                 try:
@@ -115,6 +177,7 @@ class GameSession:
                     continue
                 self._processor.process(cmd)
                 self._emit_room_snapshot(world, player)
+                self._emit_char_snapshot(player)
 
         except Exception as exc:
             import traceback
@@ -135,6 +198,21 @@ class GameSession:
         if prompt and prompt.strip():
             self.output_queue.put({"type": "prompt", "text": prompt.strip()})
         return self.input_queue.get()   # blocks until the client responds
+
+    def _emit_char_snapshot(self, player) -> None:
+        """Push a char_snapshot event so the browser can update the character panel.
+
+        Also caches the snapshot so the GET /game/char_snapshot endpoint can return
+        it without accessing player state from the HTTP handler thread.
+        """
+        try:
+            snap = _char_snapshot_data(player)
+            self._last_char_snapshot = snap  # written only from game thread
+            self.output_queue.put(snap)
+        except Exception as exc:
+            import traceback
+            print(f"[wct] char_snapshot error: {exc}\n{traceback.format_exc()}",
+                  file=sys.stderr)
 
     def _emit_room_snapshot(self, world, player) -> None:
         """Push a room_snapshot event so the browser can update the sidebar."""
@@ -176,8 +254,10 @@ class GameSession:
                 "npcs":  npcs,
                 "items": items,
             })
-        except Exception:
-            pass   # non-critical; sidebar just won't refresh
+        except Exception as exc:
+            import traceback
+            print(f"[wct] room_snapshot error: {exc}\n{traceback.format_exc()}",
+                  file=sys.stderr)
 
     def _on_output(self, msg) -> None:
         self.output_queue.put({"type": "msg", "tag": msg.tag, "text": msg.text})
@@ -232,6 +312,7 @@ def _load_world(world_id: str) -> dict:
             "dialogues":  [],
             "companions": [],
             "crafting":   [],
+            "styles":     [],
             "files":      [],   # all .toml files found
         }
 
@@ -295,6 +376,18 @@ def _load_world(world_id: str) -> dict:
                     data = toml_load(path)
                     data["_file"] = str(path.relative_to(ROOT))
                     zone["crafting"].append(data)
+                except Exception:
+                    pass
+
+        # Styles
+        styles_dir = zone_dir / "styles"
+        if styles_dir.exists():
+            for path in sorted(styles_dir.glob("*.toml")):
+                try:
+                    data = toml_load(path)
+                    for style in data.get("style", []):
+                        style["_file"] = str(path.relative_to(ROOT))
+                        zone["styles"].append(style)
                 except Exception:
                     pass
 
@@ -456,10 +549,18 @@ class WCTHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": "world_id query param required"}, 400)
                 return
             world_path = DATA_DIR / world_id
-            if not (world_path / "config.py").exists():
+            if not world_path.is_dir() or not ((world_path / "config.toml").exists() or (world_path / "config.py").exists()):
                 self._send_json({"error": f"World '{world_id}' not found"}, 404)
                 return
             wc.init(world_path)
+            # Load styles for this world
+            import engine.styles as _styles
+            _styles._STYLES = {}
+            _styles.reload()
+            styles_list = [
+                {"id": sid, "name": s.get("name", sid)}
+                for sid, s in sorted(_styles.get_all().items())
+            ]
             self._send_json({
                 "world_name":      wc.WORLD_NAME,
                 "skills":          wc.SKILLS,
@@ -467,6 +568,9 @@ class WCTHandler(BaseHTTPRequestHandler):
                 "currency_name":   wc.CURRENCY_NAME,
                 "default_style":   wc.DEFAULT_STYLE,
                 "equipment_slots": list(wc.EQUIPMENT_SLOTS),
+                "player_attrs":    wc.PLAYER_ATTRS,
+                "status_effects":  wc.STATUS_EFFECTS,
+                "styles":          styles_list,
             })
 
         elif path == "/api/validate":
@@ -525,6 +629,14 @@ class WCTHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"session": False})
 
+        elif path == "/game/char_snapshot":
+            gs   = _game_session
+            snap = gs._last_char_snapshot if (gs and gs.alive) else None
+            if snap:
+                self._send_json({"session": True, **snap})
+            else:
+                self._send_json({"session": False})
+
         elif path == "/game/stream":
             self._stream_game()
 
@@ -557,6 +669,23 @@ class WCTHandler(BaseHTTPRequestHandler):
 
         elif path == "/api/write_file":
             ok, err = _write_file(body.get("file", ""), body.get("data", {}))
+            self._send_json({"ok": ok, "error": err})
+
+        elif path == "/api/write_config":
+            world_id = body.get("world_id", "").strip()
+            cfg      = body.get("config", {})
+            if not world_id:
+                self._send_json({"ok": False, "error": "world_id required"})
+                return
+            world_path = DATA_DIR / world_id
+            if not world_path.is_dir():
+                self._send_json({"ok": False, "error": f"World '{world_id}' not found"})
+                return
+            cfg_path = world_path / "config.toml"
+            ok, err = _write_file(str(cfg_path.relative_to(ROOT)), cfg)
+            if ok:
+                # Re-init so the running server reflects the new config
+                wc.init(world_path)
             self._send_json({"ok": ok, "error": err})
 
         elif path == "/api/create_room":
@@ -649,7 +778,7 @@ class WCTHandler(BaseHTTPRequestHandler):
                 self._send_json({"ok": False, "error": "world_id and player_name required"})
                 return
             world_path = DATA_DIR / world_id
-            if not (world_path / "config.py").exists():
+            if not world_path.is_dir() or not ((world_path / "config.toml").exists() or (world_path / "config.py").exists()):
                 self._send_json({"ok": False, "error": f"World '{world_id}' not found"})
                 return
             with _session_lock:

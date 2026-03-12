@@ -71,8 +71,11 @@ text = "Where should I look?"
 next = "fragment_where"
 
 [[node]]
-id   = "fragment_where"
-line = "'Follow the entropy veins. They lead to the Core.'"
+id     = "fragment_where"
+line   = "'Follow the entropy veins. They lead to the Core.'"
+script = [
+  { op = "start_quest", quest_id = "gr_shadow_fragment" },
+]
 
 [[response]]
 node = "fragment_where"

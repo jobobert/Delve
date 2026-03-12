@@ -25,9 +25,9 @@ next = "garden"
 id   = "lost"
 line = "'Not lost. Just… between thoughts.'"
 script = [
-  { op = "if_spores_at_least", amount = 25, then = [
-    { op = "say", text = "'Your mind drifts too. I can feel it.'" }
-  ] }
+  { op = "if_attr", name = "spore_exposure", min = 25, then = [
+    { op = "say", text = "'Your mind drifts too. I can feel it.'" },
+  ] },
 ]
 
 [[response]]

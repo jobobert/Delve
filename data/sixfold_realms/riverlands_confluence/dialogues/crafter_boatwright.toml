@@ -1,8 +1,23 @@
 [[node]]
-id    = "root"
-lines = [
-  "Loran wipes sawdust from his hands. 'Need something built, patched, or floated?'"
-]
+id = "root"
+line = "Loran wipes sawdust from his hands. 'Need something built, patched, or floated?'"
+
+[[node]]
+id = "ferry_status"
+line = "'Steady as ever. River’s calmer than it looks, long as you respect her moods.'"
+
+[[node]]
+id = "repairs"
+line = "'Aye, I can mend hulls, patch seams, and tune rudders. Bring me the parts and I’ll see it done.'"
+
+[[node]]
+id = "epilogue_react"
+line = "Loran leans on a beam. 'Hard to miss the change in the air since you came back from the Core.'"
+
+[[node]]
+id = "epilogue_detail"
+line = "'Depends on what you did down there…'"
+script = [{op = "if_flag", flag = "cc_reboot_restore", then = [{op = "say", text = "The currents feel steadier. Folks are hopeful. Even the ferries glide easier."}]}, {op = "if_flag", flag = "cc_reboot_disable", then = [{op = "say", text = "The river’s wilder, but honest. People are nervous, but some say freedom’s worth the uncertainty."}]}]
 
 [[response]]
 node = "root"
@@ -18,59 +33,27 @@ next = "repairs"
 node = "root"
 text = "How do you feel about the world after the Core Chamber?"
 next = "epilogue_react"
+condition = {flag = "cc_all_calibrated"}
 
 [[response]]
 node = "root"
 text = "Nothing right now."
 next = ""
 
-
-# --- Ferry Status ---
-[[node]]
-id   = "ferry_status"
-line = "'Steady as ever. River’s calmer than it looks, long as you respect her moods.'"
-
 [[response]]
 node = "ferry_status"
 text = "Good to know."
 next = ""
-
-
-# --- Repairs ---
-[[node]]
-id   = "repairs"
-line = "'Aye, I can mend hulls, patch seams, and tune rudders. Bring me the parts and I’ll see it done.'"
 
 [[response]]
 node = "repairs"
 text = "I’ll keep that in mind."
 next = ""
 
-
-# --- Epilogue Reaction ---
-[[node]]
-id   = "epilogue_react"
-lines = [
-  "Loran leans on a beam. 'Hard to miss the change in the air since you came back from the Core.'"
-]
-
 [[response]]
 node = "epilogue_react"
 text = "What change do you mean?"
 next = "epilogue_detail"
-
-
-[[node]]
-id   = "epilogue_detail"
-line = "'Depends on what you did down there…'"
-script = [
-  { op = "if_flag", flag = "cc_reboot_restore", then = [
-    { op = "say", text = "The currents feel steadier. Folks are hopeful. Even the ferries glide easier." }
-  ] },
-  { op = "if_flag", flag = "cc_reboot_disable", then = [
-    { op = "say", text = "The river’s wilder, but honest. People are nervous, but some say freedom’s worth the uncertainty." }
-  ] }
-]
 
 [[response]]
 node = "epilogue_detail"

@@ -1,34 +1,32 @@
+# Verdant Heartwood — Fighting Styles
+
+# rootbind: a grounded, symbiotic style native to the Root-Tenders.
+# Rewards patience and defensive positioning; effective against armored or large
+# opponents that rely on sustained pressure. Weak against quick, evasive foes.
 [[style]]
-id   = "rootbind"
-name = "Rootbind"
-desc = "A grounded, symbiotic style that channels living force through the body."
+id            = "rootbind"
+name          = "Rootbind"
+desc          = "A grounded, symbiotic style that channels living force through the body. Rewards patience and defensive positioning."
+strong_vs     = ["armored", "humanoid", "large"]
+weak_vs       = ["fast", "flying", "small"]
+defense_bonus = 2
+difficulty    = 1.3
+learned_from  = "vh_root_tender_lyren"
 
-affinities = {
-  weapon_tags = ["natural", "fist"],
-  armor_tags  = ["organic", "heartwood"]
-}
+[[passive]]
+ability   = "rooted_stance"
+threshold = 50
+trigger   = "defend"
+message   = "You root yourself into the earth — the blow is absorbed!"
+on_activate = [
+  { op = "block_damage" },
+]
 
-growth = {
-  on_hit_taken = 1.5
-  on_grapple   = 2.0
-  on_regen     = 1.0
-}
-
-abilities = [
-  { id = "rooted_stance",
-    type = "stance",
-    desc = "Root yourself, gaining +4 defense and minor regeneration for 3 rounds.",
-    trigger = { on_command = "stance root" },
-    effect  = [
-      { stat = "defense", amount = 4, duration = 3 },
-      { type = "regen", amount = 2, duration = 3 }
-    ]
-  },
-
-  { id = "constrict",
-    type = "on_hit",
-    desc = "6% chance to bind the enemy, reducing their dodge.",
-    chance = 0.06,
-    effect = { type = "debuff", stat = "dodge", amount = -5, duration = 2 }
-  }
+[[passive]]
+ability   = "constrict"
+threshold = 40
+trigger   = "attack"
+message   = "Living force constricts around your opponent!"
+on_activate = [
+  { op = "apply_status", effect = "slowed", duration = 2 },
 ]
