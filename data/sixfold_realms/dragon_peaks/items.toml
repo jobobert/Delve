@@ -137,6 +137,7 @@ on_get      = [
       { op = "give_item", item_id = "drakebone_fragment" },
       { op = "skill_grow", skill = "crafting", amount = 4 },
       { op = "message", tag = "item", text = "You free a resonant fragment of drakebone." },
+      { op = "advance_quest", quest_id = "forge_sky_piercer", step = 1 },
     ],
     on_fail = [
       { op = "message", tag = "system", text = "The bone crumbles under your tools." },
@@ -159,6 +160,8 @@ on_get      = [
   { op = "message", tag = "item", text = "The conductor thrums in your hands, warm and insistent." },
   { op = "set_flag", flag = "dp_has_thermal_conductor" },
   { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 4 },
+  { op = "complete_quest", quest_id = "hoard_of_the_apex_drake" },
+  { op = "prestige", amount = 5, reason = "recovered the Thermal Conductor from the Apex Drake's hoard" },
 ]
 
 # ── Resonance Forge Panel ─────────────────────────────────────────────────────

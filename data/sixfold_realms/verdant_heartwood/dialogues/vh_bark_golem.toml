@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The golem's bark plates grind together as it turns to face you."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

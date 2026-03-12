@@ -72,6 +72,7 @@ on_get      = [
       { op = "give_item",  item_id = "vh_heartwood_bark" },
       { op = "skill_grow", skill = "survival", amount = 2 },
       { op = "message", tag = "system", text = "You peel a strip of living bark cleanly from the tree." },
+      { op = "advance_quest", quest_id = "vh_carapace", step = 1 },
     ],
     on_fail = [
       { op = "give_item",  item_id = "vh_heartwood_bark" },

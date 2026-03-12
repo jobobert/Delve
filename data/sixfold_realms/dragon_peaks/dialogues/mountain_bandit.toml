@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The bandit sneers. 'Toll time. Pay with blood.'"
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

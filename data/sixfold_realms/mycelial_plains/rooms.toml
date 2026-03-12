@@ -18,7 +18,7 @@ id          = "mp_entrance"
 name        = "Loomroot Gate"
 description = "A wooden gate half-claimed by pale fungus. The air smells faintly sweet. Sporehaven lies ahead."
 flags       = ["town"]
-npcs        = ["mp_mayor_dellen", "mp_healer_rissa"]
+spawns        = ["mp_mayor_dellen", "mp_healer_rissa", "mp_banker"]
 shop        = [
   { item_id = "mp_clarity_brew",        price = 12 },
   { item_id = "mp_fungal_mask",         price = 20 },
@@ -123,7 +123,7 @@ on_enter    = [
 id          = "mp_approach7"
 name        = "Approach — Sporehaven Gate"
 description = "A wooden archway covered in fungal carvings. The settlement lies ahead."
-npcs        = ["mp_memory_wanderer"]
+spawns        = ["mp_memory_wanderer"]
 exits       = { west = "mp_approach6", east = "mp_fields1" }
 
 
@@ -191,7 +191,7 @@ exits       = { west = "mp_fields3", north = "mp_maze1" }
 id          = "mp_fields5"
 name        = "Fields — Loomroot Rise"
 description = "A hill overlooking the fungal plains. A cloaked figure tends to fungal growth here."
-npcs        = ["mp_sporewarden"]
+spawns        = ["mp_sporewarden"]
 exits       = { south = "mp_fields4", east = "mp_fields6" }
 on_enter    = [
   { op = "adjust_attr", name = "spore_exposure", amount = -5 },

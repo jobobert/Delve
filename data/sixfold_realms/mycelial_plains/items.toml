@@ -81,6 +81,7 @@ on_get      = [
       { op = "give_item",  item_id = "mp_fungal_fiber" },
       { op = "skill_grow", skill = "survival", amount = 2 },
       { op = "message", tag = "system", text = "You strip several long fibers from the cluster." },
+      { op = "advance_quest", quest_id = "mp_mantle", step = 1 },
     ],
     on_fail = [
       { op = "give_item",  item_id = "mp_fungal_fiber" },

@@ -134,6 +134,7 @@ on_get      = [
       { op = "give_item",  item_id = "gr_shadow_ore" },
       { op = "skill_grow", skill = "crafting", amount = 2 },
       { op = "message", tag = "system", text = "You chip free a dense lump of shadow-ore." },
+      { op = "advance_quest", quest_id = "gr_mantle", step = 1 },
     ],
     on_fail = [
       { op = "give_item",  item_id = "gr_shadow_ore" },

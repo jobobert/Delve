@@ -64,7 +64,7 @@ kill_script = [
   { op = "message", tag = "combat_kill", text = "The Vault Watcher collapses into still water." },
 ]
 round_script = [
-  # High-prestige branch: guardian eases off — buffs the player with protection
+  # High-prestige branch: guardian eases off â buffs the player with protection
   { op = "if_prestige", min = 10, then = [
     { op = "if_combat_round", min = 2, then = [
       { op = "if_npc_hp", max = 70, then = [
@@ -172,7 +172,24 @@ kill_script = [
 ]
 round_script = [
   { op = "if_combat_round", min = 2, then = [
-    { op = "say", text = "Your echo reaches you before you move — the wraith has learned your patterns." },
+    { op = "say", text = "Your echo reaches you before you move â the wraith has learned your patterns." },
     { op = "apply_status", effect = "confused", duration = 2 },
   ] },
 ]
+
+[[npc]]
+id          = "mf_banker"
+name        = "Ledger-Keeper Ven"
+tags        = ["humanoid", "banker"]
+style       = "brawling"
+style_prof  = 3
+desc_short  = "A cautious figure crouched over a waterproofed ledger."
+desc_long   = "Ven keeps the Path-Reader camp's treasury  a modest strongbox sealed against the swamp damp. Adventurers who survive the Mistfen entrust their marks here rather than risk losing them to the fog."
+hp          = 20
+max_hp      = 20
+attack      = 2
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "Marks have a way of disappearing in the Mistfen. Leave them with me. Deposit, withdraw, or check your balance."

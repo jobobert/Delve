@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The bloom beast unfurls petal-like growths and lumbers forward."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

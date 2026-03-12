@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The rat bares yellowed teeth and charges."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

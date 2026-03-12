@@ -230,3 +230,20 @@ round_script = [
     { op = "apply_status", effect = "slowed", duration = 2 },
   ] },
 ]
+
+[[npc]]
+id          = "vh_banker"
+name        = "Root-Treasurer Elan"
+tags        = ["humanoid", "banker"]
+style       = "brawling"
+style_prof  = 3
+desc_short  = "A soft-spoken elder tending a living strongbox grown from heartwood."
+desc_long   = "Elan's strongbox is a small heartwood chest, still alive and locked by its own root-growth. The Heartwood trusts few outsiders with marks; Elan extends that trust on behalf of those who have earned it."
+hp          = 20
+max_hp      = 20
+attack      = 2
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "The forest keeps what is given freely. Deposit, withdraw, or check your balance."

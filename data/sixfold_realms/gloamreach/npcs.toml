@@ -261,3 +261,20 @@ round_script = [
     { op = "apply_status", effect = "weakened", duration = 2 },
   ] },
 ]
+
+[[npc]]
+id          = "gr_banker"
+name        = "Vault-Keeper Morren"
+tags        = ["humanoid", "banker"]
+style       = "brawling"
+style_prof  = 3
+desc_short  = "A pale figure in dark robes, tending a sealed iron coffer."
+desc_long   = "Morren arrived with the first Lightbearers and stayed. He maintains the shadow-vault where adventurers store marks they cannot risk losing in the dark corridors ahead."
+hp          = 20
+max_hp      = 20
+attack      = 2
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "The vault holds what the dark would otherwise take. Deposit, withdraw, or check your balance."

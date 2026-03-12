@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The symbiote latches onto the nearest root and propels itself toward you."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

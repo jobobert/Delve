@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The sentinel's crystalline form flares - it does not speak, only threatens."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

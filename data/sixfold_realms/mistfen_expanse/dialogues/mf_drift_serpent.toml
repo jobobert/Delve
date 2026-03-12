@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The serpent uncoils from the fog without warning."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

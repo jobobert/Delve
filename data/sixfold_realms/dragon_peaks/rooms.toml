@@ -13,7 +13,7 @@ id = "dp_approach_1"
 name = "Ridge Road"
 description = "A narrow path clinging to the mountain, wind biting at your cloak. The ferry berth is a short descent to the south; Highspire's banners are visible ahead."
 exits = {east = "dp_approach_2", south = "rl_ferry_berth_peaks"}
-spawns = []
+spawns = ["dp_banker"]
 on_enter = [{op = "if_not_flag", flag = "dp_ridge_intro", then = [{op = "message", tag = "system", text = "The air tastes of iron and distant flame. You are in the Dragon Peaks."}, {op = "set_flag", flag = "dp_ridge_intro"}]}]
 
 [[room]]

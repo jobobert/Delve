@@ -7,6 +7,7 @@ description = "The ground softens as the Riverlands gives way to the Mistfen. Th
 spawns      = ["mf_mire_wolf"]
 exits       = { east = "mf_mist_loop1", south = "mf_path_reader_camp" }
 
+spawns      = ["mf_banker"]
 [[room]]
 id          = "mf_path_reader_camp"
 name        = "Path-Reader Encampment"

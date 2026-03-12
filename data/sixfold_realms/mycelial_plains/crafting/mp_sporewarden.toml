@@ -4,43 +4,23 @@ id             = "mp_weave_mantle"
 npc_id         = "mp_sporewarden"
 label          = "Weave Sporewarden Mantle"
 desc           = "The Sporewarden binds fungal fiber and clarity caps into a mantle that shields the mind from spore exposure."
-slot           = ""
-weapon_tags    = []
+slot           = "body"
+armor_tags     = ["cloth", "light"]
 materials      = ["mp_fungal_fiber", "mp_clarity_cap"]
 turns_required = 12
 gold_cost      = 0
+weight         = 1
 on_complete = [
   { op = "message", tag = "crafting", text = "The Sporewarden weaves the mantle with slow, deliberate motions. The fibers hum with clarity." },
-  { op = "give_item", item_id = "sporewarden_mantle" },
   { op = "advance_quest", quest_id = "mp_mantle", step = 2 },
   { op = "advance_quest", quest_id = "mp_mantle", step = 3 },
   { op = "complete_quest", quest_id = "mp_mantle" },
   { op = "prestige", amount = 2, reason = "mastered the Plains' cognitive instability" },
 ]
-
-# --- Quality Tiers ---
-[[quality]]
-name        = "Fraying Weave"
-min_quality = 0
-max_quality = 39
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = -1 },
-  { type = "stat_bonus", stat = "max_hp",  amount = -4 },
-]
-
-[[quality]]
-name        = "Balanced Weave"
-min_quality = 40
-max_quality = 79
-effects     = []
-
-[[quality]]
-name        = "Claritybound Mantle"
-min_quality = 80
-max_quality = 100
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = 2 },
-  { type = "stat_bonus", stat = "max_hp",  amount = 5 },
+qualities = [
+  { tier = "poor",        weight = 25, defense_bonus = 1, max_hp_bonus = 3, equip_msg = "The weave is loose — spores drift through in places, but it helps.", craft_message = "The fibers resisted the weave. It will hold." },
+  { tier = "standard",    weight = 50, defense_bonus = 2, max_hp_bonus = 8, equip_msg = "The mantle resists spore exposure and sharpens your thoughts." },
+  { tier = "exceptional", weight = 25, defense_bonus = 4, max_hp_bonus = 12, name_prefix = "Sporewarden ", equip_msg = "Your mind is crystalline within it. The spore fog barely reaches you.", craft_message = "The clarity cap bonded perfectly. Extraordinary weave." },
 ]
 
 
@@ -60,24 +40,8 @@ on_complete = [
   { op = "give_item", item_id = "mp_clarity_brew" },
   { op = "give_item", item_id = "mp_clarity_brew" },
 ]
-
-# --- Quality Tiers ---
-[[quality]]
-name        = "Weak Brew"
-min_quality = 0
-max_quality = 39
-effects     = []
-
-[[quality]]
-name        = "Clear Brew"
-min_quality = 40
-max_quality = 79
-effects     = []
-
-[[quality]]
-name        = "Potent Brew"
-min_quality = 80
-max_quality = 100
-effects     = [
-  { type = "stat_bonus", stat = "max_hp", amount = 3 },
+qualities = [
+  { tier = "poor",        weight = 25, craft_message = "Weak brew — it cleared some fog, but the distillation was off." },
+  { tier = "standard",    weight = 50, craft_message = "Clear brew. Two vials, well-sealed." },
+  { tier = "exceptional", weight = 25, craft_message = "Potent brew. 'These are my best batch in months,' the Sporewarden notes." },
 ]

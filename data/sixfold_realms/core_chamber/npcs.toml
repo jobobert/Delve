@@ -351,3 +351,20 @@ hostile     = false
 xp_reward   = 0
 gold_reward = 0
 dialogue    = "cc_memory_sentinel"
+
+[[npc]]
+id          = "cc_banker"
+name        = "Resonance Auditor"
+tags        = ["construct", "banker"]
+style       = "brawling"
+style_prof  = 3
+desc_short  = "A crystalline construct that interfaces with the Chamber's treasury lattice."
+desc_long   = "The Auditor is a legacy function of the Core Chamber, maintaining accounts for those sanctioned to enter. It accepts deposits and withdrawals via resonance-key."
+hp          = 50
+max_hp      = 50
+attack      = 5
+defense     = 5
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "Account integrity confirmed. Deposit, withdraw, or check your balance — the Chamber preserves what you commit to it."

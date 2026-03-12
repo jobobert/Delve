@@ -242,3 +242,20 @@ round_script = [
     { op = "message", tag = "combat", text = "The wraith's presence blurs your senses — the world goes sideways for a moment." },
   ] },
 ]
+
+[[npc]]
+id          = "rl_banker"
+name        = "Bank-Broker Sian"
+tags        = ["humanoid", "banker"]
+style       = "brawling"
+style_prof  = 3
+desc_short  = "A sharp-eyed broker behind a lacquered counter, quill ever-ready."
+desc_long   = "The Riverlands Confluence once hosted three competing banks. The floods took two; Sian runs what remains, serving merchants, ferryers, and adventurers alike. She knows every mark by the sound it makes on the counter."
+hp          = 20
+max_hp      = 20
+attack      = 2
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "Welcome to the Confluence Branch. Deposit, withdraw, or check your balance."

@@ -1012,13 +1012,21 @@ function chipsWidget(arr, onChange, dlId, acceptType, options) {
 // ── Spawn widget ──────────────────────────────────────────────────────
 
 function cleanSpawns(arr) {
-  return (arr || []).filter(s => s && s.id).map(s => {
-    if ((s.count == null || s.count === 1) && s.hostile == null) return s.id;
-    const out = {id: s.id};
-    if (s.count && s.count !== 1) out.count = s.count;
-    if (s.hostile != null) out.hostile = !!s.hostile;
-    return out;
-  });
+  // Normalise: strings are simple spawns; objects may have count/hostile/spawn_chance.
+  return (arr || [])
+    .filter(s => s && (typeof s === 'string' ? s : s.id))
+    .map(s => {
+      if (typeof s === 'string') return s;
+      const simple = (s.count == null || s.count === 1)
+                  && s.hostile == null
+                  && s.spawn_chance == null;
+      if (simple) return s.id;
+      const out = {id: s.id};
+      if (s.count && s.count !== 1) out.count = s.count;
+      if (s.hostile != null) out.hostile = !!s.hostile;
+      if (s.spawn_chance != null && s.spawn_chance < 1.0) out.spawn_chance = s.spawn_chance;
+      return out;
+    });
 }
 
 function spawnWidget(d) {

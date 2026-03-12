@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The void tender regards you with hollow calm, then raises a hand in menace."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

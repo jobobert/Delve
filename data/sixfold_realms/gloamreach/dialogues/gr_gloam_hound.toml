@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The hound snarls, its shadow-body elongating as it crouches to spring."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

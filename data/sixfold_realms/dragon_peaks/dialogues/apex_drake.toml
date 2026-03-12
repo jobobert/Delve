@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The Apex Drake's eyes fix on you with cold fury. It does not tolerate intruders."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

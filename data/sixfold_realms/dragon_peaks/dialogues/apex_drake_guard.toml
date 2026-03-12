@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The apex guard spreads its wings and roars - it will not let you pass."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

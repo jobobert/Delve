@@ -17,6 +17,7 @@ on_enter    = [
     { op = "set_flag", flag = "vh_roots_respect" },
   ] },
 ]
+spawns      = ["vh_banker"]
 
 [[room]]
 id          = "vh_canopy1"
@@ -24,7 +25,7 @@ name        = "Overgrown Canopy — Lower Path"
 description = "Sunlight filters through thick leaves. Vines sway even without wind."
 exits       = { west = "vh_edge", east = "vh_canopy2", south = "vh_vine_bridge" }
 flags       = ["town"]
-npcs        = ["vh_root_tender_lyren", "vh_root_tender_syl"]
+spawns        = ["vh_root_tender_lyren", "vh_root_tender_syl"]
 shop        = [
   { item_id = "vh_pollen_mask",  price = 30 },
   { item_id = "vh_vine_charm",   price = 25 },
@@ -231,7 +232,7 @@ exits       = { west = "vh_core_entrance", east = "vh_core2" }
 id          = "vh_core2"
 name        = "Heartwood Core — Growth Forge"
 description = "A living forge of roots and sap. It responds to your presence."
-npcs        = ["vh_heartwood_shaper"]
+spawns        = ["vh_heartwood_shaper"]
 items       = ["vh_growth_forge"]
 exits       = { west = "vh_core1", south = "vh_core3" }
 on_enter    = [

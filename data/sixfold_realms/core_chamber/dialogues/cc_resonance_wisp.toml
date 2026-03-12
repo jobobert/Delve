@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The wisp pulses with blinding light and surges toward you."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

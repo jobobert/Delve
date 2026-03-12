@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The guardian's tendrils lash outward - it does not permit interference with the node."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

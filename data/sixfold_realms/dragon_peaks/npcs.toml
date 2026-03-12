@@ -5,7 +5,7 @@
 #           sky_serpent, lava_sprite, young_drake_scout, ashwood_drake,
 #           apex_drake_guard, apex_drake
 
-# ── Warden Selka Thornwright — quest giver, sky_piercer trainer ───────────────
+# ââ Warden Selka Thornwright â quest giver, sky_piercer trainer âââââââââââââââ
 
 [[npc]]
 id          = "warden_selka"
@@ -50,7 +50,7 @@ kill_script = [
   { op = "set_flag", flag = "dp_selka_slain" },
 ]
 
-# ── Master Smith Orun Kett — commission crafter, shopkeeper ───────────────────
+# ââ Master Smith Orun Kett â commission crafter, shopkeeper âââââââââââââââââââ
 
 [[npc]]
 id          = "smith_orun"
@@ -75,7 +75,7 @@ shop = [
   { item_id = "dp_raw_ore",           price = 60  },
 ]
 
-# ── Tinker Apprentice — flavour ───────────────────────────────────────────────
+# ââ Tinker Apprentice â flavour âââââââââââââââââââââââââââââââââââââââââââââââ
 
 [[npc]]
 id          = "tinker_apprentice"
@@ -92,9 +92,9 @@ defense     = 4
 xp_reward   = 20
 gold_reward = 5
 hostile     = false
-dialogue    = "Don't touch that — Orun will know if it's been moved."
+dialogue    = "Don't touch that â Orun will know if it's been moved."
 
-# ── Alloy Merchant Kar — shopkeeper ──────────────────────────────────────────
+# ââ Alloy Merchant Kar â shopkeeper ââââââââââââââââââââââââââââââââââââââââââ
 
 [[npc]]
 id          = "vendor_alloys"
@@ -119,7 +119,7 @@ shop = [
   { item_id = "drake_scale",          price = 50  },
 ]
 
-# ── Miner Apprentice — give_accepts trade ─────────────────────────────────────
+# ââ Miner Apprentice â give_accepts trade âââââââââââââââââââââââââââââââââââââ
 
 [[npc]]
 id          = "miner_apprentice"
@@ -150,16 +150,16 @@ give_accepts = [
   },
 ]
 
-# ── ENEMIES ───────────────────────────────────────────────────────────────────
+# ââ ENEMIES âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-# Cliff Hawk — ambush predator of the approach paths
+# Cliff Hawk â ambush predator of the approach paths
 # Fast and diving, knocks things off ledges. Sky-Piercer users handle it well.
 
 [[npc]]
 id          = "cliff_hawk"
 name        = "Cliff Hawk"
 desc_short  = "A large mountain hawk with iron-grey talons."
-desc_long   = "It circles in the updrafts and strikes without warning — talons first, fast enough to knock an unprepared traveller sideways."
+desc_long   = "It circles in the updrafts and strikes without warning â talons first, fast enough to knock an unprepared traveller sideways."
 tags        = ["beast", "fast", "flying"]
 style       = "sky_piercer"
 style_prof  = 18
@@ -184,7 +184,7 @@ kill_script = [
   { op = "message", tag = "combat_death", text = "The hawk tumbles from the updraft and disappears over the ledge." },
 ]
 
-# Mountain Bandit — opportunist on the approach and lower roads
+# Mountain Bandit â opportunist on the approach and lower roads
 
 [[npc]]
 id          = "mountain_bandit"
@@ -216,13 +216,13 @@ kill_script = [
   { op = "give_gold", amount = 8 },
 ]
 
-# Steam Sprite — born from the vent fields, small elemental
+# Steam Sprite â born from the vent fields, small elemental
 
 [[npc]]
 id          = "steam_sprite"
 name        = "Steam Sprite"
 desc_short  = "A small elemental of scalding vapour."
-desc_long   = "Birthed from the vent field's thermal chaos, it drifts on pockets of pressurised air. Contact burns. It has no malice — just heat."
+desc_long   = "Birthed from the vent field's thermal chaos, it drifts on pockets of pressurised air. Contact burns. It has no malice â just heat."
 tags        = ["beast", "small", "fast"]
 style       = "sky_piercer"
 style_prof  = 15
@@ -247,13 +247,13 @@ kill_script = [
   { op = "message", tag = "combat_death", text = "The sprite disperses with a hiss, leaving a patch of scalded stone." },
 ]
 
-# Cave Rat — opportunist in the mine tunnels
+# Cave Rat â opportunist in the mine tunnels
 
 [[npc]]
 id          = "cave_rat"
 name        = "Cave Rat"
 desc_short  = "A large rat with heat-resistant fur and sharp teeth."
-desc_long   = "Common in the lower mine tunnels, where they nest in warm pockets near the vents. Individually a nuisance — in packs, a real problem."
+desc_long   = "Common in the lower mine tunnels, where they nest in warm pockets near the vents. Individually a nuisance â in packs, a real problem."
 tags        = ["beast", "small", "fast"]
 style       = "brawling"
 style_prof  = 10
@@ -271,7 +271,7 @@ kill_script = [
   { op = "message", tag = "combat_death", text = "The cave rat squeaks once and goes still." },
 ]
 
-# Echo Bat — the Sky Rift's disorienting fliers
+# Echo Bat â the Sky Rift's disorienting fliers
 
 [[npc]]
 id          = "echo_bat"
@@ -294,7 +294,7 @@ respawn_time = 4
 round_script = [
   { op = "if_combat_round", min = 2, then = [
     { op = "apply_status", effect = "confused", duration = 2 },
-    { op = "message", tag = "combat", text = "The bat's shriek rattles inside your skull — the world blurs." },
+    { op = "message", tag = "combat", text = "The bat's shriek rattles inside your skull â the world blurs." },
   ] },
 ]
 
@@ -302,7 +302,7 @@ kill_script = [
   { op = "message", tag = "combat_death", text = "The echo bat tumbles silently into the chasm." },
 ]
 
-# Sky Serpent — aerial predator of the upper Sky Rift
+# Sky Serpent â aerial predator of the upper Sky Rift
 
 [[npc]]
 id          = "sky_serpent"
@@ -325,7 +325,7 @@ respawn_time = 6
 round_script = [
   { op = "if_combat_round", min = 2, then = [
     { op = "apply_status", effect = "slowed", duration = 2 },
-    { op = "message", tag = "combat", text = "The serpent's tail whips around your legs — your movement is hampered." },
+    { op = "message", tag = "combat", text = "The serpent's tail whips around your legs â your movement is hampered." },
   ] },
 ]
 
@@ -333,13 +333,13 @@ kill_script = [
   { op = "message", tag = "combat_death", text = "The sky serpent uncoils and falls, caught on the wind a moment before vanishing." },
 ]
 
-# Lava Sprite — denizen of the magma sluice
+# Lava Sprite â denizen of the magma sluice
 
 [[npc]]
 id          = "lava_sprite"
 name        = "Lava Sprite"
 desc_short  = "A molten elemental shaped like a crouching figure."
-desc_long   = "It emerges from the sluice channels and clings to nearby stone. Anything it touches scorches. Retreating means leaving it in your wake — which is often worse."
+desc_long   = "It emerges from the sluice channels and clings to nearby stone. Anything it touches scorches. Retreating means leaving it in your wake â which is often worse."
 tags        = ["beast", "large"]
 style       = "sky_piercer"
 style_prof  = 20
@@ -355,7 +355,7 @@ respawn_time = 7
 
 round_script = [
   { op = "if_combat_round", min = 2, then = [
-    { op = "damage", amount = 6, message = "The lava sprite's heat radiates off it in waves — your skin blisters." },
+    { op = "damage", amount = 6, message = "The lava sprite's heat radiates off it in waves â your skin blisters." },
   ] },
 ]
 
@@ -364,13 +364,13 @@ kill_script = [
   { op = "spawn_item", item_id = "volcanic_glass_shard" },
 ]
 
-# Young Drake Scout — territorial juvenile
+# Young Drake Scout â territorial juvenile
 
 [[npc]]
 id          = "young_drake_scout"
 name        = "Young Drake Scout"
 desc_short  = "A juvenile drake testing its wings."
-desc_long   = "Still small but fiercely territorial, this young drake glides between ledges, watching intruders with bright, curious eyes. Its fire is more smoke than flame — but its claws are not."
+desc_long   = "Still small but fiercely territorial, this young drake glides between ledges, watching intruders with bright, curious eyes. Its fire is more smoke than flame â but its claws are not."
 tags        = ["beast", "flying", "fast"]
 style       = "sky_piercer"
 style_prof  = 20
@@ -396,7 +396,7 @@ kill_script = [
   { op = "spawn_item", item_id = "drake_scale" },
 ]
 
-# Ashwood Drake — mid-tier territorial drake
+# Ashwood Drake â mid-tier territorial drake
 
 [[npc]]
 id          = "ashwood_drake"
@@ -433,7 +433,7 @@ kill_script = [
   { op = "give_xp", amount = 40 },
 ]
 
-# Apex Drake Guard — large patrol drake, unlocks thermal gate on death
+# Apex Drake Guard â large patrol drake, unlocks thermal gate on death
 
 [[npc]]
 id          = "apex_drake_guard"
@@ -466,13 +466,13 @@ kill_script = [
   { op = "set_flag",   flag = "dp_thermal_gate_unlocked" },
 ]
 
-# Apex Drake — zone boss
+# Apex Drake â zone boss
 
 [[npc]]
 id          = "apex_drake"
 name        = "Apex Drake"
 desc_short  = "A colossal drake with a crown of molten horn."
-desc_long   = "Ancient and intelligent, it defends its hoard and the Thermal Conductor with terrible cunning. It studies a challenger before it commits — and once it does, there is no half-measure."
+desc_long   = "Ancient and intelligent, it defends its hoard and the Thermal Conductor with terrible cunning. It studies a challenger before it commits â and once it does, there is no half-measure."
 tags        = ["beast", "flying", "large", "boss"]
 style       = "sky_piercer"
 style_prof  = 60
@@ -490,7 +490,7 @@ round_script = [
     { op = "message", tag = "combat", text = "The Apex hesitates, studying you as if weighing an old debt." },
   ] },
   { op = "if_prestige", max = -30, then = [
-    { op = "message", tag = "combat", text = "The Apex roars with fury — its attacks grow savage against those it deems dishonorable." },
+    { op = "message", tag = "combat", text = "The Apex roars with fury â its attacks grow savage against those it deems dishonorable." },
     { op = "damage", amount = 6 },
   ] },
   { op = "if_combat_round", min = 2, then = [
@@ -510,3 +510,20 @@ kill_script = [
   { op = "set_flag",   flag = "dp_apex_slain" },
   { op = "prestige",   amount = 25, reason = "slain the Apex Drake" },
 ]
+
+[[npc]]
+id          = "dp_banker"
+name        = "Peaks Paymaster"
+tags        = ["humanoid", "banker"]
+style       = "brawling"
+style_prof  = 3
+desc_short  = "A stocky dwarf in a fire-resistant coat, counting coins behind a portable strongbox."
+desc_long   = "The Paymaster runs the Dragon Peaks branch out of a fireproof strongbox bolted to the rock. She keeps accounts for miners and hunters who cannot safely carry their marks to a lowland bank."
+hp          = 20
+max_hp      = 20
+attack      = 2
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "Marks in, marks out  I run the only strongbox on the Peaks. Deposit, withdraw, or check your balance."

@@ -90,6 +90,9 @@ Add an `elif name == "my_op":` branch in `ScriptRunner._exec()` in `engine/scrip
 ### Windows encoding
 Box-drawing chars (U+2500+), ✓/✗, ⚠ crash on cp1252 consoles. Use ASCII equivalents in runtime-printed strings. Em-dash (U+2014) is safe.
 
+### toml file updates
+- Always reference WORLD_MANUAL.md when updating toml files to ensure compliance syntax is utilized.
+
 ### After adding/updating/removing features
 - Update validate.py - if the change alters how TOML files are written and/or interact with the engine
 - Update the World Creation Tool (WCT) - if the change alters how TOML files are written, including scripting changes, new features, etc. 

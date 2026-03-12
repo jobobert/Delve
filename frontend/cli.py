@@ -433,10 +433,47 @@ class CLIFrontend:
                            player_hp=p.hp)
                 break
 
+    # ── Admin commands ────────────────────────────────────────────────────────
+
+    def _admin_cmd(self, cmd: str) -> bool:
+        """Handle admin commands (typed as -<cmd>). Returns True if handled."""
+        dim  = _fg(140, 140, 200)
+        bold = BOLD + _fg(200, 200, 255)
+        err  = _fg(220, 100, 100)
+
+        if cmd == "reload":
+            print(dim + "  [admin] Reloading world data..." + RESET)
+            try:
+                _wc.init(self._world_path)
+                self.world = World(self._world_path)
+                self.world.attach_player(self.player)
+                self.processor = CommandProcessor(self.world, self.player, self.bus)
+                print(dim + f"  [admin] World '{_wc.WORLD_NAME}' reloaded." + RESET)
+                self.processor.do_look()
+            except Exception as exc:
+                print(err + f"  [admin] Reload failed: {exc}" + RESET)
+            return True
+
+        if cmd in ("flags", "tags"):
+            flags = sorted(self.player.flags)
+            print(bold + f"\n  Player flags ({len(flags)}):" + RESET)
+            if flags:
+                for f in flags:
+                    print(dim + f"    {f}" + RESET)
+            else:
+                print(dim + "    (none)" + RESET)
+            print()
+            return True
+
+        # Unknown admin command — show help rather than silently ignoring
+        print(err + f"  Unknown admin command '-{cmd}'. Available: -reload  -flags  -tags" + RESET)
+        return True
+
     # ── Main loop ─────────────────────────────────────────────────────────────
 
     def run(self) -> None:
-        world_path     = self._select_world()
+        self._world_path = self._select_world()
+        world_path       = self._world_path
         _wc.init(world_path)
         self.world     = World(world_path)           # zone_state_dir set after login
         self.player    = self._login(world_path)
@@ -460,6 +497,11 @@ class CLIFrontend:
                 break
             if not raw:
                 continue
+
+            # Admin commands (prefixed with -)
+            if raw.startswith("-"):
+                if self._admin_cmd(raw[1:].strip()):
+                    continue
 
             # Check for auto-attack trigger
             lower = raw.lower()

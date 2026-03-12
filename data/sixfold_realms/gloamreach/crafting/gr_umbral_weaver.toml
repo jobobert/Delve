@@ -4,43 +4,23 @@ id             = "gr_weave_mantle"
 npc_id         = "gr_umbral_weaver"
 label          = "Weave Umbral Mantle"
 desc           = "The Umbral Weaver binds shadow-ore and entropy residue into a mantle of shifting darkness."
-slot           = ""
-weapon_tags    = []
+slot           = "body"
+armor_tags     = ["cloth", "shadow", "entropy"]
 materials      = ["gr_shadow_ore", "gr_entropy_residue"]
 turns_required = 12
 gold_cost      = 0
+weight         = 1
 on_complete = [
   { op = "message", tag = "crafting", text = "The Weaver draws the shadows tight, weaving them into a mantle that shifts with the light." },
-  { op = "give_item", item_id = "umbral_mantle" },
   { op = "advance_quest", quest_id = "gr_mantle", step = 2 },
   { op = "advance_quest", quest_id = "gr_mantle", step = 3 },
   { op = "complete_quest", quest_id = "gr_mantle" },
   { op = "prestige", amount = 2, reason = "mastered the caverns' instability" },
 ]
-
-# --- Quality Tiers ---
-[[quality]]
-name        = "Frayed Weave"
-min_quality = 0
-max_quality = 39
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = -1 },
-  { type = "stat_bonus", stat = "max_hp",  amount = -3 },
-]
-
-[[quality]]
-name        = "Balanced Weave"
-min_quality = 40
-max_quality = 79
-effects     = []
-
-[[quality]]
-name        = "Umbral Perfection"
-min_quality = 80
-max_quality = 100
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = 2 },
-  { type = "stat_bonus", stat = "max_hp",  amount = 5 },
+qualities = [
+  { tier = "poor",        weight = 25, defense_bonus = 1, max_hp_bonus = 2, equip_msg = "The weave is loose in places, letting in cold drafts of entropy.", craft_message = "The shadows resisted — it held, but barely." },
+  { tier = "standard",    weight = 50, defense_bonus = 3, max_hp_bonus = 5, equip_msg = "The mantle shifts with the light, sometimes absorbing it, sometimes bending it around you." },
+  { tier = "exceptional", weight = 25, defense_bonus = 5, max_hp_bonus = 8, name_prefix = "Umbral ", equip_msg = "The mantle drinks the surrounding shadows and wraps you in perfect darkness.", craft_message = "The entropy wove itself. I barely had to guide it." },
 ]
 
 
@@ -59,24 +39,8 @@ on_complete = [
   { op = "message", tag = "crafting", text = "The Weaver polishes the ore until it gleams with dark light." },
   { op = "give_item", item_id = "gr_nullstone_shard" },
 ]
-
-# --- Quality Tiers ---
-[[quality]]
-name        = "Dull Polish"
-min_quality = 0
-max_quality = 39
-effects     = []
-
-[[quality]]
-name        = "Clean Polish"
-min_quality = 40
-max_quality = 79
-effects     = []
-
-[[quality]]
-name        = "Perfect Polish"
-min_quality = 80
-max_quality = 100
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = 1 },
+qualities = [
+  { tier = "poor",        weight = 25, craft_message = "Dull polish — the shard is serviceable." },
+  { tier = "standard",    weight = 50, craft_message = "Clean polish. The nullstone is well-formed." },
+  { tier = "exceptional", weight = 25, craft_message = "Perfect polish. The shard gleams with an eerie inner light." },
 ]

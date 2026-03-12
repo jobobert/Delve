@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The sprite sputters molten droplets and lunges."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

@@ -15,26 +15,10 @@ on_complete = [
   { op = "set_flag",  flag = "mf_echo_gate_unlocked" },
   { op = "prestige",  amount = 1, reason = "worked with the Path-Readers to stabilise the Mistfen" },
 ]
-
-# --- Quality Tiers ---
-[[quality]]
-name        = "Distorted Tuning"
-min_quality = 0
-max_quality = 39
-effects     = []
-
-[[quality]]
-name        = "Standard Tuning"
-min_quality = 40
-max_quality = 79
-effects     = []
-
-[[quality]]
-name        = "Perfect Tuning"
-min_quality = 80
-max_quality = 100
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = 1 }
+qualities = [
+  { tier = "poor",        weight = 25, craft_message = "The needle wavers a little. 'It will hold — probably,' Sera says." },
+  { tier = "standard",    weight = 50, craft_message = "Sera nods. 'Standard tuning. It will do the job.'" },
+  { tier = "exceptional", weight = 25, craft_message = "'Perfect alignment. The Mistfen will answer to this.' Sera sounds almost surprised." },
 ]
 
 
@@ -53,26 +37,8 @@ on_complete = [
   { op = "message", tag = "crafting", text = "The quartz stabilises, pulsing with a soft inner glow." },
   { op = "give_item", item_id = "mf_quartz_heart" },
 ]
-
-# --- Quality Tiers ---
-[[quality]]
-name        = "Clouded Resonance"
-min_quality = 0
-max_quality = 39
-effects     = [
-  { type = "stat_bonus", stat = "max_hp", amount = -2 }
-]
-
-[[quality]]
-name        = "Stable Resonance"
-min_quality = 40
-max_quality = 79
-effects     = []
-
-[[quality]]
-name        = "Pure Resonance"
-min_quality = 80
-max_quality = 100
-effects     = [
-  { type = "stat_bonus", stat = "max_hp", amount = 3 }
+qualities = [
+  { tier = "poor",        weight = 25, craft_message = "The resonance is cloudy — it will work, but it's unstable." },
+  { tier = "standard",    weight = 50, craft_message = "Stable resonance. The quartz heart is solid." },
+  { tier = "exceptional", weight = 25, craft_message = "Pure resonance. The quartz hums with a steady, clear pulse." },
 ]

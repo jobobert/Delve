@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The hawk shrieks and dives, talons extended."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

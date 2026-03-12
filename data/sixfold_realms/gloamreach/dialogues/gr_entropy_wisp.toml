@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The wisp crackles with unstable entropy and spirals toward you."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

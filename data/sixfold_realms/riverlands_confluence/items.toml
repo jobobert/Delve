@@ -34,12 +34,11 @@ id = "driftwood_crate"
 name = "Waterlogged Crate"
 desc_short = "A crate half-sunk into the pier planking."
 desc_long = "It washed up from somewhere upriver. The lid is warped but might give with effort."
-slot = "head"
 weight = 0
 scenery = true
 respawn = true
 on_get = [{op = "skill_check", skill = "survival", dc = 8, on_pass = [{op = "give_item", item_id = "clarity_stew"}, {op = "message", tag = "item", text = "You pry the crate open and salvage a sealed jar of stew."}], on_fail = [{op = "message", tag = "system", text = "The crate splinters uselessly in your hands."}]}]
-type = "weapon"
+type = "misc"
 
 [[item]]
 id = "clarity_stew"

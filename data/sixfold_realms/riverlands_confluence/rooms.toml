@@ -1,212 +1,199 @@
-# riverlands_confluence/rooms.toml
-#
-# 10 rooms. Layout (rough):
-#
-#   [echoing_chamber]
-#         |
-#   [hidden_stair]
-#         |
-#   [mural_promenade]
-#         |
-#   [ferryman_shack] -- [ferrydock_square] -- [market_row] -- [inn_common]
-#                              |                                    |
-#                         [lower_piers]                        [inn_rooms]
-#                              |
-#                      [unstable_current]
+#room = [{id = "southbank_jetty", name = "Southbank Jetty", description = "A busy wooden jetty where boats arrive from distant settlements.", coord = [], exits = {north = "riverbend_market", east = "misty_fork", to_dragon_peaks_1 = "", to_mycelial_plains_1 = ""}, items = [], flags = [], spawns = []}, {id = "riverbend_market", name = "Riverbend Market", description = "Stalls line the riverbank, selling maps, charms, and questionable river snacks.", coord = [], exits = {south = "southbank_jetty", north = "confluence_bridge", west = "shaded_bank"}, items = ["item_river_map_fragment"], flags = [], spawns = ["npc_mapmaker_sela"], start = true}, {id = "misty_fork", name = "Misty Fork", description = "The river splits here, one branch flowing toward a misty horizon.", coord = [], exits = {west = "southbank_jetty", north = "fogshore_landing", to_mistfen_expanse_1 = ""}, items = [], flags = [], spawns = []}, {id = "shaded_bank", name = "Shaded Bank", description = "Tall trees lean over the water, their roots gripping the muddy shore.", coord = [], exits = {east = "riverbend_market", north = "greenwater_ford", to_verdant_heartwood_1 = ""}, items = ["item_driftwood_charm"], flags = [], spawns = []}, {id = "confluence_bridge", name = "Confluence Bridge", description = "A broad wooden bridge spanning the main river, with a clear view of the central island.", coord = [], exits = {south = "riverbend_market", north = "confluence_shore"}, items = [], flags = [], spawns = []}, {id = "fogshore_landing", name = "Fogshore Landing", description = "A small dock half-lost in river mist.", coord = [], exits = {south = "misty_fork", north = "twilight_bank", to_mistfen_expanse_2 = ""}, items = [], flags = [], spawns = []}, {id = "greenwater_ford", name = "Greenwater Ford", description = "Shallow waters tinted green by drifting leaves.", coord = [], exits = {south = "shaded_bank", north = "emberflow_dock", to_verdant_heartwood_2 = ""}, items = [], flags = [], spawns = []}, {id = "confluence_shore", name = "Confluence Shore", description = "The river widens here, encircling a small island at its center.", coord = [], exits = {south = "confluence_bridge", east = "sporeward_bank", west = "fungal_drift", boat_to_island_1 = "confluence_isle_dock"}, items = [], flags = [], spawns = []}, {id = "twilight_bank", name = "Twilight Bank", description = "The light here feels dimmer, as if Gloamreach’s twilight has seeped downriver.", coord = [], exits = {south = "fogshore_landing", to_gloamreach_1 = ""}, items = [], flags = [], spawns = []}, {id = "emberflow_dock", name = "Emberflow Dock", description = "Warm currents swirl near the shore, carrying faint heat from distant volcanic peaks.", coord = [], exits = {south = "greenwater_ford", to_dragon_peaks_2 = ""}, items = [], flags = [], spawns = []}, {id = "sporeward_bank", name = "Sporeward Bank", description = "Faint spores drift over the water, glowing softly in the air.", coord = [], exits = {west = "confluence_shore", to_mycelial_plains_2 = ""}, items = [], flags = [], spawns = []}, {id = "fungal_drift", name = "Fungal Drift", description = "Clusters of floating fungus drift along the current.", coord = [], exits = {east = "confluence_shore", to_mycelial_plains_3 = ""}, items = [], flags = [], spawns = []}, {id = "confluence_isle_dock", name = "Confluence Isle Dock", description = "A small wooden dock on the central island, with boats tied loosely to worn posts.", coord = [], exits = {south = "confluence_shore", north = "confluence_square"}, items = [], flags = [], spawns = []}, {id = "confluence_square", name = "Confluence Square", description = "The heart of the island, ringed by stone markers bearing symbols of all regions.", coord = [], exits = {south = "confluence_isle_dock", north = "island_shrine", east = "eastwatch_bluff", west = "westshore_lookout"}, items = [], flags = [], spawns = []}, {id = "island_shrine", name = "Island Shrine", description = "A small shrine dedicated to balance between land, river, and sky.", coord = [], exits = {south = "confluence_square"}, items = ["item_river_token"], flags = [], spawns = []}, {id = "eastwatch_bluff", name = "Eastwatch Bluff", description = "A low bluff overlooking the eastern branches of the river.", coord = [], exits = {west = "confluence_square"}, items = [], flags = [], spawns = []}, {id = "westshore_lookout", name = "Westshore Lookout", description = "A rocky outcrop with a clear view of the western currents.", coord = [], exits = {east = "confluence_square"}, items = [], flags = [], spawns = []}]
 
-# ── 1. Ferrydock Square — starting hub ──────────────────────────────────────
-
+# 1. Starting hub: Ferrydock Square
 [[room]]
 id          = "rl_ferrydock_square"
 name        = "Ferrydock Square"
-description = "A broad wooden platform where several ferries once departed in steady rhythm. Lantern posts lean at odd angles, their glass cracked by subtle tremors in the air. Ropes creak, boats knock against the pilings, and a faded mural of six interlocking circles is painted on the stone embankment to the north."
+description = "A broad wooden platform where several ferries once departed in steady rhythm."
+desc_long   = """
+Lantern posts lean at odd angles, their glass cracked by subtle tremors in the air.
+Ropes creak, boats knock against the pilings, and a faded mural of six interlocking circles
+is painted on the stone embankment to the north.
+"""
+coord       = [0, 0]
 flags       = ["town", "no_combat"]
 start       = true
 exits       = { north = "rl_mural_promenade", east = "rl_market_row", south = "rl_lower_piers", west = "rl_ferryman_shack" }
-spawns      = ["kale_ferryman", "sela_mapmaker", "river_child"]
+spawns      = ["kale_ferryman", "sela_mapmaker", "river_child", "rl_banker"]
 items       = ["mural_inscription_fragment"]
 
 on_enter = [
   { op = "if_not_flag", flag = "rl_intro_seen", then = [
-    { op = "message", tag = "system", text = "The rivers feel wrong here — like they are listening." },
+    { op = "message", tag = "system", text = "The rivers feel wrong here—like they are listening." },
     { op = "set_flag", flag = "rl_intro_seen" },
     { op = "advance_quest", quest_id = "rivers_remember", step = 1 },
   ] },
 ]
 
-# ── 2. Mural Promenade — perception gate ────────────────────────────────────
-
+# 2. Mural Promenade — lore + conditional exit
 [[room]]
 id          = "rl_mural_promenade"
 name        = "Mural Promenade"
-description = "A stone walkway overlooking the confluence, dominated by a weathered mural of five rivers feeding a central circle, cracked down the middle. The stonework here is unusually regular."
+description = "A stone walkway overlooking the confluence, dominated by a weathered mural."
+coord       = [0, 1]
 flags       = ["no_combat"]
-exits       = { south = "rl_ferrydock_square", north = { to = "rl_hidden_stair", locked = true, lock_tag = "perception_gate", desc = "a faint seam in the stone where steps descend" } }
+exits       = { south = "rl_ferrydock_square", north = "rl_hidden_stair" }
+items       = ["mural_inscription_fragment"]
 
 on_enter = [
   { op = "if_not_flag", flag = "rl_mural_examined", then = [
-    { op = "message", tag = "system", text = "The mural shows five rivers feeding a central circle, cracked down the middle." },
-    { op = "set_flag", flag = "rl_mural_examined" },
-  ] },
-  { op = "if_not_flag", flag = "rl_stair_noticed", then = [
-    { op = "skill_check", skill = "perception", dc = 12,
-      on_pass = [
-        { op = "message", tag = "system", text = "Your eye catches a faint seam in the stone — steps, descending north beneath the mural." },
-        { op = "set_flag", flag = "rl_stair_noticed" },
-        { op = "unlock_exit", room_id = "rl_mural_promenade", direction = "north" },
-      ],
-      on_fail = [
-        { op = "message", tag = "system", text = "The stonework here seems unnaturally regular, but you can't make out anything specific." },
-        { op = "skill_grow", skill = "perception", amount = 2 },
-      ],
-    },
+    { op = "message", tag = "lore", text = "The mural shows five rivers feeding a central circle, cracked down the middle." },
   ] },
 ]
 
-# ── 3. Hidden Stair — resonance hazard, echo wraiths ────────────────────────
+on_enter = [
+    {op = "if_not_flag", flag = "rl_mural_examined", then = [
+        {op = "message", tag = "system", text = "The mural shows five rivers feeding a central circle, cracked down the middle."}, 
+        {op = "set_flag", flag = "rl_mural_examined"},
+        {op = "advance_quest", quest_id = "rivers_remember", step = 2}
+        ], else = []}, 
+    {op = "if_not_flag", flag = "rl_stair_noticed", then = [
+        {op = "skill_check", skill = "perception", dc = 12, 
+        on_pass = [
+            {op = "message", tag = "system", text = "Your eye catches a faint seam in the stone — steps, descending north beneath the mural."}, 
+            {op = "set_flag", flag = "rl_stair_noticed"}, 
+            {op = "unlock_exit", room_id = "rl_mural_promenade", direction = "north"}
+        ], 
+        on_fail = [
+            {op = "message", tag = "system", text = "The stonework here seems unnaturally regular, but you can't make out anything specific."}, 
+            {op = "skill_grow", skill = "perception", amount = 2}
+        ]
+        }, 
+        {op = "if_flag", then = [
+            {op = "unlock_exit", room_id = "rl_mural_promenade", direction = "north"}
+            ], 
+            else = [], flag = "rl_stair_noticed"}], else = []
+            }
+]
 
+
+# Hidden stair is gated by perception
+exits.north = { to = "rl_hidden_stair", show_if = { op = "min_skill", skill = "perception", value = 40 },
+  desc = "a faint seam in the stone, where steps descend into darkness" }
+
+# 3. Hidden Stair — early taste of hazard
 [[room]]
 id          = "rl_hidden_stair"
 name        = "Hidden Stair"
-description = "Narrow stone steps spiral downward, slick with condensation. The air hums with a low resonance that makes your teeth ache. Shapes that might be shadows drift at the edge of the torchlight."
-exits       = { up = "rl_mural_promenade", down = "rl_echoing_chamber" }
-spawns      = ["echo_wraith"]
+description = "Narrow stone steps spiral downward, slick with condensation."
+coord       = [0, 2]
+flags       = ["hazard"]
+hazard_damage  = 2
+hazard_message = "The air vibrates with a low hum that makes your teeth ache."
+hazard_exempt_flag = "rl_has_resonant_token"
+exits       = { south = "rl_mural_promenade", down = "rl_echoing_chamber" }
 
 on_enter = [
-  { op = "if_not_flag", flag = "rl_has_resonant_token", then = [
-    { op = "damage", amount = 2, message = "The resonance vibrates painfully through your bones." },
-  ] },
-  { op = "if_not_flag", flag = "rl_stair_found", then = [
-    { op = "message", tag = "system", text = "You have found the hidden stair. The air hums with an old, patient frequency." },
-    { op = "set_flag", flag = "rl_stair_found" },
-    { op = "advance_quest", quest_id = "rivers_remember", step = 2 },
-  ] },
+  { op = "message", tag = "system", text = "Each step seems to ring with a different tone beneath your boots." },
 ]
 
-# ── 4. Echoing Chamber — inscription, quest completion ──────────────────────
-
+# 4. Echoing Chamber — ancient hint + item node
 [[room]]
 id          = "rl_echoing_chamber"
 name        = "Echoing Chamber"
-description = "A circular chamber carved into the bedrock, its walls etched with concentric rings that seem to pulse faintly in the dark. The air is still, and every sound returns doubled."
+description = "A circular chamber carved into the bedrock, its walls etched with concentric rings."
+coord       = [0, 3]
+flags       = []
 exits       = { up = "rl_hidden_stair" }
 items       = ["resonant_token"]
 
 on_enter = [
   { op = "if_not_flag", flag = "rl_echo_lore_seen", then = [
-    { op = "message", tag = "system", text = "Faint words shimmer across the stone: 'Five conduits feed the heart. When one falters, all tremble.'" },
+    { op = "message", tag = "lore",
+      text = "Faint words shimmer across the stone: 'Five conduits feed the heart. When one falters, all tremble.'" },
     { op = "set_flag", flag = "rl_echo_lore_seen" },
     { op = "advance_quest", quest_id = "rivers_remember", step = 3 },
     { op = "complete_quest", quest_id = "rivers_remember" },
+    { op = "prestige", amount = 1, reason = "deciphered the inscription in the Echoing Chamber" },
   ] },
 ]
 
-# ── 5. Market Row — vendors ──────────────────────────────────────────────────
-
+# 5. Market Row — shop, crafting hooks
 [[room]]
 id          = "rl_market_row"
 name        = "Market Row"
-description = "A line of stalls and awnings, some abandoned, others stubbornly open for trade. The smell of river mud and spiced oil hangs in the air."
+description = "A line of stalls and awnings, some abandoned, others stubbornly open for trade."
+coord       = [1, 0]
 flags       = ["town", "no_combat"]
 exits       = { west = "rl_ferrydock_square", east = "rl_inn_common" }
 spawns      = ["vendor_supplies", "crafter_boatwright"]
 
-# ── 6. Confluence Inn — rest, healing ───────────────────────────────────────
-
+# 6. The Confluence Inn — healing + rest_cost
 [[room]]
 id          = "rl_inn_common"
-name        = "Confluence Inn — Common Room"
-description = "A warm, low-ceilinged hall where the smell of stew fights the damp river air. Travellers huddle over their bowls, trading rumours in low voices."
+name        = "Confluence Inn Common Room"
+description = "A warm, low-ceilinged hall where the smell of stew fights the damp river air."
+coord       = [2, 0]
 flags       = ["town", "healing", "no_combat"]
+heal_rate   = 8
 exits       = { west = "rl_market_row", up = "rl_inn_rooms" }
 spawns      = ["innkeeper_mara"]
-
-# ── 7. Inn Rooms — sleep ─────────────────────────────────────────────────────
 
 [[room]]
 id          = "rl_inn_rooms"
 name        = "Inn Rooms"
-description = "A narrow hallway with simple doors on either side. The beds are plain but dry, and the sound of the river is muffled here."
-flags       = ["sleep", "no_combat"]
+description = "A narrow hallway with simple doors on either side."
+coord       = [2, 1]
+flags       = ["healing", "no_combat"]
+heal_rate   = 10
 exits       = { down = "rl_inn_common" }
 
-on_sleep = [
-  { op = "message", tag = "system", text = "You sleep to the distant murmur of the confluence. For a few hours, the rivers sound almost calm." },
-]
-on_wake = [
-  { op = "message", tag = "system", text = "Morning. The inn creaks around you. Time to move." },
-]
-
-# ── 8. Lower Piers — combat zone ────────────────────────────────────────────
-
+# 7. Lower Piers — hazard + navigation skill check
 [[room]]
 id          = "rl_lower_piers"
 name        = "Lower Piers"
-description = "Rotting planks dip dangerously close to the churning water below. Old mooring rings hang loose, and something moves in the shadows beneath the dock."
+description = "Rotting planks dip dangerously close to the churning water below."
+coord       = [0, -1]
+flags       = ["hazard"]
+hazard_damage  = 3
+hazard_message = "Spray from the unstable currents stings your skin."
 exits       = { north = "rl_ferrydock_square", south = "rl_unstable_current" }
-spawns      = ["mire_wolf"]
 items       = ["driftwood_crate"]
 
 on_enter = [
   { op = "if_not_flag", flag = "rl_piers_warned", then = [
-    { op = "message", tag = "system", text = "Someone has carved into a post: 'Do not fall in. The river does not let go.'" },
+    { op = "message", tag = "system", text = "Someone has carved: 'Do not fall in. The river does not let go.'" },
     { op = "set_flag", flag = "rl_piers_warned" },
   ] },
-  { op = "damage", amount = 2, message = "Spray from the churning water stings your skin." },
 ]
 
-# ── 9. Unstable Current — skill check ───────────────────────────────────────
-
+# 8. Unstable Current — navigation puzzle hook
 [[room]]
 id          = "rl_unstable_current"
 name        = "Unstable Current"
-description = "Here the river narrows, its surface folding in on itself in impossible patterns. The planking underfoot flexes with each pulse of the water. Long shapes move just beneath the surface."
+description = "Here the river narrows, its surface folding in on itself in impossible patterns."
+coord       = [0, -2]
+flags       = ["hazard"]
+hazard_damage  = 4
+hazard_message = "The current tugs at your balance and your thoughts."
 exits       = { north = "rl_lower_piers" }
-spawns      = ["drift_serpent"]
 
 on_enter = [
   { op = "message", tag = "system", text = "You feel as though the river is trying to pull you somewhere that isn't here." },
-  { op = "if_not_flag", flag = "rl_current_read", then = [
-    { op = "skill_check", skill = "navigation", dc = 10,
-      on_pass = [
-        { op = "message", tag = "system", text = "You read the eddies and step where the planks are most stable." },
-        { op = "set_flag", flag = "rl_current_read" },
-        { op = "skill_grow", skill = "navigation", amount = 3 },
-      ],
-      on_fail = [
-        { op = "damage", amount = 5, message = "You misjudge a step and slam into the railing." },
-        { op = "skill_grow", skill = "navigation", amount = 1 },
-      ],
-    },
-  ] },
+  { op = "skill_check", skill = "navigation", dc = 10,
+    on_pass = [
+      { op = "message", tag = "system", text = "You read the eddies and step where the planks are most stable." },
+      { op = "set_flag", flag = "rl_current_read" },
+    ],
+    on_fail = [
+      { op = "damage", amount = 5, message = "You misjudge a step and slam into the railing." },
+    ],
+  },
 ]
-
-# ── 10. Ferryman's Shack — flavour, lore ────────────────────────────────────
-
-[[room]]
-id          = "rl_ferryman_shack"
-name        = "Ferryman's Shack"
-description = "A weathered wooden shack filled with ropes, charts, and ferry logs going back decades. A corkboard on the wall holds pinned notes: departure times, passenger tallies, tide warnings. One note reads: 'Dragon Peaks route — SUSPENDED until currents stabilise.'"
-exits       = { east = "rl_ferrydock_square" }
-
-on_enter = [
-  { op = "if_not_flag", flag = "rl_shack_seen", then = [
-    { op = "message", tag = "system", text = "The ferry logs on the table show a steady record of crossings — until, abruptly, they stop." },
-    { op = "set_flag", flag = "rl_shack_seen" },
-  ] },
-]
-
-# ── 11. Dragon Peaks Ferry Berth — inter-zone stub (suspended) ───────────────
 
 [[room]]
 id          = "rl_ferry_berth_peaks"
-name        = "Dragon Peaks Ferry Berth"
-description = "A broad stone jetty where the Dragon Peaks ferry once docked. Heavy chains hang loose from iron bollards, and the gangway has been pulled back and lashed down. A hand-lettered board reads: 'ROUTE SUSPENDED — Currents unsafe. No departures until further notice.'"
-exits       = { south = "rl_ferrydock_square", north = "dp_approach_1" }
+name        = "Peaks Ferry Berth"
+description = "A wooden landing platform where the Riverlands ferry moors before the climb into Dragon Peaks."
+exits       = {
+  north = "dp_approach_1",
+  south = "rl_ferrydock_square"
+}
 
-on_enter = [
-  { op = "if_not_flag", flag = "rl_berth_seen", then = [
-    { op = "message", tag = "system", text = "The jetty is cold and quiet. Whatever life this place had, it left with the last ferry." },
-    { op = "set_flag", flag = "rl_berth_seen" },
-  ] },
-]
+[[room]]
+id          = "rl_ferryman_shack"
+name        = "Ferryman’s Shack"
+description = "A weathered wooden shack filled with ropes, charts, and ferry logs. The ferryman often rests here between crossings."
+exits       = {
+  east = "rl_ferrydock_square"
+}

@@ -4,43 +4,23 @@ id             = "vh_grow_carapace"
 npc_id         = "vh_heartwood_shaper"
 label          = "Grow Heartwood Carapace"
 desc           = "Thalen grows a living armor from Heartwood Bark, Sap Resin, and a Bog-Quartz Heart at the Growth Forge."
-slot           = ""
-weapon_tags    = []
+slot           = "body"
+armor_tags     = ["organic", "heartwood", "resonant"]
 materials      = ["vh_heartwood_bark", "vh_sap_resin", "mf_quartz_heart"]
 turns_required = 15
 gold_cost      = 0
+weight         = 3
 on_complete = [
   { op = "message", tag = "crafting", text = "The forge pulses, weaving bark and resin into a symbiotic armor. 'It is yours,' Thalen says. 'Let it learn you.'" },
-  { op = "give_item", item_id = "heartwood_carapace" },
   { op = "advance_quest", quest_id = "vh_carapace", step = 2 },
   { op = "advance_quest", quest_id = "vh_carapace", step = 3 },
   { op = "complete_quest", quest_id = "vh_carapace" },
   { op = "prestige", amount = 2, reason = "earned the Heartwood's trust" },
 ]
-
-# --- Quality Tiers ---
-[[quality]]
-name        = "Unsteady Growth"
-min_quality = 0
-max_quality = 39
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = -1 },
-  { type = "stat_bonus", stat = "max_hp",  amount = -3 },
-]
-
-[[quality]]
-name        = "Harmonized Growth"
-min_quality = 40
-max_quality = 79
-effects     = []
-
-[[quality]]
-name        = "Symbiotic Perfection"
-min_quality = 80
-max_quality = 100
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = 2 },
-  { type = "stat_bonus", stat = "max_hp",  amount = 5 },
+qualities = [
+  { tier = "poor",        weight = 25, defense_bonus = 4, max_hp_bonus = 4, equip_msg = "The carapace fits unevenly; it is alive but still adjusting.", craft_message = "The growth was unsteady. It will bond in time." },
+  { tier = "standard",    weight = 50, defense_bonus = 8, max_hp_bonus = 10, equip_msg = "A symbiotic armor that adapts to its wearer. It pulses with quiet strength." },
+  { tier = "exceptional", weight = 25, defense_bonus = 11, max_hp_bonus = 14, name_prefix = "Heartbound ", equip_msg = "The carapace breathes in rhythm with you, amplifying each movement.", craft_message = "The quartz heart fused completely. Perfection." },
 ]
 
 
@@ -59,24 +39,8 @@ on_complete = [
   { op = "message", tag = "crafting", text = "Thalen runs a hand along the bark. It hardens and darkens slightly." },
   { op = "give_item", item_id = "vh_heartwood_bark" },
 ]
-
-# --- Quality Tiers ---
-[[quality]]
-name        = "Rough Shaping"
-min_quality = 0
-max_quality = 39
-effects     = []
-
-[[quality]]
-name        = "Clean Shaping"
-min_quality = 40
-max_quality = 79
-effects     = []
-
-[[quality]]
-name        = "Master Shaping"
-min_quality = 80
-max_quality = 100
-effects     = [
-  { type = "stat_bonus", stat = "max_hp", amount = 2 },
+qualities = [
+  { tier = "poor",        weight = 25, craft_message = "Rough shaping — the bark is functional but uneven." },
+  { tier = "standard",    weight = 50, craft_message = "Clean shaping. The bark's grain is clear and even." },
+  { tier = "exceptional", weight = 25, craft_message = "Master shaping. The bark has taken on a subtle inner warmth." },
 ]

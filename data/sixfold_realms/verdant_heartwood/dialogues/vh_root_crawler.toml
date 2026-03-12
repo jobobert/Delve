@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "The crawler erupts from the soil, mandibles clicking."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""

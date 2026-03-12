@@ -331,13 +331,12 @@ def _collect_all_quest_ops() -> dict[str, set]:
                 continue
             name = op.get("op", "")
             qid  = op.get("quest_id", "")
-            if not qid:
-                continue
-            if name == "advance_quest":
-                triggered.setdefault(qid, set()).add(int(op.get("step", 0)))
-            elif name == "complete_quest":
-                triggered.setdefault(qid, set()).add(None)
-            # Recurse into branch arrays
+            if qid:
+                if name == "advance_quest":
+                    triggered.setdefault(qid, set()).add(int(op.get("step", 0)))
+                elif name == "complete_quest":
+                    triggered.setdefault(qid, set()).add(None)
+            # Always recurse into branch arrays (do NOT skip on missing qid)
             for key in ("then", "else", "on_pass", "on_fail"):
                 branch = op.get(key)
                 if isinstance(branch, list):
@@ -353,9 +352,10 @@ def _collect_all_quest_ops() -> dict[str, set]:
                 _scan(npc.get("kill_script", []))
                 for entry in npc.get("give_accepts", []):
                     _scan(entry.get("script", []))
-            # Item on_get
+            # Item on_get and on_use
             for item in data.get("item", []):
                 _scan(item.get("on_get", []))
+                _scan(item.get("on_use", []))
             # Room on_enter
             for room in data.get("room", []):
                 _scan(room.get("on_enter", []))

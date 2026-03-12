@@ -232,3 +232,20 @@ round_script = [
     ] },
   ] },
 ]
+
+[[npc]]
+id          = "mp_banker"
+name        = "Spore-Clerk Dassa"
+tags        = ["humanoid", "banker"]
+style       = "brawling"
+style_prof  = 3
+desc_short  = "A quiet figure in a mask, maintaining a sealed clay strongbox."
+desc_long   = "Dassa serves as Sporehaven's treasury clerk. Marks stored here are safe from spore contamination and the cognitive drift the Plains inflict on the unwary."
+hp          = 20
+max_hp      = 20
+attack      = 2
+defense     = 2
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "The Plains take memories. Let me hold your marks instead. Deposit, withdraw, or check your balance."

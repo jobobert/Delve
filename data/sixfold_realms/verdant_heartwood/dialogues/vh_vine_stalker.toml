@@ -1,0 +1,10 @@
+[[node]]
+id    = "root"
+lines = [
+  "Vines whip out of the canopy - the stalker does not announce itself."
+]
+
+[[response]]
+node = "root"
+text = "..."
+next = ""
