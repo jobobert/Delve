@@ -515,8 +515,12 @@ class CLIFrontend:
                     print(dim + f"  [admin] Gave '{name}' ({arg}) to player." + RESET)
             return True
 
+        if verb == "room":
+            print(dim + f"  [admin] Current room: {self.player.room_id}" + RESET)
+            return True
+
         # Unknown admin command — show help rather than silently ignoring
-        print(err + f"  Unknown admin command '-{cmd}'. Available: -reload  -flags  -tags  -addflag  -remflag  -teleport  -give" + RESET)
+        print(err + f"  Unknown admin command '-{cmd}'. Available: -reload  -flags  -tags  -addflag  -remflag  -teleport  -give  -room" + RESET)
         return True
 
     # ── Main loop ─────────────────────────────────────────────────────────────

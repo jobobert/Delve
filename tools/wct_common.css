@@ -126,7 +126,7 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
 }
 .spawn-id { flex: 1; min-width: 0; }
 .spawn-count-wrap { display: flex; align-items: center; gap: 3px; }
-.spawn-count { width: 46px; padding: 4px 6px; }
+.spawn-count { width: 68px; padding: 4px 6px; }
 .spawn-hostile { font-size: 13px; color: var(--text-dim); white-space: nowrap; }
 .spawn-rm {
   background: none; border: none; color: var(--dim); cursor: pointer;
