@@ -138,9 +138,19 @@ name        = "Blackfen Mire"
 description = """
 A vast, poisonous wetland stretching south of the Millhaven road...
 """
+admin_comment = """
+## Story Driver ##
+Document the zone's narrative purpose, faction involvement, and design notes here.
+This field is edited in the WCT Zone Notes panel and is not read by the engine.
+"""
 ```
 
 The engine discovers zones by folder presence. The zone.toml is advisory/flavor only.
+
+`admin_comment` is an optional free-form markdown string for world-building notes. It is
+written and read by the WCT's "Zone Notes" panel (accessible via the **Notes** button on
+each zone header). The engine never reads this field. If `zone.toml` does not exist, the
+WCT will create it when you first save notes.
 
 ### Zone loading rules
 

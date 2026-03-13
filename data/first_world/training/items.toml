@@ -8,72 +8,66 @@
 # ── Weapons ───────────────────────────────────────────────────────────────────
 
 [[item]]
-id          = "spiked_knuckles"
-name        = "Spiked Knuckles"
-desc_short  = "Iron knuckles with short brutal spikes."
-desc_long   = "Four iron rings connected by a crossbar, each one capped with a short blunt spike. They won't do much against armor but against unprotected flesh they're savage. Favoured by brawlers who want an edge without learning to use a blade."
-slot        = "weapon"
+id = "spiked_knuckles"
+name = "Spiked Knuckles"
+desc_short = "Iron knuckles with short brutal spikes."
+desc_long = "Four iron rings connected by a crossbar, each one capped with a short blunt spike. They won't do much against armor but against unprotected flesh they're savage. Favoured by brawlers who want an edge without learning to use a blade."
+slot = "weapon"
 weapon_tags = ["fist", "brawling"]
-weight      = 1
-respawn     = false
-effects     = [
-  { type = "stat_bonus", stat = "attack", amount = 7 },
-  { type = "on_hit",     ability = "stun", chance = 0.12, magnitude = 1 },
-  { type = "on_equip",   message = "The spikes bite into your palm slightly. Good." },
-]
+weight = 1
+respawn = false
+effects = [{type = "stat_bonus", stat = "attack", amount = 7}, {type = "on_hit", ability = "stun", chance = 0.12, magnitude = 1}, {type = "on_equip", message = "The spikes bite into your palm slightly. Good."}]
 
 [[item]]
-id          = "rusty_sword"
-name        = "Rusty Sword"
-desc_short  = "A short sword, pitted with rust."
-desc_long   = "The blade is chipped and orange with corrosion along most of its length. Standard training equipment — functional enough to learn with."
-slot        = "weapon"
+id = "rusty_sword"
+name = "Rusty Sword"
+desc_short = "A short sword, pitted with rust."
+desc_long = "The blade is chipped and orange with corrosion along most of its length. Standard training equipment — functional enough to learn with."
+slot = "weapon"
 weapon_tags = ["blade", "one_handed"]
-weight      = 3
-respawn     = false
-effects     = [
-  { type = "stat_bonus", stat = "attack", amount = 5 },
-]
-
-# ── Armor ─────────────────────────────────────────────────────────────────────
+weight = 3
+respawn = false
+effects = [{type = "stat_bonus", stat = "attack", amount = 5}]
 
 [[item]]
-id          = "chain_shirt"
-name        = "Chain Shirt"
-desc_short  = "A short hauberk of interlocked iron rings."
-desc_long   = "The rings are tight and well-maintained — no rust, no gaps. It sits heavy on the shoulders and restricts your range of motion somewhat, but it will turn a blade that lighter armor wouldn't. Appropriate for someone who expects to be hit."
-slot        = "chest"
-armor_tags  = ["heavy", "chain", "torso"]
-weight      = 5
-respawn     = false
-effects     = [
-  { type = "stat_bonus", stat = "defense", amount = 7 },
-  { type = "stat_bonus", stat = "attack",  amount = -2 },
-]
-
-# ── Consumables ───────────────────────────────────────────────────────────────
+id = "chain_shirt"
+name = "Chain Shirt"
+desc_short = "A short hauberk of interlocked iron rings."
+desc_long = "The rings are tight and well-maintained — no rust, no gaps. It sits heavy on the shoulders and restricts your range of motion somewhat, but it will turn a blade that lighter armor wouldn't. Appropriate for someone who expects to be hit."
+slot = "chest"
+armor_tags = ["heavy", "chain", "torso"]
+weight = 5
+respawn = false
+effects = [{type = "stat_bonus", stat = "defense", amount = 7}, {type = "stat_bonus", stat = "attack", amount = -2}]
 
 [[item]]
-id          = "health_potion"
-name        = "Health Potion"
-desc_short  = "A thumb-sized vial of glowing red liquid."
-desc_long   = "A handwritten label reads 'Drink in need. Do not smell first.' Standard issue for anyone heading into the training yard."
-slot        = ""
-weight      = 0
-respawn     = true
-effects     = [
-  { type = "on_use", heal = 30 },
-]
-
-# ── Keys ──────────────────────────────────────────────────────────────────────
+id = "health_potion"
+name = "Health Potion"
+desc_short = "A thumb-sized vial of glowing red liquid."
+desc_long = "A handwritten label reads 'Drink in need. Do not smell first.' Standard issue for anyone heading into the training yard."
+weight = 0
+respawn = true
+effects = [{type = "on_use", heal = 30}]
 
 [[item]]
-id          = "barracks_key"
-name        = "Barracks Key"
-desc_short  = "A heavy iron key stamped with a soldier's crest."
-desc_long   = "Cold iron, well-worn from use. The bow is stamped with the crest of the Millhaven city guard — a tower over crossed blades. It opens the barracks storeroom."
-slot        = ""
-key_tag     = "barracks_lock"
-weight      = 0
-respawn     = false
-effects     = []
+id = "barracks_key"
+name = "Barracks Key"
+desc_short = "A heavy iron key stamped with a soldier's crest."
+desc_long = "Cold iron, well-worn from use. The bow is stamped with the crest of the Millhaven city guard — a tower over crossed blades. It opens the barracks storeroom."
+key_tag = "barracks_lock"
+weight = 0
+respawn = false
+
+[[item]]
+id = "ashwood_test_item"
+name = "Test Item"
+type = "misc"
+description = ""
+scenery = true
+slot = "head"
+
+[[item]]
+id = "training_test"
+name = "test"
+type = "misc"
+description = ""

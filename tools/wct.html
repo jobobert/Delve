@@ -17,6 +17,7 @@
   <button class="hbtn" id="btn-config" onclick="openConfig()" disabled title="Edit world configuration (config.toml)">Config</button>
   <button class="hbtn" id="btn-reload" onclick="reloadWorld()" title="Reload world data">Reload</button>
   <button class="hbtn" id="btn-validate" onclick="openValidate()">Validate</button>
+  <button class="hbtn" id="btn-errors" onclick="buildErrorList()" title="Refresh error panel">Errors</button>
   <button class="hbtn" id="btn-map" onclick="toggleMap()" title="Show world map">Map</button>
   <button class="hbtn primary" id="btn-new" onclick="openNew()">+ New</button>
   <button class="hbtn" id="btn-save" onclick="saveSelected()" disabled>Save</button>
@@ -54,11 +55,13 @@
     </div>
   </nav>
 
-  <main id="editor">
-    <div class="empty-state">
-      <h2>No object selected</h2>
-      <p>Choose a world, then click any item in the tree.</p>
-    </div>
+  <div class="editor-wrap">
+    <main id="editor">
+      <div class="empty-state">
+        <h2>No object selected</h2>
+        <p>Choose a world, then click any item in the tree.</p>
+      </div>
+    </main>
     <div id="error-panel" class="error-panel hidden">
       <div class="error-panel-header" onclick="toggleErrorPanel()">
         <span id="error-panel-title">Errors</span>
@@ -66,7 +69,7 @@
       </div>
       <div id="error-panel-body" class="error-panel-body"></div>
     </div>
-  </main>
+  </div>
 
   <aside id="xref">
     <div class="xref-toolbar">
@@ -201,6 +204,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- New object -->
 <div class="modal-backdrop hidden" id="new-modal">
@@ -463,8 +467,9 @@ function renderTypeList(type) {
     const hdr = document.createElement('div');
     hdr.className    = 'zone-header' + (isOpen ? ' open' : '');
     hdr.dataset.zone = zid;
-    hdr.innerHTML    = `<span class="caret">&#9658;</span><span>${zid}</span>`;
+    hdr.innerHTML    = `<span class="caret">&#9658;</span><span>${zid}</span><button class="zone-notes-btn" title="Zone notes">Notes</button>`;
     hdr.addEventListener('click', () => { const open = hdr.classList.toggle('open'); _saveZoneState(zid, open); });
+    hdr.querySelector('.zone-notes-btn').addEventListener('click', e => { e.stopPropagation(); selectZone(zid); });
     zoneNode.appendChild(hdr);
 
     const items = document.createElement('div');
@@ -766,6 +771,7 @@ function renderEditor() {
   else if (type === 'quest')    renderQuestEditor(main);
   else if (type === 'dialogue') renderDialogueEditor(main);
   else if (type === 'style')   renderStyleEditor(main);
+  else if (type === 'zone')    renderZoneEditor(main);
   else    main.innerHTML = '<div class="empty-state"><h2>Unknown type</h2></div>';
 }
 
@@ -778,9 +784,50 @@ function editorHeader(type, cls, name) {
     <span class="editor-type ${cls}">${type.toUpperCase()}</span>
     <span class="editor-title">${escHtml(name)}</span>
     <div class="editor-actions">
+      <button class="hbtn danger" onclick="deleteSelected()" title="Delete this ${escHtml(type)}">Delete</button>
       <button class="hbtn primary" onclick="saveSelected()">Save</button>
     </div>`;
   return div;
+}
+
+async function deleteSelected() {
+  if (!SELECTED) return;
+  const { type, zone_id, data } = SELECTED;
+  const eid = data.id || data._id || data._npc_id || '';
+  if (!confirm(`Delete ${type} '${eid}'?\n\nThis cannot be undone.`)) return;
+
+  setStatus('Deleting...', '');
+  const payload = { world_id: WORLD_ID, zone_id, type, id: eid };
+  if (data._file) payload.file = data._file;
+
+  let res, j;
+  try {
+    res = await fetch('/api/delete_object', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    j = await res.json();
+  } catch(e) { setStatus('Error: ' + e.message, 'err'); return; }
+  if (!j.ok) { setStatus('Error: ' + j.error, 'err'); return; }
+
+  // Remove from in-memory state
+  const zone = WORLD_DATA.zones?.[zone_id];
+  if (zone) {
+    if (type === 'room')     zone.rooms     = (zone.rooms     || []).filter(r => r.id        !== eid);
+    if (type === 'npc')      zone.npcs      = (zone.npcs      || []).filter(r => r.id        !== eid);
+    if (type === 'item')     zone.items     = (zone.items     || []).filter(r => r.id        !== eid);
+    if (type === 'style')    zone.styles    = (zone.styles    || []).filter(r => r.id        !== eid);
+    if (type === 'quest')    zone.quests    = (zone.quests    || []).filter(r => (r._id || r.id) !== eid);
+    if (type === 'dialogue') zone.dialogues = (zone.dialogues || []).filter(r => r._npc_id   !== eid);
+  }
+  if (type === 'room')  delete ALL_ROOMS[eid];
+  if (type === 'npc')   delete ALL_NPCS[eid];
+  if (type === 'item')  delete ALL_ITEMS[eid];
+
+  SELECTED = null;
+  DIRTY = false;
+  rebuildDataLists();
+  buildXRef();
+  renderTypeList(_ACTIVE_TYPE);
+  renderEditor();
+  setStatus(`Deleted ${type} '${eid}'`, 'ok');
 }
 
 function fieldRow(labelText, inputEl, note, tip) {
@@ -1775,6 +1822,136 @@ function renderStyleEditor(main) {
   renderStylePassives(main, d);
 }
 
+// ── Zone editor ──────────────────────────────────────────────────────
+
+function selectZone(zid) {
+  if (DIRTY) {
+    if (!confirm('You have unsaved changes. Discard?')) return;
+  }
+  const zone = WORLD_DATA?.zones?.[zid];
+  const meta = zone?.meta || { id: zid, name: zid, description: '', admin_comment: '' };
+  SELECTED = { type: 'zone', zone_id: zid, data: structuredClone(meta) };
+  DIRTY = false;
+  document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('selected'));
+  renderEditor();
+  document.getElementById('btn-save').disabled = false;
+  _saveUiState();
+}
+
+function renderZoneEditor(main) {
+  const d   = SELECTED.data;
+  const zid = SELECTED.zone_id;
+  main.appendChild(editorHeader('zone', 'editor-type', d.name || d.id || zid));
+
+  if (d.name) {
+    const row = document.createElement('div'); row.className = 'field-row';
+    const lbl = document.createElement('label'); lbl.textContent = 'Name';
+    const val = document.createElement('span'); val.className = 'field-ro'; val.textContent = d.name;
+    row.appendChild(lbl); row.appendChild(val); main.appendChild(row);
+  }
+  if (d.description) {
+    const row = document.createElement('div'); row.className = 'field-row'; row.style.alignItems = 'flex-start';
+    const lbl = document.createElement('label'); lbl.textContent = 'Description'; lbl.style.paddingTop = '4px';
+    const val = document.createElement('div'); val.className = 'field-ro';
+    val.style.cssText = 'white-space:pre-wrap;font-size:12px;line-height:1.5';
+    val.textContent = d.description;
+    row.appendChild(lbl); row.appendChild(val); main.appendChild(row);
+  }
+
+  main.appendChild(sectionTitle('Zone Notes', 'Story documentation for this zone (markdown). Not used by the engine.'));
+
+  const taRow = document.createElement('div'); taRow.className = 'field-row'; taRow.style.alignItems = 'flex-start';
+  const ta = document.createElement('textarea'); ta.id = 'zone-comment-ta';
+  ta.style.cssText = 'flex:1;height:300px;resize:vertical;font-family:Consolas,monospace;font-size:13px;background:#1a1d24;color:#cdd6e4;border:1px solid #303540;padding:8px;box-sizing:border-box;border-radius:4px';
+  ta.value = d.admin_comment || '';
+  ta.addEventListener('input', () => { d.admin_comment = ta.value; DIRTY = true; document.getElementById('btn-save').disabled = false; });
+  taRow.appendChild(ta); main.appendChild(taRow);
+
+  const btnRow = document.createElement('div'); btnRow.className = 'field-row'; btnRow.style.marginTop = '8px';
+  const popoutBtn = document.createElement('button'); popoutBtn.className = 'hbtn';
+  popoutBtn.textContent = 'Open in New Tab'; popoutBtn.title = 'Open zone notes in a new browser tab';
+  popoutBtn.addEventListener('click', () => _openZoneCommentPopout(zid, d));
+  btnRow.appendChild(popoutBtn); main.appendChild(btnRow);
+}
+
+function _openZoneCommentPopout(zid, dataRef) {
+  const win = window.open('', `zone_notes_${zid}`, 'width=720,height=640');
+  if (!win) { alert('Pop-up blocked — please allow pop-ups for this page.'); return; }
+
+  const zoneName   = dataRef.name || zid;
+  const comment    = dataRef.admin_comment || '';
+  const worldIdJ   = JSON.stringify(WORLD_ID);
+  const zoneIdJ    = JSON.stringify(zid);
+  const commentJ   = JSON.stringify(comment);
+
+  win.document.open();
+  win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${escHtml(zoneName)} \u2014 Zone Notes</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#111118;color:#cdd6e4;font-family:Consolas,monospace;display:flex;flex-direction:column;height:100vh;padding:16px;gap:12px}
+  h1{font-size:15px;color:#F29E00;flex-shrink:0}
+  textarea{flex:1;width:100%;background:#1a1d24;color:#cdd6e4;border:1px solid #303540;padding:10px;font-family:Consolas,monospace;font-size:13px;resize:none;border-radius:4px;line-height:1.5}
+  .bar{display:flex;gap:8px;align-items:center;flex-shrink:0}
+  button{padding:5px 14px;border:1px solid #303540;background:#1e2130;color:#cdd6e4;cursor:pointer;border-radius:4px;font-size:13px}
+  button.primary{background:#F29E00;color:#000;font-weight:bold;border-color:#F29E00}
+  button:hover{filter:brightness(1.2)}
+  #status{font-size:12px;color:#aaa}
+</style>
+</head>
+<body>
+<h1>${escHtml(zoneName)} \u2014 Zone Notes</h1>
+<textarea id="ta" placeholder="Zone story notes (markdown)..."></textarea>
+<div class="bar">
+  <button class="primary" onclick="save()">Save</button>
+  <button onclick="window.close()">Close</button>
+  <span id="status"></span>
+</div>
+<script>
+document.getElementById('ta').value = ${commentJ};
+async function save() {
+  const comment = document.getElementById('ta').value;
+  const st = document.getElementById('status');
+  st.textContent = 'Saving\u2026';
+  try {
+    const res = await fetch('/api/zone_comment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ world_id: ${worldIdJ}, zone_id: ${zoneIdJ}, admin_comment: comment }),
+    });
+    const j = await res.json();
+    if (j.ok) {
+      st.textContent = 'Saved';
+      if (window.opener && !window.opener.closed)
+        window.opener._syncZoneComment(${zoneIdJ}, comment);
+    } else {
+      st.textContent = 'Error: ' + j.error;
+    }
+  } catch(e) {
+    st.textContent = 'Error: ' + e.message;
+  }
+}
+<\/script>
+</body>
+</html>`);
+  win.document.close();
+}
+
+// Called by the zone-notes tab after a successful save to keep the main editor in sync.
+function _syncZoneComment(zid, comment) {
+  if (WORLD_DATA?.zones?.[zid]?.meta) WORLD_DATA.zones[zid].meta.admin_comment = comment;
+  if (SELECTED?.type === 'zone' && SELECTED?.zone_id === zid) {
+    SELECTED.data.admin_comment = comment;
+    const ta = document.getElementById('zone-comment-ta');
+    if (ta) ta.value = comment;
+  }
+  DIRTY = false;
+  setStatus('Zone notes saved from tab', 'ok');
+}
+
 function renderStylePassives(main, d) {
   d.passives = d.passives || [];
   const container = document.createElement('div');
@@ -2257,6 +2434,19 @@ async function saveSelected() {
   if (!SELECTED) return;
   const { type, zone_id, data } = SELECTED;
   setStatus('Saving...', '');
+
+  // Zone comment is saved via its own endpoint
+  if (type === 'zone') {
+    const res = await fetch('/api/zone_comment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ world_id: WORLD_ID, zone_id, admin_comment: data.admin_comment || '' }),
+    });
+    const j = await res.json();
+    if (j.ok) { DIRTY = false; setStatus('Saved', 'ok'); _saveUiState(); }
+    else setStatus('Error: ' + j.error, 'err');
+    return;
+  }
 
   // Determine the file to write
   let file = data._file;
@@ -3264,97 +3454,16 @@ function toggleErrorPanel() {
   else                      { panel?.classList.remove('collapsed'); if(tog) tog.innerHTML = '&#x25B2;'; }
 }
 
-function buildErrorList() {
+function _renderErrorIssues(errs) {
+  // Shared rendering: given an array of issue dicts {sev,msg,fix,type,zone_id,id},
+  // populate the error panel. Used by both buildErrorList() and its debounced path.
   const panel = document.getElementById('error-panel');
   const body  = document.getElementById('error-panel-body');
   const title = document.getElementById('error-panel-title');
   if (!panel || !body) return;
-  if (!WORLD_DATA) { panel.classList.add('hidden'); return; }
-
-  const errs = [];  // {sev:'err'|'warn', msg, fix, type, zone_id, id}
-
-  const addErr  = (msg, fix, type, zone_id, id) => errs.push({sev:'err',  msg, fix, type, zone_id, id});
-  const addWarn = (msg, fix, type, zone_id, id) => errs.push({sev:'warn', msg, fix, type, zone_id, id});
-
-  const allRoomIds = new Set(Object.keys(ALL_ROOMS));
-  const allNpcIds  = new Set(Object.keys(ALL_NPCS));
-  const allItemIds = new Set(Object.keys(ALL_ITEMS));
-
-  for (const [zid, zone] of Object.entries(WORLD_DATA.zones || {})) {
-    // Rooms
-    for (const room of (zone.rooms || [])) {
-      const rid = room.id || '(no id)';
-      if (!room.id) addErr(`Room missing 'id'`, `Add id = "..." to the room`, 'room', zid, rid);
-      if (!room.name) addErr(`Room '${rid}' missing 'name'`, `Add name = "..."`, 'room', zid, rid);
-      if (!room.description) addWarn(`Room '${rid}' missing 'description'`, `Add description = "..."`, 'room', zid, rid);
-      for (const [dir, ev] of Object.entries(room.exits || {})) {
-        const dest = typeof ev === 'string' ? ev : (ev?.to || '');
-        if (dest && !allRoomIds.has(dest))
-          addWarn(`Room '${rid}' exit '${dir}' -> '${dest}' not found`, `Check the exit target id`, 'room', zid, rid);
-      }
-      for (const spawn of (Array.isArray(room.spawns) ? room.spawns : [])) {
-        const nid = typeof spawn === 'string' ? spawn : (spawn?.id || '');
-        if (nid && !allNpcIds.has(nid))
-          addErr(`Room '${rid}' spawns unknown NPC '${nid}'`, `Add NPC '${nid}' or fix the id`, 'room', zid, rid);
-      }
-    }
-
-    // NPCs
-    const _NPC_REQ = ['id','name','hp','max_hp','attack','defense','xp_reward','gold_reward','hostile','tags','style','style_prof','desc_short','desc_long'];
-    for (const npc of (zone.npcs || [])) {
-      const nid = npc.id || '(no id)';
-      for (const f of _NPC_REQ) {
-        if (!(f in npc)) addErr(`NPC '${nid}' missing '${f}'`, `Add ${f} = ... to the NPC`, 'npc', zid, nid);
-      }
-      for (const entry of (npc.shop || [])) {
-        if (entry.item_id && !allItemIds.has(entry.item_id))
-          addErr(`NPC '${nid}' shop: unknown item '${entry.item_id}'`, `Check item id`, 'npc', zid, nid);
-      }
-    }
-
-    // Items
-    for (const item of (zone.items || [])) {
-      const iid = item.id || '(no id)';
-      if (!item.id)   addErr(`Item missing 'id'`, `Add id = "..."`, 'item', zid, iid);
-      if (!item.name) addErr(`Item '${iid}' missing 'name'`, `Add name = "..."`, 'item', zid, iid);
-      // Dead-code / contradiction checks
-      // Note: scenery + on_get is valid (interactive scenery / ore nodes) — engine runs on_get then stops.
-      if (item.scenery && item.slot)
-        addWarn(`Item '${iid}': scenery + slot="${item.slot}" — item can never be equipped`,
-          `Remove the slot field or remove the scenery flag`, 'item', zid, iid);
-      if (item.no_drop && item.on_drop && item.on_drop.length)
-        addWarn(`Item '${iid}': no_drop + on_drop — script will never run`,
-          `Remove on_drop or remove no_drop`, 'item', zid, iid);
-      for (const cmd of (item.commands || []))
-        if (!cmd.verb)
-          addWarn(`Item '${iid}': [[commands]] entry has no verb — will never trigger`,
-            `Add verb = "..." to the command`, 'item', zid, iid);
-    }
-
-    // Dialogues
-    for (const dlg of (zone.dialogues || [])) {
-      const did = dlg._npc_id || '?';
-      const nodes = {};
-      (dlg.node || []).forEach(n => { if (n.id) nodes[n.id] = n; });
-      if (!nodes.root) addErr(`Dialogue '${did}': missing 'root' node`, `Add [[node]] with id = "root"`, 'dialogue', zid, did);
-      // Check flat [[response]] next= refs
-      for (const resp of (dlg.response || [])) {
-        const nxt = resp.next;
-        if (nxt && !nodes[nxt])
-          addErr(`Dialogue '${did}': response next='${nxt}' not found`, `Add a [[node]] with id = "${nxt}" or fix the next= value`, 'dialogue', zid, did);
-      }
-    }
-
-    // Quests
-    for (const quest of (zone.quests || [])) {
-      const qid = quest._id || quest.id || '?';
-      if (quest.giver && !allNpcIds.has(quest.giver))
-        addWarn(`Quest '${qid}': giver '${quest.giver}' not found`, `Add NPC '${quest.giver}' or fix the giver id`, 'quest', zid, qid);
-    }
-  }
 
   body.innerHTML = '';
-  if (!errs.length) {
+  if (!errs || !errs.length) {
     panel.classList.add('hidden');
     return;
   }
@@ -3377,6 +3486,122 @@ function buildErrorList() {
       row.addEventListener('click', () => navigateTo(e.type, e.zone_id, e.id));
     }
     body.appendChild(row);
+  }
+}
+
+function _localValidateIssues() {
+  // Fast in-memory checks against WORLD_DATA (includes unsaved edits).
+  // Mirrors the checks in engine/validate_world.py so live feedback matches validate.py.
+  if (!WORLD_DATA) return [];
+
+  const errs = [];
+  const add = (sev, msg, fix, type, zone_id, id) => errs.push({sev, msg, fix, type, zone_id, id});
+
+  const allRoomIds = new Set(Object.keys(ALL_ROOMS));
+  const allNpcIds  = new Set(Object.keys(ALL_NPCS));
+  const allItemIds = new Set(Object.keys(ALL_ITEMS));
+
+  for (const [zid, zone] of Object.entries(WORLD_DATA.zones || {})) {
+    // Rooms
+    for (const room of (zone.rooms || [])) {
+      const rid = room.id || '(no id)';
+      if (!room.id)          add('err',  `Room missing 'id'`, `Add id = "..."`, 'room', zid, rid);
+      if (!room.name)        add('err',  `Room '${rid}' missing 'name'`, `Add name = "..."`, 'room', zid, rid);
+      if (!room.description) add('warn', `Room '${rid}' missing 'description'`, `Add description = "..."`, 'room', zid, rid);
+      for (const [dir, ev] of Object.entries(room.exits || {})) {
+        const dest = typeof ev === 'string' ? ev : (ev?.to || '');
+        if (dest && !allRoomIds.has(dest))
+          add('err', `Room '${rid}' exit '${dir}' -> '${dest}' not found`, `Check the exit target id`, 'room', zid, rid);
+      }
+      for (const entry of (room.items || [])) {
+        const iid = typeof entry === 'string' ? entry : (entry?.id || '');
+        if (iid && !allItemIds.has(iid))
+          add('warn', `Room '${rid}' references unknown item '${iid}'`, `Check the item id`, 'room', zid, rid);
+      }
+      for (const spawn of (Array.isArray(room.spawns) ? room.spawns : [])) {
+        const nid = typeof spawn === 'string' ? spawn : (spawn?.id || '');
+        if (nid && !allNpcIds.has(nid))
+          add('err', `Room '${rid}' spawns unknown NPC '${nid}'`, `Add NPC '${nid}' or fix the id`, 'room', zid, rid);
+      }
+    }
+
+    // Items
+    for (const item of (zone.items || [])) {
+      const iid = item.id || '(no id)';
+      if (!item.id)   add('err', `Item missing 'id'`, `Add id = "..."`, 'item', zid, iid);
+      if (!item.name) add('err', `Item '${iid}' missing 'name'`, `Add name = "..."`, 'item', zid, iid);
+      if (item.scenery && item.slot)
+        add('warn', `Item '${iid}': scenery + slot="${item.slot}" — item can never be equipped`,
+          `Remove the slot field or remove the scenery flag`, 'item', zid, iid);
+      if (item.no_drop && item.on_drop?.length)
+        add('warn', `Item '${iid}': no_drop + on_drop — script will never run`,
+          `Remove on_drop or remove no_drop`, 'item', zid, iid);
+      for (const cmd of (item.commands || []))
+        if (!cmd.verb)
+          add('warn', `Item '${iid}': [[commands]] entry has no verb — will never trigger`,
+            `Add verb = "..." to the command`, 'item', zid, iid);
+    }
+
+    // NPCs
+    const _NPC_REQ = ['id','name','hp','max_hp','attack','defense','xp_reward','gold_reward',
+                      'hostile','tags','style','style_prof','desc_short','desc_long'];
+    for (const npc of (zone.npcs || [])) {
+      const nid = npc.id || '(no id)';
+      for (const f of _NPC_REQ)
+        if (!(f in npc)) add('err', `NPC '${nid}' missing required field '${f}'`, `Add ${f} = ... to the NPC`, 'npc', zid, nid);
+      for (const entry of (npc.shop || []))
+        if (entry.item_id && !allItemIds.has(entry.item_id))
+          add('err', `NPC '${nid}' shop references unknown item '${entry.item_id}'`, `Check the item id`, 'npc', zid, nid);
+      for (const entry of (npc.give_accepts || []))
+        if (entry.item_id && !allItemIds.has(entry.item_id))
+          add('err', `NPC '${nid}' give_accepts references unknown item '${entry.item_id}'`, `Check the item id`, 'npc', zid, nid);
+    }
+
+    // Dialogues
+    for (const dlg of (zone.dialogues || [])) {
+      const did = dlg._npc_id || '?';
+      const nodes = {};
+      (dlg.node || []).forEach(n => { if (n.id) nodes[n.id] = n; });
+      if (!nodes.root)
+        add('err', `Dialogue '${did}': missing 'root' node`, `Add [[node]] with id = "root"`, 'dialogue', zid, did);
+      for (const resp of (dlg.response || [])) {
+        const nxt = resp.next;
+        if (nxt && !nodes[nxt])
+          add('err', `Dialogue '${did}': response next='${nxt}' not found`,
+            `Add a [[node]] with id = "${nxt}" or fix the next= value`, 'dialogue', zid, did);
+      }
+    }
+
+    // Quests
+    for (const quest of (zone.quests || [])) {
+      const qid = quest._id || quest.id || '?';
+      if (quest.giver && !allNpcIds.has(quest.giver))
+        add('warn', `Quest '${qid}': giver '${quest.giver}' not found`,
+          `Add NPC '${quest.giver}' or fix the giver id`, 'quest', zid, qid);
+    }
+  }
+  return errs;
+}
+
+async function buildErrorList() {
+  // Phase 1: instant in-memory checks — catches unsaved edits immediately.
+  const localIssues = _localValidateIssues();
+  _renderErrorIssues(localIssues);
+
+  // Phase 2: server-side checks — adds checks not possible in JS (quest triggers,
+  // give_accepts scripts, companions, commissions, etc.). Runs async in background.
+  if (!WORLD_ID) return;
+  try {
+    const res = await fetch(`/api/validate_issues?world_id=${encodeURIComponent(WORLD_ID)}`);
+    const j   = await res.json();
+    if (j.issues) {
+      // Merge: keep all local issues + add any server issues not already shown locally.
+      const localMsgs = new Set(localIssues.map(i => i.msg));
+      const extra = j.issues.filter(i => !localMsgs.has(i.msg));
+      if (extra.length) _renderErrorIssues([...localIssues, ...extra]);
+    }
+  } catch (err) {
+    console.error('[WCT errors] fetch failed:', err);
   }
 }
 
@@ -3840,7 +4065,7 @@ function renderMap(zoneFilter) {
         const lt = document.createElementNS(NS, 'text');
         lt.setAttribute('x', tx); lt.setAttribute('y', ty - 3);
         lt.setAttribute('text-anchor', 'middle');
-        lt.setAttribute('font-size', '8'); lt.setAttribute('fill', locked ? '#c05050' : '#666');
+        lt.setAttribute('font-size', '10'); lt.setAttribute('fill', locked ? '#c05050' : '#666');
         lt.setAttribute('pointer-events', 'none');
         lt.textContent = dir;
         svg.appendChild(lt);
@@ -3883,16 +4108,16 @@ function renderMap(zoneFilter) {
       t.textContent = txt; return t;
     };
     const nm = room.name.length > 17 ? room.name.slice(0,17)+'…' : room.name;
-    g.appendChild(mkT(nm,  CW/2, CH/2-4, 11, '#eee', true));
+    g.appendChild(mkT(nm,  CW/2, CH/2-4, 13, '#eee', true));
     const id2 = rid.length > 22 ? rid.slice(0,22)+'…' : rid;
-    g.appendChild(mkT(id2, CW/2, CH/2+12, 9, '#888', false));
+    g.appendChild(mkT(id2, CW/2, CH/2+12, 11, '#888', false));
 
     // Town and start room icons (top-right corner of node)
     let iconX = CW - 6;
     if (room.start) {
       const star = document.createElementNS(NS, 'text');
       star.setAttribute('x', iconX); star.setAttribute('y', 13);
-      star.setAttribute('text-anchor', 'end'); star.setAttribute('font-size', '11');
+      star.setAttribute('text-anchor', 'end'); star.setAttribute('font-size', '13');
       star.setAttribute('fill', '#FFD700'); star.setAttribute('pointer-events', 'none');
       star.setAttribute('title', 'Start room');
       star.textContent = '\u2605';  // filled star
@@ -3902,7 +4127,7 @@ function renderMap(zoneFilter) {
     if (room.is_town) {
       const house = document.createElementNS(NS, 'text');
       house.setAttribute('x', iconX); house.setAttribute('y', 13);
-      house.setAttribute('text-anchor', 'end'); house.setAttribute('font-size', '11');
+      house.setAttribute('text-anchor', 'end'); house.setAttribute('font-size', '13');
       house.setAttribute('fill', '#90CAF9'); house.setAttribute('pointer-events', 'none');
       house.setAttribute('title', 'Town');
       house.textContent = '\u2302';  // house symbol
@@ -3913,7 +4138,7 @@ function renderMap(zoneFilter) {
       const tags = [];
       if (room.npc_count)  tags.push(`N:${room.npc_count}`);
       if (room.item_count) tags.push(`I:${room.item_count}`);
-      g.appendChild(mkT(tags.join('  '), CW/2, CH/2+23, 8, '#aaa', false));
+      g.appendChild(mkT(tags.join('  '), CW/2, CH/2+23, 10, '#aaa', false));
     }
 
     svg.appendChild(g);
@@ -4699,7 +4924,7 @@ function _showDlgGraph(main, d) {
       if (flagOps.length) {
         const ft = document.createElementNS(NS, 'text');
         ft.setAttribute('x', (sx + tx) / 2 + 4); ft.setAttribute('y', (sy + ty) / 2);
-        ft.setAttribute('font-size','8'); ft.setAttribute('fill','#c8a96e');
+        ft.setAttribute('font-size','10'); ft.setAttribute('fill','#c8a96e');
         ft.setAttribute('font-family','Consolas,monospace');
         ft.textContent = flagOps.map(o => (o.op === 'set_flag' ? '+' : '-') + (o.flag||'?')).join(' ');
         edgeG.appendChild(ft);
@@ -4715,7 +4940,7 @@ function _showDlgGraph(main, d) {
   endEll.setAttribute('fill','#232530'); endEll.setAttribute('stroke','#888');
   endEll.setAttribute('stroke-width','1.5');
   nodeG.appendChild(endEll);
-  nodeG.appendChild(mkT('END', ex, ey + 5, 12, '#aaa', true, false, 'middle'));
+  nodeG.appendChild(mkT('END', ex, ey + 5, 14, '#aaa', true, false, 'middle'));
 
   // Nodes
   for (const [nid, n] of Object.entries(nodeMap)) {
@@ -4747,17 +4972,17 @@ function _showDlgGraph(main, d) {
     hdr2.setAttribute('fill', isOrphan ? '#252525' : hdrColor);
 
     const shortId = nid.length > 22 ? nid.slice(0,21)+'…' : nid;
-    const idTxt   = mkT(shortId, x + DG_NW/2, y + 15, 11, isOrphan ? '#555' : '#222', true, false, 'middle');
+    const idTxt   = mkT(shortId, x + DG_NW/2, y + 15, 13, isOrphan ? '#555' : '#222', true, false, 'middle');
     const line    = n.line || (Array.isArray(n.lines) ? n.lines[0] : '') || '';
     const lineStr = line.length > 28 ? line.slice(0,27)+'…' : (line || '(no text)');
-    const lineTxt = mkT(lineStr, x + 7, y + DG_HDR + 17, 10, isOrphan ? '#444' : '#cdd6e4', false, true, null);
+    const lineTxt = mkT(lineStr, x + 7, y + DG_HDR + 17, 12, isOrphan ? '#444' : '#cdd6e4', false, true, null);
     const ops = _dotFmtScriptOps(n.script || []);
     const opStr   = ops.map(o => '▸ '+o).join(' | ');
     const opTrunc = opStr.length > 34 ? opStr.slice(0,33)+'…' : opStr;
 
     g.appendChild(rect); g.appendChild(hdr); g.appendChild(hdr2);
     g.appendChild(idTxt); g.appendChild(lineTxt);
-    if (opTrunc) g.appendChild(mkT(opTrunc, x + 7, y + DG_HDR + 33, 9, '#888', false, false, null));
+    if (opTrunc) g.appendChild(mkT(opTrunc, x + 7, y + DG_HDR + 33, 11, '#888', false, false, null));
 
     g.addEventListener('mouseenter', () => rect.setAttribute('stroke','#c8a96e'));
     g.addEventListener('mouseleave', () => rect.setAttribute('stroke', defStroke));
@@ -4917,9 +5142,9 @@ function _showQuestGraph(main, quest) {
   startEll.setAttribute('rx', OVAL_RX); startEll.setAttribute('ry', OVAL_RY);
   startEll.setAttribute('fill','#1b3a1e'); startEll.setAttribute('stroke','#2e7d32'); startEll.setAttribute('stroke-width','1.5');
   nodeG.appendChild(startEll);
-  nodeG.appendChild(mkT('START', CX, startCY - 7, 13, '#4caf7d', true));
+  nodeG.appendChild(mkT('START', CX, startCY - 7, 15, '#4caf7d', true));
   const giver = quest.giver || '';
-  if (giver) nodeG.appendChild(mkT('('+giver+')', CX, startCY + 9, 10, '#388e3c', false));
+  if (giver) nodeG.appendChild(mkT('('+giver+')', CX, startCY + 9, 12, '#388e3c', false));
 
   // Step boxes
   const stepY = {};
@@ -4941,10 +5166,10 @@ function _showQuestGraph(main, quest) {
     hd2.setAttribute('x', 0); hd2.setAttribute('y', sy + QHDR/2);
     hd2.setAttribute('width', QNW); hd2.setAttribute('height', QHDR/2); hd2.setAttribute('fill','#1a2e3f');
     nodeG.appendChild(r); nodeG.appendChild(hd); nodeG.appendChild(hd2);
-    nodeG.appendChild(mkT(`Step ${sn}`, CX, sy + 16, 11, '#5b8fb9', true));
+    nodeG.appendChild(mkT(`Step ${sn}`, CX, sy + 16, 13, '#5b8fb9', true));
     const obj = s.objective || '';
-    nodeG.appendChild(mkT(obj.length > 44 ? obj.slice(0,43)+'…' : (obj||'(no objective)'), CX, sy + 38, 10, '#cdd6e4', false));
-    if (s.completion_flag) nodeG.appendChild(mkT('sets: '+s.completion_flag, CX, sy + 58, 9, '#c8a96e', false));
+    nodeG.appendChild(mkT(obj.length > 44 ? obj.slice(0,43)+'…' : (obj||'(no objective)'), CX, sy + 38, 12, '#cdd6e4', false));
+    if (s.completion_flag) nodeG.appendChild(mkT('sets: '+s.completion_flag, CX, sy + 58, 11, '#c8a96e', false));
   }
 
   // COMPLETE oval
@@ -4964,8 +5189,8 @@ function _showQuestGraph(main, quest) {
   complEll.setAttribute('rx', OVAL_RX); complEll.setAttribute('ry', OVAL_RY);
   complEll.setAttribute('fill','#1b3a1e'); complEll.setAttribute('stroke','#2e7d32'); complEll.setAttribute('stroke-width','1.5');
   nodeG.appendChild(complEll);
-  nodeG.appendChild(mkT('COMPLETE', CX, complCY - 7, 13, '#4caf7d', true));
-  if (rwParts.length) nodeG.appendChild(mkT(rwParts.join('  '), CX, complCY + 9, 9, '#388e3c', false));
+  nodeG.appendChild(mkT('COMPLETE', CX, complCY - 7, 15, '#4caf7d', true));
+  if (rwParts.length) nodeG.appendChild(mkT(rwParts.join('  '), CX, complCY + 9, 11, '#388e3c', false));
 
   // Edges
   const drawEdge = (fy, ty, trans, isComplete) => {
@@ -4984,7 +5209,7 @@ function _showQuestGraph(main, quest) {
       : '⚠ no trigger found';
     const lt = document.createElementNS(NS, 'text');
     lt.setAttribute('x', CX + 8); lt.setAttribute('y', (fy + ty) / 2 - 3);
-    lt.setAttribute('font-size','9'); lt.setAttribute('fill', col);
+    lt.setAttribute('font-size','11'); lt.setAttribute('fill', col);
     lt.setAttribute('font-family','Consolas,monospace');
     lt.textContent = label; edgeG.appendChild(lt);
     if (found) {
@@ -4994,7 +5219,7 @@ function _showQuestGraph(main, quest) {
       if (flagParts.length) {
         const ft = document.createElementNS(NS, 'text');
         ft.setAttribute('x', CX + 8); ft.setAttribute('y', (fy + ty) / 2 + 10);
-        ft.setAttribute('font-size','9'); ft.setAttribute('fill','#c8a96e');
+        ft.setAttribute('font-size','11'); ft.setAttribute('fill','#c8a96e');
         ft.setAttribute('font-family','Consolas,monospace');
         ft.textContent = flagParts.join(' '); edgeG.appendChild(ft);
       }

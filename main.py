@@ -17,13 +17,15 @@ import sys
 
 
 def main():
-    mode = "--cli"
-    if len(sys.argv) > 1:
-        mode = sys.argv[1]
+    args = sys.argv[1:]
+    admin_mode = "--admin" in args
+    args = [a for a in args if a != "--admin"]
+
+    mode = args[0] if args else "--cli"
 
     if mode == "--cli":
         from frontend.cli import CLIFrontend
-        CLIFrontend().run()
+        CLIFrontend(admin_mode=admin_mode).run()
     else:
         print(f"Unknown frontend '{mode}'. Available: --cli")
         sys.exit(1)

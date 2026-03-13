@@ -182,7 +182,8 @@ PROMPT = _fg(80, 160, 255) + BOLD + "\n> " + RESET
 # ── Frontend class ────────────────────────────────────────────────────────────
 
 class CLIFrontend:
-    def __init__(self):
+    def __init__(self, admin_mode: bool = False):
+        self._admin_mode = admin_mode
         self.bus       = EventBus()
         self.world:     World | None           = None   # set in run() after world selection
         self.player:    Player | None          = None
@@ -465,8 +466,57 @@ class CLIFrontend:
             print()
             return True
 
+        parts = cmd.split(None, 1)
+        verb  = parts[0]
+        arg   = parts[1].strip() if len(parts) > 1 else ""
+
+        if verb == "addflag":
+            if not arg:
+                print(err + "  Usage: -addflag <flag_name>" + RESET)
+            else:
+                self.player.flags.add(arg)
+                print(dim + f"  [admin] Flag '{arg}' added." + RESET)
+            return True
+
+        if verb == "remflag":
+            if not arg:
+                print(err + "  Usage: -remflag <flag_name>" + RESET)
+            elif arg in self.player.flags:
+                self.player.flags.discard(arg)
+                print(dim + f"  [admin] Flag '{arg}' removed." + RESET)
+            else:
+                print(dim + f"  [admin] Flag '{arg}' not set." + RESET)
+            return True
+
+        if verb == "teleport":
+            if not arg:
+                print(err + "  Usage: -teleport <room_id>" + RESET)
+            else:
+                room = self.world.prepare_room(arg, self.player)
+                if room is None:
+                    print(err + f"  [admin] Unknown room '{arg}'." + RESET)
+                else:
+                    self.player.room = arg
+                    self.world.evict_distant_zones(self.world.zone_for_room(arg))
+                    print(dim + f"  [admin] Teleported to '{arg}'." + RESET)
+                    self.processor.do_look()
+            return True
+
+        if verb == "give":
+            if not arg:
+                print(err + "  Usage: -give <item_id>" + RESET)
+            else:
+                item = self.world.spawn_item(arg)
+                if item is None:
+                    print(err + f"  [admin] Unknown item '{arg}'." + RESET)
+                else:
+                    self.player.inventory.append(item)
+                    name = item.get("name", arg)
+                    print(dim + f"  [admin] Gave '{name}' ({arg}) to player." + RESET)
+            return True
+
         # Unknown admin command — show help rather than silently ignoring
-        print(err + f"  Unknown admin command '-{cmd}'. Available: -reload  -flags  -tags" + RESET)
+        print(err + f"  Unknown admin command '-{cmd}'. Available: -reload  -flags  -tags  -addflag  -remflag  -teleport  -give" + RESET)
         return True
 
     # ── Main loop ─────────────────────────────────────────────────────────────
@@ -500,6 +550,9 @@ class CLIFrontend:
 
             # Admin commands (prefixed with -)
             if raw.startswith("-"):
+                if not self._admin_mode:
+                    print(_fg(220, 100, 100) + "  Admin mode is disabled. Run with --admin to enable." + RESET)
+                    continue
                 if self._admin_cmd(raw[1:].strip()):
                     continue
 

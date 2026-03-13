@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from engine.toml_io import load as toml_load
 import engine.world_config as wc
+from engine.validate_world import validate_world as _run_core_checks
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -888,10 +889,14 @@ def _validate_world(world_path: Path) -> None:
           f"{len(styles)} styles, {len(quests)} quests")
     print()
 
-    validate_rooms(rooms, items, npcs, styles)
-    validate_items(items)
-    validate_npcs(npcs, items, styles)
-    validate_quests(quests, npcs)
+    # Core cross-reference checks run via the shared engine module.
+    # Both validate.py (here) and the WCT error panel use the same logic.
+    for issue in _run_core_checks(world_path):
+        if issue["sev"] == "err":
+            err(issue["msg"])
+        else:
+            warn(issue["msg"])
+
     validate_quest_triggers(quests)
 
     # Collect zone ids that actually have rooms

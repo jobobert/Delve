@@ -56,6 +56,9 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
 /* ── Workspace ───────────────────────────────────────────────────── */
 .workspace { display: flex; flex: 1; overflow: hidden; }
 
+/* ── Editor wrap (positions error panel without scrolling) ──────── */
+.editor-wrap { position: relative; flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
 /* ── Tree nav ───────────────────────────────────────────────────── */
 #tree {
   width: 400px; min-width: 260px; max-width: 700px;
@@ -150,6 +153,12 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
 .zone-header.open .caret { transform: rotate(90deg); }
 .zone-items { display: none; }
 .zone-header.open + .zone-items { display: block; }
+.zone-notes-btn {
+  margin-left: auto; padding: 1px 7px; font-size: 11px; background: transparent;
+  border: 1px solid var(--border); border-radius: 3px; color: var(--text-dim);
+  cursor: pointer; line-height: 1.6;
+}
+.zone-notes-btn:hover { border-color: var(--accent); color: var(--accent); }
 .type-group { margin-left: 6px; }
 .type-label {
   padding: 3px 10px; font-size: 13px; color: var(--dim); text-transform: uppercase;
@@ -181,7 +190,6 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
 #editor {
   flex: 1; overflow-y: auto; padding: 20px;
   display: flex; flex-direction: column; gap: 0;
-  position: relative;
 }
 .empty-state {
   margin: auto; text-align: center; color: var(--dim); line-height: 2;
@@ -201,6 +209,7 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
   display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px;
 }
 .field-row.inline { flex-direction: row; align-items: center; gap: 12px; flex-wrap: wrap; }
+.field-ro { color: var(--text-dim); font-size: 14px; padding: 2px 0; }
 label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; }
 .field-input, .field-textarea, .field-select {
   background: var(--panel); border: 1px solid var(--border); color: var(--text);
@@ -601,10 +610,9 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
 
 /* ── Error panel ─────────────────────────────────────────────────────── */
 .error-panel {
-  position: absolute; bottom: 0; left: 0; right: 0;
   background: var(--panel); border-top: 2px solid #c62828;
-  z-index: 20; display: flex; flex-direction: column;
-  max-height: 220px; min-height: 0;
+  display: flex; flex-direction: column;
+  max-height: 220px; min-height: 0; flex-shrink: 0;
 }
 .error-panel.hidden { display: none; }
 .error-panel.collapsed .error-panel-body { display: none; }

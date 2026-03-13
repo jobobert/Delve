@@ -32,6 +32,13 @@ DATA_DIR     = ROOT / "data"
 TOOLS_DIR    = Path(__file__).parent
 FRONTEND_DIR = ROOT / "frontend"
 
+_ZONE_COMMENT_TEMPLATE_PATH = TOOLS_DIR / "zone_comment_template.md"
+def _zone_comment_template() -> str:
+    try:
+        return _ZONE_COMMENT_TEMPLATE_PATH.read_text(encoding="utf-8")
+    except Exception:
+        return "## Story Driver ##\n"
+
 sys.path.insert(0, str(ROOT))
 from engine.toml_io import load as toml_load, dump as toml_dump
 import engine.world_config as wc
@@ -322,6 +329,15 @@ def _load_world(world_id: str) -> dict:
                 data = toml_load(path)
             except Exception as e:
                 data = {"_error": str(e)}
+            if path.name == "zone.toml":
+                zone["meta"] = {
+                    "id":            data.get("id", zid),
+                    "name":          data.get("name", zid),
+                    "description":   data.get("description", ""),
+                    "admin_comment": data.get("admin_comment", _zone_comment_template()),
+                    "_file":         str(path.relative_to(ROOT)),
+                }
+                continue
             zone["files"].append(str(path.relative_to(ROOT)))
             for room in data.get("room", []):
                 room["_file"] = str(path.relative_to(ROOT))
@@ -587,6 +603,25 @@ class WCTHandler(BaseHTTPRequestHandler):
                 "ok":     result.returncode == 0,
             })
 
+        elif path == "/api/validate_issues":
+            # Return structured issue dicts for the WCT error panel.
+            # Uses the same engine/validate_world logic as validate.py.
+            from engine.validate_world import validate_world as _vw
+            qs = parse_qs(parsed.query)
+            world_id = qs.get("world_id", [""])[0]
+            if not world_id:
+                self._send_json({"ok": False, "error": "world_id required", "issues": []})
+                return
+            world_path_v = DATA_DIR / world_id
+            if not world_path_v.is_dir():
+                self._send_json({"ok": False, "error": f"World '{world_id}' not found", "issues": []})
+                return
+            try:
+                issues = _vw(world_path_v)
+                self._send_json({"ok": True, "issues": issues})
+            except Exception as exc:
+                self._send_json({"ok": False, "error": str(exc), "issues": []})
+
         # ── Game routes ───────────────────────────────────────────────────────
 
         elif path == "/game":
@@ -753,6 +788,26 @@ class WCTHandler(BaseHTTPRequestHandler):
             ok, err = _write_file(str(file_path.relative_to(ROOT)), starter)
             self._send_json({"ok": ok, "error": err, "file": str(file_path.relative_to(ROOT))})
 
+        elif path == "/api/zone_comment":
+            world_id = body.get("world_id", "")
+            zone_id  = body.get("zone_id", "")
+            comment  = body.get("admin_comment", "")
+            if not world_id or not zone_id:
+                self._send_json({"ok": False, "error": "world_id and zone_id required"})
+                return
+            zone_toml = DATA_DIR / world_id / zone_id / "zone.toml"
+            if zone_toml.exists():
+                try:
+                    data = toml_load(zone_toml)
+                except Exception as e:
+                    self._send_json({"ok": False, "error": f"Parse error: {e}"})
+                    return
+            else:
+                data = {"id": zone_id, "name": zone_id}
+            data["admin_comment"] = comment
+            ok, err = _write_file(str(zone_toml.relative_to(ROOT)), data)
+            self._send_json({"ok": ok, "error": err})
+
         elif path == "/api/create_zone":
             world_id = body.get("world_id", "")
             zone_id  = body.get("zone_id", "").strip().lower().replace(" ", "_")
@@ -768,6 +823,61 @@ class WCTHandler(BaseHTTPRequestHandler):
             (zone_dir / "items.toml").write_text(f"# {zone_id} items\n")
             (zone_dir / "npcs.toml").write_text(f"# {zone_id} NPCs\n")
             self._send_json({"ok": True, "zone_id": zone_id})
+
+        elif path == "/api/delete_object":
+            world_id = body.get("world_id", "")
+            zone_id  = body.get("zone_id", "")
+            type_    = body.get("type", "")
+            eid      = body.get("id", "")
+            file_rel = body.get("file", "")
+            if not world_id or not zone_id or not type_ or not eid:
+                self._send_json({"ok": False, "error": "world_id, zone_id, type and id required"})
+                return
+
+            if type_ in ("room", "npc", "item", "style"):
+                if not file_rel:
+                    self._send_json({"ok": False, "error": "file required for room/npc/item/style"})
+                    return
+                file_path = ROOT / file_rel
+                try:
+                    data = toml_load(file_path) if file_path.exists() else {}
+                except Exception as e:
+                    self._send_json({"ok": False, "error": f"Parse error: {e}"})
+                    return
+                key      = type_   # "room", "npc", "item", "style"
+                original = data.get(key, [])
+                filtered = [r for r in original if r.get("id") != eid]
+                if len(filtered) == len(original):
+                    self._send_json({"ok": False, "error": f"{type_} '{eid}' not found in file"})
+                    return
+                data[key] = filtered
+                ok, err = _write_file(file_rel, data)
+                self._send_json({"ok": ok, "error": err})
+
+            elif type_ == "quest":
+                quest_path = DATA_DIR / world_id / zone_id / "quests" / f"{eid}.toml"
+                if not quest_path.exists():
+                    self._send_json({"ok": False, "error": f"Quest file '{eid}.toml' not found"})
+                    return
+                try:
+                    quest_path.unlink()
+                    self._send_json({"ok": True, "error": ""})
+                except Exception as e:
+                    self._send_json({"ok": False, "error": str(e)})
+
+            elif type_ == "dialogue":
+                dlg_path = DATA_DIR / world_id / zone_id / "dialogues" / f"{eid}.toml"
+                if not dlg_path.exists():
+                    self._send_json({"ok": False, "error": f"Dialogue '{eid}.toml' not found"})
+                    return
+                try:
+                    dlg_path.unlink()
+                    self._send_json({"ok": True, "error": ""})
+                except Exception as e:
+                    self._send_json({"ok": False, "error": str(e)})
+
+            else:
+                self._send_json({"ok": False, "error": f"Unsupported type '{type_}'"})
 
         # ── Game routes ───────────────────────────────────────────────────────
 
