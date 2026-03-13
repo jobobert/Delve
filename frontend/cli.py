@@ -496,7 +496,7 @@ class CLIFrontend:
                 if room is None:
                     print(err + f"  [admin] Unknown room '{arg}'." + RESET)
                 else:
-                    self.player.room = arg
+                    self.player.room_id = arg
                     self.world.evict_distant_zones(self.world.zone_for_room(arg))
                     print(dim + f"  [admin] Teleported to '{arg}'." + RESET)
                     self.processor.do_look()
@@ -516,11 +516,88 @@ class CLIFrontend:
             return True
 
         if verb == "room":
-            print(dim + f"  [admin] Current room: {self.player.room_id}" + RESET)
+            rid   = self.player.room_id
+            zid   = self.world.zone_for_room(rid) or "?"
+            print(dim + f"  [admin] room={rid}  zone={zid}" + RESET)
+            return True
+
+        if verb == "zone":
+            rid = self.player.room_id
+            zid = self.world.zone_for_room(rid) or "?"
+            print(dim + f"  [admin] Current zone: {zid}" + RESET)
+            return True
+
+        if verb == "exits":
+            rid  = self.player.room_id
+            room = self.world.prepare_room(rid, self.player)
+            if not room:
+                print(err + "  [admin] Could not load current room." + RESET)
+                return True
+            exits = room.get("exits", {})
+            print(bold + f"\n  Exits from {rid} ({len(exits)}):" + RESET)
+            if exits:
+                for direction, val in exits.items():
+                    if isinstance(val, dict):
+                        dest   = val.get("to", "?")
+                        lock   = val.get("lock_tag") or val.get("key_tag") or ""
+                        extras = f"  key={lock}" if lock else ""
+                        show   = val.get("show_if")
+                        if show:
+                            extras += f"  show_if={show.get('flag') or show.get('op', '')}"
+                    else:
+                        dest   = val or "?"
+                        extras = ""
+                    print(dim + f"    {direction:<10} → {dest}{extras}" + RESET)
+            else:
+                print(dim + "    (none)" + RESET)
+            print()
+            return True
+
+        if verb == "items":
+            rid  = self.player.room_id
+            room = self.world.prepare_room(rid, self.player)
+            if not room:
+                print(err + "  [admin] Could not load current room." + RESET)
+                return True
+            room_items = room.get("items", [])
+            inv_items  = self.player.inventory
+            print(bold + f"\n  Room items ({len(room_items)}):" + RESET)
+            if room_items:
+                for it in room_items:
+                    tags = " ".join(it.get("tags", []))
+                    print(dim + f"    {it.get('id','?'):<30}  tags=[{tags}]" + RESET)
+            else:
+                print(dim + "    (none)" + RESET)
+            print(bold + f"\n  Inventory ({len(inv_items)}):" + RESET)
+            if inv_items:
+                for it in inv_items:
+                    tags = " ".join(it.get("tags", []))
+                    print(dim + f"    {it.get('id','?'):<30}  tags=[{tags}]" + RESET)
+            else:
+                print(dim + "    (none)" + RESET)
+            print()
+            return True
+
+        if verb == "npcs":
+            rid  = self.player.room_id
+            room = self.world.prepare_room(rid, self.player)
+            if not room:
+                print(err + "  [admin] Could not load current room." + RESET)
+                return True
+            npcs = room.get("npcs", [])
+            print(bold + f"\n  NPCs in {rid} ({len(npcs)}):" + RESET)
+            if npcs:
+                for npc in npcs:
+                    tags     = " ".join(npc.get("tags", []))
+                    hostile  = "  hostile" if npc.get("hostile") else ""
+                    print(dim + f"    {npc.get('id','?'):<30}  tags=[{tags}]{hostile}" + RESET)
+            else:
+                print(dim + "    (none)" + RESET)
+            print()
             return True
 
         # Unknown admin command — show help rather than silently ignoring
-        print(err + f"  Unknown admin command '-{cmd}'. Available: -reload  -flags  -tags  -addflag  -remflag  -teleport  -give  -room" + RESET)
+        print(err + f"  Unknown admin command '-{cmd}'. Available: -reload  -flags  -tags  -addflag  -remflag  -teleport  -give  -room  -zone  -exits  -items  -npcs" + RESET)
         return True
 
     # ── Main loop ─────────────────────────────────────────────────────────────

@@ -130,13 +130,12 @@ class CombatSession:
             p_atk += style.get("attack_bonus", 0)
             p_def += int(style.get("defense_bonus", 0))
 
-            # Iron Root iron_skin passive (always-on defense bonus)
-            if "iron_skin" in styles_mod.unlocked_passives(style, prof):
-                p_def += int(2 + (prof / 100) * 4)
-
-            # Flowing Water stillness passive (always-on defense bonus)
-            if "stillness" in styles_mod.unlocked_passives(style, prof):
-                p_def += int(1 + (prof / 100) * 5)
+            # Always-on passive bonuses (defense_bonus_base + defense_bonus_scale * prof/100)
+            for passive in style.get("passives", []):
+                if passive.get("trigger") == "always" and prof >= passive.get("threshold", 999):
+                    base  = passive.get("defense_bonus_base", 0)
+                    scale = passive.get("defense_bonus_scale", 0)
+                    p_def += int(base + scale * (prof / 100))
 
             # Gear affinity bonus (scales with proficiency)
             wpn = self.player.equipped.get("weapon")
@@ -178,8 +177,12 @@ class CombatSession:
         if style:
             n_atk += style.get("attack_bonus", 0)
             n_def += int(style.get("defense_bonus", 0))
-            if "iron_skin" in styles_mod.unlocked_passives(style, prof):
-                n_def += int(2 + (prof / 100) * 4)
+            # Always-on passive bonuses (defense_bonus_base + defense_bonus_scale * prof/100)
+            for passive in style.get("passives", []):
+                if passive.get("trigger") == "always" and prof >= passive.get("threshold", 999):
+                    base  = passive.get("defense_bonus_base", 0)
+                    scale = passive.get("defense_bonus_scale", 0)
+                    n_def += int(base + scale * (prof / 100))
 
         if self._reduced():
             n_atk = max(1, n_atk // 2)
@@ -262,9 +265,8 @@ class CombatSession:
             if requires and requires not in fired:
                 continue
 
-            # Roll the passive using the same probability functions as before.
-            ok, _frag = styles_mod.check_passive(ability, prof)
-            if not ok:
+            # Roll the passive using chance/chance_scaling from the TOML passive dict.
+            if not styles_mod.check_passive(passive, prof):
                 continue
 
             # Execute on_activate ops — they mutate combat_ctx via ScriptRunner.

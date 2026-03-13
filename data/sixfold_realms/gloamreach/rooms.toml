@@ -19,8 +19,9 @@ shop        = [
   { item_id = "gr_dim_lantern",      price = 20 },
   { item_id = "gr_bright_lantern",   price = 40 },
   { item_id = "gr_shadow_crystal",   price = 30 },
-  { item_id = "gr_echo_tuning_fork", price = 15 },
-  { item_id = "gr_afterimage_trap",  price = 10 },
+  { item_id = "gr_echo_tuning_fork",   price = 15 },
+  { item_id = "gr_afterimage_trap",    price = 10 },
+  { item_id = "gr_shadecloth_scrap",   price = 12 },
 ]
 exits       = { east = "gr_approach1" }
 on_enter    = [

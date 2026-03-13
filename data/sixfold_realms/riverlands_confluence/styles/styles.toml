@@ -7,8 +7,8 @@
 # only guided.
 #
 # Passive chain:
-#   25  sidestep  — slip aside, negating a blow entirely (defend)
-#   50  redirect  — when sidestepping, guide their momentum into a counter-strike (defend, requires sidestep)
+#   25  sidestep     — slip aside, negating a blow entirely (defend)
+#   50  redirect     — when sidestepping, guide their momentum into a counter-strike (defend, requires sidestep)
 #   75  current_flow — flowing offensive strike that amplifies damage (attack)
 
 [[style]]
@@ -30,13 +30,7 @@ armor_bonus       = 0.15
 learned_from      = ""
 learned_at        = 0
 passives = [
-  { ability = "sidestep",     threshold = 25, trigger = "defend",
-    message = "You slip aside, letting the blow pass through empty air.",
-    on_activate = [{op = "block_damage"}] },
-  { ability = "redirect",     threshold = 50, trigger = "defend", requires = "sidestep",
-    message = "You guide their momentum — and send it right back.",
-    on_activate = [{op = "counter_damage", multiplier = 0.5}] },
-  { ability = "current_flow", threshold = 75, trigger = "attack",
-    message = "You strike in one unbroken motion — impossible to brace against.",
-    on_activate = [{op = "multiply_damage", multiplier = 1.5}] },
+  { ability = "sidestep",     threshold = 25, trigger = "defend",                       chance = 0.15, message = "You slip aside, letting the blow pass through empty air.", on_activate = [{op = "block_damage"}] },
+  { ability = "redirect",     threshold = 50, trigger = "defend", requires = "sidestep", chance = 0.40, message = "You guide their momentum — and send it right back.",         on_activate = [{op = "counter_damage", multiplier = 0.5}] },
+  { ability = "current_flow", threshold = 75, trigger = "attack",                        chance = 0.12, message = "You strike in one unbroken motion — impossible to brace against.", on_activate = [{op = "multiply_damage", multiplier = 1.5}] },
 ]

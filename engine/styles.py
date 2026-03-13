@@ -151,109 +151,19 @@ def newly_unlocked(style: dict, old_prof: float, new_prof: float) -> list[str]:
                 set(unlocked_passives(style, old_prof)))
 
 
-# ── Passive functions  (used by BOTH player AND NPC) ─────────────────────────
-# Signature: (prof: float) -> (triggered: bool, raw_fragment: str)
-# Caller formats the fragment into a proper sentence.
+def check_passive(passive: dict, prof: float) -> bool:
+    """
+    Roll whether a passive fires this round.
 
-def passive_stun(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.08 + (prof/100)*0.12:
-        return True, "staggers — can't counter!"
-    return False, ""
+    Reads `chance` and `chance_scaling` from the passive dict:
+      chance         — base probability (0.0–1.0); default 0.15
+      chance_scaling — additional probability per 100 prof; default 0.0
 
-def passive_haymaker(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.10:
-        return True, "winds up for a haymaker!"
-    return False, ""
-
-def passive_parry(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.12 + (prof/100)*0.15:
-        return True, "parries cleanly."
-    return False, ""
-
-def passive_riposte(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.40:
-        return True, "ripostes!"
-    return False, ""
-
-def passive_knockback(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.15:
-        return True, "sends the target stumbling back!"
-    return False, ""
-
-def passive_iron_skin(prof: float) -> tuple[bool, str]:
-    return True, f"+{int(2+(prof/100)*4)} iron skin"  # always-active; combat reads directly
-
-def passive_bleed(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.25:
-        return True, "finds a gap — the wound will bleed."
-    return False, ""
-
-def passive_vital_strike(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.15:
-        return True, "strikes a vital point!"
-    return False, ""
-
-def passive_cleave(prof: float) -> tuple[bool, str]:
-    return True, ""
-
-def passive_cyclone(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.10:
-        return True, "spins into a cyclone of strikes!"
-    return False, ""
-
-def passive_dodge(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.15 + (prof/100)*0.20:
-        return True, "sidesteps the attack!"
-    return False, ""
-
-def passive_counter(prof: float) -> tuple[bool, str]:
-    if random.random() < 0.50:
-        return True, "counters as the attacker overextends!"
-    return False, ""
-
-def passive_redirect(prof: float) -> tuple[bool, str]:
-    """Flowing Water: use the enemy's own momentum against them.
-    Chance scales with proficiency. Against fast enemies the bonus is higher.
-    Combat reads the 'redirect' passive and applies extra damage when it fires."""
-    if random.random() < 0.12 + (prof/100)*0.18:
-        return True, "redirects the attack — using their force against them!"
-    return False, ""
-
-def passive_stillness(prof: float) -> tuple[bool, str]:
-    """Flowing Water: inner stillness adds a defense bonus. Always-active.
-    Combat reads this directly like iron_skin."""
-    return True, f"+{int(1+(prof/100)*5)} stillness"
-
-def passive_absorb(prof: float) -> tuple[bool, str]:
-    """Flowing Water: on a successful redirect, partially heal from the impact.
-    Only fires when redirect also fires (combat chains them)."""
-    if random.random() < 0.30 + (prof/100)*0.20:
-        return True, "absorbs the impact — recovering some HP!"
-    return False, ""
-
-
-PASSIVE_FNS: dict[str, callable] = {
-    "stun":         passive_stun,
-    "haymaker":     passive_haymaker,
-    "parry":        passive_parry,
-    "riposte":      passive_riposte,
-    "knockback":    passive_knockback,
-    "iron_skin":    passive_iron_skin,
-    "bleed":        passive_bleed,
-    "vital_strike": passive_vital_strike,
-    "cleave":       passive_cleave,
-    "cyclone":      passive_cyclone,
-    "dodge":        passive_dodge,
-    "counter":      passive_counter,
-    "redirect":     passive_redirect,
-    "stillness":    passive_stillness,
-    "absorb":       passive_absorb,
-}
-
-
-def check_passive(ability_id: str, prof: float) -> tuple[bool, str]:
-    fn = PASSIVE_FNS.get(ability_id)
-    return fn(prof) if fn else (False, "")
+    Returns True if the passive fires.
+    """
+    chance  = float(passive.get("chance", 0.15))
+    scaling = float(passive.get("chance_scaling", 0.0))
+    return random.random() < (chance + scaling * prof / 100)
 
 
 # ── Style learning ────────────────────────────────────────────────────────────

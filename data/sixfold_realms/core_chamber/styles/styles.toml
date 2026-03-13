@@ -1,16 +1,21 @@
 [[style]]
-id          = "resonance_core"
-name        = "Resonance Core"
-desc_short  = "A shifting style that blends all five subsystems."
-desc_long   = "Not learned but emergent — the Sixfold Regulator itself channels this style. It adapts dynamically, shifting between light, pressure, heat, growth, and memory patterns."
-strong_vs   = ["umbral_veil", "flowcurrent", "sky_piercer", "rootbind", "mindweft"]
-weak_vs     = []
-
-[[style.passive]]
-ability    = "resonance_shift"
-threshold  = 0
-trigger    = "defend"
-message    = "The Overseer's frequencies shift, disrupting your concentration!"
-on_activate = [
-  { op = "apply_status", effect = "confused", duration = 1 },
+id                = "resonance_core"
+name              = "Resonance Core"
+desc_short        = "A shifting style that blends all five subsystems."
+desc_long         = "Not learned but emergent — the Sixfold Regulator itself channels this style. It adapts dynamically, shifting between light, pressure, heat, growth, and memory patterns."
+strong_vs         = ["umbral_veil", "flowcurrent", "sky_piercer", "rootbind", "mindweft"]
+weak_vs           = []
+strong_multiplier = 1.3
+weak_multiplier   = 1.0
+attack_bonus      = 0
+defense_bonus     = 0
+difficulty        = 1.0
+preferred_weapon_tags = []
+preferred_armor_tags  = []
+weapon_bonus      = 0.0
+armor_bonus       = 0.0
+learned_from      = ""
+learned_at        = 0
+passives = [
+  { ability = "resonance_shift", threshold = 0, trigger = "defend", chance = 0.25, message = "The Overseer's frequencies shift, disrupting your concentration!", on_activate = [{op = "apply_status", effect = "confused", duration = 1}] },
 ]
