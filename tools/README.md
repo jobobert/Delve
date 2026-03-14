@@ -16,6 +16,7 @@ None require external packages except where marked.
 | `quest_graph.py` | Graphviz DOT graph of a quest's step flow (also built into WCT) | graphviz CLI |
 | `ai_player.py` | Autonomous AI playtester via Anthropic API | `ANTHROPIC_API_KEY` |
 | `offline_bot.py` | Deterministic offline playtester (no API key needed) | — |
+| `world2html.py` | Export a full world to a self-contained HTML review document | graphviz CLI (optional, for dialogue graphs) |
 | `wct_server.py` | Local web server: World Creation Tool + web game client | — |
 | `run_script.py` | Run a world script file against a named player from the CLI | — |
 | `md2html.py` | Convert a Markdown file to a self-contained HTML page | — |
@@ -256,6 +257,45 @@ python tools/offline_bot.py --world first_world --zone ashwood --verbose
 
 Outputs an HTML session log to `tools/ai_sessions/ai_<world>_<timestamp>.html`
 and appends stats to `tools/ai_sessions/stats.jsonl`.
+
+---
+
+## world2html.py
+
+Exports a full world to a single self-contained HTML file for content review
+and flow checking — suitable for printing or reading in a browser.
+
+```
+python tools/world2html.py                           # first world found
+python tools/world2html.py --world first_world
+python tools/world2html.py --world first_world --output review.html
+python tools/world2html.py --world first_world --zone ashwood
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--world` | first found | World folder name |
+| `--zone` | — | Limit output to one zone |
+| `--output` | `tools/world_review.html` | Output file path |
+
+**Sections per zone:**
+
+- **Map** — static SVG room layout with exit lines, item/NPC counts, locked-exit markers
+- **Rooms** — table of ID, name, description, flags, exits, items, spawns, `on_enter` scripts
+- **NPCs** — table of ID, name, stats, style, hostile flag, tags, `kill_script`
+- **Items** — table of ID, name, slot, weight, scenery flag, tags, `on_get`/`on_use` scripts
+- **Quests** — per-quest steps with objectives, triggers, and inline scripts
+- **Dialogues** — graphviz SVG graph per NPC (requires `dot` on PATH); falls back to a
+  collapsible HTML tree if graphviz is not installed
+- **Styles** — fighting styles defined in the zone
+
+**World-level sections:**
+
+- **Flag Index** — every flag across the world, with each usage tagged as `set`, `clear`,
+  `check`, or `show_if`, linked to the entity that uses it
+
+Output is a single `.html` file with all CSS inlined (no external dependencies).
+A `@media print` stylesheet expands all collapsible sections for clean printing.
 
 ---
 
