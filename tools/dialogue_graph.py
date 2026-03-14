@@ -139,7 +139,8 @@ def _node_label(node_id: str, node: dict, reachable: set[str]) -> str:
 _END_ID  = "__END__"
 
 
-def build_dialogue_dot(npc_id: str, path: Path, world_name: str = "") -> str:
+def build_dialogue_dot(npc_id: str, path: Path, world_name: str = "",
+                       include_legend: bool = True) -> str:
     """Return a complete DOT digraph string for one NPC's dialogue tree."""
     nodes = load_dialogue_tree(path)
     if not nodes:
@@ -213,23 +214,23 @@ def build_dialogue_dot(npc_id: str, path: Path, world_name: str = "") -> str:
 
             w(f'  {dot_id(node_id)} -> {target} [{attrs}]')
 
-    # Legend
-    w("")
-    w('  subgraph cluster_legend {')
-    w('    label="Legend" style=rounded color=black')
-    w('    fontname="Courier" fontsize=9')
-    w('    node [shape=box fontname="Courier" fontsize=9]')
-    w('    LL1 [label="narrative"          style=filled fillcolor="#EEEEEE"]')
-    w('    LL2 [label="sets flag"          style=filled fillcolor="#FFF9C4"]')
-    w('    LL3 [label="gives item/gp/xp"  style=filled fillcolor="#FFE0B2"]')
-    w('    LL4 [label="advances quest"    style=filled fillcolor="#FFD54F"]')
-    w('    LL5 [label="completes quest"   style=filled fillcolor="#A5D6A7"]')
-    w('    LL6 [label="damage / fail"     style=filled fillcolor="#FFCDD2"]')
-    w('    LL7 [label="END" shape=oval    style=filled fillcolor="#DDDDDD"]')
-    w('    LL8 [label="has entry cond"    style=dashed color="#1565C0"]')
-    w('    LL9 [label="unreachable"       color="#BBBBBB" fontcolor="#AAAAAA"]')
-    w('    LL1 -> LL2 -> LL3 -> LL4 -> LL5 -> LL6 -> LL7 -> LL8 -> LL9 [style=invis]')
-    w('  }')
+    if include_legend:
+        w("")
+        w('  subgraph cluster_legend {')
+        w('    label="Legend" style=rounded color=black')
+        w('    fontname="Courier" fontsize=9')
+        w('    node [shape=box fontname="Courier" fontsize=9]')
+        w('    LL1 [label="narrative"          style=filled fillcolor="#EEEEEE"]')
+        w('    LL2 [label="sets flag"          style=filled fillcolor="#FFF9C4"]')
+        w('    LL3 [label="gives item/gp/xp"  style=filled fillcolor="#FFE0B2"]')
+        w('    LL4 [label="advances quest"    style=filled fillcolor="#FFD54F"]')
+        w('    LL5 [label="completes quest"   style=filled fillcolor="#A5D6A7"]')
+        w('    LL6 [label="damage / fail"     style=filled fillcolor="#FFCDD2"]')
+        w('    LL7 [label="END" shape=oval    style=filled fillcolor="#DDDDDD"]')
+        w('    LL8 [label="has entry cond"    style=dashed color="#1565C0"]')
+        w('    LL9 [label="unreachable"       color="#BBBBBB" fontcolor="#AAAAAA"]')
+        w('    LL1 -> LL2 -> LL3 -> LL4 -> LL5 -> LL6 -> LL7 -> LL8 -> LL9 [style=invis]')
+        w('  }')
     w("")
     w("}")
     return "\n".join(lines)

@@ -15,7 +15,9 @@
     <option value="">-- select world --</option>
   </select>
   <button class="hbtn" id="btn-config" onclick="openConfig()" disabled title="Edit world configuration (config.toml)">Config</button>
+  <button class="hbtn" id="btn-world-notes" onclick="openWorldNotes()" disabled title="Edit world.md — world-level notes and lore">World Notes</button>
   <button class="hbtn" id="btn-reload" onclick="reloadWorld()" title="Reload world data">Reload</button>
+  <button class="hbtn" id="btn-new-world" onclick="openNewWorld()" title="Create a new world">+ World</button>
   <button class="hbtn" id="btn-validate" onclick="openValidate()">Validate</button>
   <button class="hbtn" id="btn-errors" onclick="buildErrorList()" title="Refresh error panel">Errors</button>
   <button class="hbtn" id="btn-map" onclick="toggleMap()" title="Show world map">Map</button>
@@ -244,6 +246,83 @@
   </div>
 </div>
 
+<!-- World Notes (world.md) editor -->
+<div class="modal-backdrop hidden" id="world-notes-modal">
+  <div class="modal" style="max-width:860px;width:92vw">
+    <div class="modal-header">
+      <span class="modal-title">World Notes (world.md)</span>
+      <button class="hbtn" id="btn-world-notes-popout" onclick="openWorldNotesPopout()" title="Open in new tab">Open in New Tab</button>
+      <button class="modal-close" onclick="closeModal('world-notes-modal')">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="world-notes-ta" style="width:100%;height:60vh;font-family:monospace;font-size:12px;resize:vertical;border:1px solid var(--border);background:var(--bg-input);color:var(--text);padding:8px;border-radius:3px" placeholder="Write world-level notes, lore, and design docs in Markdown..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('world-notes-modal')">Cancel</button>
+      <button class="hbtn primary" onclick="saveWorldNotes()">Save world.md</button>
+    </div>
+  </div>
+</div>
+
+<!-- New World -->
+<div class="modal-backdrop hidden" id="new-world-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title">Create New World</span>
+      <button class="modal-close" onclick="closeModal('new-world-modal')">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <label>World Name</label>
+        <input class="field-input" id="nw-name" placeholder="My World" oninput="updateNewWorldId()">
+      </div>
+      <div class="field-row">
+        <label>World ID (auto)</label>
+        <div class="id-row">
+          <input class="field-input id-field" id="nw-id" placeholder="my_world" style="flex:1">
+          <button class="id-lock" id="nw-id-lock" title="Auto-generate from name" onclick="toggleNewWorldIdLock()">&#128275;</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Currency</label>
+        <input class="field-input" id="nw-currency" placeholder="gold" value="gold">
+      </div>
+      <div id="nw-error" style="color:var(--red);font-size:12px;margin-top:6px;display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('new-world-modal')">Cancel</button>
+      <button class="hbtn primary" onclick="createNewWorld()">Create World</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Zone -->
+<div class="modal-backdrop hidden" id="delete-zone-modal">
+  <div class="modal" style="max-width:700px;width:90vw">
+    <div class="modal-header">
+      <span class="modal-title" id="delete-zone-title">Delete Zone</span>
+      <button class="modal-close" onclick="closeModal('delete-zone-modal')">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;margin-bottom:10px;color:var(--text-dim)">
+        For each object, choose <b>Delete</b> or <b>Move</b> to another zone. Objects not listed (zone.toml, styles, crafting, companions) will be removed with the zone folder.
+      </p>
+      <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;font-size:12px">
+        <b>Set all to:</b>
+        <button class="hbtn" onclick="_dzSetAll('delete')">Delete</button>
+        <button class="hbtn" onclick="_dzSetAll('move')">Move to:</button>
+        <select class="field-select" id="dz-bulk-dest" style="width:150px"></select>
+      </div>
+      <div id="delete-zone-list" style="max-height:50vh;overflow-y:auto;font-size:12px"></div>
+      <div id="dz-error" style="color:var(--red);font-size:12px;margin-top:6px;display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('delete-zone-modal')">Cancel</button>
+      <button class="hbtn danger" onclick="executeDeleteZone()">Execute</button>
+    </div>
+  </div>
+</div>
+
 <!-- Datalists for autocomplete -->
 <datalist id="dl-rooms"></datalist>
 <datalist id="dl-npcs"></datalist>
@@ -358,7 +437,8 @@ async function loadWorld(worldId) {
   SELECTED = null; DIRTY = false;
   renderEditor();
   document.getElementById('xref-body').innerHTML = '<div class="xref-empty">Select an object to see where it is used.</div>';
-  document.getElementById('btn-config').disabled = false;
+  document.getElementById('btn-config').disabled       = false;
+  document.getElementById('btn-world-notes').disabled  = false;
   setStatus(`${WORLD_CONFIG.world_name} loaded`, 'ok');
   _restoreUiState();
 }
@@ -467,9 +547,10 @@ function renderTypeList(type) {
     const hdr = document.createElement('div');
     hdr.className    = 'zone-header' + (isOpen ? ' open' : '');
     hdr.dataset.zone = zid;
-    hdr.innerHTML    = `<span class="caret">&#9658;</span><span>${zid}</span><button class="zone-notes-btn" title="Zone notes">Notes</button>`;
+    hdr.innerHTML    = `<span class="caret">&#9658;</span><span>${zid}</span><button class="zone-notes-btn" title="Zone notes">Notes</button><button class="zone-delete-btn" title="Delete zone (with object migration)">Delete…</button>`;
     hdr.addEventListener('click', () => { const open = hdr.classList.toggle('open'); _saveZoneState(zid, open); });
     hdr.querySelector('.zone-notes-btn').addEventListener('click', e => { e.stopPropagation(); selectZone(zid); });
+    hdr.querySelector('.zone-delete-btn').addEventListener('click', e => { e.stopPropagation(); openDeleteZone(zid); });
     zoneNode.appendChild(hdr);
 
     const items = document.createElement('div');
@@ -1638,6 +1719,10 @@ function renderQuestEditor(main) {
     null, 'NPC who gives this quest. Informational only — not enforced by the engine.\nUsed in quest_graph.py to annotate the flow diagram.'));
   main.appendChild(fieldRow('Summary',  textareaInput(d.summary, v => { d.summary = v; markDirty(); }),
     null, 'Full description shown in the player\'s journal when the quest is active.'));
+  main.appendChild(fieldRow('Start Message', textInput(d.start_message, v => { d.start_message = v || undefined; markDirty(); }),
+    null, 'Optional. Extra line shown in the quest banner when the quest is first started.\nIf blank, no extra line is shown (just the summary).'));
+  main.appendChild(fieldRow('Complete Message', textInput(d.complete_message, v => { d.complete_message = v || undefined; markDirty(); }),
+    null, 'Optional. Line shown in the quest banner when the quest is completed.\nDefault: "Well done, adventurer."'));
 
   main.appendChild(sectionTitle('Steps', 'Each step is a numbered objective. Steps advance via script ops:\n  { op = "advance_quest", quest_id = "id", step = N }\nThe completion_flag is SET by you in the script that drives advancement.\nIt is checked by dialogue condition: { quest = "id", step = N }'));
   renderQuestSteps(main, d);
@@ -1950,6 +2035,266 @@ function _syncZoneComment(zid, comment) {
   }
   DIRTY = false;
   setStatus('Zone notes saved from tab', 'ok');
+}
+
+// ── World Notes (world.md) ────────────────────────────────────────────────────
+
+async function openWorldNotes() {
+  if (!WORLD_ID) return;
+  document.getElementById('world-notes-modal').classList.remove('hidden');
+  const ta = document.getElementById('world-notes-ta');
+  ta.value = '';
+  try {
+    const res = await fetch(`/api/world_md?world_id=${encodeURIComponent(WORLD_ID)}`);
+    const j   = await res.json();
+    ta.value = j.content || '';
+  } catch(e) {
+    ta.value = '';
+  }
+}
+
+async function saveWorldNotes() {
+  if (!WORLD_ID) return;
+  const content = document.getElementById('world-notes-ta').value;
+  try {
+    const res = await fetch('/api/world_md', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ world_id: WORLD_ID, content }),
+    });
+    const j = await res.json();
+    if (j.ok) {
+      setStatus('world.md saved', 'ok');
+      closeModal('world-notes-modal');
+    } else {
+      setStatus('Error: ' + j.error, 'err');
+    }
+  } catch(e) {
+    setStatus('Error: ' + e.message, 'err');
+  }
+}
+
+function openWorldNotesPopout() {
+  const worldId = WORLD_ID;
+  if (!worldId) return;
+  const win = window.open('', 'world_notes_' + worldId, 'width=760,height=680');
+  if (!win) { alert('Pop-up blocked — please allow pop-ups for this page.'); return; }
+  const content = document.getElementById('world-notes-ta').value;
+  const worldIdJ = JSON.stringify(worldId);
+  const contentJ = JSON.stringify(content);
+  win.document.open();
+  win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>World Notes</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#111118;color:#cdd6e4;font-family:Consolas,monospace;display:flex;flex-direction:column;height:100vh;padding:16px;gap:12px}h1{font-size:15px;color:#F29E00;flex-shrink:0}textarea{flex:1;width:100%;background:#1a1d24;color:#cdd6e4;border:1px solid #303540;padding:10px;font-family:Consolas,monospace;font-size:13px;resize:none;border-radius:4px;line-height:1.5}.bar{display:flex;gap:8px;align-items:center;flex-shrink:0}button{padding:5px 14px;border:1px solid #303540;background:#1e2130;color:#cdd6e4;cursor:pointer;border-radius:4px;font-size:13px}button.primary{background:#F29E00;color:#000;font-weight:bold;border-color:#F29E00}button:hover{filter:brightness(1.2)}#status{font-size:12px;color:#aaa}</style>
+</head>
+<body>
+<h1>World Notes — ${worldId}</h1>
+<textarea id="ta" placeholder="World-level notes in Markdown..."></textarea>
+<div class="bar">
+  <button class="primary" onclick="save()">Save</button>
+  <button onclick="window.close()">Close</button>
+  <span id="status"></span>
+</div>
+<script>
+document.getElementById('ta').value = ${contentJ};
+async function save() {
+  const content = document.getElementById('ta').value;
+  const st = document.getElementById('status');
+  st.textContent = 'Saving\u2026';
+  try {
+    const res = await fetch('/api/world_md', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({world_id:${worldIdJ},content})});
+    const j = await res.json();
+    if (j.ok) { st.textContent = 'Saved'; } else { st.textContent = 'Error: ' + j.error; }
+  } catch(e) { st.textContent = 'Error: ' + e.message; }
+}
+<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+// ── Create new world ───────────────────────────────────────────────────────────
+
+let _newWorldIdAuto = true;
+
+function openNewWorld() {
+  document.getElementById('nw-name').value = '';
+  document.getElementById('nw-id').value   = '';
+  document.getElementById('nw-currency').value = 'gold';
+  document.getElementById('nw-error').style.display = 'none';
+  _newWorldIdAuto = true;
+  document.getElementById('nw-id-lock').textContent = '\uD83D\uDD13';
+  document.getElementById('new-world-modal').classList.remove('hidden');
+  document.getElementById('nw-name').focus();
+}
+
+function updateNewWorldId() {
+  if (!_newWorldIdAuto) return;
+  const name = document.getElementById('nw-name').value;
+  document.getElementById('nw-id').value = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
+function toggleNewWorldIdLock() {
+  _newWorldIdAuto = !_newWorldIdAuto;
+  document.getElementById('nw-id-lock').textContent = _newWorldIdAuto ? '\uD83D\uDD13' : '\uD83D\uDD12';
+}
+
+async function createNewWorld() {
+  const worldId   = document.getElementById('nw-id').value.trim();
+  const worldName = document.getElementById('nw-name').value.trim();
+  const currency  = document.getElementById('nw-currency').value.trim() || 'gold';
+  const errEl     = document.getElementById('nw-error');
+  errEl.style.display = 'none';
+  if (!worldId || !worldName) { errEl.textContent = 'World ID and Name are required.'; errEl.style.display = 'block'; return; }
+  try {
+    const res = await fetch('/api/create_world', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ world_id: worldId, world_name: worldName, currency_name: currency }),
+    });
+    const j = await res.json();
+    if (!j.ok) { errEl.textContent = j.error; errEl.style.display = 'block'; return; }
+    closeModal('new-world-modal');
+    // Reload world list and switch to new world
+    await _refreshWorldList();
+    await loadWorld(j.world_id);
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message; errEl.style.display = 'block';
+  }
+}
+
+async function _refreshWorldList() {
+  try {
+    const res = await fetch('/game/worlds');
+    const j   = await res.json();
+    const sel = document.getElementById('world-sel');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">-- select world --</option>';
+    (j.worlds || []).forEach(w => {
+      const opt = document.createElement('option');
+      opt.value = w.id; opt.textContent = w.name;
+      if (w.id === cur) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } catch(e) { /* ignore */ }
+}
+
+// ── Delete zone (with migration modal) ───────────────────────────────────────
+
+let _deleteZoneId   = null;
+let _deleteZoneRows = [];  // [{type, id, name, file, selEl}]
+
+function openDeleteZone(zid) {
+  if (!WORLD_ID || !WORLD_DATA) return;
+  _deleteZoneId   = zid;
+  _deleteZoneRows = [];
+  const zoneData = WORLD_DATA.zones[zid] || {};
+
+  // Populate bulk-dest dropdown
+  const bulkDest = document.getElementById('dz-bulk-dest');
+  bulkDest.innerHTML = '';
+  Object.keys(WORLD_DATA.zones).filter(z => z !== zid).forEach(z => {
+    const opt = document.createElement('option'); opt.value = z; opt.textContent = z;
+    bulkDest.appendChild(opt);
+  });
+
+  const list = document.getElementById('delete-zone-list');
+  list.innerHTML = '';
+  document.getElementById('dz-error').style.display = 'none';
+  document.getElementById('delete-zone-title').textContent = `Delete Zone: ${zid}`;
+
+  const otherZones = Object.keys(WORLD_DATA.zones).filter(z => z !== zid);
+
+  function addRow(type, id, name, file) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)';
+
+    const badge = document.createElement('span');
+    badge.textContent = type; badge.style.cssText = 'min-width:60px;color:var(--text-dim);font-size:10px;text-transform:uppercase';
+
+    const label = document.createElement('span');
+    label.textContent = id + (name && name !== id ? ` — ${name}` : '');
+    label.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+
+    const actSel = document.createElement('select'); actSel.className = 'field-select'; actSel.style.width = '80px';
+    const optDel = document.createElement('option'); optDel.value = 'delete'; optDel.textContent = 'Delete';
+    const optMove = document.createElement('option'); optMove.value = 'move'; optMove.textContent = 'Move';
+    actSel.appendChild(optDel); actSel.appendChild(optMove);
+
+    const destSel = document.createElement('select'); destSel.className = 'field-select'; destSel.style.width = '130px';
+    otherZones.forEach(z => { const o = document.createElement('option'); o.value = z; o.textContent = z; destSel.appendChild(o); });
+    destSel.style.display = 'none';
+    actSel.addEventListener('change', () => { destSel.style.display = actSel.value === 'move' ? '' : 'none'; });
+
+    row.appendChild(badge); row.appendChild(label); row.appendChild(actSel); row.appendChild(destSel);
+    list.appendChild(row);
+    _deleteZoneRows.push({ type, id, name, file, actSel, destSel });
+  }
+
+  // Rooms
+  const rooms = Object.values(ALL_ROOMS).filter(r => r.zone_id === zid);
+  const roomFile = rooms.length ? (rooms[0]._file || `data/${WORLD_ID}/${zid}/rooms.toml`) : null;
+  rooms.forEach(r => addRow('room', r.id || r._id || '', r.name || '', roomFile));
+
+  // NPCs
+  const npcs = Object.values(ALL_NPCS).filter(n => n.zone_id === zid);
+  const npcFile = npcs.length ? (npcs[0]._file || `data/${WORLD_ID}/${zid}/npcs.toml`) : null;
+  npcs.forEach(n => addRow('npc', n.id || n._id || '', n.name || '', npcFile));
+
+  // Items
+  const items = Object.values(ALL_ITEMS).filter(i => i.zone_id === zid);
+  const itemFile = items.length ? (items[0]._file || `data/${WORLD_ID}/${zid}/items.toml`) : null;
+  items.forEach(i => addRow('item', i.id || i._id || '', i.name || '', itemFile));
+
+  // Quests
+  const quests = Object.values(ALL_QUESTS).filter(q => q.zone_id === zid);
+  quests.forEach(q => addRow('quest', q.id || q._id || '', q.title || '', null));
+
+  // Dialogues
+  const dlgs = Object.keys(zoneData.dialogues || {});
+  dlgs.forEach(npcId => addRow('dialogue', npcId, '', null));
+
+  if (!_deleteZoneRows.length) {
+    list.innerHTML = '<p style="color:var(--text-dim);font-size:12px">No objects in this zone — it will be deleted immediately.</p>';
+  }
+
+  document.getElementById('delete-zone-modal').classList.remove('hidden');
+}
+
+function _dzSetAll(action) {
+  const destZone = document.getElementById('dz-bulk-dest').value;
+  _deleteZoneRows.forEach(row => {
+    row.actSel.value = action;
+    row.destSel.style.display = action === 'move' ? '' : 'none';
+    if (action === 'move' && destZone) row.destSel.value = destZone;
+  });
+}
+
+async function executeDeleteZone() {
+  if (!_deleteZoneId) return;
+  const errEl = document.getElementById('dz-error');
+  errEl.style.display = 'none';
+  const actions = _deleteZoneRows.map(row => ({
+    type:      row.type,
+    id:        row.id,
+    action:    row.actSel.value,
+    dest_zone: row.destSel.value,
+    file:      row.file || '',
+  }));
+  try {
+    const res = await fetch('/api/delete_zone', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ world_id: WORLD_ID, zone_id: _deleteZoneId, actions }),
+    });
+    const j = await res.json();
+    if (!j.ok) { errEl.textContent = j.error; errEl.style.display = 'block'; return; }
+    closeModal('delete-zone-modal');
+    setStatus(`Zone "${_deleteZoneId}" deleted`, 'ok');
+    await loadWorld(WORLD_ID);
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message; errEl.style.display = 'block';
+  }
 }
 
 function renderStylePassives(main, d) {

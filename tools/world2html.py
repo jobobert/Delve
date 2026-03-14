@@ -47,6 +47,26 @@ import md2html                                                                  
 _DATA_DIR  = _ROOT / "data"
 _SKIP_DIRS = {"zone_state", "players"}
 
+_DLG_LEGEND_HTML = (
+    '<div class="dlg-legend">'
+    + "".join(
+        f'<span class="dlg-legend-item">'
+        f'<span class="dlg-legend-swatch{extra}" style="background:{color}"></span>'
+        f'{label}</span>'
+        for label, color, extra in [
+            ("narrative",        "#EEEEEE", ""),
+            ("sets flag",        "#FFF9C4", ""),
+            ("gives item/gp/xp", "#FFE0B2", ""),
+            ("advances quest",   "#FFD54F", ""),
+            ("completes quest",  "#A5D6A7", ""),
+            ("damage/fail",      "#FFCDD2", ""),
+            ("has entry cond",   "#ffffff", " dashed"),
+            ("unreachable",      "#f5f5f5", ""),
+        ]
+    )
+    + '</div>'
+)
+
 _ZONE_COLORS = [
     "#4a7fd4", "#7db87d", "#c27a3a", "#a05090",
     "#5bb8c4", "#c44f4f", "#c4a83a", "#7a7aaa",
@@ -187,20 +207,27 @@ def _load_world(world_path: Path, zone_filter: str | None = None) -> dict:
         print(f"  loading zone: {zone_dir.name}")
         zones.append(_load_zone(zone_dir))
 
+    # Layout each zone independently so zones don't collide with each other.
+    # Then merge into all_rooms for cross-zone exit lookups.
     all_rooms: dict[str, dict] = {}
     for zone in zones:
+        zone_rooms: dict[str, dict] = {}
         for r in zone["rooms"]:
             rid = r.get("id", "")
             if rid:
+                zone_rooms[rid] = r
                 all_rooms[rid] = r
+        apply_auto_layout(zone_rooms)
 
-    apply_auto_layout(all_rooms)
+    world_md_path = world_path / "world.md"
+    world_md = world_md_path.read_text(encoding="utf-8") if world_md_path.exists() else ""
 
     return {
         "world_name": world_name,
         "world_path": world_path,
         "zones":      zones,
         "all_rooms":  all_rooms,
+        "world_md":   world_md,
     }
 
 
@@ -231,14 +258,13 @@ def _dot_to_svg(dot_str: str) -> str | None:
     try:
         result = subprocess.run(
             ["dot", "-Tsvg"],
-            input=dot_str,
+            input=dot_str.encode("utf-8"),
             capture_output=True,
-            text=True,
             timeout=20,
         )
         if result.returncode != 0:
             return None
-        svg = result.stdout
+        svg = result.stdout.decode("utf-8")
         idx = svg.find("<svg")
         return svg[idx:] if idx >= 0 else svg
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -365,7 +391,7 @@ def _zone_svg(zone_id: str, all_rooms: dict, color: str) -> str:
     lines_svg = "\n".join(svg_lines)
     nodes_svg = "\n".join(svg_nodes)
     return (
-        f'<svg width="{grid_w}" height="{grid_h}" '
+        f'<svg width="{grid_w}" height="{grid_h}" viewBox="0 0 {grid_w} {grid_h}" '
         f'style="max-width:100%;border:1px solid #ddd;border-radius:4px;background:#fafaf8">'
         f'\n{lines_svg}\n{nodes_svg}\n</svg>'
     )
@@ -448,10 +474,59 @@ def _build_flag_index(zones: list[dict]) -> dict[str, list[dict]]:
     return dict(sorted(idx.items()))
 
 
+# ── Quest trigger index ────────────────────────────────────────────────────────
+
+def _scan_quest_ops(ops, source: str, trig: dict) -> None:
+    """Scan a script op list for start/advance/complete_quest ops, recording source."""
+    if not isinstance(ops, list):
+        return
+    for op in ops:
+        if not isinstance(op, dict):
+            continue
+        name = op.get("op", "")
+        qid  = op.get("quest_id", "")
+        if not qid:
+            continue
+        if name == "start_quest":
+            trig.setdefault(qid, {}).setdefault("start", []).append(source)
+        elif name == "advance_quest":
+            step = str(op.get("step", "?"))
+            trig.setdefault(qid, {}).setdefault("advance", {}).setdefault(step, []).append(source)
+        elif name == "complete_quest":
+            trig.setdefault(qid, {}).setdefault("complete", []).append(source)
+        for sub in ("then", "else", "body"):
+            _scan_quest_ops(op.get(sub, []), source, trig)
+
+
+def _build_quest_trigger_index(zones: list[dict]) -> dict:
+    """Return {quest_id: {start:[src], advance:{step:[src]}, complete:[src]}}."""
+    trig: dict = {}
+    for zone in zones:
+        zid = zone["id"]
+        for room in zone["rooms"]:
+            rid = room.get("id", "?")
+            _scan_quest_ops(room.get("on_enter", []), f"room {rid}", trig)
+        for npc in zone["npcs"]:
+            nid = npc.get("id", "?")
+            _scan_quest_ops(npc.get("kill_script", []), f"kill {nid}", trig)
+        for item in zone["items"]:
+            iid = item.get("id", "?")
+            for hook in ("on_get", "on_use"):
+                _scan_quest_ops(item.get(hook, []), f"item {iid} {hook}", trig)
+        for npc_id, nodes in zone["dialogue_nodes"].items():
+            for node_id, node in nodes.items():
+                src = f"dlg {npc_id}/{node_id}"
+                _scan_quest_ops(node.get("script", []), src, trig)
+                for resp in node.get("response", []):
+                    rsrc = f"dlg {npc_id}/{node_id} \u00bb {resp.get('text','')[:30]}"
+                    _scan_quest_ops(resp.get("script", []), rsrc, trig)
+    return trig
+
+
 # ── Dialogue section ──────────────────────────────────────────────────────────
 
 def _dialogue_tree_fallback(npc_id: str, nodes: dict) -> str:
-    """Render dialogue tree as nested <details> elements (graphviz fallback)."""
+    """Render dialogue tree as always-visible divs (no collapse)."""
     reach = reachable_nodes(nodes)
     parts: list[str] = ['<div class="dlg-tree">']
     for node_id, node in nodes.items():
@@ -465,11 +540,11 @@ def _dialogue_tree_fallback(npc_id: str, nodes: dict) -> str:
         orphan_badge = " <em>(orphan)</em>" if unreachable else ""
         opacity      = ' style="opacity:0.5"' if unreachable else ""
 
-        parts.append(f'<details class="dlg-node"{opacity}>')
+        parts.append(f'<div class="dlg-node"{opacity}>')
         parts.append(
-            f'<summary style="background:{hcolor}">'
+            f'<div class="dlg-node-header" style="background:{hcolor}">'
             f'{cond_html}<b>{_h(node_id)}</b>{orphan_badge}'
-            f'</summary>'
+            f'</div>'
         )
         if line:
             parts.append(f'<blockquote class="dlg-line">{_h(line)}</blockquote>')
@@ -489,7 +564,7 @@ def _dialogue_tree_fallback(npc_id: str, nodes: dict) -> str:
                     f'<li>{rcond_s}{_h(rtext)}{rnext_s}{rscript_s}</li>'
                 )
             parts.append('</ul>')
-        parts.append('</details>')
+        parts.append('</div>')
     parts.append('</div>')
     return "\n".join(parts)
 
@@ -502,10 +577,10 @@ def _dialogue_html(npc_id: str, path: Path | None, nodes: dict, world_name: str)
     parts: list[str] = []
 
     # Graphviz diagram (shown when available)
-    if path is not None:
+    if path is not None and len(nodes) > 1:
         try:
             from dialogue_graph import build_dialogue_dot  # noqa: PLC0415
-            dot_str = build_dialogue_dot(npc_id, path, world_name)
+            dot_str = build_dialogue_dot(npc_id, path, world_name, include_legend=False)
             if dot_str:
                 svg = _dot_to_svg(dot_str)
                 if svg:
@@ -553,7 +628,8 @@ def _extract_tag_actions(script: list) -> tuple[list[str], list[str], list[dict]
     return tags_set, tags_clear, remaining
 
 
-def _quest_html(quest: dict, world_path: Path, world_name: str) -> str:
+def _quest_html(quest: dict, world_path: Path, world_name: str,
+                triggers: dict | None = None) -> str:
     qid     = quest.get("id", "?")
     title   = quest.get("title", qid)
     giver   = quest.get("giver", "")
@@ -573,6 +649,21 @@ def _quest_html(quest: dict, world_path: Path, world_name: str) -> str:
         parts.append(
             f'<p class="meta">Rewards: <span class="reward">{_h(reward_str)}</span></p>'
         )
+
+    # Trigger cross-reference
+    qt = (triggers or {}).get(qid, {})
+    if qt:
+        parts.append('<div class="quest-triggers">')
+        if qt.get("start"):
+            srcs = " ".join(f'<span class="qtrig qtrig-start">{_h(s)}</span>' for s in qt["start"])
+            parts.append(f'<div><span class="section-label">started by:</span> {srcs}</div>')
+        for step_n, srcs_list in sorted(qt.get("advance", {}).items(), key=lambda x: int(x[0]) if x[0].isdigit() else 0):
+            srcs = " ".join(f'<span class="qtrig qtrig-adv">{_h(s)}</span>' for s in srcs_list)
+            parts.append(f'<div><span class="section-label">step {_h(step_n)} by:</span> {srcs}</div>')
+        if qt.get("complete"):
+            srcs = " ".join(f'<span class="qtrig qtrig-complete">{_h(s)}</span>' for s in qt["complete"])
+            parts.append(f'<div><span class="section-label">completed by:</span> {srcs}</div>')
+        parts.append('</div>')
 
     if steps:
         parts.append('<ol class="quest-steps">')
@@ -835,7 +926,8 @@ def _flag_index_section(flag_index: dict) -> str:
 
 # ── Zone section ──────────────────────────────────────────────────────────────
 
-def _zone_section(zone: dict, color: str, all_rooms: dict, world_name: str, world_path: Path) -> str:
+def _zone_section(zone: dict, color: str, all_rooms: dict, world_name: str, world_path: Path,
+                  quest_triggers: dict | None = None) -> str:
     zid        = zone["id"]
     name       = zone["name"]
     desc       = zone.get("description", "")
@@ -886,17 +978,18 @@ def _zone_section(zone: dict, color: str, all_rooms: dict, world_name: str, worl
         parts.append('<details class="subsection" open>')
         parts.append(f'<summary>Quests ({len(zone["quests"])})</summary>')
         for quest in zone["quests"]:
-            parts.append(_quest_html(quest, world_path, world_name))
+            parts.append(_quest_html(quest, world_path, world_name, quest_triggers))
         parts.append('</details>')
 
-    # Dialogues (collapsed by default — can be large)
+    # Dialogues
     if zone["dialogue_nodes"]:
-        parts.append('<details class="subsection">')
+        parts.append('<details class="subsection" open>')
         parts.append(f'<summary>Dialogues ({len(zone["dialogue_nodes"])} NPCs)</summary>')
+        parts.append(_DLG_LEGEND_HTML)
         for npc_id in sorted(zone["dialogue_nodes"]):
             nodes = zone["dialogue_nodes"][npc_id]
             path  = zone["dialogue_paths"].get(npc_id)
-            parts.append('<details class="dlg-section">')
+            parts.append('<details class="dlg-section" open>')
             parts.append(f'<summary>{_h(npc_id)} ({len(nodes)} nodes)</summary>')
             parts.append(_dialogue_html(npc_id, path, nodes, world_name))
             parts.append('</details>')
@@ -940,6 +1033,24 @@ h4 { font-size: 12px; margin: 8px 0 3px; color: #222; }
 .overview-table { border-collapse: collapse; margin: 12px 0; font-size: 12px; }
 .overview-table td, .overview-table th { padding: 4px 14px; border: 1px solid #ccc; }
 .overview-table th { background: #e0e0d8; }
+
+/* World notes (world.md) */
+.world-notes { background: #fffff0; border: 1px solid #d4c84c; border-radius: 4px;
+               padding: 14px 20px; margin: 14px 0 20px; font-size: 12px; line-height: 1.7; }
+.world-notes h1 { font-size: 16px; color: #333; border-bottom: 1px solid #d4c84c;
+                  padding-bottom: 4px; margin: 10px 0 6px; }
+.world-notes h2 { font-size: 14px; color: #555; margin: 10px 0 4px; border: none; }
+.world-notes h3 { font-size: 12px; color: #666; margin: 8px 0 3px; }
+.world-notes p  { margin: 4px 0; }
+.world-notes ul, .world-notes ol { margin: 4px 0 4px 20px; }
+
+/* Dialogue legend */
+.dlg-legend { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 10px;
+              font-size: 10px; }
+.dlg-legend-item { display: flex; align-items: center; gap: 4px; }
+.dlg-legend-swatch { width: 12px; height: 12px; border-radius: 2px;
+                     border: 1px solid #bbb; flex-shrink: 0; }
+.dlg-legend-swatch.dashed { border-style: dashed; border-color: #1565C0; background: #fff; }
 
 /* Zone section */
 .zone-section { margin-bottom: 40px; }
@@ -989,9 +1100,8 @@ h4 { font-size: 12px; margin: 8px 0 3px; color: #222; }
 
 /* Dialogue */
 .dlg-tree { font-size: 11px; }
-.dlg-node > summary { padding: 3px 8px; cursor: pointer; border-radius: 2px;
-                      list-style: none; }
-.dlg-node > summary:hover { filter: brightness(0.95); }
+.dlg-node { margin: 4px 0; border: 1px solid #ddd; border-radius: 3px; }
+.dlg-node-header { padding: 3px 8px; border-radius: 2px 2px 0 0; }
 .dlg-line { color: #444; font-style: italic; margin: 4px 16px; font-size: 11px;
             border-left: 3px solid #c07800; padding-left: 8px; }
 .dlg-ops  { margin: 3px 8px; }
@@ -1012,6 +1122,14 @@ h4 { font-size: 12px; margin: 8px 0 3px; color: #222; }
 .reward { color: #7a5000; background: #fff0cc; border-radius: 3px;
           padding: 1px 6px; font-weight: bold; }
 
+/* Quest trigger badges */
+.quest-triggers { margin: 4px 0 6px; font-size: 11px; line-height: 1.8; }
+.qtrig { display: inline-block; border-radius: 3px; padding: 1px 5px;
+         font-size: 10px; margin: 1px; }
+.qtrig-start    { background: #d4edda; color: #1a5c2a; border: 1px solid #8bc89b; }
+.qtrig-adv      { background: #d0e4f8; color: #1a3a6a; border: 1px solid #8ab4d8; }
+.qtrig-complete { background: #fff0cc; color: #7a5000; border: 1px solid #d4a840; }
+
 /* Tag action badges */
 .tag-action { display: inline-block; border-radius: 3px; padding: 1px 5px;
               font-size: 10px; margin: 1px; font-weight: bold; }
@@ -1027,12 +1145,20 @@ h4 { font-size: 12px; margin: 8px 0 3px; color: #222; }
 
 /* Print styles */
 @media print {
-  body    { display: block; }
+  body    { display: block; background: none; }
   #toc    { display: none; }
-  #main   { max-width: 100%; padding: 0; }
+  #main   { max-width: 100%; padding: 0; background: none; }
   details { display: block !important; }
   details > summary { display: none; }
+  /* Show NPC name as a visible header when printing dialogues */
+  .dlg-section { margin: 8px 0; border-top: 1px solid #ccc; padding-top: 4px; }
+  .dlg-section > summary { display: block !important; font-weight: bold;
+                            font-size: 12px; padding: 2px 0 4px; color: #222; }
   .zone-section { page-break-before: always; }
+  /* Scale zone maps to fit the print page */
+  .subsection svg { max-width: 100% !important; max-height: 19cm !important;
+                    width: auto !important; height: auto !important; }
+  .subsection div[style*="overflow"] { overflow: visible !important; }
   .entity-table tr:hover td { background: none; }
   .admin-comment { border: 1px solid #ccc; background: #fff; }
 }
@@ -1058,6 +1184,8 @@ def generate(world_data: dict, output_path: Path) -> None:
 
     print("  building flag index...")
     flag_index = _build_flag_index(zones)
+    print("  building quest trigger index...")
+    quest_triggers = _build_quest_trigger_index(zones)
 
     # TOC
     zone_links = "".join(
@@ -1103,12 +1231,21 @@ def generate(world_data: dict, output_path: Path) -> None:
         f'</section>'
     )
 
+    world_md_html = ""
+    if world_data.get("world_md"):
+        world_md_html = (
+            f'<section id="world-notes">'
+            f'<div class="world-notes">{md2html.convert(world_data["world_md"])}</div>'
+            f'</section>'
+        )
+
     print("  rendering zone sections...")
     zone_sections: list[str] = []
     for zone in zones:
         print(f"    {zone['id']}")
         zone_sections.append(
-            _zone_section(zone, zone_color[zone["id"]], all_rooms, world_name, world_data["world_path"])
+            _zone_section(zone, zone_color[zone["id"]], all_rooms, world_name,
+                          world_data["world_path"], quest_triggers)
         )
 
     flag_section = (
@@ -1127,6 +1264,7 @@ def generate(world_data: dict, output_path: Path) -> None:
         f'{toc}'
         f'<div id="main">'
         f'{overview}'
+        f'{world_md_html}'
         f'{"".join(zone_sections)}'
         f'{flag_section}'
         f'</div>'
@@ -1149,11 +1287,16 @@ def main() -> None:
     parser.add_argument("--zone",   metavar="NAME",
                         help="Limit output to one zone")
     parser.add_argument("--output", metavar="PATH",
-                        help="Output file path (default: tools/world_review.html)")
+                        help="Output file path (default: tools/world_reviews/<world_id>.html)")
     args = parser.parse_args()
 
-    world_path  = _pick_world(args.world)
-    output_path = Path(args.output) if args.output else _TOOLS / "world_review.html"
+    world_path = _pick_world(args.world)
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        out_dir = _TOOLS / "world_reviews"
+        out_dir.mkdir(exist_ok=True)
+        output_path = out_dir / f"{world_path.name}.html"
 
     print(f"world2html: {world_path.name} -> {output_path}")
     world_data = _load_world(world_path, zone_filter=args.zone)

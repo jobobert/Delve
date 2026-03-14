@@ -1681,10 +1681,12 @@ Quests live at `data/<world_id>/<zone>/quests/<quest_id>.toml`. The filename is 
 ### 9.2 Quest Format
 
 ```toml
-id      = "ashwood_contract"
-title   = "The Ashwood Contract"
-giver   = "elder_mira"               # Informational only
-summary = "Investigate the corruption in Ashwood Forest and slay the Drake."
+id               = "ashwood_contract"
+title            = "The Ashwood Contract"
+giver            = "elder_mira"               # Informational only
+summary          = "Investigate the corruption in Ashwood Forest and slay the Drake."
+start_message    = "The forest roads are closed — travel carefully."  # optional
+complete_message = "Ashwood breathes easier. Well done."              # optional
 
 [[step]]
 index     = 1
@@ -1722,6 +1724,8 @@ item_id = "millhaven_commendation"
 | `title` | string | Display name |
 | `giver` | string | Informational NPC ID (not enforced) |
 | `summary` | string | Long description shown in journal |
+| `start_message` | string | **Optional.** Extra line shown in the quest start banner (after summary). If omitted, only the summary is shown. |
+| `complete_message` | string | **Optional.** Line shown in the quest completion banner. Default: `"Well done, adventurer."` |
 | `[[step]]` | — | One or more objective steps |
 | `step.index` | int | Step number (must be ≥ 1); gaps are fine |
 | `step.objective` | string | What the player must do |
@@ -4017,3 +4021,42 @@ field ensures the second passive only triggers on rounds where the first also fi
 **NPC `style_prof` too high on common enemies**
 A street thug with `style_prof = 90` will parry almost every round. Save high
 proficiency for bosses. Common enemies in the 10-35 range keep combat readable.
+
+---
+
+## 20. World Notes File (world.md)
+
+Each world can have an optional `world.md` file at `data/<world_id>/world.md`. This is a Markdown document for world-level lore, design notes, NPC backstory, cross-zone trade routes, quest relationships, and anything else a world creator wants to record.
+
+### 20.1 Location
+
+```
+data/<world_id>/world.md
+```
+
+### 20.2 Usage
+
+- **WCT**: Click **World Notes** in the top bar to open a fullscreen Markdown editor. Changes are saved to `world.md` immediately.
+- **world2html**: The content of `world.md` is rendered between the summary table and the first zone section when generating the review HTML.
+- **Engine**: `world.md` is not read by the engine at runtime — it is purely a tool for world authors.
+
+### 20.3 Recommended Sections
+
+```markdown
+# World Name
+
+## Overview
+Brief pitch for the world.
+
+## Regions
+Per-zone narrative summaries and design goals.
+
+## Quest Relationships
+Cross-zone quest dependencies and flag usage.
+
+## Item Notes
+Unusual item behaviours, cross-zone commission materials.
+
+## Tags
+Tag naming conventions used in this world.
+```

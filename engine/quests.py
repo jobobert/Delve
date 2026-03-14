@@ -191,6 +191,9 @@ class QuestTracker:
                 f"╔══ Quest: {title} ══"))
             ctx.bus.emit(Event.OUTPUT, Msg(Tag.QUEST,
                 f"║  {quest.get('summary','')}"))
+            start_msg = quest.get("start_message", "")
+            if start_msg:
+                ctx.bus.emit(Event.OUTPUT, Msg(Tag.QUEST, f"║  {start_msg}"))
         else:
             ctx.bus.emit(Event.OUTPUT, Msg(Tag.QUEST,
                 f"╔══ Quest Updated: {title} ══"))
@@ -209,8 +212,9 @@ class QuestTracker:
         title = quest.get("title","Quest")
         ctx.bus.emit(Event.OUTPUT, Msg(Tag.QUEST,
             f"╔══ Quest Complete: {title} ══"))
+        complete_msg = quest.get("complete_message", "Well done, adventurer.")
         ctx.bus.emit(Event.OUTPUT, Msg(Tag.QUEST,
-            "║  Well done, adventurer."))
+            f"║  {complete_msg}"))
 
         # Award rewards
         runner = ScriptRunner(ctx)

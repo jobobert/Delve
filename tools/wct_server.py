@@ -18,6 +18,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import sys
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -558,6 +559,16 @@ class WCTHandler(BaseHTTPRequestHandler):
                 return
             self._send_json(_load_world(world_id))
 
+        elif path == "/api/world_md":
+            qs       = parse_qs(parsed.query)
+            world_id = (qs.get("world_id") or [""])[0].strip()
+            if not world_id:
+                self._send_json({"error": "world_id required"}, 400)
+                return
+            md_path = DATA_DIR / world_id / "world.md"
+            content = md_path.read_text(encoding="utf-8") if md_path.exists() else ""
+            self._send_json({"content": content})
+
         elif path == "/api/world_config":
             qs = parse_qs(parsed.query)
             world_id = (qs.get("world_id") or [""])[0].strip()
@@ -878,6 +889,149 @@ class WCTHandler(BaseHTTPRequestHandler):
 
             else:
                 self._send_json({"ok": False, "error": f"Unsupported type '{type_}'"})
+
+        elif path == "/api/create_world":
+            world_id      = body.get("world_id", "").strip().lower().replace(" ", "_")
+            world_name    = body.get("world_name", "").strip()
+            currency_name = body.get("currency_name", "gold").strip() or "gold"
+            if not world_id or not world_name:
+                self._send_json({"ok": False, "error": "world_id and world_name required"})
+                return
+            if not re.match(r'^[a-z0-9_]+$', world_id):
+                self._send_json({"ok": False, "error": "world_id must be alphanumeric/underscores only"})
+                return
+            world_dir = DATA_DIR / world_id
+            if world_dir.exists():
+                self._send_json({"ok": False, "error": f"World '{world_id}' already exists"})
+                return
+            world_dir.mkdir(parents=True)
+            config_content = (
+                f'world_name      = "{world_name}"\n'
+                f'currency_name   = "{currency_name}"\n'
+                f'default_style   = "brawling"\n'
+                f'new_char_hp     = 100\n'
+                f'vision_threshold = 3\n'
+            )
+            (world_dir / "config.toml").write_text(config_content, encoding="utf-8")
+            start_zone = world_id + "_start"
+            start_dir  = world_dir / start_zone
+            start_dir.mkdir()
+            (start_dir / "rooms.toml").write_text(f"# {start_zone} rooms\n", encoding="utf-8")
+            (start_dir / "items.toml").write_text(f"# {start_zone} items\n", encoding="utf-8")
+            (start_dir / "npcs.toml").write_text(f"# {start_zone} NPCs\n",   encoding="utf-8")
+            self._send_json({"ok": True, "world_id": world_id})
+
+        elif path == "/api/delete_zone":
+            world_id = body.get("world_id", "")
+            zone_id  = body.get("zone_id", "")
+            actions  = body.get("actions", [])  # [{type, id, action, dest_zone, file}]
+            if not world_id or not zone_id:
+                self._send_json({"ok": False, "error": "world_id and zone_id required"})
+                return
+            zone_dir = DATA_DIR / world_id / zone_id
+            if not zone_dir.exists():
+                self._send_json({"ok": False, "error": f"Zone '{zone_id}' not found"})
+                return
+            errors = []
+            for act in actions:
+                atype     = act.get("type", "")
+                eid       = act.get("id", "")
+                action    = act.get("action", "delete")
+                dest_zone = act.get("dest_zone", "")
+                file_rel  = act.get("file", "")
+
+                if action == "delete":
+                    if atype in ("room", "npc", "item", "style"):
+                        if not file_rel:
+                            errors.append(f"No file for {atype} {eid}")
+                            continue
+                        fp = ROOT / file_rel
+                        try:
+                            data = toml_load(fp) if fp.exists() else {}
+                            data[atype] = [r for r in data.get(atype, []) if r.get("id") != eid]
+                            _write_file(file_rel, data)
+                        except Exception as e:
+                            errors.append(str(e))
+                    elif atype == "quest":
+                        p = zone_dir / "quests" / f"{eid}.toml"
+                        if p.exists():
+                            try:
+                                p.unlink()
+                            except Exception as e:
+                                errors.append(str(e))
+                    elif atype == "dialogue":
+                        p = zone_dir / "dialogues" / f"{eid}.toml"
+                        if p.exists():
+                            try:
+                                p.unlink()
+                            except Exception as e:
+                                errors.append(str(e))
+
+                elif action == "move" and dest_zone:
+                    dest_dir = DATA_DIR / world_id / dest_zone
+                    if not dest_dir.exists():
+                        errors.append(f"Destination zone '{dest_zone}' not found")
+                        continue
+                    if atype in ("room", "npc", "item", "style"):
+                        if not file_rel:
+                            errors.append(f"No file for {atype} {eid}")
+                            continue
+                        src_fp = ROOT / file_rel
+                        dest_file = dest_dir / Path(file_rel).name
+                        try:
+                            src_data  = toml_load(src_fp) if src_fp.exists() else {}
+                            dest_data = toml_load(dest_file) if dest_file.exists() else {}
+                            objs = src_data.get(atype, [])
+                            obj  = next((o for o in objs if o.get("id") == eid), None)
+                            if obj:
+                                src_data[atype]  = [o for o in objs if o.get("id") != eid]
+                                dest_data[atype] = dest_data.get(atype, []) + [obj]
+                                _write_file(file_rel, src_data)
+                                dest_rel = str(dest_file.relative_to(ROOT))
+                                _write_file(dest_rel, dest_data)
+                        except Exception as e:
+                            errors.append(str(e))
+                    elif atype == "quest":
+                        src_p  = zone_dir / "quests" / f"{eid}.toml"
+                        dest_q = dest_dir / "quests"
+                        dest_q.mkdir(exist_ok=True)
+                        dest_p = dest_q / f"{eid}.toml"
+                        try:
+                            shutil.move(str(src_p), str(dest_p))
+                        except Exception as e:
+                            errors.append(str(e))
+                    elif atype == "dialogue":
+                        src_p  = zone_dir / "dialogues" / f"{eid}.toml"
+                        dest_d = dest_dir / "dialogues"
+                        dest_d.mkdir(exist_ok=True)
+                        dest_p = dest_d / f"{eid}.toml"
+                        try:
+                            shutil.move(str(src_p), str(dest_p))
+                        except Exception as e:
+                            errors.append(str(e))
+
+            if errors:
+                self._send_json({"ok": False, "error": "; ".join(errors)})
+                return
+            # Remove zone directory (now should be empty or only have skeleton files)
+            try:
+                shutil.rmtree(zone_dir)
+                self._send_json({"ok": True})
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)})
+
+        elif path == "/api/world_md":
+            world_id = body.get("world_id", "")
+            content  = body.get("content", "")
+            if not world_id:
+                self._send_json({"ok": False, "error": "world_id required"})
+                return
+            md_path = DATA_DIR / world_id / "world.md"
+            try:
+                md_path.write_text(content, encoding="utf-8")
+                self._send_json({"ok": True})
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)})
 
         # ── Game routes ───────────────────────────────────────────────────────
 

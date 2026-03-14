@@ -2705,10 +2705,12 @@ line = &quot;There&#x27;s a key in the ruins. Look for the castellan&#x27;s old 
 <p>Quests live at <code>data/&lt;world<em>id&gt;/&lt;zone&gt;/quests/&lt;quest</em>id&gt;.toml</code>. The filename is the quest ID.</p>
 
 <h3 id="9-2-quest-format">9.2 Quest Format</h3>
-<pre><code class="language-toml">id      = &quot;ashwood_contract&quot;
-title   = &quot;The Ashwood Contract&quot;
-giver   = &quot;elder_mira&quot;               # Informational only
-summary = &quot;Investigate the corruption in Ashwood Forest and slay the Drake.&quot;
+<pre><code class="language-toml">id               = &quot;ashwood_contract&quot;
+title            = &quot;The Ashwood Contract&quot;
+giver            = &quot;elder_mira&quot;               # Informational only
+summary          = &quot;Investigate the corruption in Ashwood Forest and slay the Drake.&quot;
+start_message    = &quot;The forest roads are closed — travel carefully.&quot;  # optional
+complete_message = &quot;Ashwood breathes easier. Well done.&quot;              # optional
 
 [[step]]
 index     = 1
@@ -2765,6 +2767,16 @@ item_id = &quot;millhaven_commendation&quot;</code></pre>
   <td><code>summary</code></td>
   <td>string</td>
   <td>Long description shown in journal</td>
+</tr>
+<tr>
+  <td><code>start_message</code></td>
+  <td>string</td>
+  <td><strong>Optional.</strong> Extra line shown in the quest start banner (after summary). If omitted, only the summary is shown.</td>
+</tr>
+<tr>
+  <td><code>complete_message</code></td>
+  <td>string</td>
+  <td><strong>Optional.</strong> Line shown in the quest completion banner. Default: <code>"Well done, adventurer."</code></td>
 </tr>
 <tr>
   <td><code>[[step]]</code></td>
@@ -5967,5 +5979,34 @@ style_prof = 30.0</code></pre>
 
 <p><strong>NPC <code>style<em>prof</code> too high on common enemies</strong> A street thug with <code>style</em>prof = 90</code> will parry almost every round. Save high proficiency for bosses. Common enemies in the 10-35 range keep combat readable.</p>
 
+<hr>
+<h2 id="20-world-notes-file-world-md">20. World Notes File (world.md)</h2>
+<p>Each world can have an optional <code>world.md</code> file at <code>data/&lt;world_id&gt;/world.md</code>. This is a Markdown document for world-level lore, design notes, NPC backstory, cross-zone trade routes, quest relationships, and anything else a world creator wants to record.</p>
+
+<h3 id="20-1-location">20.1 Location</h3>
+<pre><code>data/&lt;world_id&gt;/world.md</code></pre>
+<h3 id="20-2-usage">20.2 Usage</h3>
+<ul>
+  <li><strong>WCT</strong>: Click <strong>World Notes</strong> in the top bar to open a fullscreen Markdown editor. Changes are saved to <code>world.md</code> immediately.</li>
+  <li><strong>world2html</strong>: The content of <code>world.md</code> is rendered between the summary table and the first zone section when generating the review HTML.</li>
+  <li><strong>Engine</strong>: <code>world.md</code> is not read by the engine at runtime — it is purely a tool for world authors.</li>
+</ul>
+<h3 id="20-3-recommended-sections">20.3 Recommended Sections</h3>
+<pre><code class="language-markdown"># World Name
+
+## Overview
+Brief pitch for the world.
+
+## Regions
+Per-zone narrative summaries and design goals.
+
+## Quest Relationships
+Cross-zone quest dependencies and flag usage.
+
+## Item Notes
+Unusual item behaviours, cross-zone commission materials.
+
+## Tags
+Tag naming conventions used in this world.</code></pre>
 </body>
 </html>
