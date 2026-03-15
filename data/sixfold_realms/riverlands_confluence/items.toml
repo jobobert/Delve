@@ -141,6 +141,97 @@ weight = 1
 respawn = false
 tags = ["tool", "repair"]
 
+# ── Nessa the Realm-Walker — trader exclusives ───────────────────────────────
+# One item sourced from each of the six realms. Only available after
+# rivers_remember is complete and Nessa's route is active.
+
+[[item]]
+id         = "rl_echo_pendant"
+name       = "Echo Pendant"
+desc_short = "A small disc of river-iron etched with the six-circle mark of the Confluence."
+desc_long  = "Those who have heard the Echoing Chamber say the pendant hums with the same tone. It sharpens the senses and steadies the nerves."
+slot       = "neck"
+weight     = 0
+tags       = ["resonant", "trader_exclusive"]
+respawn    = false
+effects    = [
+  { type = "stat_bonus", stat = "defense", amount = 3 },
+  { type = "on_equip", message = "The pendant settles at your collarbone. The world feels a little more legible." },
+]
+
+[[item]]
+id         = "dp_peak_forge_vial"
+name       = "Peak-Forge Vial"
+desc_short = "A sealed glass vial of dense amber liquid, still warm to the touch."
+desc_long  = "Distilled from Dragon Peaks thermal vents by Orun's forge apprentices. The heat inside is sealed by wax stamped with a dragon-claw mark. Drinking it floods the body with sudden warmth — and clears lingering toxins."
+weight     = 0
+tags       = ["consumable", "healing", "trader_exclusive"]
+respawn    = false
+effects    = [{ type = "on_use", heal = 40 }]
+commands   = [
+  { verb = "drink", ops = [
+    { op = "heal", amount = 40 },
+    { op = "clear_status", effect = "poisoned" },
+    { op = "message", tag = "system", text = "Heat rushes through you. The poison burns away." },
+    { op = "take_item", item_id = "dp_peak_forge_vial" },
+  ]},
+]
+
+[[item]]
+id         = "gr_twilight_ink"
+name       = "Vial of Twilight Ink"
+desc_short = "A small glass vial of ink that seems to absorb light rather than reflect it."
+desc_long  = "Gathered from the deepest passages of Gloamreach, where twilight becomes something with weight and intention. Drinking it cloaks the body in a pale ward for a short time."
+weight     = 0
+tags       = ["consumable", "gloam", "trader_exclusive"]
+respawn    = false
+commands   = [
+  { verb = "drink", ops = [
+    { op = "apply_status", effect = "protected", duration = 5 },
+    { op = "message", tag = "system", text = "The ink is cold and faintly sweet. A pale shimmer settles over you." },
+    { op = "take_item", item_id = "gr_twilight_ink" },
+  ]},
+]
+
+[[item]]
+id         = "mf_bog_lens"
+name       = "Bog-Glass Lens"
+desc_short = "A thick lens ground from Mistfen bog-quartz, mounted in a wire frame."
+desc_long  = "Mistfen path-readers use these to navigate the spore haze. The polarised quartz cuts through mist, spore-clouds, and shallow darkness alike. Wearers describe seeing the world with unusual clarity."
+slot       = "head"
+weight     = 1
+light_add  = 2
+tags       = ["mistfen_resist", "trader_exclusive"]
+respawn    = false
+effects    = [
+  { type = "stat_bonus", stat = "defense", amount = 1 },
+  { type = "on_equip", message = "The fog thins. Edges sharpen. You can see further than you expected." },
+]
+
+[[item]]
+id         = "mp_spore_silk_sash"
+name       = "Spore-Silk Sash"
+desc_short = "A wide belt woven from Mycelial Plains spore-silk threads."
+desc_long  = "The silk is harvested from the deepest growth nodes of the Mycelial Plains, where fungal threads are drawn into fibres stronger than leather. Worn as a sash, it expands carrying capacity considerably."
+slot       = "pack"
+weight     = 0
+tags       = ["container", "mycelial", "trader_exclusive"]
+respawn    = false
+effects    = [
+  { type = "stat_bonus", stat = "carry_capacity", amount = 8 },
+  { type = "on_equip", message = "The sash cinches snugly. Suddenly your pack feels lighter." },
+]
+
+[[item]]
+id         = "vh_sap_salve"
+name       = "Heartwood Sap Salve"
+desc_short = "A small clay pot sealed with green wax."
+desc_long  = "Pressed from the ancient trees at the deepest heart of the Verdant Heartwood, this salve carries centuries of stored vitality. Applying it closes wounds rapidly. Healers in the Heartwood treat it with reverence."
+weight     = 0
+tags       = ["consumable", "healing", "verdant", "trader_exclusive"]
+respawn    = false
+effects    = [{ type = "on_use", heal = 50 }]
+
 [[item]]
 id = "rl_locket"
 name = "Locket"

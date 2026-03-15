@@ -309,6 +309,7 @@ Light:               set_room_light, adjust_light, if_light, set_vision, adjust_
 Player attributes:   set_attr, adjust_attr, if_attr
 Cutscene:            pause
 Script files:        run_script_file
+Processes:           process_start, process_stop, process_pause
 Conditionals:        if_flag, if_not_flag, if_item, if_quest, if_quest_complete,
                      if_skill, if_status, if_affinity, if_prestige,
                      if_combat_round, if_npc_hp, if_light, if_attr
@@ -384,6 +385,44 @@ The NPC survives at 1 HP with `hostile = false`. No kill rewards are given.
 
 To add a new op: add an `elif name == "my_op":` branch in `ScriptRunner._exec()`
 in `engine/script.py`, document it in the module docstring and the op table above.
+
+### World processes (processes.py)
+
+`ProcessManager` drives recurring scripts and NPC patrol routes without background threads. It fires on the same tick as status effects — every non-read-only player command.
+
+**Define** processes in `processes.toml` inside any zone folder:
+
+```toml
+# Script-based: run ops on a timer
+[[process]]
+id        = "storm_cycle"
+interval  = 20        # fire every 20 action ticks
+autostart = true
+script    = [
+  { op = "message", text = "Lightning cracks over the peaks.", tag = "system" },
+]
+
+# Route-based: move an NPC along waypoints
+[[process]]
+id         = "caravan_route"
+interval   = 3
+route_npc  = "merchant_edvard"
+route_loop = "cycle"          # or "reverse" for ping-pong
+route = [
+  { room_id = "millhaven_square", ticks = 4 },
+  { room_id = "millhaven_gate",   ticks = 2 },
+]
+```
+
+**Control** from any script:
+```toml
+{ op = "process_start", process_id = "caravan_route" }
+{ op = "process_pause", process_id = "caravan_route" }
+{ op = "process_stop",  process_id = "caravan_route" }
+```
+
+State (active, tick counters, route position) is persisted per-player in
+`data/players/<name>/zone_state/_processes.json` and saved on every player save.
 
 ### Fighting styles (styles.py)
 

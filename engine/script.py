@@ -119,6 +119,11 @@ Light mechanic:
 Standalone script files:
   { op = "run_script_file", path = "scripts/event.toml" } — run ops from a world-relative TOML file
 
+World processes (see engine/processes.py):
+  { op = "process_start", process_id = "..." }   — activate (or resume) a process
+  { op = "process_stop",  process_id = "..." }   — deactivate and reset tick counters
+  { op = "process_pause", process_id = "..." }   — suspend without resetting counters
+
 Notes:
   - Unknown ops are silently ignored (forward-compatibility).
   - fail and require_tag raise _ScriptAbort, caught by run() — no traceback.
@@ -151,6 +156,9 @@ class GameContext:
     # Mutable state dict shared between CombatSession and combat-only script ops.
     # Set by _run_passives(); None outside of passive execution.
     combat_ctx: "dict | None" = None
+    # ProcessManager instance; None when running outside CommandProcessor
+    # (e.g. tools, validators).  Script ops silently skip if None.
+    processes: "object | None" = None
 
 
 def eval_exit_condition(cond: dict, ctx: "GameContext") -> bool:
@@ -797,6 +805,25 @@ class ScriptRunner:
                 except Exception as e:
                     import engine.log as log
                     log.warn("script", f"run_script_file failed: {e}", path=rel_path)
+
+        # ── World processes ───────────────────────────────────────────────────
+        elif name == "process_start":
+            # { op = "process_start", process_id = "..." }
+            pid = op.get("process_id", "")
+            if pid and ctx.processes is not None:
+                ctx.processes.start(pid)
+
+        elif name == "process_stop":
+            # { op = "process_stop", process_id = "..." }
+            pid = op.get("process_id", "")
+            if pid and ctx.processes is not None:
+                ctx.processes.stop(pid)
+
+        elif name == "process_pause":
+            # { op = "process_pause", process_id = "..." }
+            pid = op.get("process_id", "")
+            if pid and ctx.processes is not None:
+                ctx.processes.pause(pid)
 
         # ── Unknown ops ───────────────────────────────────────────────────────
         # Unknown ops are silently ignored for forward-compatibility.

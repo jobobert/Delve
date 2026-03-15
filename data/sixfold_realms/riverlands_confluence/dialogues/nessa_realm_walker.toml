@@ -1,0 +1,176 @@
+# -------------------------
+# NODE: root
+# -------------------------
+[[node]]
+id    = "root"
+lines = [
+  "Nessa tilts her head, appraising you the way a merchant appraises a coin.",
+  "'You've been to the Chamber.' It isn't a question. 'Word travels faster than people think. So do I.'"
+]
+
+[[response]]
+node = "root"
+text = "What do you sell?"
+next = "ask_wares"
+
+[[response]]
+node = "root"
+text = "Where do you travel?"
+next = "ask_route"
+
+[[response]]
+node = "root"
+text = "Where did you come from?"
+next = "ask_origin"
+
+[[response]]
+node = "root"
+text = "I'll let you get on with it."
+next = ""
+
+
+# -------------------------
+# NODE: ask_wares
+# -------------------------
+[[node]]
+id   = "ask_wares"
+line = "'One thing from each realm — the best thing, or close to it. I don't carry junk. Use the list command if you want to browse.'"
+
+[[response]]
+node = "ask_wares"
+text = "What makes these better than what I can find locally?"
+next = "ask_wares_detail"
+
+[[response]]
+node = "ask_wares"
+text = "Good to know. Thanks."
+next = ""
+
+
+# -------------------------
+# NODE: ask_wares_detail
+# -------------------------
+[[node]]
+id   = "ask_wares_detail"
+line = "'The Peaks vial was made in a forge that runs on volcanic heat — no smithy here can replicate that. The Heartwood salve takes three seasons to press. The bog lens is ground by hand in Mistfen. You can find substitutes. You won't find equivalents.'"
+
+[[response]]
+node = "ask_wares_detail"
+text = "I'll take a look."
+next = ""
+
+
+# -------------------------
+# NODE: ask_route
+# -------------------------
+[[node]]
+id   = "ask_route"
+line = "'All six. Riverlands to the Peaks, Peaks to Gloamreach, Gloam to the Fens, Fens to the Plains, Plains to the Heartwood, back here. Round and round. I stop where people stop me.'"
+
+[[response]]
+node = "ask_route"
+text = "Isn't it dangerous? Moving between zones alone?"
+next = "ask_route_danger"
+
+[[response]]
+node = "ask_route"
+text = "How long is the full circuit?"
+next = "ask_route_time"
+
+[[response]]
+node = "ask_route"
+text = "That's a lot of ground."
+next = ""
+
+
+# -------------------------
+# NODE: ask_route_danger
+# -------------------------
+[[node]]
+id   = "ask_route_danger"
+line = "'Dangerous for who? I've been doing this since before the realms started fracturing. The routes I know don't appear on anyone's maps. I'm not the only thing moving between the zones — I'm just the only one selling things.'"
+
+[[response]]
+node = "ask_route_danger"
+text = "Fair enough."
+next = ""
+
+
+# -------------------------
+# NODE: ask_route_time
+# -------------------------
+[[node]]
+id   = "ask_route_time"
+line = "'Depends how many people have questions.' She glances pointedly at you. 'Sometimes quick. Sometimes less so.'"
+
+[[response]]
+node = "ask_route_time"
+text = "I'll stop keeping you."
+next = ""
+
+
+# -------------------------
+# NODE: ask_origin
+# -------------------------
+[[node]]
+id   = "ask_origin"
+line = "'Which time? I've arrived from each of them. Most recently the Heartwood — the sap salve I'm carrying still smells like old bark.'"
+
+[[response]]
+node = "ask_origin"
+text = "What's the Heartwood like?"
+next = "ask_heartwood"
+
+[[response]]
+node = "ask_origin"
+text = "Interesting. What about the Peaks?"
+next = "ask_peaks"
+
+[[response]]
+node = "ask_origin"
+text = "I'm curious about Gloamreach."
+next = "ask_gloam"
+
+[[response]]
+node = "ask_origin"
+text = "Never mind. Thanks."
+next = ""
+
+
+# -------------------------
+# NODE: ask_heartwood
+# -------------------------
+[[node]]
+id   = "ask_heartwood"
+line = "'Green. Loud with insects. The trees remember things — not like the rivers here, more like... a long patience. The healers there live by a code I don't fully understand. They gave me the salve freely and asked me to trade fairly in return. I try.'"
+
+[[response]]
+node = "ask_heartwood"
+text = "Good to know."
+next = ""
+
+
+# -------------------------
+# NODE: ask_peaks
+# -------------------------
+[[node]]
+id   = "ask_peaks"
+line = "'Hot. Vertical. The forge crews don't waste words and neither do I, so we got along fine. The vials are theirs — something about concentrating thermal energy in the distillation. I don't ask how. I just know they work.'"
+
+[[response]]
+node = "ask_peaks"
+text = "That sounds useful."
+next = ""
+
+
+# -------------------------
+# NODE: ask_gloam
+# -------------------------
+[[node]]
+id   = "ask_gloam"
+line = "'Dark and very quiet in a particular way. The ink comes from the deepest passages — the Gloam-walkers use it in their wards. It's not something they sell to outsiders often. I may have done them a favour or two to get it. Don't ask which.'"
+
+[[response]]
+node = "ask_gloam"
+text = "I won't."
+next = ""

@@ -194,6 +194,14 @@ def _load_zone(zone_dir: Path) -> dict:
             except Exception:
                 pass
 
+    processes: list[dict] = []
+    processes_file = zone_dir / "processes.toml"
+    if processes_file.exists():
+        try:
+            processes = toml_load(processes_file).get("process", [])
+        except Exception:
+            pass
+
     return {
         **zone_meta,
         "rooms":          rooms,
@@ -204,6 +212,7 @@ def _load_zone(zone_dir: Path) -> dict:
         "dialogue_paths": dialogue_paths,
         "styles":         styles,
         "crafting":       crafting,
+        "processes":      processes,
     }
 
 
@@ -930,6 +939,52 @@ def _styles_section(styles: list[dict]) -> str:
     return f'<table class="entity-table"><{header}<tbody>{"".join(rows)}</tbody></table>'
 
 
+def _processes_section(processes: list[dict]) -> str:
+    if not processes:
+        return "<p><em>No processes.</em></p>"
+    rows: list[str] = []
+    for p in processes:
+        pid      = p.get("id", "")
+        name     = p.get("name", "")
+        interval = p.get("interval", "")
+        autostart = p.get("autostart", False)
+        loop     = p.get("route_loop", "")
+        npc      = p.get("route_npc", "")
+        comment  = p.get("admin_comment", "")
+        route    = p.get("route", [])
+
+        meta_parts = []
+        if interval:
+            meta_parts.append(f"interval: {interval}")
+        if autostart:
+            meta_parts.append("autostart")
+        if npc:
+            meta_parts.append(f"NPC: {_h(npc)}")
+        if loop:
+            meta_parts.append(f"loop: {_h(loop)}")
+        meta_html = " &middot; ".join(meta_parts)
+
+        waypoints_html = ""
+        if route:
+            wps = ", ".join(
+                f'{_h(w.get("room_id",""))} ({w.get("ticks","?")} ticks)'
+                for w in route
+            )
+            waypoints_html = f'<br><span class="desc">Route: {wps}</span>'
+
+        rows.append(
+            f'<tr>'
+            f'<td class="id-cell">{_h(pid)}</td>'
+            f'<td><b>{_h(name)}</b><br>'
+            f'<span class="desc">{meta_html}</span>'
+            f'{waypoints_html}</td>'
+            f'</tr>'
+            + _admin_comment_row(comment, 2)
+        )
+    header = '<thead><tr><th>ID</th><th>Name / Details</th></tr></thead>'
+    return f'<table class="entity-table"><{header}<tbody>{"".join(rows)}</tbody></table>'
+
+
 # ── Shop section ──────────────────────────────────────────────────────────────
 
 def _shop_section(npcs: list[dict]) -> str:
@@ -1115,6 +1170,14 @@ def _zone_section(zone: dict, color: str, all_rooms: dict, world_name: str, worl
         parts.append('<details class="subsection" open>')
         parts.append(f'<summary>Crafting ({len(crafting)} commission{"s" if len(crafting) != 1 else ""})</summary>')
         parts.append(_crafting_section(crafting))
+        parts.append('</details>')
+
+    # Processes (collapsed by default)
+    if zone["processes"]:
+        parts.append(f'<h3 id="processes-{_h(zid)}">Processes</h3>')
+        parts.append('<details class="subsection">')
+        parts.append(f'<summary>Processes ({len(zone["processes"])})</summary>')
+        parts.append(_processes_section(zone["processes"]))
         parts.append('</details>')
 
     # Styles (collapsed by default — less commonly reviewed)

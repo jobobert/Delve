@@ -135,6 +135,26 @@ Drag responses to reorder them. Click **Graph** for the interactive dialogue flo
 
 Styles define a fighting style's passive abilities. Each passive has: ability ID, proficiency threshold, trigger (on_hit, on_defend, etc.), and script ops.
 
+### Process Editor
+
+Processes are per-player tick-driven background tasks — either a recurring script or an NPC route that moves an NPC through a sequence of rooms as the player acts.
+
+Fields:
+
+- **ID** — unique process identifier (e.g. `nessa_realm_route`)
+- **Name** — display name shown in the editor
+- **Admin Comment** — design notes
+- **Interval** — number of player action ticks between each process fire (1–999)
+- **Autostart** — if checked, the process starts automatically when a player enters the world; if unchecked, it must be started via a `process_start` script op
+- **Script** — optional script ops run every time the process fires
+- **Route NPC** — NPC ID to move along the waypoints (leave blank for script-only processes)
+- **Loop mode** — `cycle` (wrap back to the first waypoint) or `reverse` (ping-pong back and forth)
+- **Waypoints** — ordered list of `{room_id, ticks}` pairs. The NPC stays at each room for `ticks` process-fires before moving to the next. Use ↑/↓ to reorder, × to remove, and **+ Waypoint** to add.
+
+**Timing example:** interval=8, ticks=3 → the NPC stays at a waypoint for 8 × 3 = 24 player actions before moving.
+
+Processes are stored in `processes.toml` in the zone folder. They are controlled from scripts using the `process_start`, `process_stop`, and `process_pause` ops (see WORLD_MANUAL.md §21).
+
 ### Zone Editor (Notes)
 
 Click the **Notes** button on a zone header to edit:
@@ -255,4 +275,5 @@ data/
         <companion_id>.toml
       styles/
         styles.toml       ← [[style]] entries
+      processes.toml      ← [[process]] entries (optional)
 ```

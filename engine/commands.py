@@ -63,6 +63,7 @@ import engine.crafting  as crafting_mod
 import engine.quests as quests_mod
 from engine.quests import QuestTracker
 from engine.script import GameContext, ScriptRunner
+from engine.processes import ProcessManager
 import engine.world_config as _wc
 from engine.map_builder import build_map_data, exit_dest as _map_exit_dest
 
@@ -129,8 +130,10 @@ class CommandProcessor:
         self._quit_requested = False
 
         # Build GameContext for scripts/dialogues/quests
-        self._quests  = QuestTracker(player)
-        self._ctx     = GameContext(player=player, world=world, bus=bus, quests=self._quests)
+        self._quests    = QuestTracker(player)
+        self._processes = ProcessManager(world._world_path, world._zone_state_dir)
+        self._ctx       = GameContext(player=player, world=world, bus=bus,
+                                      quests=self._quests, processes=self._processes)
 
         # Teleport handler: scripts emit LOOK_ROOM after updating player.room_id
         bus.subscribe(Event.LOOK_ROOM, self._on_look_room)
@@ -238,6 +241,7 @@ class CommandProcessor:
         if verb not in _NO_TICK_COMMANDS:
             self._tick_status_effects()
             self._apply_status_damage()
+            self._processes.tick(self._ctx)
 
     def do_look(self) -> None:
         # Mark current room as visited whenever we look at it
@@ -1145,6 +1149,7 @@ class CommandProcessor:
     def _cmd_save(self, verb: str, args: str) -> None:
         self.player.save()
         self.world.save_all_zone_state()
+        self._processes.save_state()
         self._out(Tag.SYSTEM, "Character saved.")
 
     # ── Companion system ──────────────────────────────────────────────────────

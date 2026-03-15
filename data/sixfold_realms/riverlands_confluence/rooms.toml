@@ -44,7 +44,7 @@ description = "A circular chamber carved into the bedrock, its walls etched with
 coord = [0, 3]
 exits = {up = "rl_hidden_stair"}
 items = ["resonant_token"]
-on_enter = [{op = "if_not_flag", flag = "rl_echo_lore_seen", then = [{op = "message", tag = "lore", text = "Faint words shimmer across the stone: 'Five conduits feed the heart. When one falters, all tremble.'"}, {op = "set_flag", flag = "rl_echo_lore_seen"}, {op = "advance_quest", quest_id = "rivers_remember", step = 3}, {op = "complete_quest", quest_id = "rivers_remember"}, {op = "prestige", amount = 1, reason = "deciphered the inscription in the Echoing Chamber"}]}]
+on_enter = [{op = "if_not_flag", flag = "rl_echo_lore_seen", then = [{op = "message", tag = "lore", text = "Faint words shimmer across the stone: 'Five conduits feed the heart. When one falters, all tremble.'"}, {op = "set_flag", flag = "rl_echo_lore_seen"}, {op = "advance_quest", quest_id = "rivers_remember", step = 3}, {op = "complete_quest", quest_id = "rivers_remember"}, {op = "prestige", amount = 1, reason = "deciphered the inscription in the Echoing Chamber"}, {op = "process_start", process_id = "nessa_realm_route"}, {op = "message", tag = "system", text = "Word of this place will travel far. You sense that traders and wanderers will now find their way here."}]}]
 
 [[room]]
 id = "rl_market_row"
@@ -53,7 +53,7 @@ description = "A line of stalls and awnings, some abandoned, others stubbornly o
 coord = [1, 0]
 flags = ["no_combat"]
 exits = {west = "rl_ferrydock_square", east = "rl_inn_common", south = "rl_city_center", north = "rl_blacksmith_shop"}
-spawns = ["vendor_supplies", "crafter_boatwright"]
+spawns = ["vendor_supplies", "crafter_boatwright", "nessa_realm_walker"]
 
 [[room]]
 id = "rl_inn_common"

@@ -47,6 +47,9 @@
       <button class="type-nav-btn" data-type="style" onclick="setActiveType('style')">
         <span class="badge badge-style">S</span><span class="type-nav-label">Styles</span>
       </button>
+      <button class="type-nav-btn" data-type="process" onclick="setActiveType('process')">
+        <span class="badge badge-proc">P</span><span class="type-nav-label">Processes</span>
+      </button>
     </div>
     <div id="tree-resizer"></div>
     <div id="tree-detail">
@@ -221,6 +224,7 @@
         <button class="type-btn"        data-type="npc"   onclick="setNewType('npc')">NPC</button>
         <button class="type-btn"        data-type="item"  onclick="setNewType('item')">Item</button>
         <button class="type-btn"        data-type="zone"  onclick="setNewType('zone')">Zone</button>
+        <button class="type-btn"        data-type="process" onclick="setNewType('process')">Process</button>
       </div>
       <div class="field-row zone-select-row" id="new-zone-row">
         <label>Zone</label>
@@ -530,13 +534,12 @@ function renderTypeList(type) {
   list.innerHTML = '';
   if (!WORLD_DATA) return;
 
-  const key      = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type + 's';
+  const key      = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type === 'process' ? 'processes' : type + 's';
   const nameKey  = type === 'quest' ? 'title' : type === 'dialogue' ? '_npc_id' : 'name';
-  const badgeCls = {room:'badge-room',npc:'badge-npc',item:'badge-item',quest:'badge-quest',dialogue:'badge-dlg',style:'badge-style'}[type];
-  const badgeLtr = {room:'R',npc:'N',item:'I',quest:'Q',dialogue:'D',style:'S'}[type];
+  const badgeCls = {room:'badge-room',npc:'badge-npc',item:'badge-item',quest:'badge-quest',dialogue:'badge-dlg',style:'badge-style',process:'badge-proc'}[type];
+  const badgeLtr = {room:'R',npc:'N',item:'I',quest:'Q',dialogue:'D',style:'S',process:'P'}[type];
 
   const savedState = _loadZoneState();
-
   for (const [zid, zone] of Object.entries(WORLD_DATA.zones || {})) {
     const arr = zone[key] || [];
     if (!arr.length) continue;
@@ -947,6 +950,7 @@ function renderEditor() {
   else if (type === 'dialogue') renderDialogueEditor(main);
   else if (type === 'style')   renderStyleEditor(main);
   else if (type === 'zone')    renderZoneEditor(main);
+  else if (type === 'process') renderProcessEditor(main);
   else    main.innerHTML = '<div class="empty-state"><h2>Unknown type</h2></div>';
 }
 
@@ -989,6 +993,7 @@ async function deleteSelected() {
     if (type === 'npc')      zone.npcs      = (zone.npcs      || []).filter(r => r.id        !== eid);
     if (type === 'item')     zone.items     = (zone.items     || []).filter(r => r.id        !== eid);
     if (type === 'style')    zone.styles    = (zone.styles    || []).filter(r => r.id        !== eid);
+    if (type === 'process')  zone.processes = (zone.processes || []).filter(r => r.id        !== eid);
     if (type === 'quest')    zone.quests    = (zone.quests    || []).filter(r => (r._id || r.id) !== eid);
     if (type === 'dialogue') zone.dialogues = (zone.dialogues || []).filter(r => r._npc_id   !== eid);
   }
@@ -2140,6 +2145,127 @@ function _syncZoneComment(zid, comment) {
   setStatus('Zone notes saved from tab', 'ok');
 }
 
+// ── Process editor ────────────────────────────────────────────────────────────
+
+function renderProcessEditor(main) {
+  const d   = SELECTED.data;
+  const zid = SELECTED.zone_id;
+  main.appendChild(editorHeader('process', 'badge-proc', d.name || d.id || ''));
+
+  // Identity
+  main.appendChild(sectionTitle('Identity'));
+  appendIdRow(main, d, 'process', zid);
+  main.appendChild(fieldRow('Name', textInput(d.name || '', v => { d.name = v; markDirty(); })));
+  main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment || '', v => { d.admin_comment = v; markDirty(); }),
+    null, 'Internal note for world creators; not shown in-game.'));
+
+  // Settings
+  main.appendChild(sectionTitle('Settings', 'Interval: how many player action commands between each fire.\nautostart: if true, activates immediately on world load (no process_start needed).'));
+  main.appendChild(fieldRow('Interval', numInput(d.interval ?? 1, v => { d.interval = v; markDirty(); }, 1, 999, 1),
+    null, 'Fire every N player action commands (min 1).'));
+
+  const cbRow = document.createElement('div'); cbRow.className = 'field-row';
+  const cbLabel = document.createElement('label'); cbLabel.textContent = 'Autostart';
+  const cb = document.createElement('input'); cb.type = 'checkbox';
+  cb.style.accentColor = 'var(--accent)'; cb.style.width = '16px'; cb.style.height = '16px'; cb.style.cursor = 'pointer';
+  cb.checked = d.autostart || false;
+  cb.addEventListener('change', () => { d.autostart = cb.checked; markDirty(); });
+  cbRow.appendChild(cbLabel); cbRow.appendChild(cb); main.appendChild(cbRow);
+
+  // Script
+  main.appendChild(sectionTitle('Script', 'Script ops run on each process fire.\nLeave empty if using Route only.'));
+  const scriptDiv = document.createElement('div'); scriptDiv.style.cssText = 'padding-left:8px;';
+  const scriptBtn = document.createElement('button'); scriptBtn.className = 'hbtn';
+  scriptBtn.textContent = (d.script && d.script.length ? `Edit Script (${d.script.length} op${d.script.length !== 1 ? 's' : ''})` : 'Add Script');
+  scriptBtn.addEventListener('click', () => {
+    d.script = d.script || [];
+    openScriptModal('Process: ' + (d.name || d.id || 'script'), d.script, ops => { d.script = ops; markDirty(); renderProcessEditor(main); });
+  });
+  scriptDiv.appendChild(scriptBtn);
+  main.appendChild(scriptDiv);
+
+  // Route
+  main.appendChild(sectionTitle('NPC Route', 'Optional: move an NPC along a list of waypoints.\nLeave Route NPC blank to use Script only.'));
+  main.appendChild(fieldRow('Route NPC', refInput(d.route_npc || '', 'dl-npcs', v => { d.route_npc = v; markDirty(); }, 'npc'),
+    null, 'NPC id to move along the route. Must exist in the world.'));
+
+  const loopRow = document.createElement('div'); loopRow.className = 'field-row';
+  const loopLabel = document.createElement('label'); loopLabel.textContent = 'Loop mode';
+  const loopSel = document.createElement('select'); loopSel.className = 'field-select';
+  ['cycle', 'reverse'].forEach(v => {
+    const opt = document.createElement('option'); opt.value = v; opt.textContent = v;
+    if ((d.route_loop || 'cycle') === v) opt.selected = true;
+    loopSel.appendChild(opt);
+  });
+  loopSel.addEventListener('change', () => { d.route_loop = loopSel.value; markDirty(); });
+  loopRow.appendChild(loopLabel); loopRow.appendChild(loopSel); main.appendChild(loopRow);
+
+  main.appendChild(sectionTitle('Waypoints',
+    'Each waypoint: the room the NPC travels to, and how many process-fires to wait there.\n' +
+    'Timing = interval × ticks player actions per waypoint.\n' +
+    'E.g. interval=8, ticks=3 → NPC stays ~24 actions before moving.'));
+  _renderRouteWaypoints(main, d);
+}
+
+function _renderRouteWaypoints(main, d) {
+  d.route = d.route || [];
+  const container = document.createElement('div');
+  container.id = 'proc-route-container';
+  container.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+  const redraw = () => {
+    container.innerHTML = '';
+    d.route.forEach((wp, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+      // Room ref input
+      const roomInp = document.createElement('input');
+      roomInp.type = 'text'; roomInp.className = 'field-input'; roomInp.style.flex = '1';
+      roomInp.placeholder = 'room_id'; roomInp.value = wp.room_id || '';
+      roomInp.setAttribute('list', 'dl-rooms');
+      roomInp.addEventListener('input', () => { wp.room_id = roomInp.value; markDirty(); });
+
+      // Ticks
+      const tickLabel = document.createElement('span'); tickLabel.textContent = 'ticks:';
+      tickLabel.style.cssText = 'font-size:12px;color:var(--text-dim);white-space:nowrap;';
+      const tickInp = document.createElement('input');
+      tickInp.type = 'number'; tickInp.className = 'field-input'; tickInp.style.width = '60px';
+      tickInp.min = 1; tickInp.value = wp.ticks ?? 1;
+      tickInp.addEventListener('change', () => { wp.ticks = parseInt(tickInp.value, 10) || 1; markDirty(); });
+
+      // Move up/down
+      const upBtn = document.createElement('button'); upBtn.className = 'hbtn'; upBtn.textContent = '↑';
+      upBtn.style.padding = '2px 6px'; upBtn.title = 'Move up';
+      upBtn.disabled = i === 0;
+      upBtn.addEventListener('click', () => { [d.route[i-1], d.route[i]] = [d.route[i], d.route[i-1]]; markDirty(); redraw(); });
+
+      const dnBtn = document.createElement('button'); dnBtn.className = 'hbtn'; dnBtn.textContent = '↓';
+      dnBtn.style.padding = '2px 6px'; dnBtn.title = 'Move down';
+      dnBtn.disabled = i === d.route.length - 1;
+      dnBtn.addEventListener('click', () => { [d.route[i], d.route[i+1]] = [d.route[i+1], d.route[i]]; markDirty(); redraw(); });
+
+      // Remove
+      const rmBtn = document.createElement('button'); rmBtn.className = 'hbtn danger'; rmBtn.textContent = '×';
+      rmBtn.style.padding = '2px 6px'; rmBtn.title = 'Remove waypoint';
+      rmBtn.addEventListener('click', () => { d.route.splice(i, 1); markDirty(); redraw(); });
+
+      row.appendChild(roomInp); row.appendChild(tickLabel); row.appendChild(tickInp);
+      row.appendChild(upBtn); row.appendChild(dnBtn); row.appendChild(rmBtn);
+      container.appendChild(row);
+    });
+
+    // Add waypoint button
+    const addBtn = document.createElement('button'); addBtn.className = 'hbtn';
+    addBtn.textContent = '+ Waypoint';
+    addBtn.addEventListener('click', () => { d.route.push({ room_id: '', ticks: 1 }); markDirty(); redraw(); });
+    container.appendChild(addBtn);
+  };
+
+  redraw();
+  main.appendChild(container);
+}
+
 // ── World Notes (world.md) ────────────────────────────────────────────────────
 
 async function openWorldNotes() {
@@ -3052,7 +3178,7 @@ async function saveSelected() {
 
 function buildFileData(type, file, changedRecord) {
   // Find the zone that owns this file and rebuild the array
-  const recordType = {room:'room', npc:'npc', item:'item', style:'style'}[type] || type;
+  const recordType = {room:'room', npc:'npc', item:'item', style:'style', process:'process'}[type] || type;
   for (const [, zone] of Object.entries(WORLD_DATA.zones || {})) {
     const arr = zone[type + 's'] || [];
     if (!arr.some(r => r._file === file)) continue;
@@ -3167,6 +3293,9 @@ const OP_SCHEMA = {
   if_npc_hp:        [{key:'max',        type:'num',     label:'max'}, {branch:'then'}, {branch:'else'}],
   end_combat:       [],
   journal_entry:    [{key:'title',      type:'text',    label:'title'}, {key:'text', type:'text', label:'text'}],
+  process_start:    [{key:'process_id', type:'text',    label:'process'}],
+  process_stop:     [{key:'process_id', type:'text',    label:'process'}],
+  process_pause:    [{key:'process_id', type:'text',    label:'process'}],
 };
 const OP_NAMES = Object.keys(OP_SCHEMA).sort();
 
@@ -3632,6 +3761,9 @@ async function createNew() {
   } else if (_newType === 'item') {
     endpoint = '/api/create_item';
     payload  = { world_id: WORLD_ID, zone_id: zone_id, item: {id, name, type:'misc', description:''} };
+  } else if (_newType === 'process') {
+    endpoint = '/api/create_process';
+    payload  = { world_id: WORLD_ID, zone_id: zone_id, process: {id, name, interval: 1, autostart: false} };
   }
 
   const res  = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });

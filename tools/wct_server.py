@@ -321,6 +321,7 @@ def _load_world(world_id: str) -> dict:
             "companions": [],
             "crafting":   [],
             "styles":     [],
+            "processes":  [],
             "files":      [],   # all .toml files found
         }
 
@@ -408,6 +409,17 @@ def _load_world(world_id: str) -> dict:
                         zone["styles"].append(style)
                 except Exception:
                     pass
+
+        # Processes
+        proc_file = zone_dir / "processes.toml"
+        if proc_file.exists():
+            try:
+                data = toml_load(proc_file)
+                for proc in data.get("process", []):
+                    proc["_file"] = str(proc_file.relative_to(ROOT))
+                    zone["processes"].append(proc)
+            except Exception as e:
+                print(f"[WCT] processes.toml load error in {zid}: {e}", flush=True)
 
         world["zones"][zid] = zone
 
@@ -876,6 +888,23 @@ class WCTHandler(BaseHTTPRequestHandler):
             ok, err = _write_file(str(file_path.relative_to(ROOT)), existing)
             self._send_json({"ok": ok, "error": err})
 
+        elif path == "/api/create_process":
+            world_id  = body.get("world_id", "")
+            zone_id   = body.get("zone_id", "")
+            proc_data = body.get("process", {})
+            if not world_id or not zone_id or not proc_data.get("id"):
+                self._send_json({"ok": False, "error": "world_id, zone_id and process.id required"})
+                return
+            file_path = DATA_DIR / world_id / zone_id / "processes.toml"
+            try:
+                existing = toml_load(file_path) if file_path.exists() else {}
+            except Exception:
+                existing = {}
+            existing.setdefault("process", []).append(proc_data)
+            ok, err = _write_file(str(file_path.relative_to(ROOT)), existing)
+            self._send_json({"ok": ok, "error": err,
+                             "file": str(file_path.relative_to(ROOT))})
+
         elif path == "/api/create_dialogue":
             world_id = body.get("world_id", "")
             zone_id  = body.get("zone_id", "")
@@ -965,9 +994,9 @@ class WCTHandler(BaseHTTPRequestHandler):
                 self._send_json({"ok": False, "error": "world_id, zone_id, type and id required"})
                 return
 
-            if type_ in ("room", "npc", "item", "style"):
+            if type_ in ("room", "npc", "item", "style", "process"):
                 if not file_rel:
-                    self._send_json({"ok": False, "error": "file required for room/npc/item/style"})
+                    self._send_json({"ok": False, "error": "file required for room/npc/item/style/process"})
                     return
                 file_path = ROOT / file_rel
                 try:

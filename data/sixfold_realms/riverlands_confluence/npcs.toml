@@ -149,6 +149,35 @@ xp_reward   = 0
 gold_reward = 0
 hostile     = false
 
+# ── Nessa the Realm-Walker — traveling trader ────────────────────────────────
+# Starts in rl_market_row. Inactive until rivers_remember is completed,
+# then routed through all six realms by the "nessa_realm_route" process.
+
+[[npc]]
+id          = "nessa_realm_walker"
+name        = "Nessa the Realm-Walker"
+desc_short  = "A road-worn trader whose pack is covered in pins and tokens from distant places."
+desc_long   = "Nessa's coat is stitched with patches from every zone she has passed through — Peaks wax, Gloam-shadow, Heartwood bark, Mistfen quartz. She moves like someone who has made peace with being always in transit."
+tags        = ["humanoid", "townsfolk", "trader"]
+style       = "flowcurrent"
+style_prof  = 20
+hp          = 35
+max_hp      = 35
+attack      = 6
+defense     = 6
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+
+shop = [
+  { item_id = "rl_echo_pendant",    price = 55 },
+  { item_id = "dp_peak_forge_vial", price = 30 },
+  { item_id = "gr_twilight_ink",    price = 25 },
+  { item_id = "mf_bog_lens",        price = 45 },
+  { item_id = "mp_spore_silk_sash", price = 50 },
+  { item_id = "vh_sap_salve",       price = 35 },
+]
+
 # ── ENEMIES ──────────────────────────────────────────────────────────────────
 
 # Mire Wolf — spawns at lower piers. Riverlands scavenger drawn to the dock

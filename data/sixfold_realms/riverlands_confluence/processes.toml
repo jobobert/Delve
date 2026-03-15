@@ -1,0 +1,33 @@
+# riverlands_confluence/processes.toml
+#
+# nessa_realm_route — Moves Nessa the Realm-Walker through all six zones
+# on a repeating cycle. Triggered by completing the rivers_remember quest.
+#
+# Timing: interval=8 means the route checks every 8 player action commands.
+# Each waypoint ticks field is how many process-fires to wait before moving.
+# So rl_market_row (ticks=3) = 8 × 3 = 24 player actions at the home base.
+#
+# Zone start rooms used as waypoints:
+#   rl_market_row         — Riverlands Confluence (home base)
+#   dp_highspire_1        — Dragon Peaks (Highspire Hold)
+#   gr_entrance           — Gloamreach (Twilight Mouth)
+#   mf_path_reader_camp   — Mistfen Expanse (Path Reader's Camp)
+#   mp_entrance           — Mycelial Plains (Entrance)
+#   vh_edge               — Verdant Heartwood (Forest Edge)
+
+[[process]]
+id            = "nessa_realm_route"
+name          = "Nessa's Trading Route"
+interval      = 8
+autostart     = false
+admin_comment = "Activated on rivers_remember completion. Nessa cycles through all six realms."
+route_npc     = "nessa_realm_walker"
+route_loop    = "cycle"
+route = [
+  { room_id = "rl_market_row",       ticks = 3 },
+  { room_id = "dp_highspire_1",      ticks = 2 },
+  { room_id = "gr_entrance",         ticks = 2 },
+  { room_id = "mf_path_reader_camp", ticks = 2 },
+  { room_id = "mp_entrance",         ticks = 2 },
+  { room_id = "vh_edge",             ticks = 2 },
+]
