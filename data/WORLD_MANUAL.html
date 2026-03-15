@@ -521,7 +521,7 @@ spawns = [
   <td><code>lock_tag</code></td>
   <td>string</td>
   <td><code>""</code></td>
-  <td>Tag matched against item <code>key_tag</code> field for unlock</td>
+  <td>Tag matched against item <code>tags</code> array for unlock</td>
 </tr>
 <tr>
   <td><code>show_if</code></td>
@@ -1061,7 +1061,7 @@ round_script = [
   <td><code>tags</code></td>
   <td>list</td>
   <td>No</td>
-  <td>Item tags checked by <code>require_tag</code> script op and style affinity</td>
+  <td>Item tags; used by <code>require_tag</code> script op, style affinity, and door unlocking (any tag matching a door's <code>lock_tag</code> opens it)</td>
 </tr>
 <tr>
   <td><code>weapon_tags</code></td>
@@ -1076,11 +1076,6 @@ round_script = [
   <td>Tags for fighting-style armor affinity matching</td>
 </tr>
 <tr>
-  <td><code>key_tag</code></td>
-  <td>string</td>
-  <td>No</td>
-  <td>Unlocks any door with a matching <code>lock_tag</code></td>
-</tr>
 <tr>
   <td><code>respawn</code></td>
   <td>bool</td>
@@ -1210,7 +1205,7 @@ name        = &quot;Barracks Key&quot;
 desc_short  = &quot;A heavy iron key stamped with the town crest.&quot;
 slot        = &quot;&quot;
 weight      = 0
-key_tag     = &quot;barracks_lock&quot;
+tags        = [&quot;barracks_lock&quot;]
 respawn     = false</code></pre>
 <p><strong>Scenery / Mining node:</strong></p>
 

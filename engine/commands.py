@@ -25,7 +25,7 @@ Exits are either plain room-ID strings or door dicts:
   { to = "room_id", locked = bool, lock_tag = "tag", desc = "..." }
 _move() resolves both forms. Locked doors block movement and print a DOOR
 message. unlock/lock commands check the player's inventory for a matching
-key_tag.
+a matching tag in the item's `tags` array.
 
 Combat integration
 ──────────────────
@@ -297,6 +297,9 @@ class CommandProcessor:
             # Passive hazard damage — bypassed if player has an exemption flag
             exempt_flag = room.get("hazard_exempt_flag", "")
             if exempt_flag and exempt_flag in self.player.flags:
+                return
+            chance = room.get("hazard_chance", 1.0)
+            if chance < 1.0 and random.random() >= chance:
                 return
             dmg = room.get("hazard_damage", 2)
             self.player.hp -= dmg
@@ -1632,9 +1635,9 @@ class CommandProcessor:
         return None, None
 
     def _key_for_lock(self, lock_tag: str) -> "dict | None":
-        """Return the first inventory item that has a matching key_tag, or None."""
+        """Return the first inventory item whose tags include lock_tag, or None."""
         for item in self.player.inventory:
-            if item.get("key_tag") == lock_tag:
+            if lock_tag in item.get("tags", []):
                 return item
         return None
 

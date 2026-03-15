@@ -182,6 +182,18 @@ def _load_zone(zone_dir: Path) -> dict:
         except Exception:
             pass
 
+    crafting: list[dict] = []
+    crafting_dir = zone_dir / "crafting"
+    if crafting_dir.exists():
+        for f in sorted(crafting_dir.glob("*.toml")):
+            try:
+                cd = toml_load(f)
+                for comm in cd.get("commission", []):
+                    comm.setdefault("_file", f.stem)
+                    crafting.append(comm)
+            except Exception:
+                pass
+
     return {
         **zone_meta,
         "rooms":          rooms,
@@ -191,6 +203,7 @@ def _load_zone(zone_dir: Path) -> dict:
         "dialogue_nodes": dialogue_nodes,
         "dialogue_paths": dialogue_paths,
         "styles":         styles,
+        "crafting":       crafting,
     }
 
 
@@ -745,6 +758,18 @@ def _quest_html(quest: dict, world_path: Path, world_name: str,
 
 # ── Entity table builders ─────────────────────────────────────────────────────
 
+def _admin_comment_row(comment: str, colspan: int) -> str:
+    """Return a table row containing an admin comment, or empty string if no comment."""
+    if not comment:
+        return ""
+    return (
+        f'<tr class="admin-comment-row">'
+        f'<td colspan="{colspan}" class="admin-comment-cell">'
+        f'<span class="admin-comment-label">note:</span> {_h(comment)}'
+        f'</td></tr>'
+    )
+
+
 def _rooms_section(rooms: list[dict], all_rooms: dict) -> str:
     if not rooms:
         return "<p><em>No rooms.</em></p>"
@@ -758,6 +783,7 @@ def _rooms_section(rooms: list[dict], all_rooms: dict) -> str:
         items    = room.get("items", [])
         spwns    = room.get("spawns", [])
         on_enter = room.get("on_enter", [])
+        comment  = room.get("admin_comment", "")
 
         exit_parts = []
         for d, ev in exits.items():
@@ -784,6 +810,7 @@ def _rooms_section(rooms: list[dict], all_rooms: dict) -> str:
             f'<td class="small">{spwns_str}</td>'
             f'<td class="small">{_fmt_script_html(on_enter) if on_enter else "-"}</td>'
             f'</tr>'
+            + _admin_comment_row(comment, 7)
         )
 
     header = (
@@ -809,14 +836,19 @@ def _npcs_section(npcs: list[dict]) -> str:
         tags    = npc.get("tags", [])
         hostile = npc.get("hostile", True)
         kill    = npc.get("kill_script", [])
+        comment = npc.get("admin_comment", "")
+        shop    = npc.get("shop", [])
 
         hostile_str = "yes" if hostile else '<span class="friendly">no</span>'
         tags_str    = _h(", ".join(str(t) for t in tags))
+        shop_badge  = (
+            f' <span class="shop-badge">shop:{len(shop)}</span>' if shop else ""
+        )
 
         rows.append(
             f'<tr>'
             f'<td class="id-cell">{_h(nid)}</td>'
-            f'<td><b>{_h(name)}</b></td>'
+            f'<td><b>{_h(name)}</b>{shop_badge}</td>'
             f'<td class="center">{_h(str(hp))}</td>'
             f'<td class="center">{_h(str(atk))}</td>'
             f'<td class="center">{_h(str(df))}</td>'
@@ -825,6 +857,7 @@ def _npcs_section(npcs: list[dict]) -> str:
             f'<td class="small">{tags_str}</td>'
             f'<td class="small">{_fmt_script_html(kill) if kill else "-"}</td>'
             f'</tr>'
+            + _admin_comment_row(comment, 9)
         )
 
     header = (
@@ -849,6 +882,7 @@ def _items_section(items: list[dict]) -> str:
         scenery = item.get("scenery", False)
         on_get  = item.get("on_get", [])
         on_use  = item.get("on_use", [])
+        comment = item.get("admin_comment", "")
 
         scenery_s = "yes" if scenery else ""
         tags_str  = _h(", ".join(str(t) for t in tags))
@@ -864,6 +898,7 @@ def _items_section(items: list[dict]) -> str:
             f'<td class="small">{_fmt_script_html(on_get) if on_get else "-"}</td>'
             f'<td class="small">{_fmt_script_html(on_use) if on_use else "-"}</td>'
             f'</tr>'
+            + _admin_comment_row(comment, 8)
         )
 
     header = (
@@ -880,16 +915,110 @@ def _styles_section(styles: list[dict]) -> str:
         return "<p><em>No styles.</em></p>"
     rows: list[str] = []
     for s in styles:
-        sid  = s.get("id", "")
-        name = s.get("name", "")
-        desc = s.get("description", "")
+        sid     = s.get("id", "")
+        name    = s.get("name", "")
+        desc    = s.get("description", "")
+        comment = s.get("admin_comment", "")
         rows.append(
             f'<tr>'
             f'<td class="id-cell">{_h(sid)}</td>'
             f'<td><b>{_h(name)}</b><br><span class="desc">{_h(desc)}</span></td>'
             f'</tr>'
+            + _admin_comment_row(comment, 2)
         )
     header = '<thead><tr><th>ID</th><th>Name / Description</th></tr></thead>'
+    return f'<table class="entity-table"><{header}<tbody>{"".join(rows)}</tbody></table>'
+
+
+# ── Shop section ──────────────────────────────────────────────────────────────
+
+def _shop_section(npcs: list[dict]) -> str:
+    """Render shop inventories for all NPCs that have a shop."""
+    shop_npcs = [n for n in npcs if n.get("shop")]
+    if not shop_npcs:
+        return ""
+    rows: list[str] = []
+    for npc in shop_npcs:
+        nid  = npc.get("id", "")
+        name = npc.get("name", nid)
+        shop = npc.get("shop", [])
+        rows.append(
+            f'<tr class="shop-npc-header">'
+            f'<td colspan="3"><b>{_h(name)}</b> <span class="id-badge">{_h(nid)}</span></td>'
+            f'</tr>'
+        )
+        for entry in shop:
+            item_id = entry.get("item_id", "?")
+            price   = entry.get("price", "?")
+            stock   = entry.get("stock", "")
+            stock_s = f" (stock: {_h(str(stock))})" if stock != "" else ""
+            rows.append(
+                f'<tr>'
+                f'<td class="id-cell">{_h(item_id)}</td>'
+                f'<td>{_h(str(price))} gp{stock_s}</td>'
+                f'<td></td>'
+                f'</tr>'
+            )
+    header = (
+        '<thead><tr>'
+        '<th>Item ID</th><th>Price</th><th></th>'
+        '</tr></thead>'
+    )
+    return f'<table class="entity-table"><{header}<tbody>{"".join(rows)}</tbody></table>'
+
+
+# ── Crafting section ──────────────────────────────────────────────────────────
+
+def _crafting_section(crafting: list[dict]) -> str:
+    """Render crafting commissions."""
+    if not crafting:
+        return "<p><em>No commissions.</em></p>"
+    rows: list[str] = []
+    for comm in crafting:
+        cid       = comm.get("id", "")
+        label     = comm.get("label", comm.get("name", cid))
+        npc_id    = comm.get("npc_id", comm.get("_file", ""))
+        slot      = comm.get("slot", "")
+        materials = comm.get("materials", [])
+        result    = comm.get("result", "")
+        turns     = comm.get("turns_required", "")
+        gold      = comm.get("gold_cost", "")
+        xp        = comm.get("xp_reward", "")
+        qualities = comm.get("qualities", [])
+
+        mat_str  = _h(", ".join(str(m) for m in materials))
+        qual_str = _h(", ".join(
+            q.get("tier", "?") + (f' (+{q["attack_bonus"]}atk)' if "attack_bonus" in q
+                                   else f' (+{q["defense_bonus"]}def)' if "defense_bonus" in q
+                                   else "")
+            for q in qualities
+        ))
+        result_s = _h(result) if result else ""
+        turns_s  = _h(str(turns)) if turns != "" else ""
+        gold_s   = _h(str(gold)) if gold != "" else ""
+        xp_s     = _h(str(xp)) if xp != "" else ""
+
+        rows.append(
+            f'<tr>'
+            f'<td class="id-cell">{_h(cid)}</td>'
+            f'<td><b>{_h(label)}</b></td>'
+            f'<td class="small">{_h(npc_id)}</td>'
+            f'<td class="small">{_h(slot)}</td>'
+            f'<td class="small">{mat_str}</td>'
+            f'<td class="small">{result_s}</td>'
+            f'<td class="center">{turns_s}</td>'
+            f'<td class="center">{gold_s}</td>'
+            f'<td class="center">{xp_s}</td>'
+            f'<td class="small">{qual_str}</td>'
+            f'</tr>'
+        )
+    header = (
+        '<thead><tr>'
+        '<th>ID</th><th>Label</th><th>NPC</th><th>Slot</th>'
+        '<th>Materials</th><th>Result</th><th>Turns</th><th>Gold</th><th>XP</th>'
+        '<th>Quality tiers</th>'
+        '</tr></thead>'
+    )
     return f'<table class="entity-table"><{header}<tbody>{"".join(rows)}</tbody></table>'
 
 
@@ -943,31 +1072,54 @@ def _zone_section(zone: dict, color: str, all_rooms: dict, world_name: str, worl
         parts.append(f'<div class="admin-comment">{md2html.convert(comment_md)}</div>')
 
     # Map
+    parts.append(f'<h3 id="map-{_h(zid)}">Map</h3>')
     parts.append('<details class="subsection" open>')
     parts.append(f'<summary>Map ({len(zone["rooms"])} rooms)</summary>')
     parts.append(f'<div style="overflow:auto">{_zone_svg(zid, all_rooms, color)}</div>')
     parts.append('</details>')
 
     # Rooms
+    parts.append(f'<h3 id="rooms-{_h(zid)}">Rooms</h3>')
     parts.append('<details class="subsection" open>')
     parts.append(f'<summary>Rooms ({len(zone["rooms"])})</summary>')
     parts.append(_rooms_section(zone["rooms"], all_rooms))
     parts.append('</details>')
 
     # NPCs
+    parts.append(f'<h3 id="npcs-{_h(zid)}">NPCs</h3>')
     parts.append('<details class="subsection" open>')
     parts.append(f'<summary>NPCs ({len(zone["npcs"])})</summary>')
     parts.append(_npcs_section(zone["npcs"]))
     parts.append('</details>')
 
+    # Shop inventories
+    shop_npcs = [n for n in zone["npcs"] if n.get("shop")]
+    if shop_npcs:
+        parts.append(f'<h3 id="shops-{_h(zid)}">Shops</h3>')
+        parts.append('<details class="subsection" open>')
+        parts.append(f'<summary>Shops ({len(shop_npcs)} NPC{"s" if len(shop_npcs) != 1 else ""})</summary>')
+        parts.append(_shop_section(zone["npcs"]))
+        parts.append('</details>')
+
     # Items
+    parts.append(f'<h3 id="items-{_h(zid)}">Items</h3>')
     parts.append('<details class="subsection" open>')
     parts.append(f'<summary>Items ({len(zone["items"])})</summary>')
     parts.append(_items_section(zone["items"]))
     parts.append('</details>')
 
+    # Crafting commissions
+    crafting = zone.get("crafting", [])
+    if crafting:
+        parts.append(f'<h3 id="crafting-{_h(zid)}">Crafting</h3>')
+        parts.append('<details class="subsection" open>')
+        parts.append(f'<summary>Crafting ({len(crafting)} commission{"s" if len(crafting) != 1 else ""})</summary>')
+        parts.append(_crafting_section(crafting))
+        parts.append('</details>')
+
     # Styles (collapsed by default — less commonly reviewed)
     if zone["styles"]:
+        parts.append(f'<h3 id="styles-{_h(zid)}">Styles</h3>')
         parts.append('<details class="subsection">')
         parts.append(f'<summary>Styles ({len(zone["styles"])})</summary>')
         parts.append(_styles_section(zone["styles"]))
@@ -975,6 +1127,7 @@ def _zone_section(zone: dict, color: str, all_rooms: dict, world_name: str, worl
 
     # Quests
     if zone["quests"]:
+        parts.append(f'<h3 id="quests-{_h(zid)}">Quests</h3>')
         parts.append('<details class="subsection" open>')
         parts.append(f'<summary>Quests ({len(zone["quests"])})</summary>')
         for quest in zone["quests"]:
@@ -983,6 +1136,7 @@ def _zone_section(zone: dict, color: str, all_rooms: dict, world_name: str, worl
 
     # Dialogues
     if zone["dialogue_nodes"]:
+        parts.append(f'<h3 id="dialogues-{_h(zid)}">Dialogues</h3>')
         parts.append('<details class="subsection" open>')
         parts.append(f'<summary>Dialogues ({len(zone["dialogue_nodes"])} NPCs)</summary>')
         parts.append(_DLG_LEGEND_HTML)
@@ -1135,6 +1289,23 @@ h4 { font-size: 12px; margin: 8px 0 3px; color: #222; }
               font-size: 10px; margin: 1px; font-weight: bold; }
 .tag-set   { background: #d4edda; color: #1a5c2a; border: 1px solid #8bc89b; }
 .tag-clear { background: #f8d7da; color: #721c24; border: 1px solid #e8a0a5; }
+
+/* Admin comment rows in entity tables */
+.admin-comment-row td { background: #fffff0; border-bottom: 1px solid #e4e0da; }
+.admin-comment-cell { font-size: 10px; color: #6a5a00; font-style: italic;
+                      padding: 2px 8px 4px !important; }
+.admin-comment-label { font-style: normal; font-weight: bold; color: #8a7000;
+                       text-transform: uppercase; letter-spacing: 0.5px;
+                       margin-right: 4px; }
+
+/* Shop badge on NPC name */
+.shop-badge { font-size: 9px; background: #e0f0d8; color: #2a6a2a;
+              border: 1px solid #8bc89b; border-radius: 3px;
+              padding: 0 4px; font-weight: normal; margin-left: 4px; }
+
+/* Shop NPC header rows */
+.shop-npc-header td { background: #f0ede4; font-size: 11px;
+                      padding: 4px 8px !important; border-bottom: 1px solid #d8d0c0; }
 
 /* Quest/dialogue diagram toggle */
 .quest-graph-toggle { margin: 8px 0; border: 1px solid #d8d0b8; border-radius: 4px; }

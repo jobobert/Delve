@@ -54,7 +54,7 @@ id = "barracks_key"
 name = "Barracks Key"
 desc_short = "A heavy iron key stamped with a soldier's crest."
 desc_long = "Cold iron, well-worn from use. The bow is stamped with the crest of the Millhaven city guard — a tower over crossed blades. It opens the barracks storeroom."
-key_tag = "barracks_lock"
+tags    = ["barracks_lock"]
 weight = 0
 respawn = false
 

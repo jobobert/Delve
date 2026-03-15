@@ -11,7 +11,7 @@ coord = [0, 0]
 flags = ["town", "no_combat"]
 start = true
 exits = {north = "rl_mural_promenade", east = "rl_market_row", south = "rl_lower_piers", west = "rl_ferryman_shack"}
-spawns = ["kale_ferryman", "sela_mapmaker", "river_child", "rl_banker"]
+spawns = ["sela_mapmaker", "river_child", "rl_banker"]
 items = ["mural_inscription_fragment"]
 on_enter = [{op = "if_not_flag", flag = "rl_intro_seen", then = [{op = "message", tag = "system", text = "The rivers feel wrong here—like they are listening."}, {op = "set_flag", flag = "rl_intro_seen"}, {op = "advance_quest", quest_id = "rivers_remember", step = 1}]}]
 
@@ -51,8 +51,8 @@ id = "rl_market_row"
 name = "Market Row"
 description = "A line of stalls and awnings, some abandoned, others stubbornly open for trade."
 coord = [1, 0]
-flags = ["town", "no_combat"]
-exits = {west = "rl_ferrydock_square", east = "rl_inn_common"}
+flags = ["no_combat"]
+exits = {west = "rl_ferrydock_square", east = "rl_inn_common", south = "rl_city_center", north = "rl_blacksmith_shop"}
 spawns = ["vendor_supplies", "crafter_boatwright"]
 
 [[room]]
@@ -60,9 +60,9 @@ id = "rl_inn_common"
 name = "Confluence Inn Common Room"
 description = "A warm, low-ceilinged hall where the smell of stew fights the damp river air."
 coord = [2, 0]
-flags = ["town", "healing", "no_combat"]
+flags = ["healing", "no_combat"]
 heal_rate = 8
-exits = {west = "rl_market_row", up = "rl_inn_rooms"}
+exits = {west = "rl_market_row", up = "rl_inn_rooms", east = "rl_stable"}
 spawns = ["innkeeper_mara"]
 
 [[room]]
@@ -72,7 +72,7 @@ description = "A narrow hallway with simple doors on either side."
 coord = [2, 1]
 flags = ["healing", "no_combat"]
 heal_rate = 10
-exits = {down = "rl_inn_common"}
+exits = {down = "rl_inn_common", east = "rl_guest_room", west = {to = "rl_guest_room_2", locked = true, lock_tag = "guest_room_key"}}
 
 [[room]]
 id = "rl_lower_piers"
@@ -86,6 +86,7 @@ exits = {north = "rl_ferrydock_square", south = "rl_unstable_current"}
 items = ["driftwood_crate"]
 on_enter = [{op = "if_not_flag", flag = "rl_piers_warned", then = [{op = "message", tag = "system", text = "Someone has carved: 'Do not fall in. The river does not let go.'"}, {op = "set_flag", flag = "rl_piers_warned"}]}]
 spawns = [{id = "mire_wolf", spawn_chance = 0.5}]
+hazard_chance = 0.75
 
 [[room]]
 id = "rl_unstable_current"
@@ -95,7 +96,7 @@ coord = [0, -2]
 flags = ["hazard"]
 hazard_damage = 4
 hazard_message = "The current tugs at your balance and your thoughts."
-exits = {north = "rl_lower_piers"}
+exits = {north = "rl_lower_piers", south = {to = "rl_hovel", show_if = "rl_current_read"}}
 on_enter = [{op = "message", tag = "system", text = "You feel as though the river is trying to pull you somewhere that isn't here."}, {op = "skill_check", skill = "navigation", dc = 10, on_pass = [{op = "message", tag = "system", text = "You read the eddies and step where the planks are most stable."}, {op = "set_flag", flag = "rl_current_read"}], on_fail = [{op = "damage", amount = 5, message = "You misjudge a step and slam into the railing."}]}]
 spawns = [{id = "echo_wraith", spawn_chance = 0.5}]
 
@@ -110,3 +111,41 @@ id = "rl_ferryman_shack"
 name = "Ferryman’s Shack"
 description = "A weathered wooden shack filled with ropes, charts, and ferry logs. The ferryman often rests here between crossings."
 exits = {east = "rl_ferrydock_square", north = "rl_ferry_berth_peaks"}
+spawns = ["kale_ferryman"]
+
+[[room]]
+id = "rl_hovel"
+name = "Hovel"
+description = ""
+exits = {}
+items = ["rl_locket"]
+
+[[room]]
+id = "rl_guest_room"
+name = "Guest Room"
+description = ""
+exits = {}
+
+[[room]]
+id = "rl_guest_room_2"
+name = "Guest Room"
+description = ""
+exits = {}
+
+[[room]]
+id = "rl_stable"
+name = "Stable"
+description = ""
+exits = {}
+
+[[room]]
+id = "rl_city_center"
+name = "City Center"
+description = ""
+exits = {}
+
+[[room]]
+id = "rl_blacksmith_shop"
+name = "Blacksmith Shop"
+description = ""
+exits = {}

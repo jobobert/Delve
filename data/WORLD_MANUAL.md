@@ -285,7 +285,7 @@ exits = {
 | `to` | string | **required** | Destination room ID |
 | `desc` | string | `""` | Door description shown when player examines the exit |
 | `locked` | bool | `false` | Whether the door starts locked |
-| `lock_tag` | string | `""` | Tag matched against item `key_tag` field for unlock |
+| `lock_tag` | string | `""` | Tag matched against item `tags` array for unlock |
 | `show_if` | condition dict | none | Exit is invisible and impassable unless condition passes |
 | `on_look` | script array | `[]` | Script run when player examines this exit (`look north`) |
 | `on_exit` | script array | `[]` | Script run in the **source** room before the player leaves |
@@ -549,10 +549,9 @@ Items are defined in `[[item]]` blocks in a zone's `items.toml`.
 | `desc_long` | string | Recommended | Full description (shown with `examine <item>`) |
 | `slot` | string | No | Equipment slot; `""` = non-equippable — see [Appendix B](#appendix-b--equipment-slots) |
 | `weight` | int | No | Carry weight in stones (0 = weightless) |
-| `tags` | list | No | Item tags checked by `require_tag` script op and style affinity |
+| `tags` | list | No | Item tags; used by `require_tag` script op, style affinity, and door unlocking (any tag matching a door's `lock_tag` opens it) |
 | `weapon_tags` | list | No | Tags for fighting-style weapon affinity matching |
 | `armor_tags` | list | No | Tags for fighting-style armor affinity matching |
-| `key_tag` | string | No | Unlocks any door with a matching `lock_tag` |
 | `respawn` | bool | No | `false` = removed after pickup, tracked in player's looted set |
 | `no_drop` | bool | No | `true` = cannot be dropped; stays with player on death |
 | `scenery` | bool | No | `true` = visible but cannot be picked up |
@@ -643,7 +642,7 @@ name        = "Barracks Key"
 desc_short  = "A heavy iron key stamped with the town crest."
 slot        = ""
 weight      = 0
-key_tag     = "barracks_lock"
+tags        = ["barracks_lock"]
 respawn     = false
 ```
 

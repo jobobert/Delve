@@ -355,6 +355,7 @@ let ALL_ITEMS  = {};  // id → {name, zone_id, _file}
 let ALL_QUESTS = {};  // id → {title, zone_id, _file}
 let ALL_TAGS      = [];  // sorted unique tag strings, rebuilt on world load
 let TAG_COMMENTS  = {};  // tag → admin comment string, persisted in localStorage
+let TAG_CATEGORIES = {}; // tag → category string, persisted in localStorage
 
 let _ACTIVE_TYPE = 'room';  // which type button is currently selected in nav
 
@@ -433,8 +434,9 @@ async function loadWorld(worldId) {
   buildErrorList();
   renderTypeList(_ACTIVE_TYPE);
   TAG_COMMENTS = _loadTagComments();
+  TAG_CATEGORIES = _loadTagCategories();
   rebuildTagPalette();
-  SELECTED = null; DIRTY = false;
+  SELECTED = null; DIRTY = false; _setDirtyUI(false);
   renderEditor();
   document.getElementById('xref-body').innerHTML = '<div class="xref-empty">Select an object to see where it is used.</div>';
   document.getElementById('btn-config').disabled       = false;
@@ -658,7 +660,18 @@ function collectAllTags() {
         t.forEach(tag => set.add(tag));
       });
     });
+    (zone.rooms || []).forEach(r => {
+      Object.values(r.exits || {}).forEach(v => {
+        if (typeof v === 'object' && v?.lock_tag) set.add(v.lock_tag);
+      });
+    });
   }
+  // Style tag arrays (strong_vs, weak_vs, preferred_weapon_tags, preferred_armor_tags)
+  (WORLD_CONFIG?.styles || []).forEach(s => {
+    ['strong_vs','weak_vs','preferred_weapon_tags','preferred_armor_tags'].forEach(field => {
+      (s[field] || []).forEach(tag => set.add(tag));
+    });
+  });
   return [...set].sort();
 }
 
@@ -669,12 +682,13 @@ function rebuildTagPalette() {
   if (!box) return;
   box.innerHTML = '';
   if (count) count.textContent = '(' + ALL_TAGS.length + ')';
-  ALL_TAGS.forEach(tag => {
+
+  const makeChip = tag => {
     const chip = document.createElement('span');
     chip.className = 'tag-palette-chip';
     chip.textContent = tag;
     chip.dataset.tag = tag;
-    chip.title       = TAG_COMMENTS[tag] ? TAG_COMMENTS[tag] : 'Click to add notes';
+    chip.title       = TAG_COMMENTS[tag] ? TAG_COMMENTS[tag] : 'Click to add notes/category';
     if (TAG_COMMENTS[tag]) chip.style.boxShadow = 'inset 0 -2px 0 var(--accent)';
     chip.draggable = true;
     chip.addEventListener('dragstart', e => {
@@ -690,7 +704,27 @@ function rebuildTagPalette() {
       clearDropHint();
     });
     chip.addEventListener('click', () => showTagPopup(tag));
-    box.appendChild(chip);
+    return chip;
+  };
+
+  // Group by category; uncategorised → ''
+  const groups = {}; // category → tags[]
+  ALL_TAGS.forEach(tag => {
+    const cat = TAG_CATEGORIES[tag] || '';
+    (groups[cat] = groups[cat] || []).push(tag);
+  });
+
+  // Sort: named categories alphabetically, then '' (uncategorised) last
+  const cats = Object.keys(groups).sort((a, b) => {
+    if (!a) return 1; if (!b) return -1; return a.localeCompare(b);
+  });
+
+  cats.forEach(cat => {
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin:6px 0 2px;width:100%;';
+    hdr.textContent = cat || 'Uncategorized';
+    box.appendChild(hdr);
+    groups[cat].forEach(tag => box.appendChild(makeChip(tag)));
   });
 }
 
@@ -711,6 +745,27 @@ function _saveTagComment(tag, text) {
   localStorage.setItem(key, JSON.stringify(TAG_COMMENTS));
 }
 
+function _tagCategoriesKey() { return WORLD_ID ? 'wct_tagcats_' + WORLD_ID : null; }
+
+function _loadTagCategories() {
+  const key = _tagCategoriesKey();
+  if (!key) return {};
+  try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (_) { return {}; }
+}
+
+function _saveTagCategory(tag, cat) {
+  const key = _tagCategoriesKey();
+  if (!key) return;
+  if (cat) TAG_CATEGORIES[tag] = cat; else delete TAG_CATEGORIES[tag];
+  localStorage.setItem(key, JSON.stringify(TAG_CATEGORIES));
+}
+
+function _allTagCategoryOptions() {
+  const base = ['npc', 'item', 'room', 'key'];
+  const used = new Set([...base, ...Object.values(TAG_CATEGORIES)]);
+  return [...used].sort();
+}
+
 function showTagPopup(tag) {
   const existing = document.getElementById('tag-comment-modal');
   if (existing) existing.remove();
@@ -729,6 +784,22 @@ function showTagPopup(tag) {
         if (t.includes(tag)) usages.push({type:'item', zone:zid, id:i.id, name:i.name||i.id, field});
       });
     });
+    (zone.rooms || []).forEach(r => {
+      Object.entries(r.exits || {}).forEach(([dir, v]) => {
+        if (typeof v === 'object' && v?.lock_tag === tag)
+          usages.push({type:'room', zone:zid, id:r.id, name:r.name||r.id, field:`exit (${dir}) lock_tag`});
+      });
+    });
+  }
+  // Style matchup arrays (scan per-zone so we have zone_id for navigation)
+  for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+    (zone.styles || []).forEach(s => {
+      [['strong_vs','strong vs'],['weak_vs','weak vs'],
+       ['preferred_weapon_tags','weapon affinity'],['preferred_armor_tags','armor affinity']].forEach(([field, label]) => {
+        if ((s[field] || []).includes(tag))
+          usages.push({type:'style', zone:zid, id:s.id, name:s.name||s.id, field:label});
+      });
+    });
   }
 
   const backdrop = document.createElement('div');
@@ -741,11 +812,14 @@ function showTagPopup(tag) {
         <button class="modal-close" id="tag-modal-close">&#x2715;</button>
       </div>
       <div class="modal-body">
+        <datalist id="tag-cat-dl">${_allTagCategoryOptions().map(c => `<option value="${escHtml(c)}">`).join('')}</datalist>
+        <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Category</label>
+        <input id="tag-cat-inp" list="tag-cat-dl" style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:12px;padding:6px;box-sizing:border-box;margin-bottom:10px" placeholder="e.g. npc, item, room, key" value="${escHtml(TAG_CATEGORIES[tag] || '')}">
         <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Notes</label>
         <textarea id="tag-comment-ta" style="width:100%;height:70px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:12px;padding:6px;resize:vertical;box-sizing:border-box" placeholder="What does this tag mean, how is it used...">${escHtml(TAG_COMMENTS[tag] || '')}</textarea>
         <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px">Used by (${usages.length})</div>
         <div id="tag-usage-list" style="display:flex;flex-direction:column;gap:3px;max-height:180px;overflow-y:auto">
-          ${usages.length ? '' : '<div style="color:var(--text-dim);font-size:12px;font-style:italic">Not used in any NPC or item.</div>'}
+          ${usages.length ? '' : '<div style="color:var(--text-dim);font-size:12px;font-style:italic">Not used anywhere in this world.</div>'}
         </div>
       </div>
     </div>`;
@@ -755,8 +829,8 @@ function showTagPopup(tag) {
   const ul = document.getElementById('tag-usage-list');
   usages.forEach(u => {
     const el   = document.createElement('div');
-    const bcls = u.type === 'npc' ? 'badge-npc' : 'badge-item';
-    const bltr = u.type === 'npc' ? 'N' : 'I';
+    const bcls = u.type === 'npc' ? 'badge-npc' : u.type === 'room' ? 'badge-room' : u.type === 'style' ? 'badge-style' : 'badge-item';
+    const bltr = u.type === 'npc' ? 'N' : u.type === 'room' ? 'R' : u.type === 'style' ? 'S' : 'I';
     el.style.cssText = 'display:flex;align-items:center;gap:6px;padding:2px 0;cursor:pointer';
     el.innerHTML = `<span class="badge ${bcls}">${bltr}</span><span style="font-size:12px">${escHtml(u.name)}${u.field ? ' <span style="color:var(--text-dim)">(' + escHtml(u.field) + ')</span>' : ''}</span><span style="font-size:11px;color:var(--text-dim);margin-left:auto">${escHtml(u.zone)}</span>`;
     el.title = `Go to ${u.name}`;
@@ -769,9 +843,14 @@ function showTagPopup(tag) {
     const text = e.target.value.trim();
     _saveTagComment(tag, text);
     document.querySelectorAll(`.tag-palette-chip[data-tag="${CSS.escape(tag)}"]`).forEach(c => {
-      c.title           = text || 'Click to add notes';
+      c.title           = text || 'Click to add notes/category';
       c.style.boxShadow = text ? 'inset 0 -2px 0 var(--accent)' : '';
     });
+  });
+  document.getElementById('tag-cat-inp').addEventListener('input', e => {
+    const cat = e.target.value.trim();
+    _saveTagCategory(tag, cat);
+    rebuildTagPalette();
   });
 
   const closeModal = () => { backdrop.remove(); document.removeEventListener('keydown', onKey); };
@@ -789,8 +868,8 @@ function selectObject(type, zone_id, data) {
   if (DIRTY) {
     if (!confirm('You have unsaved changes. Discard?')) return;
   }
-  SELECTED = { type, zone_id, data: structuredClone(data) };
-  DIRTY    = false;
+  SELECTED = { type, zone_id, data: structuredClone(data), _orig_id: data.id || data._id || data._npc_id || '' };
+  DIRTY    = false; _setDirtyUI(false);
 
   // Cross-reference panel
   const xrefId = data.id || data._id || data._npc_id || '';
@@ -808,9 +887,24 @@ function selectObject(type, zone_id, data) {
 }
 
 let _errorRebuildTimer = null;
+function _setDirtyUI(dirty) {
+  const tb = document.getElementById('btn-save');
+  if (tb) {
+    tb.classList.toggle('dirty', dirty);
+    tb.classList.toggle('primary', !dirty);
+  }
+  document.querySelectorAll('.editor-actions .hbtn.primary, .editor-actions .hbtn.dirty').forEach(b => {
+    b.classList.toggle('dirty', dirty);
+    b.classList.toggle('primary', !dirty);
+  });
+  const titleEl = document.querySelector('.editor-title');
+  if (titleEl) titleEl.style.opacity = dirty ? '0.75' : '';
+}
+
 function markDirty() {
   DIRTY = true;
   document.getElementById('btn-save').disabled = false;
+  _setDirtyUI(true);
 
   // Sync the edited clone back to WORLD_DATA so buildErrorList() sees current state.
   // SELECTED.data is a structuredClone (disconnected from zone arrays), so we write
@@ -903,7 +997,7 @@ async function deleteSelected() {
   if (type === 'item')  delete ALL_ITEMS[eid];
 
   SELECTED = null;
-  DIRTY = false;
+  DIRTY = false; _setDirtyUI(false);
   rebuildDataLists();
   buildXRef();
   renderTypeList(_ACTIVE_TYPE);
@@ -1302,6 +1396,8 @@ function renderRoomEditor(main) {
     null, 'Text shown on each hazard tick.\nDefault: "The environment bites at you."'));
   main.appendChild(fieldRow('Hazard Exempt Flag', textInput(d.hazard_exempt_flag, v => d.hazard_exempt_flag = v),
     null, 'Player flag that bypasses hazard damage.\nExample: "has_mining_gear"'));
+  main.appendChild(fieldRow('Hazard Chance', numInput(d.hazard_chance, v => d.hazard_chance = v, 0, 1, 0.05),
+    null, 'Probability (0–1) hazard fires each command tick. Default: 1.0 (always).'));
   main.appendChild(fieldRow('Heal Rate', numInput(d.heal_rate, v => d.heal_rate = v, 0),
     null, 'HP restored per command when the "healing" flag is set. Default: 5.'));
   main.appendChild(fieldRow('Room Light', numInput(d.light, v => d.light = v, 0, 10),
@@ -1617,8 +1713,6 @@ function renderItemEditor(main) {
   cbHelp.textContent = 'No Drop: cannot be dropped, kept on death.  Respawn: reappears each zone load.  Scenery: visible but cannot be picked up.';
   main.appendChild(cbHelp);
 
-  main.appendChild(fieldRow('Key Tag', textInput(d.key_tag || '', v => { d.key_tag = v || undefined; markDirty(); }),
-    null, 'Unlocks any door whose lock_tag matches this value.\nLeave blank for non-key items.'));
   const itemExtraRow = document.createElement('div'); itemExtraRow.className = 'field-row inline';
   function itemExtraPair(lbl, key, tip) {
     const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.gap='3px';
@@ -1902,6 +1996,11 @@ function renderStyleEditor(main) {
   main.appendChild(fieldRow('Learned at', numInput(d.learned_at, v => { d.learned_at = v; markDirty(); }, 0, 100),
     null, 'Minimum player level to learn this style (0 = any level).'));
 
+  // Admin comment
+  main.appendChild(sectionTitle('Admin Comment'));
+  main.appendChild(fieldRow('Comment', textareaInput(d.admin_comment, v => { d.admin_comment = v; markDirty(); }),
+    null, 'Internal note for world creators; not shown to players.'));
+
   // Passives
   main.appendChild(sectionTitle('Passives', 'Passive abilities triggered during combat.\nEach fires when trigger matches and player proficiency >= threshold.'));
   renderStylePassives(main, d);
@@ -1916,7 +2015,7 @@ function selectZone(zid) {
   const zone = WORLD_DATA?.zones?.[zid];
   const meta = zone?.meta || { id: zid, name: zid, description: '', admin_comment: '' };
   SELECTED = { type: 'zone', zone_id: zid, data: structuredClone(meta) };
-  DIRTY = false;
+  DIRTY = false; _setDirtyUI(false);
   document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('selected'));
   renderEditor();
   document.getElementById('btn-save').disabled = false;
@@ -1942,6 +2041,10 @@ function renderZoneEditor(main) {
     val.textContent = d.description;
     row.appendChild(lbl); row.appendChild(val); main.appendChild(row);
   }
+
+  main.appendChild(sectionTitle('ID Prefix', 'Default prefix for new object IDs in this zone.\nIf set, new rooms/NPCs/items will use this prefix instead of the zone ID.\nLeave blank to use the zone ID (default).'));
+  main.appendChild(fieldRow('Prefix', textInput(d.prefix || '', v => { d.prefix = v; markDirty(); }),
+    null, 'e.g. "bf" → new rooms get id "bf_my_room" instead of "blackfen_my_room"'));
 
   main.appendChild(sectionTitle('Zone Notes', 'Story documentation for this zone (markdown). Not used by the engine.'));
 
@@ -2033,7 +2136,7 @@ function _syncZoneComment(zid, comment) {
     const ta = document.getElementById('zone-comment-ta');
     if (ta) ta.value = comment;
   }
-  DIRTY = false;
+  DIRTY = false; _setDirtyUI(false);
   setStatus('Zone notes saved from tab', 'ok');
 }
 
@@ -2768,27 +2871,124 @@ function appendIdRow(main, d, type, zone_id) {
 
 function makeId(zone_id, name) {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-  return zone_id + '_' + slug;
+  const prefix = WORLD_DATA?.zones?.[zone_id]?.meta?.prefix || zone_id;
+  return prefix + '_' + slug;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
 // Save
 // ═══════════════════════════════════════════════════════════════════════
 
+function _confirmRename(oldId, newId, refs) {
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.style.zIndex = '600';
+
+    const box = document.createElement('div');
+    box.className = 'modal';
+    box.style.cssText = 'min-width:420px;max-width:560px;';
+
+    const hdr = document.createElement('div'); hdr.className = 'modal-header';
+    const title = document.createElement('span'); title.className = 'modal-title';
+    title.textContent = `Rename ID`;
+    hdr.appendChild(title);
+    box.appendChild(hdr);
+
+    const body = document.createElement('div'); body.className = 'modal-body';
+    const p = document.createElement('p');
+    p.style.cssText = 'margin:0 0 10px;';
+    p.innerHTML = `Rename <b>${escHtml(oldId)}</b> → <b>${escHtml(newId)}</b><br>
+      ${refs.length === 0
+        ? 'No references found in world data.'
+        : `Found <b>${refs.length}</b> reference${refs.length !== 1 ? 's' : ''} that will be updated:`}`;
+    body.appendChild(p);
+    if (refs.length > 0) {
+      const ul = document.createElement('ul');
+      ul.style.cssText = 'margin:0 0 8px;max-height:180px;overflow-y:auto;padding-left:18px;font-size:13px;';
+      refs.forEach(r => {
+        const li = document.createElement('li');
+        li.textContent = `${r.type} "${r.name || r.id}" — ${r.context}`;
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    }
+    box.appendChild(body);
+
+    const footer = document.createElement('div'); footer.className = 'modal-footer';
+
+    const done = (result) => { document.body.removeChild(backdrop); resolve(result); };
+
+    const btnCancel = document.createElement('button');
+    btnCancel.className = 'hbtn'; btnCancel.textContent = 'Cancel';
+    btnCancel.onclick = () => done('cancel');
+
+    const btnSave = document.createElement('button');
+    btnSave.className = 'hbtn'; btnSave.textContent = 'Save ID only';
+    btnSave.title = 'Change ID in this record only; existing references will break.';
+    btnSave.onclick = () => done('save_only');
+
+    const btnRename = document.createElement('button');
+    btnRename.className = 'hbtn primary';
+    btnRename.textContent = refs.length > 0
+      ? `Rename + update ${refs.length} ref${refs.length !== 1 ? 's' : ''}`
+      : 'Rename';
+    btnRename.onclick = () => done('rename');
+
+    footer.appendChild(btnCancel);
+    footer.appendChild(btnSave);
+    footer.appendChild(btnRename);
+    box.appendChild(footer);
+
+    backdrop.appendChild(box);
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) done('cancel'); });
+    document.body.appendChild(backdrop);
+  });
+}
+
 async function saveSelected() {
   if (!SELECTED) return;
   const { type, zone_id, data } = SELECTED;
   setStatus('Saving...', '');
+
+  // ID rename detection
+  const _origId = SELECTED._orig_id || '';
+  const _newId  = data.id || data._npc_id || '';
+  if (_origId && _newId && _origId !== _newId) {
+    const refs = XREF[_origId] || [];
+    const choice = await _confirmRename(_origId, _newId, refs);
+    if (choice === 'cancel') { setStatus('', ''); return; }
+    if (choice === 'rename') {
+      const res = await fetch('/api/rename_id', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ world_id: WORLD_ID, old_id: _origId, new_id: _newId }),
+      });
+      const j = await res.json();
+      if (j.ok) {
+        DIRTY = false; _setDirtyUI(false);
+        SELECTED._orig_id = _newId;
+        const n = (j.changed || []).length;
+        setStatus(`Renamed ${_origId} → ${_newId}${n ? ` (${n} file${n !== 1 ? 's' : ''} updated)` : ''}`, 'ok');
+        await reloadWorld();
+        _saveUiState();
+      } else {
+        setStatus('Rename error: ' + j.error, 'err');
+      }
+      return;
+    }
+    // 'save_only': fall through to normal save
+  }
 
   // Zone comment is saved via its own endpoint
   if (type === 'zone') {
     const res = await fetch('/api/zone_comment', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ world_id: WORLD_ID, zone_id, admin_comment: data.admin_comment || '' }),
+      body: JSON.stringify({ world_id: WORLD_ID, zone_id, admin_comment: data.admin_comment || '', prefix: data.prefix || '' }),
     });
     const j = await res.json();
-    if (j.ok) { DIRTY = false; setStatus('Saved', 'ok'); _saveUiState(); }
+    if (j.ok) { DIRTY = false; _setDirtyUI(false); setStatus('Saved', 'ok'); _saveUiState(); }
     else setStatus('Error: ' + j.error, 'err');
     return;
   }
@@ -2807,7 +3007,7 @@ async function saveSelected() {
     const clean = serialiseQuest(data);
     const res = await fetch('/api/write_file', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, data: clean }) });
     const j = await res.json();
-    if (j.ok) { DIRTY = false; setStatus('Saved', 'ok'); _saveUiState(); }
+    if (j.ok) { DIRTY = false; _setDirtyUI(false); setStatus('Saved', 'ok'); _saveUiState(); }
     else setStatus('Error: ' + j.error, 'err');
     return;
   }
@@ -2816,7 +3016,7 @@ async function saveSelected() {
     const clean = serialiseDlg(data);
     const res = await fetch('/api/write_file', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, data: clean }) });
     const j = await res.json();
-    if (j.ok) { DIRTY = false; setStatus('Saved', 'ok'); _saveUiState(); }
+    if (j.ok) { DIRTY = false; _setDirtyUI(false); setStatus('Saved', 'ok'); _saveUiState(); }
     else setStatus('Error: ' + j.error, 'err');
     return;
   }
@@ -2830,7 +3030,7 @@ async function saveSelected() {
   });
   const j = await res.json();
   if (j.ok) {
-    DIRTY = false;
+    DIRTY = false; _setDirtyUI(false);
     setStatus('Saved', 'ok');
     const _savedKey = SELECTED
       ? { type: SELECTED.type, zone_id: SELECTED.zone_id,
@@ -3086,7 +3286,7 @@ function saveScript() {
 // Exit editor modal
 // ═══════════════════════════════════════════════════════════════════════
 
-let _exitData = {};   // direction → {to, locked, lock_tag, show_if, on_exit}
+let _exitData = {};   // direction → {to, locked, lock_tag, desc, show_if, on_exit, on_enter, on_look}
 
 function openExitModal(roomData, callback) {
   _exitCallback = callback;
@@ -3094,14 +3294,17 @@ function openExitModal(roomData, callback) {
   _exitData = {};
   for (const [dir, v] of Object.entries(roomData.exits || {})) {
     if (typeof v === 'string') {
-      _exitData[dir] = {to: v, locked: false, lock_tag: '', show_if: '', on_exit: []};
+      _exitData[dir] = {to: v, locked: false, lock_tag: '', desc: '', show_if: '', on_exit: [], on_enter: [], on_look: []};
     } else {
       _exitData[dir] = {
         to:       v.to       || '',
         locked:   !!v.locked,
         lock_tag: v.lock_tag || '',
+        desc:     v.desc     || '',
         show_if:  v.show_if  || '',
-        on_exit:  Array.isArray(v.on_exit) ? v.on_exit : [],
+        on_exit:  Array.isArray(v.on_exit)  ? v.on_exit  : [],
+        on_enter: Array.isArray(v.on_enter) ? v.on_enter : [],
+        on_look:  Array.isArray(v.on_look)  ? v.on_look  : [],
       };
     }
   }
@@ -3124,7 +3327,7 @@ function buildExitRow(dir, v) {
 
   // Direction input
   const dirInp = document.createElement('input'); dirInp.type='text'; dirInp.className='op-input';
-  dirInp.style.width='90px'; dirInp.value = dir;
+  dirInp.style.width='90px'; dirInp.value = dir; dirInp.placeholder = 'direction';
   dirInp.setAttribute('list','dl-directions');
   dirInp.addEventListener('change', () => {
     if (dirInp.value !== dir && dirInp.value) {
@@ -3146,7 +3349,6 @@ function buildExitRow(dir, v) {
     const m = toInp.value.match(/\(([^)]+)\)$/);
     v.to = m ? m[1] : toInp.value;
   });
-  // drag target
   toInp.addEventListener('dragover', e => { e.preventDefault(); toInp.classList.add('ref-drop'); });
   toInp.addEventListener('dragleave', () => toInp.classList.remove('ref-drop'));
   toInp.addEventListener('drop', e => { e.preventDefault(); toInp.classList.remove('ref-drop'); if(e.dataTransfer.getData('wct/type')==='room'){const id=e.dataTransfer.getData('wct/id');toInp.value=id;v.to=id;} });
@@ -3158,7 +3360,7 @@ function buildExitRow(dir, v) {
   lockCb.title='Locked';
   const lockLbl = document.createElement('label'); lockLbl.className='checkbox-row';
   lockLbl.appendChild(lockCb); lockLbl.appendChild(document.createTextNode(' locked'));
-  lockCb.addEventListener('change', () => { v.locked = lockCb.checked; tagRow.style.display = v.locked ? '' : 'none'; });
+  lockCb.addEventListener('change', () => { v.locked = lockCb.checked; lockRow.style.display = v.locked ? '' : 'none'; });
   top.appendChild(lockLbl);
 
   // Remove
@@ -3167,29 +3369,58 @@ function buildExitRow(dir, v) {
   top.appendChild(rmBtn);
   card.appendChild(top);
 
-  // Lock tag row (visible when locked)
-  const tagRow = document.createElement('div'); tagRow.className='exit-row-advanced';
-  tagRow.style.display = v.locked ? '' : 'none';
-  const tagLbl = document.createElement('span'); tagLbl.className='op-field-label'; tagLbl.textContent='lock_tag:';
-  const tagInp = document.createElement('input'); tagInp.type='text'; tagInp.className='op-input';
-  tagInp.style.flex='1'; tagInp.value = v.lock_tag || '';
-  tagInp.addEventListener('input', () => v.lock_tag = tagInp.value);
-  tagRow.appendChild(tagLbl); tagRow.appendChild(tagInp);
+  // Lock tag row (visible only when locked)
+  const lockRow = document.createElement('div'); lockRow.className='exit-row-advanced';
+  lockRow.style.display = v.locked ? '' : 'none';
+  const lockTagLbl = document.createElement('span'); lockTagLbl.className='op-field-label'; lockTagLbl.textContent='lock_tag:';
+  const lockTagInp = document.createElement('input'); lockTagInp.type='text'; lockTagInp.className='op-input';
+  lockTagInp.style.flex='1'; lockTagInp.value = v.lock_tag || '';
+  lockTagInp.addEventListener('input', () => v.lock_tag = lockTagInp.value);
+  lockRow.appendChild(lockTagLbl); lockRow.appendChild(lockTagInp);
+  card.appendChild(lockRow);
 
-  // show_if
+  // Always-visible fields: desc, show_if
+  const advRow = document.createElement('div'); advRow.className='exit-row-advanced';
+  const descLbl = document.createElement('span'); descLbl.className='op-field-label'; descLbl.textContent='desc:';
+  const descInp = document.createElement('input'); descInp.type='text'; descInp.className='op-input';
+  descInp.style.flex='1'; descInp.value = v.desc || '';
+  descInp.title = 'Description shown when looking at this exit (door/gate flavor text).';
+  descInp.addEventListener('input', () => v.desc = descInp.value);
+  advRow.appendChild(descLbl); advRow.appendChild(descInp);
+
   const sifLbl = document.createElement('span'); sifLbl.className='op-field-label'; sifLbl.textContent='show_if:';
   const sifInp = document.createElement('input'); sifInp.type='text'; sifInp.className='op-input';
   sifInp.style.width='110px'; sifInp.value = v.show_if || '';
+  sifInp.title = 'Condition flag: "has_flag:my_flag" or "not_flag:my_flag"';
   sifInp.addEventListener('input', () => v.show_if = sifInp.value);
-  tagRow.appendChild(sifLbl); tagRow.appendChild(sifInp);
-  card.appendChild(tagRow);
+  advRow.appendChild(sifLbl); advRow.appendChild(sifInp);
+  card.appendChild(advRow);
+
+  // Script buttons row
+  const scriptRow = document.createElement('div'); scriptRow.className='exit-row-advanced';
+  scriptRow.style.cssText = 'gap:6px;';
+  const mkScriptBtn = (label, arr, tip) => {
+    const btn = document.createElement('button'); btn.className='hbtn';
+    btn.style.cssText = 'font-size:11px;padding:2px 8px;';
+    const update = () => { btn.textContent = label + (arr.length ? ` (${arr.length})` : ''); };
+    update();
+    btn.title = tip;
+    btn.addEventListener('click', () => openScriptModal(label, arr, updated => {
+      arr.length = 0; arr.push(...updated); update();
+    }));
+    return btn;
+  };
+  scriptRow.appendChild(mkScriptBtn('on_exit',  v.on_exit,  'Script run when player leaves through this exit.'));
+  scriptRow.appendChild(mkScriptBtn('on_enter', v.on_enter, 'Script run when player arrives via this exit.'));
+  scriptRow.appendChild(mkScriptBtn('on_look',  v.on_look,  'Script run when player examines this exit.'));
+  card.appendChild(scriptRow);
 
   return card;
 }
 
 function addExitRow() {
-  const dir = 'new';
-  _exitData[dir] = {to:'', locked:false, lock_tag:'', show_if:'', on_exit:[]};
+  const dir = '';  // empty so datalist shows all directions on focus
+  _exitData[dir] = {to:'', locked:false, lock_tag:'', desc:'', show_if:'', on_exit:[], on_enter:[], on_look:[]};
   renderExitRows();
 }
 
@@ -3199,14 +3430,21 @@ function saveExits() {
   for (const [dir, v] of Object.entries(_exitData)) {
     if (!dir || dir === 'new') continue;
     if (!v.to) continue;
-    if (!v.locked && !v.lock_tag && !v.show_if && !v.on_exit.length) {
+    const hasExtras = v.locked || v.lock_tag || v.desc || v.show_if
+      || (v.on_exit && v.on_exit.length)
+      || (v.on_enter && v.on_enter.length)
+      || (v.on_look && v.on_look.length);
+    if (!hasExtras) {
       exits[dir] = v.to;  // simple string form
     } else {
       const e = {to: v.to};
-      if (v.locked)   e.locked   = true;
-      if (v.lock_tag) e.lock_tag = v.lock_tag;
-      if (v.show_if)  e.show_if  = v.show_if;
-      if (v.on_exit && v.on_exit.length) e.on_exit = v.on_exit;
+      if (v.locked)                         e.locked   = true;
+      if (v.lock_tag)                       e.lock_tag = v.lock_tag;
+      if (v.desc)                           e.desc     = v.desc;
+      if (v.show_if)                        e.show_if  = v.show_if;
+      if (v.on_exit  && v.on_exit.length)   e.on_exit  = v.on_exit;
+      if (v.on_enter && v.on_enter.length)  e.on_enter = v.on_enter;
+      if (v.on_look  && v.on_look.length)   e.on_look  = v.on_look;
       exits[dir] = e;
     }
   }
@@ -3401,9 +3639,22 @@ async function createNew() {
   if (data.ok) {
     closeModal('new-modal');
     setStatus('Created ' + id, 'ok');
+    // Snapshot dirty selection before reload clears it
+    const _prevSel   = (SELECTED && DIRTY) ? structuredClone(SELECTED) : null;
     await reloadWorld();
-    // Auto-select the new object
-    if (_newType !== 'zone') {
+    if (_prevSel) {
+      // Restore unsaved work — don't overwrite with fresh world data
+      SELECTED = _prevSel;
+      DIRTY = true; _setDirtyUI(true);
+      renderEditor();
+      const selId = _prevSel.data?.id || _prevSel.data?._id || _prevSel.data?._npc_id || '';
+      if (selId) {
+        document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('selected'));
+        const el = document.querySelector(`.tree-item[data-id="${CSS.escape(selId)}"][data-zone="${CSS.escape(_prevSel.zone_id)}"]`);
+        if (el) el.classList.add('selected');
+      }
+    } else if (_newType !== 'zone') {
+      // Auto-select the new object
       const zone = WORLD_DATA.zones[zone_id];
       if (zone) {
         const arr = zone[_newType + 's'] || [];
@@ -3601,6 +3852,8 @@ function buildXRef() {
       for (const [dir, v] of Object.entries(room.exits || {})) {
         const target = typeof v === 'string' ? v : (v?.to || '');
         addRef(target, 'room', zid, room.id, rn, `exit (${dir})`);
+        if (typeof v === 'object' && v?.lock_tag)
+          addRef(v.lock_tag, 'room', zid, room.id, rn, `exit (${dir}) lock_tag`);
       }
       scanObj(room.on_enter, 'room', zid, room.id, rn, 'on_enter');
     });
@@ -5285,7 +5538,7 @@ function _showDlgGraph(main, d) {
   endEll.setAttribute('fill','#232530'); endEll.setAttribute('stroke','#888');
   endEll.setAttribute('stroke-width','1.5');
   nodeG.appendChild(endEll);
-  nodeG.appendChild(mkT('END', ex, ey + 5, 14, '#aaa', true, false, 'middle'));
+  nodeG.appendChild(mkT('END', ex, ey + 5, 14, '#555', true, false, 'middle'));
 
   // Nodes
   for (const [nid, n] of Object.entries(nodeMap)) {

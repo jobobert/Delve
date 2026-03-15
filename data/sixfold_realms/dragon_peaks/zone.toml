@@ -1,2 +1,4 @@
-name       = "Dragon Peaks"
+name = "Dragon Peaks"
 start_room = "dp_highspire_1"
+admin_comment = "## Story Driver ##\n"
+prefix = "dp"

@@ -488,7 +488,7 @@ Only one companion active at a time. Acquired through quests and dialogue.
 exits = { east = { to = "armory", locked = true, lock_tag = "garrison_lock" } }
 ```
 
-Items with `key_tag = "garrison_lock"` unlock that exit.
+Items whose `tags` array includes `"garrison_lock"` unlock that exit.
 Commands: `unlock <dir>` / `lock <dir>`.
 
 ### Alias system

@@ -140,3 +140,18 @@ desc_long = "A small kit containing needles, thread, resin patches, and metal cl
 weight = 1
 respawn = false
 tags = ["tool", "repair"]
+
+[[item]]
+id = "rl_locket"
+name = "Locket"
+type = "misc"
+description = ""
+
+[[item]]
+id = "rl_guest_room_key"
+name = "Guest Room Key"
+type = "misc"
+description = "A well-used, but functional room key for the Confluence Inn"
+desc_short = "A well-used, but functional room key for the Confluence Inn"
+desc_long = "The key was made with care, but that was a long time ago. There is no way to know how many copies are in the world"
+tags    = ["guest_room_key"]

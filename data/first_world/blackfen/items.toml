@@ -176,7 +176,7 @@ taken from Durath Ironteeth, or found on his body, depending on how
 things went.
 """
 weight  = 0
-key_tag = "durath_key"
+tags    = ["durath_key"]
 
 [[item]]
 id         = "redbelly_dagger"

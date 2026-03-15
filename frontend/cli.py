@@ -539,7 +539,7 @@ class CLIFrontend:
                 for direction, val in exits.items():
                     if isinstance(val, dict):
                         dest   = val.get("to", "?")
-                        lock   = val.get("lock_tag") or val.get("key_tag") or ""
+                        lock   = val.get("lock_tag") or ""
                         extras = f"  key={lock}" if lock else ""
                         show   = val.get("show_if")
                         if show:

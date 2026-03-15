@@ -1,2 +1,4 @@
-name       = "Mycelial Plains"
+name = "Mycelial Plains"
 start_room = "mp_entrance"
+admin_comment = "## Story Driver ##\n"
+prefix = "mp"

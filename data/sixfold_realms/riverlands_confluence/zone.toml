@@ -1,2 +1,4 @@
-name       = "Riverlands Confluence"
+name = "Riverlands Confluence"
 start_room = "rl_ferrydock_square"
+admin_comment = "## Story Driver ##\n"
+prefix = "rl"

@@ -1,2 +1,4 @@
-name       = "Core Chamber"
+name = "Core Chamber"
 start_room = "cc_entrance"
+admin_comment = "## Story Driver ##\n"
+prefix = "cc"

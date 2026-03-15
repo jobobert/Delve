@@ -1,2 +1,4 @@
-name       = "Gloamreach"
+name = "Gloamreach"
 start_room = "gr_entrance"
+admin_comment = "## Story Driver ##\n"
+prefix = "gr"

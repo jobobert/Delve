@@ -336,6 +336,7 @@ def _load_world(world_id: str) -> dict:
                     "name":          data.get("name", zid),
                     "description":   data.get("description", ""),
                     "admin_comment": data.get("admin_comment", _zone_comment_template()),
+                    "prefix":        data.get("prefix", ""),
                     "_file":         str(path.relative_to(ROOT)),
                 }
                 continue
@@ -411,6 +412,99 @@ def _load_world(world_id: str) -> dict:
         world["zones"][zid] = zone
 
     return world
+
+
+def _rename_id_in_world(world_path: Path, old_id: str, new_id: str) -> list[str]:
+    """
+    Rename an entity ID across all TOML files in a world.
+    Updates known reference fields (item_id, npc_id, room_id, exits, spawns, etc.)
+    and renames any dialogues/<old_id>.toml file.
+    Returns list of changed file paths (relative to ROOT).
+    """
+    SCALAR_FIELDS = {
+        'id', 'item_id', 'npc_id', 'room_id', 'to_room', 'from_room',
+        'quest_id', 'style_id', 'companion_id', 'learned_from', 'style',
+        'giver', 'location', 'default_style', 'result',
+    }
+    LIST_FIELDS = {'reward_items', 'spawns', 'items', 'components'}
+
+    def _replace(obj):
+        """Return (new_obj, changed). Only replaces in known fields, not arbitrary strings."""
+        if isinstance(obj, list):
+            changed = False
+            result = []
+            for item in obj:
+                new_item, c = _replace(item)
+                result.append(new_item)
+                changed = changed or c
+            return result, changed
+
+        if isinstance(obj, dict):
+            changed = False
+            result = {}
+            for k, v in obj.items():
+                if k in SCALAR_FIELDS and v == old_id:
+                    result[k] = new_id
+                    changed = True
+                elif k in LIST_FIELDS and isinstance(v, list):
+                    new_list = []
+                    for item in v:
+                        if item == old_id:
+                            new_list.append(new_id)
+                            changed = True
+                        else:
+                            new_item, c = _replace(item)
+                            new_list.append(new_item)
+                            changed = changed or c
+                    result[k] = new_list
+                elif k == 'exits' and isinstance(v, dict):
+                    new_exits = {}
+                    for dir_, dest in v.items():
+                        if isinstance(dest, str) and dest == old_id:
+                            new_exits[dir_] = new_id
+                            changed = True
+                        elif isinstance(dest, dict):
+                            new_dest, c = _replace(dest)
+                            new_exits[dir_] = new_dest
+                            changed = changed or c
+                        else:
+                            new_exits[dir_] = dest
+                    result[k] = new_exits
+                elif isinstance(v, (dict, list)):
+                    new_v, c = _replace(v)
+                    result[k] = new_v
+                    changed = changed or c
+                else:
+                    result[k] = v
+            return result, changed
+
+        return obj, False
+
+    changed_files: list[str] = []
+
+    for toml_path in sorted(world_path.rglob('*.toml')):
+        try:
+            data = toml_load(toml_path)
+        except Exception:
+            continue
+        new_data, changed = _replace(data)
+        if changed:
+            try:
+                toml_dump(toml_path, new_data)
+                changed_files.append(str(toml_path.relative_to(ROOT)))
+            except Exception:
+                pass
+
+    # Rename dialogue file if one exists for old_id
+    for dlg_path in world_path.rglob(f'dialogues/{old_id}.toml'):
+        new_path = dlg_path.parent / f'{new_id}.toml'
+        try:
+            dlg_path.rename(new_path)
+            changed_files.append(f'{dlg_path.relative_to(ROOT)} -> dialogues/{new_id}.toml')
+        except Exception:
+            pass
+
+    return changed_files
 
 
 def _write_field(file_rel: str, record_type: str, record_id: str,
@@ -816,6 +910,12 @@ class WCTHandler(BaseHTTPRequestHandler):
             else:
                 data = {"id": zone_id, "name": zone_id}
             data["admin_comment"] = comment
+            prefix = body.get("prefix", None)
+            if prefix is not None:
+                if prefix:
+                    data["prefix"] = prefix
+                else:
+                    data.pop("prefix", None)
             ok, err = _write_file(str(zone_toml.relative_to(ROOT)), data)
             self._send_json({"ok": ok, "error": err})
 
@@ -834,6 +934,26 @@ class WCTHandler(BaseHTTPRequestHandler):
             (zone_dir / "items.toml").write_text(f"# {zone_id} items\n")
             (zone_dir / "npcs.toml").write_text(f"# {zone_id} NPCs\n")
             self._send_json({"ok": True, "zone_id": zone_id})
+
+        elif path == "/api/rename_id":
+            world_id = body.get("world_id", "")
+            old_id   = body.get("old_id", "").strip()
+            new_id   = body.get("new_id", "").strip()
+            if not world_id or not old_id or not new_id:
+                self._send_json({"ok": False, "error": "world_id, old_id, new_id required"})
+                return
+            if old_id == new_id:
+                self._send_json({"ok": True, "changed": [], "error": ""})
+                return
+            world_path = DATA_DIR / world_id
+            if not world_path.is_dir():
+                self._send_json({"ok": False, "error": f"World '{world_id}' not found"})
+                return
+            try:
+                changed = _rename_id_in_world(world_path, old_id, new_id)
+                self._send_json({"ok": True, "changed": changed, "error": ""})
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)})
 
         elif path == "/api/delete_object":
             world_id = body.get("world_id", "")

@@ -227,7 +227,7 @@ Use `slot = ""` for non-equippable items (consumables, quest items, resources).
 | `scenery = true` | Cannot be picked up; stays in room |
 | `respawn = true` | Reappears each zone load |
 | `no_drop = true` | Cannot be dropped; excluded from death corpse |
-| `key_tag = "tag"` | Unlocks exits with matching `lock_tag` |
+| (any tag in `tags`) | Item tags include the exit's `lock_tag` value to unlock it |
 | `on_get = [...]` | Script ops run when the item is picked up |
 | `on_use = [...]` | Script ops run when the item is used |
 | `on_hit = [...]` | Script ops run when the item hits in combat |

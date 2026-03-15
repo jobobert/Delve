@@ -1,2 +1,4 @@
-name       = "Mistfen Expanse"
+name = "Mistfen Expanse"
 start_room = "mf_path_reader_camp"
+admin_comment = "## Story Driver ##\n"
+prefix = "mf"

@@ -1,2 +1,4 @@
-name       = "Verdant Heartwood"
+name = "Verdant Heartwood"
 start_room = "vh_edge"
+admin_comment = "## Story Driver ##\n"
+prefix = "vh"

@@ -164,7 +164,7 @@ def build_dialogue_dot(npc_id: str, path: Path, world_name: str = "",
 
     # END sentinel
     w(f'  {dot_id(_END_ID)} [label="END" shape=oval'
-      f' style=filled fillcolor="#DDDDDD" fontname="Courier" fontsize=10]')
+      f' style=filled fillcolor="#DDDDDD" fontcolor="#555555" fontname="Courier" fontsize=10]')
     w("")
 
     # Dialogue nodes
@@ -226,7 +226,7 @@ def build_dialogue_dot(npc_id: str, path: Path, world_name: str = "",
         w('    LL4 [label="advances quest"    style=filled fillcolor="#FFD54F"]')
         w('    LL5 [label="completes quest"   style=filled fillcolor="#A5D6A7"]')
         w('    LL6 [label="damage / fail"     style=filled fillcolor="#FFCDD2"]')
-        w('    LL7 [label="END" shape=oval    style=filled fillcolor="#DDDDDD"]')
+        w('    LL7 [label="END" shape=oval    style=filled fillcolor="#DDDDDD" fontcolor="#555555"]')
         w('    LL8 [label="has entry cond"    style=dashed color="#1565C0"]')
         w('    LL9 [label="unreachable"       color="#BBBBBB" fontcolor="#AAAAAA"]')
         w('    LL1 -> LL2 -> LL3 -> LL4 -> LL5 -> LL6 -> LL7 -> LL8 -> LL9 [style=invis]')
