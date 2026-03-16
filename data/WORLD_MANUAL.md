@@ -991,6 +991,17 @@ Displays "A [name] falls to the ground."
 
 ---
 
+**`spawn_npc`** — Spawn a live copy of an NPC into a room
+
+```toml
+{ op = "spawn_npc", npc_id = "training_dummy" }
+{ op = "spawn_npc", npc_id = "patrol_guard", room_id = "barracks" }
+```
+
+`room_id` defaults to `"current"` (the player's current room).  The NPC is added to the room's live `_npcs` list immediately.  The room must already be loaded; if the zone has been evicted the call is a silent no-op.  Spawned NPCs with `respawn = false` do not reappear after being defeated.
+
+---
+
 #### QUESTS
 
 **`advance_quest`** — Move an active quest to the given step, or start it at step 1
@@ -2630,6 +2641,7 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 | `give_item` | `item_id` | Copy item to inventory |
 | `take_item` | `item_id` | Remove item from inventory |
 | `spawn_item` | `item_id` | Place item in current room |
+| `spawn_npc` | `npc_id`, `room_id` | Spawn live NPC in room (default: current) |
 | `if_item` | `item_id`, `then`, `else` | Branch on inventory item |
 | `require_tag` | `tag`, `fail_message` | Abort if no item with tag |
 
@@ -4096,7 +4108,8 @@ admin_comment = "Caravan moves through town on a loop"
 | `interval` | int | No | Fire every N action ticks; default `1` |
 | `autostart` | bool | No | If `true`, process starts active immediately; default `false` |
 | `admin_comment` | string | No | Design notes (not shown in-game) |
-| `script` | array | No | Script ops to run on each fire (Option A) |
+| `script` | array | No | Inline script ops to run on each fire (Option A) |
+| `script_file` | string | No | World-relative path to a TOML ops file (Option A2) |
 | `route_npc` | string | No | NPC id to move along the route (Option B) |
 | `route_loop` | string | No | `"cycle"` (default) or `"reverse"` |
 | `route` | array | No | List of `{room_id, ticks}` waypoints (Option B) |
@@ -4116,6 +4129,28 @@ script = [
   { op = "adjust_light", amount = -1 },
 ]
 ```
+
+For longer or reusable scripts, use `script_file` instead of an inline `script` array. The path is relative to the world root and the file must contain an `ops` or `script` array at the top level.
+
+```toml
+[[process]]
+id          = "patrol_events"
+name        = "Patrol Events"
+interval    = 10
+autostart   = true
+script_file = "scripts/patrol_tick.toml"
+```
+
+```toml
+# data/<world>/scripts/patrol_tick.toml
+ops = [
+  { op = "if_flag", flag = "patrol_alert",
+    then = [{ op = "message", text = "Boots ring on the cobblestones outside.", tag = "system" }]
+  },
+]
+```
+
+Both `script` and `script_file` may be defined on the same process; the inline `script` runs first, then the file.
 
 ### 21.3 Option B — NPC Route (Caravan / Patrol)
 

@@ -41,6 +41,7 @@ Inventory:
   { op = "give_item",         item_id = "..." }     — deepcopy template → player
   { op = "take_item",         item_id = "..." }     — remove first match; un-equips
   { op = "spawn_item",        item_id = "..." }     — place item in current room
+  { op = "spawn_npc",         npc_id = "...", room_id = "current" }  — spawn NPC in room
 
 Quests:
   { op = "advance_quest",     quest_id = "...", step = N }
@@ -327,6 +328,16 @@ class ScriptRunner:
                     emit(Tag.ITEM, f"  A {item.get('name', item_id)} falls to the ground.")
                 else:
                     p.inventory.append(item)
+
+        elif name == "spawn_npc":
+            # { op = "spawn_npc", npc_id = "...", room_id = "current" }
+            # room_id defaults to the player's current room when "current" or omitted.
+            npc_id  = op.get("npc_id", "")
+            room_id = op.get("room_id", "current")
+            if room_id == "current":
+                room_id = p.room_id
+            if w and npc_id:
+                w.spawn_npc_in_room(npc_id, room_id)
 
         # ── Quests ────────────────────────────────────────────────────────────
         elif name == "advance_quest":

@@ -436,6 +436,23 @@ class World:
         tmpl = self.items.get(item_id)
         return deepcopy(tmpl) if tmpl else None
 
+    def spawn_npc_in_room(self, npc_id: str, room_id: str) -> bool:
+        """Spawn a fresh copy of npc_id into room_id's live NPC list.
+
+        Returns True on success.  The room must be already loaded; if the zone
+        isn't loaded (or npc_id is unknown) the call is a no-op.
+        """
+        room = self.get_room(room_id)
+        if room is None:
+            return False
+        if room.get("_npcs") is None:
+            room["_npcs"] = []
+        tmpl = self.npcs.get(npc_id)
+        if tmpl is None:
+            return False
+        room["_npcs"].append(deepcopy(tmpl))
+        return True
+
     # ── Corpse system ─────────────────────────────────────────────────────────
 
     CORPSE_TTL = 600   # seconds before an unclaimed corpse decays

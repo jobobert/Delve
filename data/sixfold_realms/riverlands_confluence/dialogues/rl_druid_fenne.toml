@@ -1,0 +1,132 @@
+# rl_druid_fenne.toml — Fenne the Root-Warden dialogue
+# Teaches the Flowcurrent style and offers sparring practice.
+
+# -------------------------
+# NODE: root
+# -------------------------
+[[node]]
+id    = "root"
+lines = [
+  "Fenne glances up from the fire without hurry.",
+  "'You've the look of someone who's been through the current. What is it you need?'"
+]
+
+[[response]]
+node = "root"
+text = "Tell me about the Flowcurrent style."
+next = "flowcurrent_lore"
+
+[[response]]
+node    = "root"
+text    = "I'd like to learn the Flowcurrent style."
+next    = "teach_offer"
+show_if = { not_flag = "rl_fenne_taught" }
+
+[[response]]
+node    = "root"
+text    = "I already know Flowcurrent. Can I practice against something?"
+next    = "sparring"
+show_if = { flag = "rl_fenne_taught" }
+
+[[response]]
+node = "root"
+text = "Can I practice against something?"
+next = "sparring"
+
+[[response]]
+node = "root"
+text = "Just resting. Thanks."
+next = ""
+
+
+# -------------------------
+# NODE: flowcurrent_lore
+# -------------------------
+[[node]]
+id   = "flowcurrent_lore"
+line = "'Flowcurrent isn't about striking first. It's about reading where the opponent commits, then not being there. River scouts developed it when they faced armoured soldiers — brute force loses to the current every time. Speed and redirection. Patience.'"
+
+[[response]]
+node    = "flowcurrent_lore"
+text    = "Can you teach it to me?"
+next    = "teach_offer"
+show_if = { not_flag = "rl_fenne_taught" }
+
+[[response]]
+node = "flowcurrent_lore"
+text = "What makes it weak?"
+next = "flowcurrent_weakness"
+
+[[response]]
+node = "flowcurrent_lore"
+text = "That makes sense. Thanks."
+next = ""
+
+
+# -------------------------
+# NODE: flowcurrent_weakness
+# -------------------------
+[[node]]
+id   = "flowcurrent_weakness"
+line = "'Heavy armour. Slow, deliberate fighters. If someone refuses to commit, the current has nothing to redirect. You can't sidestep a wall.' She pokes the fire. 'Every style has its limits. Knowing yours is half the work.'"
+
+[[response]]
+node    = "flowcurrent_weakness"
+text    = "I'd still like to learn it."
+next    = "teach_offer"
+show_if = { not_flag = "rl_fenne_taught" }
+
+[[response]]
+node = "flowcurrent_weakness"
+text = "Good to know."
+next = ""
+
+
+# -------------------------
+# NODE: teach_offer
+# -------------------------
+[[node]]
+id    = "teach_offer"
+lines = [
+  "'It takes patience. I can show you the foundations — the rest builds through practice.'",
+  "Fenne demonstrates the opening stance with a river-smooth branch, narrating each movement in a low, steady voice.",
+  "You settle by the fire and watch closely."
+]
+script = [
+  { op = "teach_style", style_id = "flowcurrent" },
+  { op = "set_flag",    flag = "rl_fenne_taught"  },
+]
+
+[[response]]
+node = "teach_offer"
+text = "I appreciate it. Can I practice against something?"
+next = "sparring"
+
+[[response]]
+node = "teach_offer"
+text = "Thank you."
+next = ""
+
+
+# -------------------------
+# NODE: sparring
+# -------------------------
+[[node]]
+id    = "sparring"
+lines = [
+  "'A good idea. The current can't teach what a body can.'",
+  "Fenne gathers a bundle of reeds and a handful of river clay. With practiced movements, a rough combat construct takes shape in the clearing."
+]
+script = [
+  { op = "spawn_npc", npc_id = "rl_sparring_partner" },
+]
+
+[[response]]
+node = "sparring"
+text = "Let's see what I've learned."
+next = ""
+
+[[response]]
+node = "sparring"
+text = "Thank you, Fenne."
+next = ""

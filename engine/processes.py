@@ -14,10 +14,14 @@ interval      = 5          # fire every 5 action ticks (default 1)
 autostart     = false      # start automatically on world load (default false)
 admin_comment = ""
 
-# Option A — script list: run these ops on each fire
+# Option A — inline script list: run these ops on each fire
 script = [
   { op = "message", text = "A caravan rolls past.", tag = "system" },
 ]
+
+# Option A2 — external script file (world-relative path to a TOML ops file)
+# The file must contain an "ops" or "script" array at the top level.
+script_file = "scripts/caravan_tick.toml"
 
 # Option B — NPC route: walk an NPC along waypoints
 route_npc  = "traveling_merchant"   # NPC id to move
@@ -179,6 +183,18 @@ class ProcessManager:
         if script:
             from engine.script import ScriptRunner
             ScriptRunner(ctx).run(script)
+
+        script_file = proc.get("script_file", "")
+        if script_file:
+            script_path = self._world_path / script_file
+            if script_path.exists():
+                try:
+                    data = toml_load(script_path)
+                    ops  = data.get("ops", data.get("script", []))
+                    from engine.script import ScriptRunner
+                    ScriptRunner(ctx).run(ops)
+                except Exception:
+                    pass
 
     def _advance_route(self, proc: dict, st: dict, ctx: "GameContext",
                        route: list, npc_id: str) -> None:

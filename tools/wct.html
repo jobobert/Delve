@@ -3259,6 +3259,7 @@ const OP_SCHEMA = {
   give_item:        [{key:'item_id',    type:'item_ref', label:'item'}],
   take_item:        [{key:'item_id',    type:'item_ref', label:'item'}],
   spawn_item:       [{key:'item_id',    type:'item_ref', label:'item'}],
+  spawn_npc:        [{key:'npc_id',     type:'npc_ref',  label:'npc'}, {key:'room_id', type:'room_ref', label:'room (blank=current)'}],
   advance_quest:    [{key:'quest_id',   type:'quest_ref',label:'quest'}, {key:'step', type:'num', label:'step'}],
   complete_quest:   [{key:'quest_id',   type:'quest_ref',label:'quest'}],
   teach_style:      [{key:'style_id',   type:'style_ref',label:'style'}],

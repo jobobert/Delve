@@ -203,7 +203,7 @@ class CommandProcessor:
             "recall":        self._cmd_recall,
             # Resource collection
             "mine":          self._cmd_mine,
-            "chop":          self._cmd_chop
+            "chop":          self._cmd_chop,
         }
         for d in DIRECTIONS:
             self._commands[d] = self._cmd_direction

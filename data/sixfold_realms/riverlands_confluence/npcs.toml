@@ -333,7 +333,7 @@ shop = [
   { item_id = "rl_basic_repair_kit", price = 8  },
 ]
 
-# ── Druid Fenne — rest, lore ─────────────────────────────────────────────────
+# ── Druid Fenne — rest, lore, style teaching ─────────────────────────────────
 
 [[npc]]
 id          = "rl_druid_fenne"
@@ -351,7 +351,29 @@ xp_reward   = 0
 gold_reward = 0
 hostile     = false
 rest_cost   = 3
-dialogue    = "The city watches the river but doesn't listen to it. Sit a while. The fire doesn't ask questions."
+
+# ── Sparring Partner (spawned by Fenne) ──────────────────────────────────────
+
+[[npc]]
+id          = "rl_sparring_partner"
+name        = "Sparring Partner"
+desc_short  = "A construct of woven reeds and river clay shaped for combat practice."
+desc_long   = "Fenne has shaped this from riverbank materials — it responds to blows like a living opponent but collapses harmlessly when defeated. The weave is surprisingly firm."
+tags        = ["construct", "humanoid"]
+style       = "flowcurrent"
+style_prof  = 10
+hp          = 22
+max_hp      = 22
+attack      = 5
+defense     = 3
+xp_reward   = 0
+gold_reward = 0
+hostile     = true
+respawn     = false
+
+kill_script = [
+  { op = "message", tag = "combat_death", text = "The construct unravels — reeds and clay scattering across the ground. A moment later the river takes the pieces." },
+]
 
 # ── Patrol Captain Veth — local authority ────────────────────────────────────
 

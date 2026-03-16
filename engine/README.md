@@ -295,7 +295,7 @@ door event arrays. Scripts abort cleanly when `fail` fires.
 Output:              say, message
 Player state:        set_flag, clear_flag, give_gold, take_gold, give_xp,
                      heal, set_hp, damage
-Inventory:           give_item, take_item, spawn_item
+Inventory:           give_item, take_item, spawn_item, spawn_npc
 Quests:              advance_quest, complete_quest
 Styles:              teach_style
 World:               unlock_exit, lock_exit,
@@ -336,6 +336,12 @@ Combat-only passives (on_activate only):
 **`spawn_item`** — drop item into current room (useful in kill scripts):
 ```toml
 { op = "spawn_item", item_id = "dragon_fang" }
+```
+
+**`spawn_npc`** — spawn a live NPC instance into a room (defaults to current room):
+```toml
+{ op = "spawn_npc", npc_id = "training_dummy" }
+{ op = "spawn_npc", npc_id = "patrol_guard", room_id = "barracks" }
 ```
 
 **`damage`** — deal direct HP damage to the player:

@@ -9,6 +9,7 @@ Configuration is in frontend/config.py (word wrap, auto-attack, colors, aliases)
 
 from __future__ import annotations
 import re
+import shutil
 import textwrap
 import sys
 import time
@@ -596,8 +597,78 @@ class CLIFrontend:
             print()
             return True
 
+        if verb == "heal":
+            self.player.hp = self.player.max_hp
+            print(dim + f"  [admin] HP restored to {self.player.max_hp}." + RESET)
+            return True
+
+        if verb == "savestate":
+            slot = arg.strip()
+            if not slot:
+                print(err + "  Usage: -savestate <slot>" + RESET)
+                return True
+            # Persist current live state first
+            self.player.save()
+            self.world.save_all_zone_state()
+            if hasattr(self.processor, '_processes'):
+                self.processor._processes.save_state()
+            saves_dir = self.player.player_dir / "saves" / slot
+            saves_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(self.player._save_path, saves_dir / "player.toml")
+            zs_dst = saves_dir / "zone_state"
+            if zs_dst.exists():
+                shutil.rmtree(zs_dst)
+            shutil.copytree(self.player.zone_state_dir, zs_dst)
+            print(dim + f"  [admin] State saved to slot '{slot}'." + RESET)
+            return True
+
+        if verb == "restorestate":
+            slot = arg.strip()
+            if not slot:
+                print(err + "  Usage: -restorestate <slot>" + RESET)
+                return True
+            saves_dir = self.player.player_dir / "saves" / slot
+            if not saves_dir.exists():
+                print(err + f"  [admin] No save slot '{slot}' found." + RESET)
+                return True
+            # Restore player.toml
+            shutil.copy2(saves_dir / "player.toml", self.player._save_path)
+            # Restore zone_state files
+            zs_src = saves_dir / "zone_state"
+            zs_dst = self.player.zone_state_dir
+            if zs_src.exists():
+                for f in zs_dst.glob("*.json"):
+                    f.unlink()
+                for f in zs_src.glob("*.json"):
+                    shutil.copy2(f, zs_dst / f.name)
+            # Reload player in-place
+            restored = Player.load(self.player.name)
+            if restored:
+                self.player.__dict__.update(restored.__dict__)
+            # Evict all loaded zones so they reload from restored state
+            for zone_id in list(self.world._loaded_zones.keys()):
+                del self.world._loaded_zones[zone_id]
+                meta = self.world._zone_index.get(zone_id)
+                if meta:
+                    meta.loaded = False
+            print(dim + f"  [admin] State restored from slot '{slot}'." + RESET)
+            self.processor.do_look()
+            return True
+
+        if verb == "slots":
+            saves_root = self.player.player_dir / "saves"
+            slots = [d.name for d in sorted(saves_root.iterdir())
+                     if d.is_dir()] if saves_root.exists() else []
+            if slots:
+                print(bold + "  Save slots:" + RESET)
+                for s in slots:
+                    print(dim + f"    {s}" + RESET)
+            else:
+                print(dim + "  [admin] No save slots found." + RESET)
+            return True
+
         # Unknown admin command — show help rather than silently ignoring
-        print(err + f"  Unknown admin command '-{cmd}'. Available: -reload  -flags  -tags  -addflag  -remflag  -teleport  -give  -room  -zone  -exits  -items  -npcs" + RESET)
+        print(err + f"  Unknown admin command '-{cmd}'. Available: -reload  -flags  -tags  -addflag  -remflag  -teleport  -give  -room  -zone  -exits  -items  -npcs  -heal  -savestate  -restorestate  -slots" + RESET)
         return True
 
     # ── Main loop ─────────────────────────────────────────────────────────────
