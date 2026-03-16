@@ -418,8 +418,8 @@ def _load_world(world_id: str) -> dict:
                 for proc in data.get("process", []):
                     proc["_file"] = str(proc_file.relative_to(ROOT))
                     zone["processes"].append(proc)
-            except Exception as e:
-                print(f"[WCT] processes.toml load error in {zid}: {e}", flush=True)
+            except Exception:
+                pass
 
         world["zones"][zid] = zone
 

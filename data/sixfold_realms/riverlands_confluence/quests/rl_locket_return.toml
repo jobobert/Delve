@@ -1,0 +1,22 @@
+id      = "rl_locket_return"
+title   = "The Ferryman's Keepsake"
+giver   = "rl_old_man_aldric"
+summary = "An old ferryman at the Confluence Inn is missing a locket taken by the floodwaters. It may still be in the shack he abandoned."
+
+[[step]]
+index     = 1
+objective = "Find the locket in the flooded shack beyond the Unstable Current."
+hint      = "The shack is past the piers, where the current reads strangest."
+
+[[step]]
+index     = 2
+objective = "Return the locket to Old Aldric in Guest Room 2."
+hint      = "Mara at the inn can let you in."
+
+[[reward]]
+type   = "xp"
+amount = 40
+
+[[reward]]
+type   = "gold"
+amount = 10

@@ -111,6 +111,9 @@ xp_reward   = 0
 gold_reward = 0
 hostile     = false
 rest_cost   = 5
+shop        = [
+  { item_id = "rl_guest_room_key", price = 5 },
+]
 
 # ── River Child — flavour ────────────────────────────────────────────────────
 
@@ -271,6 +274,103 @@ round_script = [
     { op = "message", tag = "combat", text = "The wraith's presence blurs your senses — the world goes sideways for a moment." },
   ] },
 ]
+
+# ── Old Aldric — quest giver, locket return ──────────────────────────────────
+
+[[npc]]
+id          = "rl_old_man_aldric"
+name        = "Old Aldric"
+desc_short  = "A weathered old man sitting at the window, watching the river."
+desc_long   = "Aldric's hands tremble slightly, but his eyes are clear and steady. He spent decades as a ferryman before his body made that impossible. Now he rents this room by the week, watching the water he used to work."
+tags        = ["humanoid", "townsfolk"]
+style       = "flowcurrent"
+style_prof  = 5
+hp          = 20
+max_hp      = 20
+attack      = 2
+defense     = 3
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "I left a lot behind when the floodwaters came. Most of it didn't matter. One thing did."
+
+give_accepts = [
+  {
+    item_id = "rl_locket",
+    message = "Aldric takes the locket in both hands and holds it without speaking. When he looks up, his eyes are wet. 'I didn't think I'd ever see it again. Here.' He presses the vest into your arms.",
+    script  = [
+      { op = "advance_quest", quest_id = "rl_locket_return", step = 2 },
+      { op = "complete_quest", quest_id = "rl_locket_return" },
+      { op = "give_item",  item_id = "rl_river_scale_vest" },
+      { op = "prestige",   amount = 2, reason = "returned Aldric's locket" },
+    ],
+  },
+]
+
+# ── Blacksmith Orin — shop, crafting ─────────────────────────────────────────
+
+[[npc]]
+id          = "rl_blacksmith_orin"
+name        = "Orin the Smith"
+desc_short  = "A broad-shouldered blacksmith with iron-darkened hands and a direct manner."
+desc_long   = "Orin shapes river-iron the way water shapes stone — methodically, without drama. She has been the Confluence's working smith for twenty years and has no interest in being anything else."
+tags        = ["humanoid", "townsfolk", "crafter"]
+style       = "flowcurrent"
+style_prof  = 15
+hp          = 50
+max_hp      = 50
+attack      = 9
+defense     = 7
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "River-iron holds an edge better than people expect. Come back when yours is dull."
+
+shop = [
+  { item_id = "rl_river_iron_sword", price = 30 },
+  { item_id = "rl_iron_pauldrons",   price = 22 },
+  { item_id = "ferryman_hook",       price = 20 },
+  { item_id = "rl_basic_repair_kit", price = 8  },
+]
+
+# ── Druid Fenne — rest, lore ─────────────────────────────────────────────────
+
+[[npc]]
+id          = "rl_druid_fenne"
+name        = "Fenne the Root-Warden"
+desc_short  = "A still figure in grey-green robes tending a small fire."
+desc_long   = "Fenne watches the clearing with the patience of old wood. They speak little and plainly. The herbs they tend carry the same faint resonance as the river — as though both know something the city doesn't."
+tags        = ["humanoid", "townsfolk", "healer"]
+style       = "flowcurrent"
+style_prof  = 25
+hp          = 35
+max_hp      = 35
+attack      = 6
+defense     = 5
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+rest_cost   = 3
+dialogue    = "The city watches the river but doesn't listen to it. Sit a while. The fire doesn't ask questions."
+
+# ── Patrol Captain Veth — local authority ────────────────────────────────────
+
+[[npc]]
+id          = "rl_patrol_captain"
+name        = "Patrol Captain Veth"
+desc_short  = "A lean woman in river-blue patrol gear reading the notice board."
+desc_long   = "Veth runs the Confluence patrol with minimal staff and considerable competence. She reads every notice posted on the board herself, and knows most of what moves through the city before it reaches her officially."
+tags        = ["humanoid", "townsfolk", "guard"]
+style       = "flowcurrent"
+style_prof  = 30
+hp          = 55
+max_hp      = 55
+attack      = 10
+defense     = 8
+xp_reward   = 0
+gold_reward = 0
+hostile     = false
+dialogue    = "Keep your blade sheathed in the city center. That's not a request."
 
 [[npc]]
 id          = "rl_banker"

@@ -1,0 +1,59 @@
+[[node]]
+id    = "root"
+lines = [
+  "Orin sets down her hammer and looks you over with the same appraising eye she gives raw metal.",
+  "'Looking to buy, or just looking?'"
+]
+
+[[response]]
+node = "root"
+text = "What do you have for sale?"
+next = "shop_prompt"
+
+[[response]]
+node = "root"
+text = "How long have you been the smith here?"
+next = "ask_history"
+
+[[response]]
+node = "root"
+text = "Nothing for now."
+next = ""
+
+
+# ── shop_prompt ───────────────────────────────────────────────────────────────
+[[node]]
+id   = "shop_prompt"
+line = "'Use the list command. Everything on the rack is priced and ready. I don't haggle.'"
+
+[[response]]
+node = "shop_prompt"
+text = "Fair enough."
+next = ""
+
+
+# ── ask_history ───────────────────────────────────────────────────────────────
+[[node]]
+id   = "ask_history"
+line = "'Twenty years. The floods took two other smiths before me. I stayed because the river-iron here is worth the trouble — mineral content you won't find anywhere else. The blade comes out different. Better.'"
+
+[[response]]
+node = "ask_history"
+text = "Sounds like you know what you're doing."
+next = "ask_history_2"
+
+[[response]]
+node = "ask_history"
+text = "Good to know."
+next = ""
+
+
+# ── ask_history_2 ─────────────────────────────────────────────────────────────
+[[node]]
+id   = "ask_history_2"
+line = "'I do. That's why people keep buying.'"
+
+[[response]]
+node = "ask_history_2"
+text = "I'll take a look at your stock."
+next = ""
