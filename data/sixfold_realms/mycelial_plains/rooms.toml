@@ -71,6 +71,7 @@ on_enter    = [
 id          = "mp_approach3"
 name        = "Approach — Loomroot Crossing"
 description = "A crossroads where fungal fibers hang from old signposts."
+spawns      = ["mp_sporeling"]
 exits       = { west = "mp_approach2", north = "mp_approach4", east = "mp_approach5" }
 
 [[room]]
@@ -104,6 +105,7 @@ on_enter    = [
 id          = "mp_approach6"
 name        = "Approach — Memory Drift Path"
 description = "The path seems different than you remember. Did that fence always lean?"
+spawns      = ["mp_spore_drifter"]
 exits       = {
   west = "mp_approach5",
   east = { to = "mp_approach7", show_if = { op = "has_flag", flag = "mp_mind_clear" } },
@@ -164,6 +166,7 @@ on_enter    = [
 id          = "mp_fields3"
 name        = "Fields — Memory Echo Lane"
 description = "You feel as though you've walked this lane before. The houses seem familiar."
+spawns      = ["mp_spore_drifter"]
 exits       = {
   west = "mp_fields2",
   east = { to = "mp_fields4", show_if = { op = "has_flag", flag = "mp_mind_clear" } },
@@ -197,6 +200,10 @@ on_enter    = [
   { op = "adjust_attr", name = "spore_exposure", amount = -5 },
   { op = "set_flag",    flag = "mp_mind_clear" },
   { op = "message", tag = "system", text = "The Sporewarden's presence calms the ambient spore cloud." },
+  { op = "if_not_flag", flag = "mp_memory_whip_started", then = [
+    { op = "advance_quest", quest_id = "mp_memory_whip", step = 1 },
+    { op = "set_flag", flag = "mp_memory_whip_started" },
+  ] },
 ]
 
 [[room]]
@@ -215,6 +222,7 @@ on_enter    = [
 id          = "mp_fields7"
 name        = "Fields — Garden Approach"
 description = "Ancient stone pillars rise from the fungal earth. A faint hum fills the air."
+spawns      = ["mp_sporeling"]
 exits       = { west = "mp_fields6", east = "mp_garden_entrance" }
 
 
@@ -341,6 +349,7 @@ on_enter    = [
 id          = "mp_garden4"
 name        = "Memory Garden — Core Antechamber"
 description = "A warm glow radiates from deeper within. The air feels heavy with meaning."
+spawns      = ["mp_memory_node_guardian"]
 exits       = { west = "mp_garden3", east = "mp_garden5" }
 
 [[room]]

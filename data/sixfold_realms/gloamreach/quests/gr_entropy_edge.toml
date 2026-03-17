@@ -1,0 +1,27 @@
+id      = "gr_entropy_edge"
+title   = "A Cut That Lasts"
+giver   = "gr_umbral_weaver"
+summary = "The Umbral Weaver has shaped blades from shadow-ore before, but never one deliberately designed to carry entropy into its wounds. She'll do it — if you bring the right materials."
+
+[[step]]
+index     = 1
+objective = "Find the Umbral Weaver at the Shadowfall Pit."
+hint      = "The Weaver works among the shadows of the Echo Warrens, where shadow falls like water."
+
+[[step]]
+index     = 2
+objective = "Gather shadow-ore, entropy residue, and a nullstone shard."
+hint      = "Shadow-ore can be mined from the ore veins. Entropy residue pools near the entropy wisps. The Weaver herself can polish a nullstone shard from shadow-ore."
+
+[[step]]
+index     = 3
+objective = "Commission the Entropy Edge from the Umbral Weaver."
+hint      = "Return with all three materials and commission the blade."
+
+[[reward]]
+type   = "xp"
+amount = 200
+
+[[reward]]
+type   = "gold"
+amount = 50

@@ -959,8 +959,10 @@ function renderEditor() {
 function editorHeader(type, cls, name) {
   const div = document.createElement('div');
   div.className = 'editor-header';
+  const badgeLtr = {room:'R', npc:'N', item:'I', quest:'Q', dialogue:'D', style:'S', process:'P', zone:'Z'}[type] || type.slice(0,1).toUpperCase();
+  const badgeCls = cls.startsWith('badge-') ? `badge ${cls}` : cls;
   div.innerHTML = `
-    <span class="editor-type ${cls}">${type.toUpperCase()}</span>
+    <span class="editor-type ${badgeCls}">${badgeLtr}</span>
     <span class="editor-title">${escHtml(name)}</span>
     <div class="editor-actions">
       <button class="hbtn danger" onclick="deleteSelected()" title="Delete this ${escHtml(type)}">Delete</button>
@@ -1346,7 +1348,7 @@ function spawnWidget(d) {
 
 function renderRoomEditor(main) {
   const d = SELECTED.data;
-  main.appendChild(editorHeader('room', 'editor-type', d.name || d.id));
+  main.appendChild(editorHeader('room', 'badge-room', d.name || d.id));
 
   // ID with auto-lock
   appendIdRow(main, d, 'room', SELECTED.zone_id);
@@ -1423,7 +1425,7 @@ function renderRoomEditor(main) {
 
 function renderNpcEditor(main) {
   const d = SELECTED.data;
-  main.appendChild(editorHeader('npc', 'editor-type', d.name || d.id));
+  main.appendChild(editorHeader('npc', 'badge-npc', d.name || d.id));
   appendIdRow(main, d, 'npc', SELECTED.zone_id);
   main.appendChild(fieldRow('Name', textInput(d.name, v => d.name = v),
     null, 'Display name shown in the room and combat log.\nCan be a list for random variation on spawn:\n  name = ["Grey Wolf", "Black Wolf"]'));
@@ -1482,7 +1484,7 @@ function renderNpcEditor(main) {
 
   main.appendChild(sectionTitle('Dialogue', 'Link a dialogue tree to this NPC.\nThe fallback dialog is shown when the NPC is talked to but has no dialogue tree,\nor when a dialogue node is missing.'));
 
-  main.appendChild(fieldRow('Fallback Dialog', textareaInput(d.fallback_dialog, v => { d.fallback_dialog = v || undefined; markDirty(); }),
+  main.appendChild(fieldRow('Fallback Dialog', textareaInput(d.dialogue, v => { d.dialogue = v || undefined; markDirty(); }),
     null, 'Text shown when this NPC is talked to with no dialogue tree configured,\nor when a dialogue node cannot be found.'));
 
   const _dlgNpcId = d.id || '';
@@ -1673,7 +1675,7 @@ function renderShop(main, d) {
 
 function renderItemEditor(main) {
   const d = SELECTED.data;
-  main.appendChild(editorHeader('item', 'editor-type', d.name || d.id));
+  main.appendChild(editorHeader('item', 'badge-item', d.name || d.id));
   appendIdRow(main, d, 'item', SELECTED.zone_id);
   main.appendChild(fieldRow('Name', textInput(d.name, v => d.name = v),
     null, 'Display name shown in inventory, rooms, and combat.'));
@@ -1789,7 +1791,7 @@ function serialiseQuest(data) {
 
 function renderQuestEditor(main) {
   const d = SELECTED.data;
-  main.appendChild(editorHeader('quest', 'editor-type', d.title || d._id || d.id));
+  main.appendChild(editorHeader('quest', 'badge-quest', d.title || d._id || d.id));
   const questDotBtn = document.createElement('button');
   questDotBtn.className = 'hbtn'; questDotBtn.textContent = 'Export DOT';
   questDotBtn.title = 'Download quest flow as Graphviz .dot file';
@@ -1945,7 +1947,7 @@ function _tagsInput(arr, onChange) {
 
 function renderStyleEditor(main) {
   const d = SELECTED.data;
-  main.appendChild(editorHeader('style', 'editor-type', d.name || d.id || ''));
+  main.appendChild(editorHeader('style', 'badge-style', d.name || d.id || ''));
 
   // Identity
   main.appendChild(sectionTitle('Identity'));
@@ -2055,7 +2057,7 @@ function renderZoneEditor(main) {
 
   const taRow = document.createElement('div'); taRow.className = 'field-row'; taRow.style.alignItems = 'flex-start';
   const ta = document.createElement('textarea'); ta.id = 'zone-comment-ta';
-  ta.style.cssText = 'flex:1;height:300px;resize:vertical;font-family:Consolas,monospace;font-size:13px;background:#1a1d24;color:#cdd6e4;border:1px solid #303540;padding:8px;box-sizing:border-box;border-radius:4px';
+  ta.style.cssText = 'width:100%;height:300px;resize:vertical;font-family:Consolas,monospace;font-size:13px;background:#1a1d24;color:#cdd6e4;border:1px solid #303540;padding:8px;box-sizing:border-box;border-radius:4px';
   ta.value = d.admin_comment || '';
   ta.addEventListener('input', () => { d.admin_comment = ta.value; DIRTY = true; document.getElementById('btn-save').disabled = false; });
   taRow.appendChild(ta); main.appendChild(taRow);
@@ -2620,7 +2622,7 @@ function renderStylePassives(main, d) {
 
 function renderDialogueEditor(main) {
   const d = SELECTED.data;
-  main.appendChild(editorHeader('dialogue', 'editor-type', d._npc_id || ''));
+  main.appendChild(editorHeader('dialogue', 'badge-dlg', d._npc_id || ''));
   const dlgDotBtn = document.createElement('button');
   dlgDotBtn.className = 'hbtn'; dlgDotBtn.textContent = 'Export DOT';
   dlgDotBtn.title = 'Download dialogue tree as Graphviz .dot file';

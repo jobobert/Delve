@@ -1,0 +1,27 @@
+id      = "mf_pressure_chain"
+title   = "Weight of the Swamp"
+giver   = "mf_path_reader_sera"
+summary = "Sera has developed a technique for binding the swamp's pressure into a weapon — a chain that staggers anything it hits."
+
+[[step]]
+index     = 1
+objective = "Speak with Sera at the Path-Reader Encampment."
+hint      = "Sera can be found at the camp south of the swamp's edge."
+
+[[step]]
+index     = 2
+objective = "Gather two bog-quartz crystals and a pressure-hollowed stone."
+hint      = "Bog-quartz grows in the side landing near the Echoing Boardwalk. Pressure-hollowed stone can be found deeper in the swamp."
+
+[[step]]
+index     = 3
+objective = "Commission the Pressure Chain from Sera."
+hint      = "Return with the materials and Sera will bind them into the weapon."
+
+[[reward]]
+type   = "xp"
+amount = 200
+
+[[reward]]
+type   = "gold"
+amount = 50

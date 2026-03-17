@@ -1,0 +1,27 @@
+id      = "vh_rootbound_stave"
+title   = "The Living Weapon"
+giver   = "vh_heartwood_shaper"
+summary = "Thalen has grown weapons before, but always for the Heartwood's own defenders. He will shape a Rootbound Stave for you — but only if you bring materials from the Core itself."
+
+[[step]]
+index     = 1
+objective = "Find Thalen at the Growth Forge."
+hint      = "Thalen works in the Heartwood Core, near the Growth Forge deep within the root network."
+
+[[step]]
+index     = 2
+objective = "Gather Heartwood bark, sap resin, and a growth catalyst."
+hint      = "Bark and resin are found throughout the warrens. The growth catalyst is rarer — it accumulates near the deepest root channels."
+
+[[step]]
+index     = 3
+objective = "Commission the Rootbound Stave from Thalen."
+hint      = "Return with all three materials and Thalen will shape the stave at the Growth Forge."
+
+[[reward]]
+type   = "xp"
+amount = 200
+
+[[reward]]
+type   = "gold"
+amount = 50

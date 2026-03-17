@@ -220,3 +220,21 @@ on_get      = [
   { op = "complete_quest", quest_id = "vh_growth_regulator" },
   { op = "prestige", amount = 3, reason = "recovered the Growth Regulator fragment" },
 ]
+
+
+# ── Rootbound Stave ───────────────────────────────────────────────────────────
+[[item]]
+id          = "vh_rootbound_stave"
+name        = "Rootbound Stave"
+desc_short  = "A living stave of Heartwood root, still growing slowly."
+desc_long   = "Thalen shaped this from a section of the Heartwood's root network while it was still alive. The growth catalyst fused into the wood gives each blow a sudden burst of growth energy — enough to freeze a target in place for a moment."
+slot        = "weapon"
+weight      = 3
+weapon_tags = ["polearm", "stave", "heartwood"]
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack",  amount = 10 },
+  { type = "stat_bonus", stat = "defense", amount = 3 },
+  { type = "on_equip",   message = "The stave pulses warmly in your grip. A faint tendril curls toward your wrist." },
+  { type = "on_hit",     ability = "stun", chance = 0.15, magnitude = 1 },
+]

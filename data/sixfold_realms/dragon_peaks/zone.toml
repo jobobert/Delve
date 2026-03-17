@@ -1,4 +1,4 @@
 name = "Dragon Peaks"
 start_room = "dp_highspire_1"
-admin_comment = "## Story Driver ##\n"
+admin_comment = "## Story Driver ##\nThe Dragon Peaks surround a huge mountain and are crawling with drakes."
 prefix = "dp"

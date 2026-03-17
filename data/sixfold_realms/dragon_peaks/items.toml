@@ -334,3 +334,20 @@ weight      = 0
 respawn     = false
 tags        = ["dragon_peaks_material"]
 effects     = []
+
+
+# ── Ashen Fang ────────────────────────────────────────────────────────────────
+[[item]]
+id          = "dp_ashen_fang"
+name        = "Ashen Fang"
+desc_short  = "A jagged blade carved from volcanic glass and set with drakebone."
+desc_long   = "The serrated edge was designed to catch in wounds and drag. Drake feathers line the grip for balance; the blade burns faintly to the touch."
+slot        = "weapon"
+weight      = 2
+weapon_tags = ["blade", "dagger", "volcanic"]
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack", amount = 10 },
+  { type = "on_equip",   message = "The ashen blade hums with trapped heat — a drake's last breath, caught in glass." },
+  { type = "on_hit",     ability = "bleed", chance = 0.20, magnitude = 2 },
+]

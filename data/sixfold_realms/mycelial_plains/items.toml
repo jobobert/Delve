@@ -220,3 +220,21 @@ on_get      = [
   { op = "complete_quest", quest_id = "mp_fragment" },
   { op = "prestige", amount = 3, reason = "recovered the Cognitive Regulator Fragment" },
 ]
+
+
+# ── Memory Whip ───────────────────────────────────────────────────────────────
+[[item]]
+id          = "mp_memory_whip"
+name        = "Memory Whip"
+desc_short  = "A flexible polearm woven from fungal fiber and mycelial resin."
+desc_long   = "The Sporewarden calls it a 'corrective tool.' The resin-hardened cord carries a cognitive jolt on impact — not painful enough to matter, but disorienting enough to stop a creature mid-swing."
+slot        = "weapon"
+weight      = 2
+weapon_tags = ["polearm", "whip", "fungal"]
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack",  amount = 9 },
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+  { type = "on_equip",   message = "The whip coils loosely in your hand. It smells faintly of mycelium and spores." },
+  { type = "on_hit",     ability = "stun", chance = 0.12, magnitude = 1 },
+]

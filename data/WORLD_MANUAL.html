@@ -95,6 +95,8 @@ a { color: #3a6fa0; }
   <li><a href="#17-light-mechanic">Light Mechanic</a></li>
   <li><a href="#18-world-defined-player-attributes">World-Defined Player Attributes</a></li>
   <li><a href="#19-standalone-script-files">Standalone Script Files</a></li>
+  <li><a href="#20-world-notes-file-worldmd">World Notes File</a></li>
+  <li><a href="#21-world-processes">World Processes</a></li>
   <li><a href="#appendix-a--room-flags">Appendix A — Room Flags</a></li>
   <li><a href="#appendix-b--equipment-slots">Appendix B — Equipment Slots</a></li>
   <li><a href="#appendix-c--all-script-ops-quick-reference">Appendix C — All Script Ops (Quick Reference)</a></li>
@@ -1061,7 +1063,7 @@ round_script = [
   <td><code>tags</code></td>
   <td>list</td>
   <td>No</td>
-  <td>Item tags; used by <code>require_tag</code> script op, style affinity, and door unlocking (any tag matching a door's <code>lock_tag</code> opens it)</td>
+  <td>Item tags; used by <code>require<em>tag</code> script op, style affinity, and door unlocking (any tag matching a door's <code>lock</em>tag</code> opens it)</td>
 </tr>
 <tr>
   <td><code>weapon_tags</code></td>
@@ -1075,7 +1077,6 @@ round_script = [
   <td>No</td>
   <td>Tags for fighting-style armor affinity matching</td>
 </tr>
-<tr>
 <tr>
   <td><code>respawn</code></td>
   <td>bool</td>
@@ -1747,6 +1748,13 @@ ops     = [
 <p>Displays "A [name] falls to the ground."</p>
 
 <p><em>From world:</em> <code>{ op = "spawn<em>item", item</em>id = "groundhog<em>trophy" }</code> in <code>kill</em>script</code>.</p>
+
+<hr>
+<p><strong><code>spawn_npc</code></strong> — Spawn a live copy of an NPC into a room</p>
+
+<pre><code class="language-toml">{ op = &quot;spawn_npc&quot;, npc_id = &quot;training_dummy&quot; }
+{ op = &quot;spawn_npc&quot;, npc_id = &quot;patrol_guard&quot;, room_id = &quot;barracks&quot; }</code></pre>
+<p><code>room<em>id</code> defaults to <code>"current"</code> (the player's current room).  The NPC is added to the room's live <code></em>npcs</code> list immediately.  The room must already be loaded; if the zone has been evicted the call is a silent no-op.  Spawned NPCs with <code>respawn = false</code> do not reappear after being defeated.</p>
 
 <hr>
 <h4 id="quests">QUESTS</h4>
@@ -3817,6 +3825,336 @@ python tools/run_script.py scripts/welcome.toml --player NewHero --create</code>
 <p>The tool loads the world, loads the player, executes the ops, and saves the player. All OUTPUT messages are printed to the console during execution.</p>
 
 <hr>
+<h2 id="20-world-notes-file-world-md">20. World Notes File (world.md)</h2>
+<p>Each world can have an optional <code>world.md</code> file at <code>data/&lt;world_id&gt;/world.md</code>. This is a Markdown document for world-level lore, design notes, NPC backstory, cross-zone trade routes, quest relationships, and anything else a world creator wants to record.</p>
+
+<h3 id="20-1-location">20.1 Location</h3>
+<pre><code>data/&lt;world_id&gt;/world.md</code></pre>
+<h3 id="20-2-usage">20.2 Usage</h3>
+<ul>
+  <li><strong>WCT</strong>: Click <strong>World Notes</strong> in the top bar to open a fullscreen Markdown editor. Changes are saved to <code>world.md</code> immediately.</li>
+  <li><strong>world2html</strong>: The content of <code>world.md</code> is rendered between the summary table and the first zone section when generating the review HTML.</li>
+  <li><strong>Engine</strong>: <code>world.md</code> is not read by the engine at runtime — it is purely a tool for world authors.</li>
+</ul>
+<h3 id="20-3-recommended-sections">20.3 Recommended Sections</h3>
+<pre><code class="language-markdown"># World Name
+
+## Overview
+Brief pitch for the world.
+
+## Regions
+Per-zone narrative summaries and design goals.
+
+## Quest Relationships
+Cross-zone quest dependencies and flag usage.
+
+## Item Notes
+Unusual item behaviours, cross-zone commission materials.
+
+## Tags
+Tag naming conventions used in this world.</code></pre>
+<hr>
+<h2 id="21-world-processes">21. World Processes</h2>
+<p>World processes are recurring scripts or NPC-route drivers that fire automatically on player-action ticks. They enable time-passing simulation — weather changes, NPC patrols, shifting exits, caravan routes — without any background threads or clock dependency.</p>
+
+<p>Processes fire on the same tick used by status effects (every non-read-only player command). They are per-player: each character has their own process state persisted in their zone_state folder.</p>
+
+<h3 id="21-1-defining-a-process">21.1 Defining a Process</h3>
+<p>Create a <code>processes.toml</code> file inside any zone folder. Each <code>[[process]]</code> block defines one process.</p>
+
+<pre><code class="language-toml">[[process]]
+id            = &quot;caravan_route&quot;
+name          = &quot;Merchant Caravan&quot;
+interval      = 5          # fire every 5 action ticks (default 1)
+autostart     = false      # start automatically on world load (default false)
+admin_comment = &quot;Caravan moves through town on a loop&quot;</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Required</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>id</code></td>
+  <td>string</td>
+  <td><strong>Yes</strong></td>
+  <td>Unique process identifier</td>
+</tr>
+<tr>
+  <td><code>name</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>Display name (for tooling)</td>
+</tr>
+<tr>
+  <td><code>interval</code></td>
+  <td>int</td>
+  <td>No</td>
+  <td>Fire every N action ticks; default <code>1</code></td>
+</tr>
+<tr>
+  <td><code>autostart</code></td>
+  <td>bool</td>
+  <td>No</td>
+  <td>If <code>true</code>, process starts active immediately; default <code>false</code></td>
+</tr>
+<tr>
+  <td><code>admin_comment</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>Design notes (not shown in-game)</td>
+</tr>
+<tr>
+  <td><code>script</code></td>
+  <td>array</td>
+  <td>No</td>
+  <td>Inline script ops to run on each fire (Option A)</td>
+</tr>
+<tr>
+  <td><code>script_file</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>World-relative path to a TOML ops file (Option A2)</td>
+</tr>
+<tr>
+  <td><code>script_py</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>World-relative path to a Python <code>.py</code> file (Option A3)</td>
+</tr>
+<tr>
+  <td><code>route_npc</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td>NPC id to move along the route (Option B)</td>
+</tr>
+<tr>
+  <td><code>route_loop</code></td>
+  <td>string</td>
+  <td>No</td>
+  <td><code>"cycle"</code> (default) or <code>"reverse"</code></td>
+</tr>
+<tr>
+  <td><code>route</code></td>
+  <td>array</td>
+  <td>No</td>
+  <td>List of <code>{room_id, ticks}</code> waypoints (Option B)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="21-2-option-a-script-based-process">21.2 Option A — Script-Based Process</h3>
+<p>A script process runs a list of ops every time it fires. Use this for weather messages, periodic flag checks, room-light changes, or any timed effect.</p>
+
+<pre><code class="language-toml">[[process]]
+id       = &quot;storm_cycle&quot;
+name     = &quot;Storm Cycle&quot;
+interval = 20
+autostart = true
+script = [
+  { op = &quot;message&quot;, text = &quot;Thunder rolls across the hills.&quot;, tag = &quot;system&quot; },
+  { op = &quot;adjust_light&quot;, amount = -1 },
+]</code></pre>
+<p>For longer or reusable scripts, use <code>script_file</code> to point to an external TOML ops file instead of embedding an inline array.</p>
+
+<h4 id="21-2-1-external-script-files-script-file">21.2.1 External Script Files (script_file)</h4>
+<p><code>script_file</code> takes a world-relative path to a TOML file whose top-level key is <code>ops</code> or <code>script</code>. The engine loads and runs the file through the same ScriptRunner that handles inline ops — any op that works inline works in a file.</p>
+
+<p><strong>When to use <code>script_file</code>:</strong></p>
+
+<ul>
+  <li>The process logic is more than 5–6 ops (inline becomes hard to read)</li>
+  <li>The same script is shared by more than one process</li>
+  <li>You want to edit the logic without touching <code>processes.toml</code></li>
+</ul>
+<p><strong>Recommended layout:</strong></p>
+
+<pre><code>data/&lt;world_id&gt;/
+  scripts/
+    weather_tick.toml
+    patrol_events.toml
+    caravan_checks.toml
+  &lt;zone_id&gt;/
+    processes.toml
+    ...</code></pre>
+<p><strong>Process definition:</strong></p>
+
+<pre><code class="language-toml">[[process]]
+id          = &quot;patrol_events&quot;
+name        = &quot;Patrol Events&quot;
+interval    = 10
+autostart   = true
+script_file = &quot;scripts/patrol_events.toml&quot;</code></pre>
+<p><strong>Script file (<code>data/&lt;world<em>id&gt;/scripts/patrol</em>events.toml</code>):</strong></p>
+
+<pre><code class="language-toml"># Top-level key must be &quot;ops&quot; or &quot;script&quot;
+ops = [
+  { op = &quot;if_flag&quot;, flag = &quot;patrol_alert&quot;,
+    then = [
+      { op = &quot;message&quot;, text = &quot;Boots ring on the cobblestones outside.&quot;, tag = &quot;system&quot; },
+      { op = &quot;adjust_light&quot;, amount = -1 },
+    ],
+    else = [
+      { op = &quot;adjust_light&quot;, amount = 1 },
+    ]
+  },
+]</code></pre>
+<p>Both <code>script</code> and <code>script_file</code> may be defined on the same process; the inline <code>script</code> runs first, then the file. If the file is missing or cannot be parsed, it is silently skipped.</p>
+
+<h4 id="21-2-2-python-script-files-script-py">21.2.2 Python Script Files (script_py)</h4>
+<p><code>script_py</code> points to an actual Python <code>.py</code> file. The file must define a top-level <code>run(ctx)</code> function. The engine loads and executes it on every process fire, passing in the full game context. This enables integrations that are impossible in TOML ops — HTTP requests, logging, file output, Discord/Slack webhooks, email, or any Python library.</p>
+
+<p><strong>Context object passed to <code>run(ctx)</code>:</strong></p>
+
+<table>
+<thead>
+<tr>
+  <th>Attribute</th>
+  <th>Type</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>ctx.player</code></td>
+  <td><code>Player</code></td>
+  <td>Current player (read/write — changes persist)</td>
+</tr>
+<tr>
+  <td><code>ctx.world</code></td>
+  <td><code>World</code></td>
+  <td>Zone/room/NPC data</td>
+</tr>
+<tr>
+  <td><code>ctx.bus</code></td>
+  <td><code>EventBus</code></td>
+  <td>Emit messages to the player's frontend</td>
+</tr>
+<tr>
+  <td><code>ctx.quests</code></td>
+  <td><code>QuestTracker</code></td>
+  <td>Read quest state</td>
+</tr>
+<tr>
+  <td><code>ctx.processes</code></td>
+  <td><code>ProcessManager</code></td>
+  <td>Start/stop/pause other processes</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Emitting output to the player from Python:</strong></p>
+
+<pre><code class="language-python">from engine.events import Event
+from engine.msg import Msg, Tag
+
+def run(ctx):
+    ctx.bus.emit(Event.OUTPUT, Msg(Tag.SYSTEM, &quot;The bell tower tolls the hour.&quot;))</code></pre>
+<p><strong>Full example — Discord webhook on quest completion:</strong></p>
+
+<p>Process definition:</p>
+
+<pre><code class="language-toml">[[process]]
+id          = &quot;discord_quest_log&quot;
+name        = &quot;Discord Quest Logger&quot;
+interval    = 1
+autostart   = false          # start via process_start op in a quest&#x27;s complete script
+script_py   = &quot;scripts/discord_quest_log.py&quot;</code></pre>
+<p>Script file (<code>data/&lt;world<em>id&gt;/scripts/discord</em>quest_log.py</code>):</p>
+
+<pre><code class="language-python">import requests  # third-party; install with: pip install requests
+
+WEBHOOK_URL = &quot;https://discord.com/api/webhooks/YOUR_WEBHOOK_URL&quot;
+
+def run(ctx):
+    p = ctx.player
+    completed = sorted(p.completed_quests)
+    if not completed:
+        return
+    last = completed[-1].replace(&quot;_&quot;, &quot; &quot;).title()
+    try:
+        requests.post(WEBHOOK_URL, json={
+            &quot;content&quot;: f&quot;**{p.name}** completed **{last}** (prestige: {p.prestige})&quot;
+        }, timeout=3)
+    except Exception:
+        pass  # never let network errors crash the game</code></pre>
+<p><strong>Rules and safety:</strong></p>
+
+<ul>
+  <li>The <code>.py</code> file is reloaded from disk on <strong>every</strong> fire, so edits take effect immediately without restarting the server.</li>
+  <li>All exceptions are caught silently — a broken script never crashes the game or interrupts the player.</li>
+  <li><code>ctx.player</code> is the live player object; writes to it (e.g. setting flags, adjusting gold) take effect immediately and are saved on the next player save.</li>
+  <li>The script runs synchronously on the game tick, so keep network calls short or fire-and-forget with a timeout. Long-running operations will delay the player's response.</li>
+  <li>No sandboxing is applied. Scripts have full Python access. Only use <code>script_py</code> with trusted content.</li>
+</ul>
+<h3 id="21-3-option-b-npc-route-caravan-patrol">21.3 Option B — NPC Route (Caravan / Patrol)</h3>
+<p>A route process walks an NPC through a list of waypoints. The <code>ticks</code> field on each waypoint is how many process-fires the NPC waits at that room before moving.</p>
+
+<pre><code class="language-toml">[[process]]
+id         = &quot;traveling_merchant&quot;
+name       = &quot;Traveling Merchant&quot;
+interval   = 3           # check route every 3 action ticks
+autostart  = false       # started by quest trigger
+route_npc  = &quot;merchant_edvard&quot;
+route_loop = &quot;cycle&quot;     # loops back to start; use &quot;reverse&quot; for ping-pong
+route = [
+  { room_id = &quot;millhaven_square&quot;, ticks = 4 },
+  { room_id = &quot;millhaven_gate&quot;,   ticks = 2 },
+  { room_id = &quot;millbrook_road&quot;,   ticks = 6 },
+]</code></pre>
+<p>With <code>route_loop = "reverse"</code>, the NPC walks forward to the last waypoint then back to the first, then forward again.</p>
+
+<p>Both <code>script</code> and <code>route</code> may appear on the same process — the route advances first, then the script runs.</p>
+
+<p><strong>Route timing note:</strong> With <code>interval = 3</code> and <code>ticks = 4</code>, the NPC stays at a waypoint for <code>3 × 4 = 12</code> player action commands before moving.</p>
+
+<blockquote>
+<p><strong>Zone eviction:</strong> Route-based NPC movement uses <code>move_npc</code> internally and requires the NPC's current zone to be loaded. If a zone is evicted from memory while an NPC is mid-route, the NPC will reappear at its spawn point when the zone reloads. Plan routes within zones or between always-adjacent zones.</p>
+
+</blockquote>
+<h3 id="21-4-controlling-processes-from-scripts">21.4 Controlling Processes from Scripts</h3>
+<p>Any script (dialogue, on<em>enter, item on</em>get, quest trigger, etc.) can start, stop, or pause a process.</p>
+
+<pre><code class="language-toml"># Start when player triggers a quest
+{ op = &quot;process_start&quot;, process_id = &quot;caravan_route&quot; }
+
+# Pause during a cutscene or boss fight
+{ op = &quot;process_pause&quot;, process_id = &quot;caravan_route&quot; }
+
+# Stop and reset all counters
+{ op = &quot;process_stop&quot;,  process_id = &quot;caravan_route&quot; }</code></pre>
+<p><code>process<em>start</code> also resumes a paused process. <code>process</em>stop</code> resets tick counters so the process starts fresh if restarted.</p>
+
+<h3 id="21-5-state-persistence">21.5 State Persistence</h3>
+<p>Process state (active/paused, tick counters, route position) is saved to:</p>
+
+<pre><code>data/players/&lt;name&gt;/zone_state/_processes.json</code></pre>
+<p>It is loaded when <code>CommandProcessor</code> initialises and written whenever the player saves. Process state survives world reloads and game restarts.</p>
+
+<h3 id="21-6-full-example-weather-process">21.6 Full Example — Weather Process</h3>
+<pre><code class="language-toml"># data/first_world/millhaven/processes.toml
+
+[[process]]
+id        = &quot;millhaven_weather&quot;
+name      = &quot;Millhaven Weather&quot;
+interval  = 15
+autostart = true
+admin_comment = &quot;Toggles a rain flag every ~15 commands. Quests check &#x27;millhaven_raining&#x27;.&quot;
+script = [
+  { op = &quot;if_flag&quot;, flag = &quot;millhaven_raining&quot;,
+    then = [
+      { op = &quot;clear_flag&quot;, flag = &quot;millhaven_raining&quot; },
+      { op = &quot;message&quot;, text = &quot;The rain eases. Pale sunlight breaks through the clouds.&quot;, tag = &quot;system&quot; },
+    ],
+    else = [
+      { op = &quot;set_flag&quot;, flag = &quot;millhaven_raining&quot; },
+      { op = &quot;message&quot;, text = &quot;Dark clouds gather. Rain begins to fall.&quot;, tag = &quot;system&quot; },
+    ]
+  }
+]</code></pre>
+<hr>
 <h2 id="appendix-a-room-flags">Appendix A — Room Flags</h2>
 <p>Add any of these string values to a room's <code>flags</code> array.</p>
 
@@ -4108,6 +4446,11 @@ on_wake  = [
   <td>Place item in current room</td>
 </tr>
 <tr>
+  <td><code>spawn_npc</code></td>
+  <td><code>npc<em>id</code>, <code>room</em>id</code></td>
+  <td>Spawn live NPC in room (default: current)</td>
+</tr>
+<tr>
   <td><code>if_item</code></td>
   <td><code>item_id</code>, <code>then</code>, <code>else</code></td>
   <td>Branch on inventory item</td>
@@ -4347,6 +4690,34 @@ on_wake  = [
   <td><code>run<em>script</em>file</code></td>
   <td><code>path</code></td>
   <td>Run ops from a world-relative TOML file (see §19)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>World processes (see §21)</strong></p>
+
+<table>
+<thead>
+<tr>
+  <th>Op</th>
+  <th>Key attributes</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>process_start</code></td>
+  <td><code>process_id</code></td>
+  <td>Activate (or resume) a process</td>
+</tr>
+<tr>
+  <td><code>process_stop</code></td>
+  <td><code>process_id</code></td>
+  <td>Deactivate and reset tick counters</td>
+</tr>
+<tr>
+  <td><code>process_pause</code></td>
+  <td><code>process_id</code></td>
+  <td>Suspend without resetting counters</td>
 </tr>
 </tbody>
 </table>
@@ -5974,34 +6345,5 @@ style_prof = 30.0</code></pre>
 
 <p><strong>NPC <code>style<em>prof</code> too high on common enemies</strong> A street thug with <code>style</em>prof = 90</code> will parry almost every round. Save high proficiency for bosses. Common enemies in the 10-35 range keep combat readable.</p>
 
-<hr>
-<h2 id="20-world-notes-file-world-md">20. World Notes File (world.md)</h2>
-<p>Each world can have an optional <code>world.md</code> file at <code>data/&lt;world_id&gt;/world.md</code>. This is a Markdown document for world-level lore, design notes, NPC backstory, cross-zone trade routes, quest relationships, and anything else a world creator wants to record.</p>
-
-<h3 id="20-1-location">20.1 Location</h3>
-<pre><code>data/&lt;world_id&gt;/world.md</code></pre>
-<h3 id="20-2-usage">20.2 Usage</h3>
-<ul>
-  <li><strong>WCT</strong>: Click <strong>World Notes</strong> in the top bar to open a fullscreen Markdown editor. Changes are saved to <code>world.md</code> immediately.</li>
-  <li><strong>world2html</strong>: The content of <code>world.md</code> is rendered between the summary table and the first zone section when generating the review HTML.</li>
-  <li><strong>Engine</strong>: <code>world.md</code> is not read by the engine at runtime — it is purely a tool for world authors.</li>
-</ul>
-<h3 id="20-3-recommended-sections">20.3 Recommended Sections</h3>
-<pre><code class="language-markdown"># World Name
-
-## Overview
-Brief pitch for the world.
-
-## Regions
-Per-zone narrative summaries and design goals.
-
-## Quest Relationships
-Cross-zone quest dependencies and flag usage.
-
-## Item Notes
-Unusual item behaviours, cross-zone commission materials.
-
-## Tags
-Tag naming conventions used in this world.</code></pre>
 </body>
 </html>

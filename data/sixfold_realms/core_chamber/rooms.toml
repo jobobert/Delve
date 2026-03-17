@@ -132,8 +132,7 @@ on_enter    = [
 id          = "cc_light_calibration"
 name        = "Calibration — Light"
 description = "Mirrors and crystals float in midair, scattering beams of shifting color. A prismatic sentinel watches over the node."
-spawns        = ["cc_light_sentinel"]
-spawns      = ["cc_echo_light"]
+spawns      = ["cc_light_sentinel", "cc_echo_light"]
 exits       = { south = "cc_lattice1" }
 on_enter    = [
   { op = "adjust_attr", name = "resonance", amount = -3 },
@@ -145,8 +144,7 @@ on_enter    = [
 id          = "cc_pressure_calibration"
 name        = "Calibration — Pressure"
 description = "Air currents twist unpredictably, bending sound and space around the alignment node."
-spawns        = ["cc_pressure_sentinel"]
-spawns      = ["cc_echo_pressure"]
+spawns      = ["cc_pressure_sentinel", "cc_echo_pressure"]
 exits       = { west = "cc_lattice1" }
 on_enter    = [
   { op = "adjust_attr", name = "resonance", amount = -3 },
@@ -158,8 +156,7 @@ on_enter    = [
 id          = "cc_growth_calibration"
 name        = "Calibration — Growth"
 description = "Vines coil around ancient machinery, pulsing with life. The growth node breathes slowly."
-spawns        = ["cc_growth_sentinel"]
-spawns      = ["cc_echo_growth"]
+spawns      = ["cc_growth_sentinel", "cc_echo_growth"]
 exits       = { north = "cc_lattice1" }
 on_enter    = [
   { op = "adjust_attr", name = "resonance", amount = -3 },
@@ -171,8 +168,7 @@ on_enter    = [
 id          = "cc_heat_calibration"
 name        = "Calibration — Heat"
 description = "Thermal vents flare rhythmically, like a beating heart. The heat node glows deep orange."
-spawns        = ["cc_heat_sentinel"]
-spawns      = ["cc_echo_heat"]
+spawns      = ["cc_heat_sentinel", "cc_echo_heat"]
 exits       = { east = "cc_lattice1" }
 on_enter    = [
   { op = "adjust_attr", name = "resonance", amount = -3 },
@@ -184,8 +180,7 @@ on_enter    = [
 id          = "cc_memory_calibration"
 name        = "Calibration — Memory"
 description = "Fungal nodes glow softly, whispering fragments of forgotten knowledge. The memory sentinel stands in quiet contemplation."
-spawns        = ["cc_memory_sentinel"]
-spawns      = ["cc_echo_memory"]
+spawns      = ["cc_memory_sentinel", "cc_echo_memory"]
 exits       = { down = "cc_lattice1" }
 on_enter    = [
   { op = "adjust_attr", name = "resonance", amount = -3 },

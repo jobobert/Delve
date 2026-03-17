@@ -221,3 +221,20 @@ on_get      = [
   { op = "complete_quest", quest_id = "gr_shadow_fragment" },
   { op = "prestige", amount = 3, reason = "recovered the Shadow Regulator Fragment" },
 ]
+
+
+# ── Entropy Edge ──────────────────────────────────────────────────────────────
+[[item]]
+id          = "gr_entropy_edge"
+name        = "Entropy Edge"
+desc_short  = "A thin blade of shadow-ore, cold to the touch."
+desc_long   = "The Umbral Weaver shaped this blade from the densest shadow-ore in the Sink. Its edge is unnaturally sharp — wounds it makes resist closing, as if entropy seeps into the cut."
+slot        = "weapon"
+weight      = 2
+weapon_tags = ["blade", "shadow", "entropy"]
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack", amount = 11 },
+  { type = "on_equip",   message = "The blade drinks the ambient light. Your hand feels suddenly colder." },
+  { type = "on_hit",     ability = "bleed", chance = 0.18, magnitude = 2 },
+]

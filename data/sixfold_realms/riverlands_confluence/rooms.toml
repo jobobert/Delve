@@ -11,7 +11,7 @@ coord = [0, 0]
 flags = ["town", "no_combat"]
 start = true
 exits = {north = "rl_mural_promenade", east = "rl_market_row", south = "rl_lower_piers", west = "rl_ferryman_shack"}
-spawns = ["sela_mapmaker", "river_child", "rl_banker"]
+spawns = ["sela_mapmaker", "rl_banker"]
 items = ["mural_inscription_fragment"]
 on_enter = [{op = "if_not_flag", flag = "rl_intro_seen", then = [{op = "message", tag = "system", text = "The rivers feel wrong here—like they are listening."}, {op = "set_flag", flag = "rl_intro_seen"}, {op = "advance_quest", quest_id = "rivers_remember", step = 1}]}]
 
@@ -24,6 +24,7 @@ flags = ["no_combat"]
 exits = {south = "rl_ferrydock_square", north = {to = "rl_hidden_stair", show_if = {op = "has_flag", flag = "rl_stair_noticed"}, desc = "a faint seam in the stone, where steps descend into darkness"}}
 items = ["mural_inscription_fragment"]
 on_enter = [{op = "if_not_flag", flag = "rl_mural_examined", then = [{op = "message", tag = "system", text = "The mural shows five rivers feeding a central circle, cracked down the middle."}, {op = "set_flag", flag = "rl_mural_examined"}, {op = "advance_quest", quest_id = "rivers_remember", step = 2}], else = []}, {op = "if_not_flag", flag = "rl_stair_noticed", then = [{op = "skill_check", skill = "perception", dc = 12, on_pass = [{op = "message", tag = "system", text = "Your eye catches a faint seam in the stone — steps, descending north beneath the mural."}, {op = "set_flag", flag = "rl_stair_noticed"}], on_fail = [{op = "message", tag = "system", text = "The stonework here seems unnaturally regular, but you can't make out anything specific."}, {op = "skill_grow", skill = "perception", amount = 2}]}], else = []}]
+spawns = ["river_child"]
 
 [[room]]
 id = "rl_hidden_stair"
@@ -114,73 +115,73 @@ exits = {east = "rl_ferrydock_square", north = "rl_ferry_berth_peaks"}
 spawns = ["kale_ferryman"]
 
 [[room]]
-id          = "rl_hovel"
-name        = "Flooded Shack"
+id = "rl_hovel"
+name = "Flooded Shack"
 description = "A sagging one-room shack lodged between the riverbank and a crumbling retaining wall."
-desc_long   = "Watermarks stripe the walls at varying heights — a record of past floods, each one higher than the last. A rusted stove sits cold in the corner, and personal effects have been left behind as though the owner stepped out and never came back. A loose board in the floor has shifted."
-exits       = { north = "rl_unstable_current" }
-items       = ["rl_locket"]
+desc_long = "Watermarks stripe the walls at varying heights — a record of past floods, each one higher than the last. A rusted stove sits cold in the corner, and personal effects have been left behind as though the owner stepped out and never came back. A loose board in the floor has shifted."
+exits = {north = "rl_unstable_current"}
+items = ["rl_locket"]
 
 [[room]]
-id          = "rl_guest_room"
-name        = "Guest Room"
+id = "rl_guest_room"
+name = "Guest Room"
 description = "A small, tidy room with a single cot, a washbasin, and a hook on the back of the door."
-desc_long   = "A candle stub sits on a shelf above the bed. The mattress creaks but holds. Through the window, the river is just visible between the rooftops."
-exits       = { west = "rl_inn_rooms" }
+desc_long = "A candle stub sits on a shelf above the bed. The mattress creaks but holds. Through the window, the river is just visible between the rooftops."
+exits = {west = "rl_inn_rooms"}
 
 [[room]]
-id          = "rl_guest_room_2"
-name        = "Guest Room"
+id = "rl_guest_room_2"
+name = "Guest Room"
 description = "The room is kept with quiet care — a folded blanket, a small oil lamp, a worn coat hung on a peg."
-desc_long   = "An old man sits in the single chair by the window, looking out at the water. He turns slowly when you enter, eyes steady despite the tremor in his hands."
-exits       = { east = "rl_inn_rooms" }
-spawns      = ["rl_old_man_aldric"]
+desc_long = "An old man sits in the single chair by the window, looking out at the water. He turns slowly when you enter, eyes steady despite the tremor in his hands."
+exits = {east = "rl_inn_rooms"}
+spawns = ["rl_old_man_aldric"]
 
 [[room]]
-id          = "rl_stable"
-name        = "Stable"
+id = "rl_stable"
+name = "Stable"
 description = "Low-ceilinged and smelling of hay and river mud, the stable houses a row of empty stalls."
-desc_long   = "One stall holds a calm mule regarding you without interest. The straw near the back wall has been disturbed — raked over, but not carefully. Someone dug here and tried to cover it."
-exits       = { west = "rl_inn_common" }
-items       = ["rl_stable_coinpurse"]
+desc_long = "One stall holds a calm mule regarding you without interest. The straw near the back wall has been disturbed — raked over, but not carefully. Someone dug here and tried to cover it."
+exits = {west = "rl_inn_common"}
+items = ["rl_stable_coinpurse"]
 
 [[room]]
-id          = "rl_city_center"
-name        = "City Center"
+id = "rl_city_center"
+name = "City Center"
 description = "A broad flagstone plaza where the main road through the Confluence widens and opens up."
-desc_long   = "A notice board stands at the center, its posts pocked by years of nailed announcements. Officials in river-blue coats move between the surrounding buildings, and the patrol captain has a field table set near the eastern passage."
-exits       = { north = "rl_market_row", east = "rl_city_edge" }
-spawns      = ["rl_patrol_captain"]
-flags       = ["no_combat"]
+desc_long = "A notice board stands at the center, its posts pocked by years of nailed announcements. Officials in river-blue coats move between the surrounding buildings, and the patrol captain has a field table set near the eastern passage."
+exits = {north = "rl_market_row", east = "rl_city_edge"}
+spawns = ["rl_patrol_captain"]
+flags = ["no_combat"]
 
 [[room]]
-id          = "rl_blacksmith_shop"
-name        = "Blacksmith Shop"
+id = "rl_blacksmith_shop"
+name = "Blacksmith Shop"
 description = "Heat rolls from a forge set into the rear wall. The smell of hot metal and coal smoke hangs heavy."
-desc_long   = "Finished blades and reinforced fittings line the racks in neat rows. The ring of hammer on anvil fills every pause in conversation, and the smith doesn't look up until she's ready."
-exits       = { south = "rl_market_row" }
-spawns      = ["rl_blacksmith_orin"]
+desc_long = "Finished blades and reinforced fittings line the racks in neat rows. The ring of hammer on anvil fills every pause in conversation, and the smith doesn't look up until she's ready."
+exits = {south = "rl_market_row"}
+spawns = ["rl_blacksmith_orin"]
 
 [[room]]
-id          = "rl_city_edge"
-name        = "City's Edge"
+id = "rl_city_edge"
+name = "City's Edge"
 description = "The buildings thin and give way here at the edge of the settlement."
-desc_long   = "Between the last house and the first tree, a worn sword is wedged point-down into a split log by the path — left by someone who moved on or couldn't. The clearing ahead smells of smoke and herbs."
-exits       = { west = "rl_city_center", south = "rl_clearing" }
-items       = ["rl_warden_blade"]
+desc_long = "Between the last house and the first tree, a worn sword is wedged point-down into a split log by the path — left by someone who moved on or couldn't. The clearing ahead smells of smoke and herbs."
+exits = {west = "rl_city_center", south = "rl_clearing"}
+items = ["rl_warden_blade"]
 
 [[room]]
-id          = "rl_clearing"
-name        = "Clearing"
+id = "rl_clearing"
+name = "Clearing"
 description = "A circle of flat stones surrounds a low fire, with old roots gripping the earth at the edges."
-desc_long   = "Braided bundles of herbs hang from low branches, still green against the grey-brown bark. A figure in grey-green robes crouches near the flames, tending a small iron pot with unhurried attention."
-exits       = { north = "rl_city_edge" }
-spawns      = ["rl_druid_fenne"]
+desc_long = "Braided bundles of herbs hang from low branches, still green against the grey-brown bark. A figure in grey-green robes crouches near the flames, tending a small iron pot with unhurried attention."
+exits = {north = "rl_city_edge"}
+spawns = ["rl_druid_fenne"]
 
 [[room]]
-id          = "rl_echoing_antichamber"
-name        = "Echoing Antechamber"
+id = "rl_echoing_antichamber"
+name = "Echoing Antechamber"
 description = "A narrow passage that broadens into a low alcove, its walls carved with the same concentric rings as the chamber beyond."
-desc_long   = "The resonant hum is softer here, filtered through layers of stone. In a recess along the far wall, a cloth-wrapped bundle rests on a natural shelf — placed deliberately, long before you arrived."
-exits       = { east = "rl_echoing_chamber" }
-items       = ["rl_resonant_blade"]
+desc_long = "The resonant hum is softer here, filtered through layers of stone. In a recess along the far wall, a cloth-wrapped bundle rests on a natural shelf — placed deliberately, long before you arrived."
+exits = {east = "rl_echoing_chamber"}
+items = ["rl_resonant_blade"]

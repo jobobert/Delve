@@ -1,0 +1,27 @@
+id      = "mp_memory_whip"
+title   = "The Corrective Tool"
+giver   = "mp_sporewarden"
+summary = "The Sporewarden has a theory: a weapon woven from memory spores and mycelial resin can interrupt a creature's pattern-recognition mid-combat. He'll weave one if you gather the materials."
+
+[[step]]
+index     = 1
+objective = "Find the Sporewarden at Loomroot Rise."
+hint      = "The Sporewarden tends the Plains from a vantage point above the fields."
+
+[[step]]
+index     = 2
+objective = "Gather fungal fiber, mycelial resin, and memory spores."
+hint      = "Fungal fiber and resin can be collected from the Plains' larger bloom clusters. Memory spores accumulate near active memory nodes."
+
+[[step]]
+index     = 3
+objective = "Commission the Memory Whip from the Sporewarden."
+hint      = "Return with all three materials and the Sporewarden will weave the whip."
+
+[[reward]]
+type   = "xp"
+amount = 200
+
+[[reward]]
+type   = "gold"
+amount = 50

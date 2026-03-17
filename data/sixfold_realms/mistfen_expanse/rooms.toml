@@ -4,10 +4,8 @@
 id          = "mf_swamp_edge"
 name        = "Swamp's Edge"
 description = "The ground softens as the Riverlands gives way to the Mistfen. The air hums with pressure."
-spawns      = ["mf_mire_wolf"]
+spawns      = ["mf_mire_wolf", "mf_banker"]
 exits       = { east = "mf_mist_loop1", south = "mf_path_reader_camp" }
-
-spawns      = ["mf_banker"]
 [[room]]
 id          = "mf_path_reader_camp"
 name        = "Path-Reader Encampment"
@@ -15,6 +13,12 @@ description = "Lanterns hang from bent trees. Path-Readers sit in quiet focus, l
 flags       = ["town", "no_combat"]
 spawns      = ["mf_path_reader_sera"]
 exits       = { north = "mf_swamp_edge", east = "mf_anchor_field", south = "mf_smuggler_hide" }
+on_enter    = [
+  { op = "if_not_flag", flag = "mf_pressure_chain_started", then = [
+    { op = "advance_quest", quest_id = "mf_pressure_chain", step = 1 },
+    { op = "set_flag", flag = "mf_pressure_chain_started" },
+  ] },
+]
 
 [[room]]
 id          = "mf_smuggler_hide"
@@ -113,6 +117,7 @@ on_enter    = [
 id          = "mf_mist_loop3"
 name        = "Mist Loop - Segment 3"
 description = "Shapes in the mist repeat at wrong intervals. Without an anchor, you could walk forever."
+spawns      = ["mf_echo_wraith"]
 exits       = {
   east = "mf_mist_loop1",
   west = { to = "mf_echo_gate", show_if = { op = "has_flag", flag = "mf_anchor_attuned" } },
@@ -177,6 +182,7 @@ on_enter    = [
 id          = "mf_stretch_side"
 name        = "Side Landing"
 description = "A small platform juts out from the boardwalk, overlooking a still pool."
+spawns      = ["mf_drift_serpent"]
 items       = ["mf_bog_quartz_node"]
 exits       = { west = "mf_stretch2" }
 
@@ -184,6 +190,7 @@ exits       = { west = "mf_stretch2" }
 id          = "mf_stretch3"
 name        = "Compressed Crossing"
 description = "The distance between two leaning trees feels wrong — too short, then too long, then short again."
+spawns      = ["mf_drift_serpent"]
 exits       = {
   north = "mf_mist_loop3",
   south = "mf_rot_platform1",
@@ -231,6 +238,7 @@ on_enter    = [
 id          = "mf_rot_west"
 name        = "Western Backwater"
 description = "A quiet backwater where the mist hangs heavy and still."
+spawns      = ["mf_mire_wolf"]
 items       = ["mf_bog_quartz_node"]
 exits       = { east = "mf_rot_platform1" }
 
@@ -254,6 +262,7 @@ on_enter    = [
 id          = "mf_drowned_approach"
 name        = "Approach to the Drowned Vault"
 description = "Ruined stone pillars lean at impossible angles over dark water. The pressure here is almost painful."
+spawns      = ["mf_echo_wraith"]
 exits       = {
   east = "mf_echo_gate",
   west = {
@@ -269,6 +278,7 @@ exits       = {
 id          = "mf_drowned_vault_entrance"
 name        = "Drowned Vault - Entrance"
 description = "A submerged stair descends into a half-flooded ruin. Each breath feels heavier than the last."
+spawns      = ["mf_drift_serpent"]
 exits       = { down = "mf_drowned_vault_hall", east = "mf_drowned_approach" }
 
 [[room]]

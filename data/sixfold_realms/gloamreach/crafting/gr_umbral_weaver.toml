@@ -44,3 +44,30 @@ qualities = [
   { tier = "standard",    weight = 50, craft_message = "Clean polish. The nullstone is well-formed." },
   { tier = "exceptional", weight = 25, craft_message = "Perfect polish. The shard gleams with an eerie inner light." },
 ]
+
+
+# Commission 3: Shape the Entropy Edge
+[[commission]]
+id             = "gr_shape_entropy_edge"
+npc_id         = "gr_umbral_weaver"
+label          = "Shape the Entropy Edge"
+desc           = "The Weaver can draw entropy into a shadow-ore blade — an edge that makes wounds that won't close."
+slot           = "weapon"
+weapon_tags    = ["blade", "shadow", "entropy"]
+materials      = ["gr_shadow_ore", "gr_entropy_residue", "gr_nullstone_shard"]
+turns_required = 15
+gold_cost      = 0
+weight         = 2
+on_complete = [
+  { op = "message", tag = "crafting", text = "The Weaver runs a fingertip along the finished edge. A thin line of shadow follows it. 'It will hold,' she says." },
+  { op = "advance_quest", quest_id = "gr_entropy_edge", step = 2 },
+  { op = "advance_quest", quest_id = "gr_entropy_edge", step = 3 },
+  { op = "complete_quest", quest_id = "gr_entropy_edge" },
+  { op = "prestige", amount = 3, reason = "shaped the Entropy Edge with the Umbral Weaver" },
+]
+qualities = [
+  { tier = "poor",        weight = 20, attack_bonus = 8,  equip_msg = "The edge is rough in places — it will cause wounds, but inconsistently.", craft_message = "The entropy resisted shaping. It held, barely." },
+  { tier = "standard",    weight = 55, attack_bonus = 11, equip_msg = "The blade is thin and cold. Wounds it makes will bleed freely." },
+  { tier = "exceptional", weight = 20, attack_bonus = 13, name_prefix = "Entropic ", equip_msg = "The edge seems to anticipate cuts. The shadow-ore aligned perfectly.", craft_message = "The nullstone drew the entropy clean into the blade. Rare." },
+  { tier = "masterwork",  weight = 5,  attack_bonus = 15, name_prefix = "Masterwork ", equip_msg = "The blade is barely there in dim light. Every wound it makes refuses to close.", craft_message = "That was not shaping. That was entropy choosing its own form." },
+]

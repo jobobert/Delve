@@ -44,3 +44,30 @@ qualities = [
   { tier = "standard",    weight = 50, craft_message = "Tempered alloy. Solid work." },
   { tier = "exceptional", weight = 25, craft_message = "Sky-forged alloy. The drake-scale bonded cleanly to the ore." },
 ]
+
+
+# Commission 3: Forge the Ashen Fang
+[[commission]]
+id              = "dp_forge_ashen_fang"
+npc_id          = "smith_orun"
+label           = "Forge the Ashen Fang"
+desc            = "Orun can forge a volcanic glass blade set with drakebone — serrated to cause bleeding wounds."
+slot            = "weapon"
+weapon_tags     = ["blade", "dagger", "volcanic"]
+materials       = ["volcanic_glass_shard", "drakebone_fragment", "drake_feather_fragment"]
+turns_required  = 15
+gold_cost       = 0
+weight          = 2
+on_complete = [
+  { op = "message", tag = "crafting", text = "Orun quenches the blade in drake blood. The edge hisses and goes still." },
+  { op = "advance_quest", quest_id = "dp_ashen_fang", step = 2 },
+  { op = "advance_quest", quest_id = "dp_ashen_fang", step = 3 },
+  { op = "complete_quest", quest_id = "dp_ashen_fang" },
+  { op = "prestige", amount = 3, reason = "forged the Ashen Fang with Orun" },
+]
+qualities = [
+  { tier = "poor",        weight = 20, attack_bonus = 7,  equip_msg = "The glass is slightly uneven — it will cut, but not cleanly.", craft_message = "The glass cracked a little in the quench. It will hold." },
+  { tier = "standard",    weight = 55, attack_bonus = 10, equip_msg = "The serrated edge catches light. It will make wounds that don't close easily." },
+  { tier = "exceptional", weight = 20, attack_bonus = 12, name_prefix = "Fine ", equip_msg = "The glass took the edge perfectly. Every nick will bleed.", craft_message = "That drakebone set clean into the glass. Rare result." },
+  { tier = "masterwork",  weight = 5,  attack_bonus = 14, name_prefix = "Masterwork ", equip_msg = "The blade is almost alive. It already wants to cut.", craft_message = "I won't make another like that. The volcanic glass sang when I quenched it." },
+]

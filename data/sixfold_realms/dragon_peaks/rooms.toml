@@ -21,7 +21,7 @@ id = "dp_approach_2"
 name = "Windward Ledge"
 description = "A ledge with ropes tied to ancient anchors; updrafts buffet anything loose. Shapes wheel in the sky above."
 exits = {west = "dp_approach_1", east = "dp_approach_3", up = "dp_watch_post"}
-spawns = []
+spawns = ["cliff_hawk"]
 on_enter = [{op = "damage", amount = 2, message = "A sudden gust nearly throws you off balance."}, {op = "skill_check", skill = "perception", dc = 12, on_pass = [{op = "message", tag = "system", text = "You spot a safer line of footing and brace against the wind."}], on_fail = [{op = "damage", amount = 3, message = "You stagger as the wind slams into you."}]}]
 
 [[room]]
@@ -30,7 +30,7 @@ name = "Charred Outcrop"
 description = "Blackened rock and a faint trail of scorched feathers. Something large passed through here recently."
 exits = {west = "dp_approach_2", east = "dp_approach_4"}
 items = ["drake_feather_fragment"]
-spawns = []
+spawns = ["mountain_bandit"]
 
 [[room]]
 id = "dp_approach_4"
@@ -46,6 +46,7 @@ id = "dp_approach_5"
 name = "Resonant Cairn"
 description = "Stacked stones hum faintly when the wind passes through them. The sound is almost words."
 exits = {west = "dp_approach_4", east = "dp_approach_6"}
+spawns = ["echo_bat"]
 on_enter = [{op = "if_not_flag", flag = "dp_cairn_seen", then = [{op = "message", tag = "system", text = "An old plaque reads: 'Tune the vents; the mountain listens.'"}, {op = "set_flag", flag = "dp_cairn_seen"}]}]
 
 [[room]]
@@ -60,7 +61,7 @@ id = "dp_watch_post"
 name = "Mountain Watch Post"
 description = "A small wooden lookout built on a rocky outcrop. Drake movements are marked on a board with chalk — several entries this week. The ledge below is clearly visible."
 exits = {down = "dp_approach_2"}
-spawns = []
+spawns = ["warden_selka"]
 flags = ["no_combat"]
 
 [[room]]
@@ -71,7 +72,7 @@ exits = {west = "dp_approach_6", north = "dp_highspire_2", east = "dp_highspire_
 spawns = ["smith_orun"]
 flags = ["town", "no_combat"]
 start = false
-on_enter = [{op = "if_not_flag", flag = "dp_highspire_intro", then = [{op = "message", tag = "system", text = "Highspire Hold — carved into the mountain's shoulder, holding its ground against the wind."}, {op = "set_flag", flag = "dp_highspire_intro"}, {op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 1}]}]
+on_enter = [{op = "if_not_flag", flag = "dp_highspire_intro", then = [{op = "message", tag = "system", text = "Highspire Hold — carved into the mountain's shoulder, holding its ground against the wind."}, {op = "set_flag", flag = "dp_highspire_intro"}, {op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 1}]}, {op = "if_not_flag", flag = "dp_ashen_fang_started", then = [{op = "advance_quest", quest_id = "dp_ashen_fang", step = 1}, {op = "set_flag", flag = "dp_ashen_fang_started"}]}]
 
 [[room]]
 id = "dp_highspire_2"
@@ -85,7 +86,7 @@ id = "dp_highspire_3"
 name = "Alloy Market"
 description = "Stalls selling resonant alloys, heat crystals, and forged tools. Vendors call over each other to be heard above the wind."
 exits = {west = "dp_highspire_1", east = "dp_highspire_4"}
-spawns = []
+spawns = ["vendor_alloys"]
 flags = ["town", "no_combat"]
 
 [[room]]
@@ -100,14 +101,14 @@ id = "dp_highspire_5"
 name = "Emberfall Road"
 description = "A path descending toward the volcanic vents. Heat shimmers in the air and the stone underfoot is warm."
 exits = {north = "dp_highspire_1", south = "dp_emberfall_1", east = "dp_highspire_6"}
-spawns = []
+spawns = ["steam_sprite"]
 
 [[room]]
 id = "dp_highspire_6"
 name = "Tinkerer's Alcove"
 description = "A cramped workshop where Orun's apprentices experiment with alloys and resonant coils."
 exits = {west = "dp_highspire_5"}
-spawns = []
+spawns = ["tinker_apprentice"]
 items = ["resonant_alloy_ingot_node"]
 flags = ["no_combat"]
 
@@ -116,7 +117,7 @@ id = "dp_emberfall_1"
 name = "Scorched Foothills"
 description = "Patches of molten rock and brittle vegetation crackle underfoot. The heat builds with every step downward."
 exits = {north = "dp_highspire_5", south = "dp_emberfall_2"}
-spawns = []
+spawns = ["steam_sprite"]
 on_enter = [{op = "damage", amount = 3, message = "Heat from below scorches your boots."}]
 
 [[room]]
@@ -124,7 +125,7 @@ id = "dp_emberfall_2"
 name = "Heat Vent Field"
 description = "A field of vents that pulse hot air in irregular bursts. The ground trembles between eruptions."
 exits = {north = "dp_emberfall_1", south = "dp_emberfall_3", east = "dp_mine_entrance"}
-spawns = []
+spawns = ["steam_sprite", "lava_sprite"]
 on_enter = [{op = "skill_check", skill = "survival", dc = 12, on_pass = [{op = "message", tag = "system", text = "You time your steps between the vent pulses."}], on_fail = [{op = "damage", amount = 6, message = "A blast catches you unprepared — the heat is savage."}]}]
 
 [[room]]
@@ -132,6 +133,7 @@ id = "dp_mine_entrance"
 name = "Resonant Mine Entrance"
 description = "A reinforced tunnel mouth leading into the mountain, lined with old support beams. The hum of the rock is deeper here."
 exits = {west = "dp_emberfall_2", east = "dp_mine_1"}
+spawns = ["cave_rat", "miner_apprentice"]
 items = ["dp_raw_ore_node"]
 on_enter = [{op = "if_not_flag", flag = "dp_mine_intro", then = [{op = "message", tag = "system", text = "A notice board inside the entrance reads: 'Pickaxe required. Watch for cave rats.'"}, {op = "set_flag", flag = "dp_mine_intro"}]}]
 
@@ -141,7 +143,7 @@ name = "Resonant Vein Tunnel"
 description = "Walls glitter with faintly humming metal seams. The air is close but still."
 exits = {west = "dp_mine_entrance", east = "dp_mine_2"}
 items = ["resonant_alloy_ingot_node"]
-spawns = []
+spawns = ["cave_rat", "echo_bat"]
 
 [[room]]
 id = "dp_mine_2"
@@ -149,7 +151,7 @@ name = "Drakebone Gallery"
 description = "Fossilised bones protrude from the rock like pale roots. This vein has been worked before — recently."
 exits = {west = "dp_mine_1"}
 items = ["drakebone_deposit"]
-spawns = []
+spawns = ["echo_bat"]
 
 [[room]]
 id = "dp_emberfall_3"
@@ -157,13 +159,14 @@ name = "Glass Run"
 description = "Fields of volcanic glass shards glitter like broken stars. The footing is treacherous but the view is extraordinary."
 exits = {north = "dp_emberfall_2", south = "dp_emberfall_4"}
 items = ["volcanic_glass_node"]
+spawns = ["lava_sprite"]
 
 [[room]]
 id = "dp_emberfall_4"
 name = "Drake Roost"
 description = "Charred perches and scattered bones mark a drake nesting ground. The smell of old smoke is thick."
 exits = {north = "dp_emberfall_3", south = "dp_emberfall_5"}
-spawns = []
+spawns = ["ashwood_drake"]
 
 [[room]]
 id = "dp_emberfall_5"
@@ -171,6 +174,7 @@ name = "Hearthforge Ruin"
 description = "An ancient forge half-buried in ash; gears still hum faintly. The panel is intact — waiting for someone who knows what they are doing."
 exits = {north = "dp_emberfall_4", south = "dp_emberfall_6"}
 items = ["resonance_forge_panel"]
+spawns = ["lava_sprite"]
 on_enter = [{op = "if_not_flag", flag = "dp_forge_intro", then = [{op = "message", tag = "system", text = "The forge hums quietly. The panel awaits alignment to stabilise the vents — and unlock the way forward."}, {op = "set_flag", flag = "dp_forge_intro"}]}]
 
 [[room]]
@@ -178,7 +182,7 @@ id = "dp_emberfall_6"
 name = "Magma Sluice"
 description = "A channel of slow-moving magma; stepping stones cross at narrow points. The air shimmers with distortion."
 exits = {north = "dp_emberfall_5", east = "dp_sky_rift_6"}
-spawns = []
+spawns = ["lava_sprite"]
 on_enter = [{op = "damage", amount = 5, message = "The heat is unbearable — exposed skin sears instantly."}]
 
 [[room]]
@@ -186,7 +190,7 @@ id = "dp_sky_rift_1"
 name = "Sky Rift Mouth"
 description = "A yawning chasm with visible updrafts and distant platforms. The wind here has intention."
 exits = {west = "dp_highspire_4", east = "dp_sky_rift_2"}
-spawns = []
+spawns = ["cliff_hawk"]
 on_enter = [{op = "damage", amount = 2, message = "The updrafts tug at your balance — you barely keep your footing."}]
 
 [[room]]
@@ -195,6 +199,7 @@ name = "Glider Platform"
 description = "A platform with old glider rigs; ropes hang ready for anchoring. The chasm drops away on all sides."
 exits = {west = "dp_sky_rift_1", east = "dp_sky_rift_3"}
 items = ["glider_anchor_point"]
+spawns = ["cliff_hawk", "sky_serpent"]
 on_enter = [{op = "if_not_flag", flag = "dp_glider_intro", then = [{op = "message", tag = "system", text = "A faded sign reads: 'Anchor with a polearm or steady line.'"}, {op = "set_flag", flag = "dp_glider_intro"}]}]
 
 [[room]]
@@ -202,7 +207,7 @@ id = "dp_sky_rift_3"
 name = "Wind Tunnel"
 description = "A narrow corridor where wind funnels violently; timing is everything here."
 exits = {west = "dp_sky_rift_2", east = "dp_sky_rift_4"}
-spawns = []
+spawns = ["sky_serpent"]
 on_enter = [{op = "damage", amount = 3, message = "A focused gust slams into you as you enter the tunnel."}]
 
 [[room]]
@@ -211,13 +216,14 @@ name = "Suspended Spire"
 description = "A tall spire with rings for anchoring gliders and ropes. The view from here is dizzying."
 exits = {west = "dp_sky_rift_3", east = "dp_sky_rift_5"}
 items = ["sky_piercer_anchor"]
+spawns = ["sky_serpent", "young_drake_scout"]
 
 [[room]]
 id = "dp_sky_rift_5"
 name = "Ridge of Echoes"
 description = "Wind-carved stone that sings when struck; echoes reveal hidden paths. The sound here is layered and strange."
 exits = {west = "dp_sky_rift_4", east = "dp_sky_rift_6"}
-spawns = []
+spawns = ["young_drake_scout"]
 on_enter = [{op = "if_not_flag", flag = "dp_echo_ridge_checked", then = [{op = "skill_check", skill = "perception", dc = 14, on_pass = [{op = "message", tag = "system", text = "You hear a faint secondary tone that points to a narrow ledge — a path through the rift."}, {op = "set_flag", flag = "dp_echo_ridge_checked"}, {op = "skill_grow", skill = "perception", amount = 2}], on_fail = [{op = "message", tag = "system", text = "The wind drowns out any subtle echoes."}, {op = "skill_grow", skill = "perception", amount = 1}]}]}]
 
 [[room]]
@@ -225,7 +231,7 @@ id = "dp_sky_rift_6"
 name = "Skybridge Terminus"
 description = "A battered platform overlooking the chasm. Ropes lead to distant cliffs. The magma sluice glows far below to the south."
 exits = {west = "dp_sky_rift_5", south = "dp_emberfall_6", east = "dp_apex_approach_1"}
-spawns = []
+spawns = ["ashwood_drake"]
 on_enter = [{op = "damage", amount = 2, message = "The terminus platform shudders in the gusting wind."}]
 
 [[room]]
@@ -233,7 +239,7 @@ id = "dp_apex_approach_1"
 name = "Cracked Summit"
 description = "The air thins and the ground trembles with each distant roar. You are close."
 exits = {west = "dp_sky_rift_6", east = "dp_apex_approach_2"}
-spawns = []
+spawns = ["young_drake_scout", "apex_drake_guard"]
 on_enter = [{op = "if_not_flag", flag = "dp_summit_approached", then = [{op = "message", tag = "system", text = "The mountain groans. Something immense is aware of your presence."}, {op = "set_flag", flag = "dp_summit_approached"}]}]
 
 [[room]]
@@ -242,12 +248,13 @@ name = "Hoard Ridge"
 description = "Scattered treasures and bones litter the slope; a deep scent of old smoke hangs here. Every step forward is watched."
 exits = {west = "dp_apex_approach_1", east = "dp_apex_approach_3"}
 items = ["drake_hoard_fragment"]
-spawns = []
+spawns = ["apex_drake_guard"]
 
 [[room]]
 id = "dp_apex_approach_3"
 name = "Thermal Conduit Gate"
 description = "An ancient gate carved with concentric rings; heat pulses from within. Something holds it sealed."
+spawns = ["apex_drake_guard"]
 exits = {west = "dp_apex_approach_2", east = {to = "dp_apex_inner_1", locked = true, lock_tag = "dp_thermal_gate_lock", desc = "A ringed stone gate sealed by humming sigils."}}
 on_enter = [{op = "if_not_flag", flag = "dp_thermal_gate_notice", then = [{op = "message", tag = "system", text = "The carved rings in the gate pulse faintly; something holds them closed."}, {op = "set_flag", flag = "dp_thermal_gate_notice"}]}, {op = "if_flag", flag = "dp_thermal_gate_unlocked", then = [{op = "if_not_flag", flag = "dp_thermal_gate_opened", then = [{op = "unlock_exit", room_id = "dp_apex_approach_3", direction = "east"}, {op = "message", tag = "system", text = "With a grinding sigh the gate's rings slide aside, revealing the path inward."}, {op = "set_flag", flag = "dp_thermal_gate_opened"}]}]}]
 
@@ -256,7 +263,7 @@ id = "dp_apex_inner_1"
 name = "Apex Outer Ledge"
 description = "A wide ledge overlooking a cavernous hollow where the Apex Drake nests. The air crackles with heat."
 exits = {west = "dp_apex_approach_3", east = "dp_apex_inner_2"}
-spawns = []
+spawns = ["apex_drake_guard"]
 
 [[room]]
 id = "dp_apex_inner_2"
@@ -264,6 +271,7 @@ name = "Hearth of the Apex"
 description = "A cavern lit by molten veins; the Thermal Conductor sits on a pedestal of stone and metal. The drake egg rests in a warm hollow nearby."
 exits = {west = "dp_apex_inner_1", east = "dp_apex_inner_3"}
 items = ["thermal_conductor_piece", "drake_egg"]
+spawns = ["apex_drake_guard"]
 on_enter = [{op = "if_not_flag", flag = "dp_thermal_piece_seen", then = [{op = "message", tag = "lore", text = "A humming crystal rests in a carved cradle, its pulse out of sync with the world around it."}, {op = "set_flag", flag = "dp_thermal_piece_seen"}]}]
 
 [[room]]
@@ -271,4 +279,4 @@ id = "dp_apex_inner_3"
 name = "Apex Summit"
 description = "The highest point of the Peaks. The Apex Drake circles above, its shadow swallowing the light, then lands with the certainty of something that has never lost."
 exits = {west = "dp_apex_inner_2"}
-spawns = []
+spawns = ["apex_drake"]

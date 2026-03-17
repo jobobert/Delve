@@ -42,3 +42,30 @@ qualities = [
   { tier = "standard",    weight = 50, craft_message = "Stable resonance. The quartz heart is solid." },
   { tier = "exceptional", weight = 25, craft_message = "Pure resonance. The quartz hums with a steady, clear pulse." },
 ]
+
+
+# Commission 3: Forge the Pressure Chain
+[[commission]]
+id             = "mf_forge_pressure_chain"
+npc_id         = "mf_path_reader_sera"
+label          = "Forge the Pressure Chain"
+desc           = "Sera can bind bog-quartz and pressure-hollowed stone into a chain weapon that stuns on impact."
+slot           = "weapon"
+weapon_tags    = ["polearm", "chain", "pressure"]
+materials      = ["bog_quartz", "pressure_hollowed_stone"]
+turns_required = 14
+gold_cost      = 0
+weight         = 3
+on_complete = [
+  { op = "message", tag = "crafting", text = "Sera links the final segment. The chain vibrates once, sharply, then settles." },
+  { op = "advance_quest", quest_id = "mf_pressure_chain", step = 2 },
+  { op = "advance_quest", quest_id = "mf_pressure_chain", step = 3 },
+  { op = "complete_quest", quest_id = "mf_pressure_chain" },
+  { op = "prestige", amount = 3, reason = "forged the Pressure Chain with Sera" },
+]
+qualities = [
+  { tier = "poor",        weight = 20, attack_bonus = 6,  defense_bonus = 1, equip_msg = "The links are slightly mismatched — the stun pulse will be inconsistent.", craft_message = "The quartz bonded rough. It will hold." },
+  { tier = "standard",    weight = 55, attack_bonus = 9,  defense_bonus = 2, equip_msg = "The chain hums steadily. Each blow carries the weight of the entire swamp." },
+  { tier = "exceptional", weight = 20, attack_bonus = 11, defense_bonus = 3, name_prefix = "Tuned ", equip_msg = "The chain resonates perfectly. The stunwave carries further than it should.", craft_message = "The pressure aligned cleanly. I felt it in my hands." },
+  { tier = "masterwork",  weight = 5,  attack_bonus = 13, defense_bonus = 4, name_prefix = "Masterwork ", equip_msg = "The chain almost pulls you toward targets. Its pressure-wave is devastating.", craft_message = "I have never felt a weapon like that leave my hands before." },
+]

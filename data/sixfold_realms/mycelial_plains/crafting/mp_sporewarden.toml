@@ -45,3 +45,30 @@ qualities = [
   { tier = "standard",    weight = 50, craft_message = "Clear brew. Two vials, well-sealed." },
   { tier = "exceptional", weight = 25, craft_message = "Potent brew. 'These are my best batch in months,' the Sporewarden notes." },
 ]
+
+
+# Commission 3: Weave the Memory Whip
+[[commission]]
+id             = "mp_weave_memory_whip"
+npc_id         = "mp_sporewarden"
+label          = "Weave the Memory Whip"
+desc           = "The Sporewarden weaves fungal fiber and mycelial resin into a flexible whip that delivers a stunning cognitive jolt on impact."
+slot           = "weapon"
+weapon_tags    = ["polearm", "whip", "fungal"]
+materials      = ["mp_fungal_fiber", "mp_mycelial_resin", "mp_memory_spores"]
+turns_required = 14
+gold_cost      = 0
+weight         = 2
+on_complete = [
+  { op = "message", tag = "crafting", text = "The Sporewarden coils the finished whip with practiced care. 'Do not use it on yourself,' he says." },
+  { op = "advance_quest", quest_id = "mp_memory_whip", step = 2 },
+  { op = "advance_quest", quest_id = "mp_memory_whip", step = 3 },
+  { op = "complete_quest", quest_id = "mp_memory_whip" },
+  { op = "prestige", amount = 3, reason = "wove the Memory Whip with the Sporewarden" },
+]
+qualities = [
+  { tier = "poor",        weight = 20, attack_bonus = 6,  defense_bonus = 1, equip_msg = "The weave is uneven — the stun will be mild and inconsistent.", craft_message = "The memory spores didn't bond evenly. It will still work." },
+  { tier = "standard",    weight = 55, attack_bonus = 9,  defense_bonus = 2, equip_msg = "The resin cord holds its shape well. A solid hit will interrupt anything." },
+  { tier = "exceptional", weight = 20, attack_bonus = 11, defense_bonus = 3, name_prefix = "Resonant ", equip_msg = "The cord hums faintly. The cognitive jolt carries further than it should.", craft_message = "The memory spores bonded clean. I'm almost proud of it." },
+  { tier = "masterwork",  weight = 5,  attack_bonus = 13, defense_bonus = 4, name_prefix = "Masterwork ", equip_msg = "The whip moves like it already knows where to strike. Its stun pulse is immediate and total.", craft_message = "That weapon is smarter than it has any right to be." },
+]

@@ -44,3 +44,30 @@ qualities = [
   { tier = "standard",    weight = 50, craft_message = "Clean shaping. The bark's grain is clear and even." },
   { tier = "exceptional", weight = 25, craft_message = "Master shaping. The bark has taken on a subtle inner warmth." },
 ]
+
+
+# Commission 3: Shape the Rootbound Stave
+[[commission]]
+id             = "vh_shape_rootbound_stave"
+npc_id         = "vh_heartwood_shaper"
+label          = "Shape the Rootbound Stave"
+desc           = "Thalen can grow a living stave from Heartwood bark and catalyst — a weapon that roots targets with each strike."
+slot           = "weapon"
+weapon_tags    = ["polearm", "stave", "heartwood"]
+materials      = ["vh_heartwood_bark", "vh_sap_resin", "vh_growth_catalyst"]
+turns_required = 15
+gold_cost      = 0
+weight         = 3
+on_complete = [
+  { op = "message", tag = "crafting", text = "The forge pulses as Thalen removes the stave. It is still warm, still growing. 'Treat it well,' he says." },
+  { op = "advance_quest", quest_id = "vh_rootbound_stave", step = 2 },
+  { op = "advance_quest", quest_id = "vh_rootbound_stave", step = 3 },
+  { op = "complete_quest", quest_id = "vh_rootbound_stave" },
+  { op = "prestige", amount = 3, reason = "shaped the Rootbound Stave with Thalen" },
+]
+qualities = [
+  { tier = "poor",        weight = 20, attack_bonus = 7,  defense_bonus = 2, equip_msg = "The stave is a little unsteady — the growth catalyst didn't fuse evenly.", craft_message = "The catalyst bonded partially. It will still hold." },
+  { tier = "standard",    weight = 55, attack_bonus = 10, defense_bonus = 3, equip_msg = "The stave is solid and warm. Each hit releases a pulse of contained growth." },
+  { tier = "exceptional", weight = 20, attack_bonus = 12, defense_bonus = 4, name_prefix = "Living ", equip_msg = "Small tendrils extend toward threats when you raise the stave.", craft_message = "The wood is still choosing its final shape. Watch it grow." },
+  { tier = "masterwork",  weight = 5,  attack_bonus = 14, defense_bonus = 5, name_prefix = "Masterwork ", equip_msg = "The stave has grown into the shape of your grip. It roots targets completely.", craft_message = "That stave is not a weapon. It is a partnership." },
+]

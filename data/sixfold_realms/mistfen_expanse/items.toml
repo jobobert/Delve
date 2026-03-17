@@ -182,3 +182,21 @@ slot        = ""
 weight      = 0
 respawn     = false
 tags        = ["mistfen_tool", "resonance"]
+
+
+# ── Pressure Chain ────────────────────────────────────────────────────────────
+[[item]]
+id          = "mf_pressure_chain"
+name        = "Pressure Chain"
+desc_short  = "A weighted polearm that channels the swamp's pressure into its blows."
+desc_long   = "Crafted from bog-quartz and pressure-hollowed stone, the chain's links vibrate with stored force. A hit from it releases a concussive wave that staggers."
+slot        = "weapon"
+weight      = 3
+weapon_tags = ["polearm", "chain", "pressure"]
+respawn     = false
+effects     = [
+  { type = "stat_bonus", stat = "attack",  amount = 9 },
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+  { type = "on_equip",   message = "The chain hums with compressed pressure. It wants to release." },
+  { type = "on_hit",     ability = "stun", chance = 0.10, magnitude = 1 },
+]

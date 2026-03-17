@@ -73,6 +73,7 @@ exits       = {
 id          = "vh_canopy4"
 name        = "Overgrown Canopy — Sunwell"
 description = "A shaft of sunlight pierces the canopy. Flowers open and close in rhythmic cycles."
+spawns      = ["vh_pollen_sprite"]
 exits       = { north = "vh_pollen_clearing", east = "vh_canopy5" }
 on_enter    = [
   { op = "if_flag", flag = "vh_growth_open", then = [
@@ -90,6 +91,7 @@ on_enter    = [
 id          = "vh_canopy5"
 name        = "Overgrown Canopy — Vine Gate"
 description = "A wall of vines blocks the path. They twitch when you approach."
+spawns      = ["vh_vine_stalker"]
 items       = ["vh_vine_wall"]
 exits       = {
   west = "vh_canopy4",
@@ -108,6 +110,7 @@ exits       = { west = "vh_canopy5", south = "vh_root_drop" }
 id          = "vh_vine_bridge"
 name        = "Vine Bridge"
 description = "A woven bridge of living vines stretches across a ravine."
+spawns      = ["vh_vine_stalker"]
 exits       = { north = "vh_canopy1", south = "vh_canopy4" }
 on_enter    = [
   { op = "if_not_flag", flag = "vh_vine_safe", then = [
@@ -120,6 +123,7 @@ on_enter    = [
 id          = "vh_root_drop"
 name        = "Root Drop"
 description = "A vertical shaft lined with thick roots. They shift to form handholds."
+spawns      = ["vh_root_crawler"]
 exits       = { north = "vh_canopy6", down = "vh_warrens1" }
 
 
@@ -138,6 +142,7 @@ exits       = { up = "vh_root_drop", east = "vh_warrens2" }
 id          = "vh_warrens2"
 name        = "Rootbound Warrens — Echo Chamber"
 description = "Roots coil around a hollow chamber. Touching them triggers faint whispers."
+spawns      = ["vh_root_crawler"]
 items       = ["vh_memory_root_cluster"]
 exits       = { west = "vh_warrens1", east = "vh_warrens3" }
 
@@ -200,6 +205,7 @@ exits       = { west = "vh_warrens4", south = "vh_warrens6" }
 id          = "vh_warrens6"
 name        = "Rootbound Warrens — Resin Pool"
 description = "A pool of amber resin glows softly. It smells sweet and sharp."
+spawns      = ["vh_symbiote"]
 items       = ["vh_sap_resin"]
 exits       = { north = "vh_warrens5", east = "vh_warrens7" }
 
@@ -219,6 +225,7 @@ exits       = { west = "vh_warrens6", up = "vh_core_entrance" }
 id          = "vh_core_entrance"
 name        = "Heartwood Core — Threshold"
 description = "The roots part reluctantly. A deep pulse echoes through the chamber."
+spawns      = ["vh_bark_golem"]
 exits       = { down = "vh_warrens7", east = "vh_core1" }
 
 [[room]]
@@ -237,6 +244,10 @@ items       = ["vh_growth_forge"]
 exits       = { west = "vh_core1", south = "vh_core3" }
 on_enter    = [
   { op = "message", tag = "system", text = "The forge pulses with slow, rhythmic light." },
+  { op = "if_not_flag", flag = "vh_rootbound_stave_started", then = [
+    { op = "advance_quest", quest_id = "vh_rootbound_stave", step = 1 },
+    { op = "set_flag", flag = "vh_rootbound_stave_started" },
+  ] },
 ]
 
 [[room]]

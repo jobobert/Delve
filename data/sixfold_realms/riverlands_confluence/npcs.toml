@@ -7,406 +7,286 @@
 # ── Ferryman Kale — quest giver, lore ───────────────────────────────────────
 
 [[npc]]
-id          = "kale_ferryman"
-name        = "Ferryman Kale"
-desc_short  = "A weathered ferryman with river lines etched into his face."
-desc_long   = "Kale's eyes track the currents more than the people, as if listening to something only he can hear. His hands are rope-calloused, his boots permanently waterlogged."
-tags        = ["humanoid", "townsfolk"]
-style       = "flowcurrent"
-style_prof  = 30
-hp          = 40
-max_hp      = 40
-attack      = 8
-defense     = 6
-xp_reward   = 0
+id = "kale_ferryman"
+name = "Ferryman Kale"
+desc_short = "A weathered ferryman with river lines etched into his face."
+desc_long = "Kale's eyes track the currents more than the people, as if listening to something only he can hear. His hands are rope-calloused, his boots permanently waterlogged."
+tags = ["humanoid", "townsfolk"]
+style = "flowcurrent"
+style_prof = 30
+hp = 40
+max_hp = 40
+attack = 8
+defense = 6
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-
-give_accepts = [
-  {
-    item_id = "resonant_token",
-    message = "Kale turns the token over in his hand, listening. 'So the echoes have found you too.'",
-    script  = [
-      { op = "set_flag",  flag = "rl_kale_trusts_you" },
-      { op = "prestige",  amount = 5, reason = "shared a relic of the old rivers" },
-      { op = "give_gold", amount = 10 },
-    ],
-  },
-]
-
-# ── Mapmaker Sela — shop, lore ───────────────────────────────────────────────
+hostile = false
+give_accepts = [{item_id = "resonant_token", message = "Kale turns the token over in his hand, listening. 'So the echoes have found you too.'", script = [{op = "set_flag", flag = "rl_kale_trusts_you"}, {op = "prestige", amount = 5, reason = "shared a relic of the old rivers"}, {op = "give_gold", amount = 10}]}]
 
 [[npc]]
-id          = "sela_mapmaker"
-name        = "Mapmaker Sela"
-desc_short  = "A sharp-eyed cartographer surrounded by half-finished maps."
-desc_long   = "Lines of ink crisscross her table, some crossed out, others circled with frustration. She glances at you without pausing her work."
-tags        = ["humanoid", "townsfolk"]
-style       = "flowcurrent"
-style_prof  = 10
-hp          = 30
-max_hp      = 30
-attack      = 5
-defense     = 4
-xp_reward   = 0
+id = "sela_mapmaker"
+name = "Mapmaker Sela"
+desc_short = "A sharp-eyed cartographer surrounded by half-finished maps."
+desc_long = "Lines of ink crisscross her table, some crossed out, others circled with frustration. She glances at you without pausing her work."
+tags = ["humanoid", "townsfolk"]
+style = "flowcurrent"
+style_prof = 10
+hp = 30
+max_hp = 30
+attack = 5
+defense = 4
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-
-shop = [
-  { item_id = "clarity_stew",   price = 6 },
-  { item_id = "resonant_token", price = 40 },
-]
-
-kill_script = [
-  { op = "message", tag = "system", text = "As Sela falls, her ink spills across the maps like a spreading river." },
-  { op = "set_flag", flag = "rl_sela_dead" },
-]
-
-# ── Vendor Supplies — general goods ─────────────────────────────────────────
+hostile = false
+shop = [{item_id = "clarity_stew", price = 6}, {item_id = "resonant_token", price = 40}]
+kill_script = [{op = "message", tag = "system", text = "As Sela falls, her ink spills across the maps like a spreading river."}, {op = "set_flag", flag = "rl_sela_dead"}]
 
 [[npc]]
-id          = "vendor_supplies"
-name        = "Stallkeeper Brann"
-desc_short  = "A stocky merchant arranging goods with practiced efficiency."
-desc_long   = "Brann's stall holds ropes, hooks, and jars labeled in a neat hand. He nods when you approach, no words wasted."
-tags        = ["humanoid", "townsfolk"]
-style       = "flowcurrent"
-style_prof  = 15
-hp          = 35
-max_hp      = 35
-attack      = 6
-defense     = 5
-xp_reward   = 0
+id = "vendor_supplies"
+name = "Stallkeeper Brann"
+desc_short = "A stocky merchant arranging goods with practiced efficiency."
+desc_long = "Brann's stall holds ropes, hooks, and jars labeled in a neat hand. He nods when you approach, no words wasted."
+tags = ["humanoid", "townsfolk"]
+style = "flowcurrent"
+style_prof = 15
+hp = 35
+max_hp = 35
+attack = 6
+defense = 5
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-
-shop = [
-  { item_id = "clarity_stew",       price = 8  },
-  { item_id = "ferryman_hook",      price = 25 },
-  { item_id = "rl_travel_rations",  price = 5  },
-  { item_id = "rl_water_flask",     price = 3  },
-  { item_id = "rl_torch_bundle",    price = 4  },
-  { item_id = "rl_rope_coil",       price = 6  },
-  { item_id = "rl_basic_repair_kit", price = 8 },
-  { item_id = "rl_small_pouch",     price = 2  },
-  { item_id = "rl_minor_tonic",     price = 6  },
-  { item_id = "rl_antifog_oil",     price = 7  },
-]
-
-# ── Innkeeper Mara — rest ────────────────────────────────────────────────────
+hostile = false
+shop = [{item_id = "clarity_stew", price = 8}, {item_id = "ferryman_hook", price = 25}, {item_id = "rl_travel_rations", price = 5}, {item_id = "rl_water_flask", price = 3}, {item_id = "rl_torch_bundle", price = 4}, {item_id = "rl_rope_coil", price = 6}, {item_id = "rl_basic_repair_kit", price = 8}, {item_id = "rl_small_pouch", price = 2}, {item_id = "rl_minor_tonic", price = 6}, {item_id = "rl_antifog_oil", price = 7}]
 
 [[npc]]
-id          = "innkeeper_mara"
-name        = "Innkeeper Mara"
-desc_short  = "A broad-shouldered woman with tired eyes and a ready smile."
-desc_long   = "Mara moves with the efficiency of someone who has kept this place running through worse than bad weather. A set of keys hangs at her belt."
-tags        = ["humanoid", "townsfolk"]
-style       = "flowcurrent"
-style_prof  = 20
-hp          = 45
-max_hp      = 45
-attack      = 7
-defense     = 7
-xp_reward   = 0
+id = "innkeeper_mara"
+name = "Innkeeper Mara"
+desc_short = "A broad-shouldered woman with tired eyes and a ready smile."
+desc_long = "Mara moves with the efficiency of someone who has kept this place running through worse than bad weather. A set of keys hangs at her belt."
+tags = ["humanoid", "townsfolk"]
+style = "flowcurrent"
+style_prof = 20
+hp = 45
+max_hp = 45
+attack = 7
+defense = 7
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-rest_cost   = 5
-shop        = [
-  { item_id = "rl_guest_room_key", price = 5 },
-]
-
-# ── River Child — flavour ────────────────────────────────────────────────────
+hostile = false
+rest_cost = 5
+shop = [{item_id = "rl_guest_room_key", price = 5}]
 
 [[npc]]
-id          = "river_child"
-name        = "River Child"
-desc_short  = "A barefoot child tossing pebbles into the water."
-desc_long   = "They watch the ripples with intense concentration, as if expecting an answer. When they notice you watching, they don't flinch."
-tags        = ["humanoid", "small", "townsfolk"]
-style       = "flowcurrent"
-style_prof  = 5
-hp          = 20
-max_hp      = 20
-attack      = 2
-defense     = 2
-xp_reward   = 0
+id = "river_child"
+name = "River Child"
+desc_short = "A barefoot child tossing pebbles into the water."
+desc_long = "They watch the ripples with intense concentration, as if expecting an answer. When they notice you watching, they don't flinch."
+tags = ["humanoid", "small", "townsfolk"]
+style = "flowcurrent"
+style_prof = 5
+hp = 20
+max_hp = 20
+attack = 2
+defense = 2
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "Sometimes the river whispers names. Sometimes it forgets them."
-
-# ── Loran the Boatwright — crafting, lore ───────────────────────────────────
+hostile = false
+dialogue = "Sometimes the river whispers names. Sometimes it forgets them."
 
 [[npc]]
-id          = "crafter_boatwright"
-name        = "Loran the Boatwright"
-desc_short  = "A skilled craftsman who builds and repairs river vessels."
-desc_long   = "Loran has spent decades shaping hulls and patching ferries. His hands are calloused, and his eyes are sharp with experience."
-tags        = ["humanoid", "townsfolk", "crafter"]
-style       = "flowcurrent"
-style_prof  = 10
-hp          = 30
-max_hp      = 30
-attack      = 4
-defense     = 3
-xp_reward   = 0
+id = "crafter_boatwright"
+name = "Loran the Boatwright"
+desc_short = "A skilled craftsman who builds and repairs river vessels."
+desc_long = "Loran has spent decades shaping hulls and patching ferries. His hands are calloused, and his eyes are sharp with experience."
+tags = ["humanoid", "townsfolk", "crafter"]
+style = "flowcurrent"
+style_prof = 10
+hp = 30
+max_hp = 30
+attack = 4
+defense = 3
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-
-# ── Nessa the Realm-Walker — traveling trader ────────────────────────────────
-# Starts in rl_market_row. Inactive until rivers_remember is completed,
-# then routed through all six realms by the "nessa_realm_route" process.
+hostile = false
 
 [[npc]]
-id          = "nessa_realm_walker"
-name        = "Nessa the Realm-Walker"
-desc_short  = "A road-worn trader whose pack is covered in pins and tokens from distant places."
-desc_long   = "Nessa's coat is stitched with patches from every zone she has passed through — Peaks wax, Gloam-shadow, Heartwood bark, Mistfen quartz. She moves like someone who has made peace with being always in transit."
-tags        = ["humanoid", "townsfolk", "trader"]
-style       = "flowcurrent"
-style_prof  = 20
-hp          = 35
-max_hp      = 35
-attack      = 6
-defense     = 6
-xp_reward   = 0
+id = "nessa_realm_walker"
+name = "Nessa the Realm-Walker"
+desc_short = "A road-worn trader whose pack is covered in pins and tokens from distant places."
+desc_long = "Nessa's coat is stitched with patches from every zone she has passed through — Peaks wax, Gloam-shadow, Heartwood bark, Mistfen quartz. She moves like someone who has made peace with being always in transit."
+tags = ["humanoid", "townsfolk", "trader"]
+style = "flowcurrent"
+style_prof = 20
+hp = 35
+max_hp = 35
+attack = 6
+defense = 6
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-
-shop = [
-  { item_id = "rl_echo_pendant",    price = 55 },
-  { item_id = "dp_peak_forge_vial", price = 30 },
-  { item_id = "gr_twilight_ink",    price = 25 },
-  { item_id = "mf_bog_lens",        price = 45 },
-  { item_id = "mp_spore_silk_sash", price = 50 },
-  { item_id = "vh_sap_salve",       price = 35 },
-]
-
-# ── ENEMIES ──────────────────────────────────────────────────────────────────
-
-# Mire Wolf — spawns at lower piers. Riverlands scavenger drawn to the dock
-# refuse. Fast and aggressive, but fragile. Flowcurrent players handle it well.
+hostile = false
+shop = [{item_id = "rl_echo_pendant", price = 55}, {item_id = "dp_peak_forge_vial", price = 30}, {item_id = "gr_twilight_ink", price = 25}, {item_id = "mf_bog_lens", price = 45}, {item_id = "mp_spore_silk_sash", price = 50}, {item_id = "vh_sap_salve", price = 35}]
 
 [[npc]]
-id          = "mire_wolf"
-name        = "Mire Wolf"
-desc_short  = "A lean, river-damp wolf that has learned to stalk the docks."
-desc_long   = "Its grey coat is slick with spray, its eyes pale and calculating. It circles wide before committing, watching for an opening."
-tags        = ["beast", "fast"]
-style       = "flowcurrent"
-style_prof  = 20
-hp          = 28
-max_hp      = 28
-attack      = 8
-defense     = 3
-xp_reward   = 18
+id = "mire_wolf"
+name = "Mire Wolf"
+desc_short = "A lean, river-damp wolf that has learned to stalk the docks."
+desc_long = "Its grey coat is slick with spray, its eyes pale and calculating. It circles wide before committing, watching for an opening."
+tags = ["beast", "fast"]
+style = "flowcurrent"
+style_prof = 20
+hp = 28
+max_hp = 28
+attack = 8
+defense = 3
+xp_reward = 18
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 5
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The mire wolf slumps and slides off the pier edge into the churning water below." },
-]
-
-# Drift Serpent — spawns at unstable current. An eel-like creature native to
-# the confluence's chaotic waters. Attacks with a numbing toxin.
+kill_script = [{op = "message", tag = "combat_death", text = "The mire wolf slumps and slides off the pier edge into the churning water below."}]
 
 [[npc]]
-id          = "drift_serpent"
-name        = "Drift Serpent"
-desc_short  = "A long, pale serpent that rides the impossible currents beneath the planking."
-desc_long   = "It moves like liquid, like the river itself shaped into something with intent. Its bite carries a faint numbing cold."
-tags        = ["beast", "fast", "small"]
-style       = "flowcurrent"
-style_prof  = 25
-hp          = 22
-max_hp      = 22
-attack      = 9
-defense     = 4
-xp_reward   = 20
+id = "drift_serpent"
+name = "Drift Serpent"
+desc_short = "A long, pale serpent that rides the impossible currents beneath the planking."
+desc_long = "It moves like liquid, like the river itself shaped into something with intent. Its bite carries a faint numbing cold."
+tags = ["beast", "fast", "small"]
+style = "flowcurrent"
+style_prof = 25
+hp = 22
+max_hp = 22
+attack = 9
+defense = 4
+xp_reward = 20
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 5
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The drift serpent unravels and is carried away by the current." },
-]
-
-round_script = [
-  { op = "if_combat_round", min = 2, then = [
-    { op = "if_npc_hp", max = 15, then = [
-      { op = "apply_status", effect = "poisoned", duration = 3 },
-      { op = "message", tag = "combat", text = "The serpent's bite carries a cold sting — poison seeps in." },
-    ] },
-  ] },
-]
-
-# Echo Wraith — spawns on the hidden stair. A resonance entity born from
-# centuries of accumulated harmonic energy in the bedrock. Semi-translucent,
-# cold to the touch, and disorienting to fight.
+kill_script = [{op = "message", tag = "combat_death", text = "The drift serpent unravels and is carried away by the current."}]
+round_script = [{op = "if_combat_round", min = 2, then = [{op = "if_npc_hp", max = 15, then = [{op = "apply_status", effect = "poisoned", duration = 3}, {op = "message", tag = "combat", text = "The serpent's bite carries a cold sting — poison seeps in."}]}]}]
 
 [[npc]]
-id          = "echo_wraith"
-name        = "Echo Wraith"
-desc_short  = "A translucent shape that ripples like a reflection on disturbed water."
-desc_long   = "Not quite solid, not quite absent. It moves with eerie patience, its form shifting between the shadow of a person and the shape of something older."
-tags        = ["undead", "fast", "small"]
-style       = "flowcurrent"
-style_prof  = 35
-hp          = 38
-max_hp      = 38
-attack      = 11
-defense     = 6
-xp_reward   = 30
+id = "echo_wraith"
+name = "Echo Wraith"
+desc_short = "A translucent shape that ripples like a reflection on disturbed water."
+desc_long = "Not quite solid, not quite absent. It moves with eerie patience, its form shifting between the shadow of a person and the shape of something older."
+tags = ["undead", "fast", "small"]
+style = "flowcurrent"
+style_prof = 35
+hp = 38
+max_hp = 38
+attack = 11
+defense = 6
+xp_reward = 30
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 8
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The echo wraith disperses into a scatter of dying harmonics, leaving nothing behind but a faint ringing in your ears." },
-]
-
-round_script = [
-  { op = "if_combat_round", min = 3, then = [
-    { op = "apply_status", effect = "confused", duration = 2 },
-    { op = "message", tag = "combat", text = "The wraith's presence blurs your senses — the world goes sideways for a moment." },
-  ] },
-]
-
-# ── Old Aldric — quest giver, locket return ──────────────────────────────────
+kill_script = [{op = "message", tag = "combat_death", text = "The echo wraith disperses into a scatter of dying harmonics, leaving nothing behind but a faint ringing in your ears."}]
+round_script = [{op = "if_combat_round", min = 3, then = [{op = "apply_status", effect = "confused", duration = 2}, {op = "message", tag = "combat", text = "The wraith's presence blurs your senses — the world goes sideways for a moment."}]}]
 
 [[npc]]
-id          = "rl_old_man_aldric"
-name        = "Old Aldric"
-desc_short  = "A weathered old man sitting at the window, watching the river."
-desc_long   = "Aldric's hands tremble slightly, but his eyes are clear and steady. He spent decades as a ferryman before his body made that impossible. Now he rents this room by the week, watching the water he used to work."
-tags        = ["humanoid", "townsfolk"]
-style       = "flowcurrent"
-style_prof  = 5
-hp          = 20
-max_hp      = 20
-attack      = 2
-defense     = 3
-xp_reward   = 0
+id = "rl_old_man_aldric"
+name = "Old Aldric"
+desc_short = "A weathered old man sitting at the window, watching the river."
+desc_long = "Aldric's hands tremble slightly, but his eyes are clear and steady. He spent decades as a ferryman before his body made that impossible. Now he rents this room by the week, watching the water he used to work."
+tags = ["humanoid", "townsfolk"]
+style = "flowcurrent"
+style_prof = 5
+hp = 20
+max_hp = 20
+attack = 2
+defense = 3
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "I left a lot behind when the floodwaters came. Most of it didn't matter. One thing did."
-
-give_accepts = [
-  {
-    item_id = "rl_locket",
-    message = "Aldric takes the locket in both hands and holds it without speaking. When he looks up, his eyes are wet. 'I didn't think I'd ever see it again. Here.' He presses the vest into your arms.",
-    script  = [
-      { op = "advance_quest", quest_id = "rl_locket_return", step = 2 },
-      { op = "complete_quest", quest_id = "rl_locket_return" },
-      { op = "give_item",  item_id = "rl_river_scale_vest" },
-      { op = "prestige",   amount = 2, reason = "returned Aldric's locket" },
-    ],
-  },
-]
-
-# ── Blacksmith Orin — shop, crafting ─────────────────────────────────────────
+hostile = false
+dialogue = "I left a lot behind when the floodwaters came. Most of it didn't matter. One thing did."
+give_accepts = [{item_id = "rl_locket", message = "Aldric takes the locket in both hands and holds it without speaking. When he looks up, his eyes are wet. 'I didn't think I'd ever see it again. Here.' He presses the vest into your arms.", script = [{op = "advance_quest", quest_id = "rl_locket_return", step = 2}, {op = "complete_quest", quest_id = "rl_locket_return"}, {op = "give_item", item_id = "rl_river_scale_vest"}, {op = "prestige", amount = 2, reason = "returned Aldric's locket"}]}]
 
 [[npc]]
-id          = "rl_blacksmith_orin"
-name        = "Orin the Smith"
-desc_short  = "A broad-shouldered blacksmith with iron-darkened hands and a direct manner."
-desc_long   = "Orin shapes river-iron the way water shapes stone — methodically, without drama. She has been the Confluence's working smith for twenty years and has no interest in being anything else."
-tags        = ["humanoid", "townsfolk", "crafter"]
-style       = "flowcurrent"
-style_prof  = 15
-hp          = 50
-max_hp      = 50
-attack      = 9
-defense     = 7
-xp_reward   = 0
+id = "rl_blacksmith_orin"
+name = "Orin the Smith"
+desc_short = "A broad-shouldered blacksmith with iron-darkened hands and a direct manner."
+desc_long = "Orin shapes river-iron the way water shapes stone — methodically, without drama. She has been the Confluence's working smith for twenty years and has no interest in being anything else."
+tags = ["humanoid", "townsfolk", "crafter"]
+style = "flowcurrent"
+style_prof = 15
+hp = 50
+max_hp = 50
+attack = 9
+defense = 7
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "River-iron holds an edge better than people expect. Come back when yours is dull."
-
-shop = [
-  { item_id = "rl_river_iron_sword", price = 30 },
-  { item_id = "rl_iron_pauldrons",   price = 22 },
-  { item_id = "ferryman_hook",       price = 20 },
-  { item_id = "rl_basic_repair_kit", price = 8  },
-]
-
-# ── Druid Fenne — rest, lore, style teaching ─────────────────────────────────
+hostile = false
+dialogue = "River-iron holds an edge better than people expect. Come back when yours is dull."
+shop = [{item_id = "rl_river_iron_sword", price = 30}, {item_id = "rl_iron_pauldrons", price = 22}, {item_id = "ferryman_hook", price = 20}, {item_id = "rl_basic_repair_kit", price = 8}]
 
 [[npc]]
-id          = "rl_druid_fenne"
-name        = "Fenne the Root-Warden"
-desc_short  = "A still figure in grey-green robes tending a small fire."
-desc_long   = "Fenne watches the clearing with the patience of old wood. They speak little and plainly. The herbs they tend carry the same faint resonance as the river — as though both know something the city doesn't."
-tags        = ["humanoid", "townsfolk", "healer"]
-style       = "flowcurrent"
-style_prof  = 25
-hp          = 35
-max_hp      = 35
-attack      = 6
-defense     = 5
-xp_reward   = 0
+id = "rl_druid_fenne"
+name = "Fenne the Root-Warden"
+desc_short = "A still figure in grey-green robes tending a small fire."
+desc_long = "Fenne watches the clearing with the patience of old wood. They speak little and plainly. The herbs they tend carry the same faint resonance as the river — as though both know something the city doesn't."
+tags = ["humanoid", "townsfolk", "healer"]
+style = "flowcurrent"
+style_prof = 25
+hp = 35
+max_hp = 35
+attack = 6
+defense = 5
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-rest_cost   = 3
-
-# ── Sparring Partner (spawned by Fenne) ──────────────────────────────────────
+hostile = false
+rest_cost = 3
 
 [[npc]]
-id          = "rl_sparring_partner"
-name        = "Sparring Partner"
-desc_short  = "A construct of woven reeds and river clay shaped for combat practice."
-desc_long   = "Fenne has shaped this from riverbank materials — it responds to blows like a living opponent but collapses harmlessly when defeated. The weave is surprisingly firm."
-tags        = ["construct", "humanoid"]
-style       = "flowcurrent"
-style_prof  = 10
-hp          = 22
-max_hp      = 22
-attack      = 5
-defense     = 3
-xp_reward   = 0
+id = "rl_sparring_partner"
+name = "Sparring Partner"
+desc_short = "A construct of woven reeds and river clay shaped for combat practice."
+desc_long = "Fenne has shaped this from riverbank materials — it responds to blows like a living opponent but collapses harmlessly when defeated. The weave is surprisingly firm."
+tags = ["construct", "humanoid"]
+style = "flowcurrent"
+style_prof = 10
+hp = 22
+max_hp = 22
+attack = 5
+defense = 3
+xp_reward = 0
 gold_reward = 0
-hostile     = true
-respawn     = false
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The construct unravels — reeds and clay scattering across the ground. A moment later the river takes the pieces." },
-]
-
-# ── Patrol Captain Veth — local authority ────────────────────────────────────
+hostile = true
+respawn = false
+kill_script = [{op = "message", tag = "combat_death", text = "The construct unravels — reeds and clay scattering across the ground. A moment later the river takes the pieces."}]
+dialogue = "Hmph"
 
 [[npc]]
-id          = "rl_patrol_captain"
-name        = "Patrol Captain Veth"
-desc_short  = "A lean woman in river-blue patrol gear reading the notice board."
-desc_long   = "Veth runs the Confluence patrol with minimal staff and considerable competence. She reads every notice posted on the board herself, and knows most of what moves through the city before it reaches her officially."
-tags        = ["humanoid", "townsfolk", "guard"]
-style       = "flowcurrent"
-style_prof  = 30
-hp          = 55
-max_hp      = 55
-attack      = 10
-defense     = 8
-xp_reward   = 0
+id = "rl_patrol_captain"
+name = "Patrol Captain Veth"
+desc_short = "A lean woman in river-blue patrol gear reading the notice board."
+desc_long = "Veth runs the Confluence patrol with minimal staff and considerable competence. She reads every notice posted on the board herself, and knows most of what moves through the city before it reaches her officially."
+tags = ["humanoid", "townsfolk", "guard"]
+style = "flowcurrent"
+style_prof = 30
+hp = 55
+max_hp = 55
+attack = 10
+defense = 8
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "Keep your blade sheathed in the city center. That's not a request."
+hostile = false
+dialogue = "Keep your blade sheathed in the city center. That's not a request."
 
 [[npc]]
-id          = "rl_banker"
-name        = "Bank-Broker Sian"
-tags        = ["humanoid", "banker"]
-style       = "brawling"
-style_prof  = 3
-desc_short  = "A sharp-eyed broker behind a lacquered counter, quill ever-ready."
-desc_long   = "The Riverlands Confluence once hosted three competing banks. The floods took two; Sian runs what remains, serving merchants, ferryers, and adventurers alike. She knows every mark by the sound it makes on the counter."
-hp          = 20
-max_hp      = 20
-attack      = 2
-defense     = 2
-xp_reward   = 0
+id = "rl_banker"
+name = "Bank-Broker Sian"
+tags = ["humanoid", "banker"]
+style = "brawling"
+style_prof = 3
+desc_short = "A sharp-eyed broker behind a lacquered counter, quill ever-ready."
+desc_long = "The Riverlands Confluence once hosted three competing banks. The floods took two; Sian runs what remains, serving merchants, ferryers, and adventurers alike. She knows every mark by the sound it makes on the counter."
+hp = 20
+max_hp = 20
+attack = 2
+defense = 2
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "Welcome to the Confluence Branch. Deposit, withdraw, or check your balance."
+hostile = false
+dialogue = "Welcome to the Confluence Branch. Deposit, withdraw, or check your balance."
