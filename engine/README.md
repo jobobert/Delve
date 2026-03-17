@@ -427,6 +427,22 @@ route = [
 { op = "process_stop",  process_id = "caravan_route" }
 ```
 
+**Python script integration (`script_py`):**
+```toml
+[[process]]
+id        = "discord_notify"
+interval  = 50
+script_py = "scripts/discord_notify.py"
+```
+```python
+# data/<world_id>/scripts/discord_notify.py
+def run(ctx):
+    # ctx.player, ctx.world, ctx.bus, ctx.quests, ctx.processes
+    import requests
+    requests.post(WEBHOOK_URL, json={"content": f"{ctx.player.name} pinged"}, timeout=3)
+```
+Module is reloaded from disk on every fire. All exceptions are silently caught.
+
 State (active, tick counters, route position) is persisted per-player in
 `data/players/<name>/zone_state/_processes.json` and saved on every player save.
 

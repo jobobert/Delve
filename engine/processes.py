@@ -19,9 +19,16 @@ script = [
   { op = "message", text = "A caravan rolls past.", tag = "system" },
 ]
 
-# Option A2 — external script file (world-relative path to a TOML ops file)
+# Option A2 — external TOML ops file (world-relative path)
 # The file must contain an "ops" or "script" array at the top level.
 script_file = "scripts/caravan_tick.toml"
+
+# Option A3 — Python script file (world-relative path to a .py file)
+# The file must define a top-level run(ctx) function.
+# ctx exposes: ctx.player, ctx.world, ctx.bus, ctx.quests, ctx.processes
+# Exceptions are caught and silently ignored so a broken script never
+# crashes the game.  The module is reloaded on every fire.
+script_py = "scripts/discord_notify.py"
 
 # Option B — NPC route: walk an NPC along waypoints
 route_npc  = "traveling_merchant"   # NPC id to move
@@ -193,6 +200,20 @@ class ProcessManager:
                     ops  = data.get("ops", data.get("script", []))
                     from engine.script import ScriptRunner
                     ScriptRunner(ctx).run(ops)
+                except Exception:
+                    pass
+
+        script_py = proc.get("script_py", "")
+        if script_py:
+            py_path = self._world_path / script_py
+            if py_path.exists():
+                try:
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("_proc_script", py_path)
+                    mod  = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+                    if callable(getattr(mod, "run", None)):
+                        mod.run(ctx)
                 except Exception:
                     pass
 

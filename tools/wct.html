@@ -2184,6 +2184,15 @@ function renderProcessEditor(main) {
   scriptDiv.appendChild(scriptBtn);
   main.appendChild(scriptDiv);
 
+  // External script files
+  main.appendChild(sectionTitle('External Scripts', 'Optional: run a TOML ops file or a Python .py file on each fire.\nPaths are relative to the world root (e.g. scripts/weather.toml).\nscript_file runs TOML ops; script_py calls run(ctx) in a Python file.\nBoth run after the inline Script above.'));
+  main.appendChild(fieldRow('TOML Script File',
+    textInput(d.script_file || '', v => { d.script_file = v || undefined; markDirty(); }),
+    null, 'World-relative path to a .toml file with an ops[] or script[] array.'));
+  main.appendChild(fieldRow('Python Script File',
+    textInput(d.script_py || '', v => { d.script_py = v || undefined; markDirty(); }),
+    null, 'World-relative path to a .py file that defines run(ctx). Full Python access — use for webhooks, logging, etc.'));
+
   // Route
   main.appendChild(sectionTitle('NPC Route', 'Optional: move an NPC along a list of waypoints.\nLeave Route NPC blank to use Script only.'));
   main.appendChild(fieldRow('Route NPC', refInput(d.route_npc || '', 'dl-npcs', v => { d.route_npc = v; markDirty(); }, 'npc'),

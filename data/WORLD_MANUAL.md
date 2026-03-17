@@ -2593,6 +2593,7 @@ admin_comment = "Caravan moves through town on a loop"
 | `admin_comment` | string | No | Design notes (not shown in-game) |
 | `script` | array | No | Inline script ops to run on each fire (Option A) |
 | `script_file` | string | No | World-relative path to a TOML ops file (Option A2) |
+| `script_py` | string | No | World-relative path to a Python `.py` file (Option A3) |
 | `route_npc` | string | No | NPC id to move along the route (Option B) |
 | `route_loop` | string | No | `"cycle"` (default) or `"reverse"` |
 | `route` | array | No | List of `{room_id, ticks}` waypoints (Option B) |
@@ -2664,6 +2665,68 @@ ops = [
 ```
 
 Both `script` and `script_file` may be defined on the same process; the inline `script` runs first, then the file. If the file is missing or cannot be parsed, it is silently skipped.
+
+#### 21.2.2 Python Script Files (script_py)
+
+`script_py` points to an actual Python `.py` file. The file must define a top-level `run(ctx)` function. The engine loads and executes it on every process fire, passing in the full game context. This enables integrations that are impossible in TOML ops — HTTP requests, logging, file output, Discord/Slack webhooks, email, or any Python library.
+
+**Context object passed to `run(ctx)`:**
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `ctx.player` | `Player` | Current player (read/write — changes persist) |
+| `ctx.world` | `World` | Zone/room/NPC data |
+| `ctx.bus` | `EventBus` | Emit messages to the player's frontend |
+| `ctx.quests` | `QuestTracker` | Read quest state |
+| `ctx.processes` | `ProcessManager` | Start/stop/pause other processes |
+
+**Emitting output to the player from Python:**
+```python
+from engine.events import Event
+from engine.msg import Msg, Tag
+
+def run(ctx):
+    ctx.bus.emit(Event.OUTPUT, Msg(Tag.SYSTEM, "The bell tower tolls the hour."))
+```
+
+**Full example — Discord webhook on quest completion:**
+
+Process definition:
+```toml
+[[process]]
+id          = "discord_quest_log"
+name        = "Discord Quest Logger"
+interval    = 1
+autostart   = false          # start via process_start op in a quest's complete script
+script_py   = "scripts/discord_quest_log.py"
+```
+
+Script file (`data/<world_id>/scripts/discord_quest_log.py`):
+```python
+import requests  # third-party; install with: pip install requests
+
+WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_WEBHOOK_URL"
+
+def run(ctx):
+    p = ctx.player
+    completed = sorted(p.completed_quests)
+    if not completed:
+        return
+    last = completed[-1].replace("_", " ").title()
+    try:
+        requests.post(WEBHOOK_URL, json={
+            "content": f"**{p.name}** completed **{last}** (prestige: {p.prestige})"
+        }, timeout=3)
+    except Exception:
+        pass  # never let network errors crash the game
+```
+
+**Rules and safety:**
+- The `.py` file is reloaded from disk on **every** fire, so edits take effect immediately without restarting the server.
+- All exceptions are caught silently — a broken script never crashes the game or interrupts the player.
+- `ctx.player` is the live player object; writes to it (e.g. setting flags, adjusting gold) take effect immediately and are saved on the next player save.
+- The script runs synchronously on the game tick, so keep network calls short or fire-and-forget with a timeout. Long-running operations will delay the player's response.
+- No sandboxing is applied. Scripts have full Python access. Only use `script_py` with trusted content.
 
 ### 21.3 Option B — NPC Route (Caravan / Patrol)
 

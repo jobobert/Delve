@@ -944,14 +944,16 @@ def _processes_section(processes: list[dict]) -> str:
         return "<p><em>No processes.</em></p>"
     rows: list[str] = []
     for p in processes:
-        pid      = p.get("id", "")
-        name     = p.get("name", "")
-        interval = p.get("interval", "")
-        autostart = p.get("autostart", False)
-        loop     = p.get("route_loop", "")
-        npc      = p.get("route_npc", "")
-        comment  = p.get("admin_comment", "")
-        route    = p.get("route", [])
+        pid         = p.get("id", "")
+        name        = p.get("name", "")
+        interval    = p.get("interval", "")
+        autostart   = p.get("autostart", False)
+        loop        = p.get("route_loop", "")
+        npc         = p.get("route_npc", "")
+        comment     = p.get("admin_comment", "")
+        route       = p.get("route", [])
+        script_file = p.get("script_file", "")
+        script_py   = p.get("script_py", "")
 
         meta_parts = []
         if interval:
@@ -962,6 +964,10 @@ def _processes_section(processes: list[dict]) -> str:
             meta_parts.append(f"NPC: {_h(npc)}")
         if loop:
             meta_parts.append(f"loop: {_h(loop)}")
+        if script_file:
+            meta_parts.append(f"toml: <code>{_h(script_file)}</code>")
+        if script_py:
+            meta_parts.append(f"py: <code>{_h(script_py)}</code>")
         meta_html = " &middot; ".join(meta_parts)
 
         waypoints_html = ""
