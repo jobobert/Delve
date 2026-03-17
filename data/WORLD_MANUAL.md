@@ -26,14 +26,16 @@
 17. [Light Mechanic](#17-light-mechanic)
 18. [World-Defined Player Attributes](#18-world-defined-player-attributes)
 19. [Standalone Script Files](#19-standalone-script-files)
-20. [Appendix A — Room Flags](#appendix-a--room-flags)
-21. [Appendix B — Equipment Slots](#appendix-b--equipment-slots)
-22. [Appendix C — All Script Ops (Quick Reference)](#appendix-c--all-script-ops-quick-reference)
-23. [Appendix D — Player Fields for Substitution](#appendix-d--player-fields-for-substitution)
-24. [Appendix E — Quest Design Walkthrough](#appendix-e--quest-design-walkthrough)
-25. [Appendix F — Companion Design Walkthrough](#appendix-f--companion-design-walkthrough)
-26. [Appendix G — Crafting & Commission Design Walkthrough](#appendix-g--crafting--commission-design-walkthrough)
-27. [Appendix H — Fighting Style Design Walkthrough](#appendix-h--fighting-style-design-walkthrough)
+20. [World Notes File](#20-world-notes-file-worldmd)
+21. [World Processes](#21-world-processes)
+22. [Appendix A — Room Flags](#appendix-a--room-flags)
+23. [Appendix B — Equipment Slots](#appendix-b--equipment-slots)
+24. [Appendix C — All Script Ops (Quick Reference)](#appendix-c--all-script-ops-quick-reference)
+25. [Appendix D — Player Fields for Substitution](#appendix-d--player-fields-for-substitution)
+26. [Appendix E — Quest Design Walkthrough](#appendix-e--quest-design-walkthrough)
+27. [Appendix F — Companion Design Walkthrough](#appendix-f--companion-design-walkthrough)
+28. [Appendix G — Crafting & Commission Design Walkthrough](#appendix-g--crafting--commission-design-walkthrough)
+29. [Appendix H — Fighting Style Design Walkthrough](#appendix-h--fighting-style-design-walkthrough)
 
 ---
 
@@ -2524,6 +2526,226 @@ All OUTPUT messages are printed to the console during execution.
 
 ---
 
+## 20. World Notes File (world.md)
+
+Each world can have an optional `world.md` file at `data/<world_id>/world.md`. This is a Markdown document for world-level lore, design notes, NPC backstory, cross-zone trade routes, quest relationships, and anything else a world creator wants to record.
+
+### 20.1 Location
+
+```
+data/<world_id>/world.md
+```
+
+### 20.2 Usage
+
+- **WCT**: Click **World Notes** in the top bar to open a fullscreen Markdown editor. Changes are saved to `world.md` immediately.
+- **world2html**: The content of `world.md` is rendered between the summary table and the first zone section when generating the review HTML.
+- **Engine**: `world.md` is not read by the engine at runtime — it is purely a tool for world authors.
+
+### 20.3 Recommended Sections
+
+```markdown
+# World Name
+
+## Overview
+Brief pitch for the world.
+
+## Regions
+Per-zone narrative summaries and design goals.
+
+## Quest Relationships
+Cross-zone quest dependencies and flag usage.
+
+## Item Notes
+Unusual item behaviours, cross-zone commission materials.
+
+## Tags
+Tag naming conventions used in this world.
+```
+
+---
+
+## 21. World Processes
+
+World processes are recurring scripts or NPC-route drivers that fire automatically on player-action ticks. They enable time-passing simulation — weather changes, NPC patrols, shifting exits, caravan routes — without any background threads or clock dependency.
+
+Processes fire on the same tick used by status effects (every non-read-only player command). They are per-player: each character has their own process state persisted in their zone_state folder.
+
+### 21.1 Defining a Process
+
+Create a `processes.toml` file inside any zone folder. Each `[[process]]` block defines one process.
+
+```toml
+[[process]]
+id            = "caravan_route"
+name          = "Merchant Caravan"
+interval      = 5          # fire every 5 action ticks (default 1)
+autostart     = false      # start automatically on world load (default false)
+admin_comment = "Caravan moves through town on a loop"
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | **Yes** | Unique process identifier |
+| `name` | string | No | Display name (for tooling) |
+| `interval` | int | No | Fire every N action ticks; default `1` |
+| `autostart` | bool | No | If `true`, process starts active immediately; default `false` |
+| `admin_comment` | string | No | Design notes (not shown in-game) |
+| `script` | array | No | Inline script ops to run on each fire (Option A) |
+| `script_file` | string | No | World-relative path to a TOML ops file (Option A2) |
+| `route_npc` | string | No | NPC id to move along the route (Option B) |
+| `route_loop` | string | No | `"cycle"` (default) or `"reverse"` |
+| `route` | array | No | List of `{room_id, ticks}` waypoints (Option B) |
+
+### 21.2 Option A — Script-Based Process
+
+A script process runs a list of ops every time it fires. Use this for weather messages, periodic flag checks, room-light changes, or any timed effect.
+
+```toml
+[[process]]
+id       = "storm_cycle"
+name     = "Storm Cycle"
+interval = 20
+autostart = true
+script = [
+  { op = "message", text = "Thunder rolls across the hills.", tag = "system" },
+  { op = "adjust_light", amount = -1 },
+]
+```
+
+For longer or reusable scripts, use `script_file` to point to an external TOML ops file instead of embedding an inline array.
+
+#### 21.2.1 External Script Files (script_file)
+
+`script_file` takes a world-relative path to a TOML file whose top-level key is `ops` or `script`. The engine loads and runs the file through the same ScriptRunner that handles inline ops — any op that works inline works in a file.
+
+**When to use `script_file`:**
+- The process logic is more than 5–6 ops (inline becomes hard to read)
+- The same script is shared by more than one process
+- You want to edit the logic without touching `processes.toml`
+
+**Recommended layout:**
+
+```
+data/<world_id>/
+  scripts/
+    weather_tick.toml
+    patrol_events.toml
+    caravan_checks.toml
+  <zone_id>/
+    processes.toml
+    ...
+```
+
+**Process definition:**
+```toml
+[[process]]
+id          = "patrol_events"
+name        = "Patrol Events"
+interval    = 10
+autostart   = true
+script_file = "scripts/patrol_events.toml"
+```
+
+**Script file (`data/<world_id>/scripts/patrol_events.toml`):**
+```toml
+# Top-level key must be "ops" or "script"
+ops = [
+  { op = "if_flag", flag = "patrol_alert",
+    then = [
+      { op = "message", text = "Boots ring on the cobblestones outside.", tag = "system" },
+      { op = "adjust_light", amount = -1 },
+    ],
+    else = [
+      { op = "adjust_light", amount = 1 },
+    ]
+  },
+]
+```
+
+Both `script` and `script_file` may be defined on the same process; the inline `script` runs first, then the file. If the file is missing or cannot be parsed, it is silently skipped.
+
+### 21.3 Option B — NPC Route (Caravan / Patrol)
+
+A route process walks an NPC through a list of waypoints. The `ticks` field on each waypoint is how many process-fires the NPC waits at that room before moving.
+
+```toml
+[[process]]
+id         = "traveling_merchant"
+name       = "Traveling Merchant"
+interval   = 3           # check route every 3 action ticks
+autostart  = false       # started by quest trigger
+route_npc  = "merchant_edvard"
+route_loop = "cycle"     # loops back to start; use "reverse" for ping-pong
+route = [
+  { room_id = "millhaven_square", ticks = 4 },
+  { room_id = "millhaven_gate",   ticks = 2 },
+  { room_id = "millbrook_road",   ticks = 6 },
+]
+```
+
+With `route_loop = "reverse"`, the NPC walks forward to the last waypoint then back to the first, then forward again.
+
+Both `script` and `route` may appear on the same process — the route advances first, then the script runs.
+
+**Route timing note:** With `interval = 3` and `ticks = 4`, the NPC stays at a waypoint for `3 × 4 = 12` player action commands before moving.
+
+> **Zone eviction:** Route-based NPC movement uses `move_npc` internally and requires the NPC's current zone to be loaded. If a zone is evicted from memory while an NPC is mid-route, the NPC will reappear at its spawn point when the zone reloads. Plan routes within zones or between always-adjacent zones.
+
+### 21.4 Controlling Processes from Scripts
+
+Any script (dialogue, on_enter, item on_get, quest trigger, etc.) can start, stop, or pause a process.
+
+```toml
+# Start when player triggers a quest
+{ op = "process_start", process_id = "caravan_route" }
+
+# Pause during a cutscene or boss fight
+{ op = "process_pause", process_id = "caravan_route" }
+
+# Stop and reset all counters
+{ op = "process_stop",  process_id = "caravan_route" }
+```
+
+`process_start` also resumes a paused process. `process_stop` resets tick counters so the process starts fresh if restarted.
+
+### 21.5 State Persistence
+
+Process state (active/paused, tick counters, route position) is saved to:
+
+```
+data/players/<name>/zone_state/_processes.json
+```
+
+It is loaded when `CommandProcessor` initialises and written whenever the player saves. Process state survives world reloads and game restarts.
+
+### 21.6 Full Example — Weather Process
+
+```toml
+# data/first_world/millhaven/processes.toml
+
+[[process]]
+id        = "millhaven_weather"
+name      = "Millhaven Weather"
+interval  = 15
+autostart = true
+admin_comment = "Toggles a rain flag every ~15 commands. Quests check 'millhaven_raining'."
+script = [
+  { op = "if_flag", flag = "millhaven_raining",
+    then = [
+      { op = "clear_flag", flag = "millhaven_raining" },
+      { op = "message", text = "The rain eases. Pale sunlight breaks through the clouds.", tag = "system" },
+    ],
+    else = [
+      { op = "set_flag", flag = "millhaven_raining" },
+      { op = "message", text = "Dark clouds gather. Rain begins to fall.", tag = "system" },
+    ]
+  }
+]
+```
+
+---
+
 ## Appendix A — Room Flags
 
 Add any of these string values to a room's `flags` array.
@@ -4040,193 +4262,3 @@ field ensures the second passive only triggers on rounds where the first also fi
 **NPC `style_prof` too high on common enemies**
 A street thug with `style_prof = 90` will parry almost every round. Save high
 proficiency for bosses. Common enemies in the 10-35 range keep combat readable.
-
----
-
-## 20. World Notes File (world.md)
-
-Each world can have an optional `world.md` file at `data/<world_id>/world.md`. This is a Markdown document for world-level lore, design notes, NPC backstory, cross-zone trade routes, quest relationships, and anything else a world creator wants to record.
-
-### 20.1 Location
-
-```
-data/<world_id>/world.md
-```
-
-### 20.2 Usage
-
-- **WCT**: Click **World Notes** in the top bar to open a fullscreen Markdown editor. Changes are saved to `world.md` immediately.
-- **world2html**: The content of `world.md` is rendered between the summary table and the first zone section when generating the review HTML.
-- **Engine**: `world.md` is not read by the engine at runtime — it is purely a tool for world authors.
-
-### 20.3 Recommended Sections
-
-```markdown
-# World Name
-
-## Overview
-Brief pitch for the world.
-
-## Regions
-Per-zone narrative summaries and design goals.
-
-## Quest Relationships
-Cross-zone quest dependencies and flag usage.
-
-## Item Notes
-Unusual item behaviours, cross-zone commission materials.
-
-## Tags
-Tag naming conventions used in this world.
-```
-
----
-
-## 21. World Processes
-
-World processes are recurring scripts or NPC-route drivers that fire automatically on player-action ticks. They enable time-passing simulation — weather changes, NPC patrols, shifting exits, caravan routes — without any background threads or clock dependency.
-
-Processes fire on the same tick used by status effects (every non-read-only player command). They are per-player: each character has their own process state persisted in their zone_state folder.
-
-### 21.1 Defining a Process
-
-Create a `processes.toml` file inside any zone folder. Each `[[process]]` block defines one process.
-
-```toml
-[[process]]
-id            = "caravan_route"
-name          = "Merchant Caravan"
-interval      = 5          # fire every 5 action ticks (default 1)
-autostart     = false      # start automatically on world load (default false)
-admin_comment = "Caravan moves through town on a loop"
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `id` | string | **Yes** | Unique process identifier |
-| `name` | string | No | Display name (for tooling) |
-| `interval` | int | No | Fire every N action ticks; default `1` |
-| `autostart` | bool | No | If `true`, process starts active immediately; default `false` |
-| `admin_comment` | string | No | Design notes (not shown in-game) |
-| `script` | array | No | Inline script ops to run on each fire (Option A) |
-| `script_file` | string | No | World-relative path to a TOML ops file (Option A2) |
-| `route_npc` | string | No | NPC id to move along the route (Option B) |
-| `route_loop` | string | No | `"cycle"` (default) or `"reverse"` |
-| `route` | array | No | List of `{room_id, ticks}` waypoints (Option B) |
-
-### 21.2 Option A — Script-Based Process
-
-A script process runs a list of ops every time it fires. Use this for weather messages, periodic flag checks, room-light changes, or any timed effect.
-
-```toml
-[[process]]
-id       = "storm_cycle"
-name     = "Storm Cycle"
-interval = 20
-autostart = true
-script = [
-  { op = "message", text = "Thunder rolls across the hills.", tag = "system" },
-  { op = "adjust_light", amount = -1 },
-]
-```
-
-For longer or reusable scripts, use `script_file` instead of an inline `script` array. The path is relative to the world root and the file must contain an `ops` or `script` array at the top level.
-
-```toml
-[[process]]
-id          = "patrol_events"
-name        = "Patrol Events"
-interval    = 10
-autostart   = true
-script_file = "scripts/patrol_tick.toml"
-```
-
-```toml
-# data/<world>/scripts/patrol_tick.toml
-ops = [
-  { op = "if_flag", flag = "patrol_alert",
-    then = [{ op = "message", text = "Boots ring on the cobblestones outside.", tag = "system" }]
-  },
-]
-```
-
-Both `script` and `script_file` may be defined on the same process; the inline `script` runs first, then the file.
-
-### 21.3 Option B — NPC Route (Caravan / Patrol)
-
-A route process walks an NPC through a list of waypoints. The `ticks` field on each waypoint is how many process-fires the NPC waits at that room before moving.
-
-```toml
-[[process]]
-id         = "traveling_merchant"
-name       = "Traveling Merchant"
-interval   = 3           # check route every 3 action ticks
-autostart  = false       # started by quest trigger
-route_npc  = "merchant_edvard"
-route_loop = "cycle"     # loops back to start; use "reverse" for ping-pong
-route = [
-  { room_id = "millhaven_square", ticks = 4 },
-  { room_id = "millhaven_gate",   ticks = 2 },
-  { room_id = "millbrook_road",   ticks = 6 },
-]
-```
-
-With `route_loop = "reverse"`, the NPC walks forward to the last waypoint then back to the first, then forward again.
-
-Both `script` and `route` may appear on the same process — the route advances first, then the script runs.
-
-**Route timing note:** With `interval = 3` and `ticks = 4`, the NPC stays at a waypoint for `3 × 4 = 12` player action commands before moving.
-
-> **Zone eviction:** Route-based NPC movement uses `move_npc` internally and requires the NPC's current zone to be loaded. If a zone is evicted from memory while an NPC is mid-route, the NPC will reappear at its spawn point when the zone reloads. Plan routes within zones or between always-adjacent zones.
-
-### 21.4 Controlling Processes from Scripts
-
-Any script (dialogue, on_enter, item on_get, quest trigger, etc.) can start, stop, or pause a process.
-
-```toml
-# Start when player triggers a quest
-{ op = "process_start", process_id = "caravan_route" }
-
-# Pause during a cutscene or boss fight
-{ op = "process_pause", process_id = "caravan_route" }
-
-# Stop and reset all counters
-{ op = "process_stop",  process_id = "caravan_route" }
-```
-
-`process_start` also resumes a paused process. `process_stop` resets tick counters so the process starts fresh if restarted.
-
-### 21.5 State Persistence
-
-Process state (active/paused, tick counters, route position) is saved to:
-
-```
-data/players/<name>/zone_state/_processes.json
-```
-
-It is loaded when `CommandProcessor` initialises and written whenever the player saves. Process state survives world reloads and game restarts.
-
-### 21.6 Full Example — Weather Process
-
-```toml
-# data/first_world/millhaven/processes.toml
-
-[[process]]
-id        = "millhaven_weather"
-name      = "Millhaven Weather"
-interval  = 15
-autostart = true
-admin_comment = "Toggles a rain flag every ~15 commands. Quests check 'millhaven_raining'."
-script = [
-  { op = "if_flag", flag = "millhaven_raining",
-    then = [
-      { op = "clear_flag", flag = "millhaven_raining" },
-      { op = "message", text = "The rain eases. Pale sunlight breaks through the clouds.", tag = "system" },
-    ],
-    else = [
-      { op = "set_flag", flag = "millhaven_raining" },
-      { op = "message", text = "Dark clouds gather. Rain begins to fall.", tag = "system" },
-    ]
-  }
-]
-```
