@@ -371,6 +371,10 @@ const NPC_TAGS = [
   'armored','fast','slow','large','small','group','spar','criminal',
 ];
 
+// Badge letter and CSS class for each entity type — used by the left-pane list, editor header, and tag-usage panel.
+const BADGE_LTR = {room:'R',npc:'N',item:'I',quest:'Q',dialogue:'D',style:'S',process:'P',zone:'Z'};
+const BADGE_CLS = {room:'badge-room',npc:'badge-npc',item:'badge-item',quest:'badge-quest',dialogue:'badge-dlg',style:'badge-style',process:'badge-proc'};
+
 let SELECTED     = null;  // {type, zone_id, data}  — mutable working copy
 let DIRTY        = false;
 let XREF         = {};    // id → [{type, zone_id, id, name, context}]
@@ -536,8 +540,8 @@ function renderTypeList(type) {
 
   const key      = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type === 'process' ? 'processes' : type + 's';
   const nameKey  = type === 'quest' ? 'title' : type === 'dialogue' ? '_npc_id' : 'name';
-  const badgeCls = {room:'badge-room',npc:'badge-npc',item:'badge-item',quest:'badge-quest',dialogue:'badge-dlg',style:'badge-style',process:'badge-proc'}[type];
-  const badgeLtr = {room:'R',npc:'N',item:'I',quest:'Q',dialogue:'D',style:'S',process:'P'}[type];
+  const badgeCls = BADGE_CLS[type];
+  const badgeLtr = BADGE_LTR[type];
 
   const savedState = _loadZoneState();
   for (const [zid, zone] of Object.entries(WORLD_DATA.zones || {})) {
@@ -832,8 +836,8 @@ function showTagPopup(tag) {
   const ul = document.getElementById('tag-usage-list');
   usages.forEach(u => {
     const el   = document.createElement('div');
-    const bcls = u.type === 'npc' ? 'badge-npc' : u.type === 'room' ? 'badge-room' : u.type === 'style' ? 'badge-style' : 'badge-item';
-    const bltr = u.type === 'npc' ? 'N' : u.type === 'room' ? 'R' : u.type === 'style' ? 'S' : 'I';
+    const bcls = BADGE_CLS[u.type] || 'badge-item';
+    const bltr = BADGE_LTR[u.type] || 'I';
     el.style.cssText = 'display:flex;align-items:center;gap:6px;padding:2px 0;cursor:pointer';
     el.innerHTML = `<span class="badge ${bcls}">${bltr}</span><span style="font-size:12px">${escHtml(u.name)}${u.field ? ' <span style="color:var(--text-dim)">(' + escHtml(u.field) + ')</span>' : ''}</span><span style="font-size:11px;color:var(--text-dim);margin-left:auto">${escHtml(u.zone)}</span>`;
     el.title = `Go to ${u.name}`;
@@ -959,7 +963,7 @@ function renderEditor() {
 function editorHeader(type, cls, name) {
   const div = document.createElement('div');
   div.className = 'editor-header';
-  const badgeLtr = {room:'R', npc:'N', item:'I', quest:'Q', dialogue:'D', style:'S', process:'P', zone:'Z'}[type] || type.slice(0,1).toUpperCase();
+  const badgeLtr = BADGE_LTR[type] || type.slice(0,1).toUpperCase();
   const badgeCls = cls.startsWith('badge-') ? `badge ${cls}` : cls;
   div.innerHTML = `
     <span class="editor-type ${badgeCls}">${badgeLtr}</span>
