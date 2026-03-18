@@ -306,6 +306,7 @@ class CLIFrontend:
                 print(dim + f"  Starting stats rolled:  ATK {player.attack}  DEF {player.defense}  HP {player.hp}" + RESET)
                 print(dim + "  (Stats grow through combat and equipment.)\n" + RESET)
                 player.save()
+                self._new_player = True
                 return player
 
     # ── Auto-attack ───────────────────────────────────────────────────────────
@@ -687,7 +688,8 @@ class CLIFrontend:
             if word not in self.player.aliases:
                 self.player.aliases[word] = expansion
 
-        self.processor.do_look()
+        self.processor.on_session_start(new_player=getattr(self, '_new_player', False))
+        self._new_player = False
 
         while not self.processor.quit_requested:
             try:

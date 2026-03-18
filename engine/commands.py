@@ -248,6 +248,15 @@ class CommandProcessor:
         self.player.visited_rooms.add(self.player.room_id)
         self._cmd_look("look", "")
 
+    def on_session_start(self, new_player: bool = False) -> None:
+        """Call once after the processor is ready. Shows the starting room and,
+        for brand-new players, fires the start room's on_enter script."""
+        self.do_look()
+        if new_player:
+            room = self.world.prepare_room(self.player.room_id, self.player)
+            if room:
+                self._run_room_on_enter(room)
+
     # ── Item commands ─────────────────────────────────────────────────────────
 
     def _item_commands_for(self, item: dict) -> list[dict]:

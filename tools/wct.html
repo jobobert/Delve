@@ -4146,6 +4146,30 @@ function renderXRef(id) {
           rm ? () => navigateTo('room', rm.zone_id, target) : null));
       });
     }
+
+    // Quests referenced in this room's scripts
+    const questRefs = new Map(); // quest_id → context
+    const _collectQuestRefs = (obj, ctx) => {
+      if (!obj || typeof obj !== 'object') return;
+      if (Array.isArray(obj)) { obj.forEach(v => _collectQuestRefs(v, ctx)); return; }
+      if (obj.quest_id && typeof obj.quest_id === 'string') {
+        if (!questRefs.has(obj.quest_id)) questRefs.set(obj.quest_id, ctx);
+      }
+      for (const v of Object.values(obj)) {
+        if (v && typeof v === 'object') _collectQuestRefs(v, ctx);
+      }
+    };
+    _collectQuestRefs(d.on_enter, 'on_enter');
+    _collectQuestRefs(d.on_exit,  'on_exit');
+
+    if (questRefs.size) {
+      body.appendChild(groupTitle('Quests'));
+      for (const [qid, ctx] of questRefs) {
+        const q = ALL_QUESTS[qid];
+        body.appendChild(xrefRow('quest', q?.title || qid, ctx,
+          q ? () => navigateTo('quest', q.zone_id, qid) : null));
+      }
+    }
   }
 
   // ── Flags used by the selected entity ──────────────────────────────
