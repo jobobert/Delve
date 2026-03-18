@@ -2668,6 +2668,17 @@ function renderDialogueEditor(main) {
     _showDlgGraph(main, d);
   });
   main.querySelector('.editor-actions')?.appendChild(dlgGrfBtn);
+  if (d._npc_id) {
+    const npc = ALL_NPCS[d._npc_id];
+    const dlgBackBtn = document.createElement('button');
+    dlgBackBtn.className = 'hbtn';
+    dlgBackBtn.textContent = '\u2190 NPC';
+    dlgBackBtn.title = 'Back to NPC: ' + (npc?.name || d._npc_id);
+    dlgBackBtn.addEventListener('click', () => {
+      if (npc) navigateTo('npc', npc.zone_id, d._npc_id);
+    });
+    main.querySelector('.editor-actions')?.appendChild(dlgBackBtn);
+  }
 
   // Normalize: ensure node/response arrays, normalise line→lines
   d.node     = (d.node     || []).map(n => ({
@@ -4105,6 +4116,17 @@ function renderXRef(id) {
     const el = document.createElement('div'); el.className = 'xref-group-title';
     el.textContent = text; return el;
   };
+
+  // ── Dialogue: owning NPC ─────────────────────────────────────────
+  if (SELECTED?.type === 'dialogue') {
+    const npcId = SELECTED.data?._npc_id;
+    if (npcId) {
+      const npc = ALL_NPCS[npcId];
+      body.appendChild(groupTitle('NPC'));
+      body.appendChild(xrefRow('npc', npc?.name || npcId, null,
+        npc ? () => navigateTo('npc', npc.zone_id, npcId) : null));
+    }
+  }
 
   // ── Room contents: spawns / items / exits ────────────────────────
   if (SELECTED?.type === 'room') {
@@ -5880,6 +5902,38 @@ function _dlgGraphNodeClick(nid, node, detailEl) {
   detailEl.appendChild(body);
 }
 
+function _popoutGraph(svgEl, title) {
+  const svgStr = new XMLSerializer().serializeToString(svgEl);
+  const win = window.open('', '_blank', 'width=1100,height=750');
+  if (!win) { alert('Pop-up blocked — please allow pop-ups for this page.'); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>${escHtml(title)}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#181c23;color:#cdd3de;font-family:Consolas,monospace;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+header{flex-shrink:0;padding:6px 14px;background:#2f3033;border-bottom:1px solid #8390a9;font-size:14px;font-weight:600}
+#canvas{flex:1;overflow:hidden;position:relative;cursor:grab}
+#canvas.dragging{cursor:grabbing}
+svg{display:block;transform-origin:0 0;user-select:none;overflow:visible}
+</style></head><body>
+<header>${escHtml(title)}</header>
+<div id="canvas">${svgStr}</div>
+<script>
+(function(){
+  const canvas=document.getElementById('canvas');
+  const svg=canvas.querySelector('svg');
+  let scale=1,ox=40,oy=40,dragging=false,lx,ly;
+  function applyT(){svg.style.transform='translate('+ox+'px,'+oy+'px) scale('+scale+')';}
+  applyT();
+  canvas.addEventListener('mousedown',e=>{dragging=true;lx=e.clientX;ly=e.clientY;canvas.classList.add('dragging');});
+  window.addEventListener('mouseup',()=>{dragging=false;canvas.classList.remove('dragging');});
+  window.addEventListener('mousemove',e=>{if(!dragging)return;ox+=e.clientX-lx;oy+=e.clientY-ly;lx=e.clientX;ly=e.clientY;applyT();});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();const mx=e.clientX-r.left;const my=e.clientY-r.top;const ds=e.deltaY<0?1.12:1/1.12;ox=mx-(mx-ox)*ds;oy=my-(my-oy)*ds;scale*=ds;applyT();},{passive:false});
+})();
+<\/script></body></html>`);
+  win.document.close();
+}
+
 function _showDlgGraph(main, d) {
   const existing = main.querySelector('.dlg-graph-wrap');
   if (existing) {
@@ -6047,7 +6101,11 @@ function _showDlgGraph(main, d) {
   const hint = document.createElement('span');
   hint.style.cssText = 'font-size:11px;color:var(--text-dim);margin-left:6px';
   hint.textContent = 'Click node for details';
-  tb.appendChild(backBtn); tb.appendChild(expBtn); tb.appendChild(hint);
+  const dlgPopBtn = document.createElement('button');
+  dlgPopBtn.className = 'hbtn'; dlgPopBtn.textContent = 'Pop out';
+  dlgPopBtn.title = 'Open graph in a new window';
+  dlgPopBtn.addEventListener('click', () => _popoutGraph(svg, d._npc_id ? 'Dialogue: ' + d._npc_id : 'Dialogue'));
+  tb.appendChild(backBtn); tb.appendChild(expBtn); tb.appendChild(dlgPopBtn); tb.appendChild(hint);
 
   const wrap = document.createElement('div');
   wrap.className = 'dlg-graph-wrap';
@@ -6286,7 +6344,11 @@ function _showQuestGraph(main, quest) {
   const stepInfo = document.createElement('span');
   stepInfo.style.cssText = 'font-size:11px;color:var(--text-dim);margin-left:6px';
   stepInfo.textContent = stepNums.length ? `${stepNums.length} step(s)` : 'No steps defined';
-  tb.appendChild(backBtn); tb.appendChild(expBtn); tb.appendChild(stepInfo);
+  const qPopBtn = document.createElement('button');
+  qPopBtn.className = 'hbtn'; qPopBtn.textContent = 'Pop out';
+  qPopBtn.title = 'Open graph in a new window';
+  qPopBtn.addEventListener('click', () => _popoutGraph(svg, 'Quest: ' + (quest.title || quest.id || '')));
+  tb.appendChild(backBtn); tb.appendChild(expBtn); tb.appendChild(qPopBtn); tb.appendChild(stepInfo);
 
   const wrap = document.createElement('div');
   wrap.className = 'dlg-graph-wrap';

@@ -286,8 +286,21 @@ class CLIFrontend:
         bold  = BOLD + _fg(255, 255, 255)
         dim   = _fg(160, 160, 160)
         while True:
-            name = input(label + "Enter your character name: " + RESET).strip()
+            name = input(label + "Enter your character name (? to list): " + RESET).strip()
             if not name:
+                continue
+            if name == "?":
+                players = sorted(
+                    p.name for p in (_DATA_DIR / "players").iterdir()
+                    if p.is_dir() and (p / "player.toml").exists()
+                ) if (_DATA_DIR / "players").exists() else []
+                if players:
+                    print(label + "\nExisting characters:" + RESET)
+                    for p in players:
+                        print(label + f"  {p}" + RESET)
+                    print()
+                else:
+                    print(label + "\n  (No characters yet.)\n" + RESET)
                 continue
             if Player.exists(name):
                 player = Player.load(name)

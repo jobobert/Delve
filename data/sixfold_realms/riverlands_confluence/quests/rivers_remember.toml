@@ -1,27 +1,26 @@
-id      = "rivers_remember"
-title   = "The Rivers Remember"
-giver   = "kale_ferryman"
+id = "rivers_remember"
+title = "The Rivers Remember"
+giver = "kale_ferryman"
 summary = "Kale believes the rivers are carrying echoes from the fractured realms. Follow where the waters lead."
 
 [[step]]
-index     = 1
-objective = "Explore Ferrydock Square and speak with Ferryman Kale."
-hint      = "He watches the currents more than the people."
-
-[[step]]
-index     = 2
+index = 1
 objective = "Investigate the mural promenade and search for hidden passages."
-hint      = "Some seams in stone are more than weathering."
+hint = "Some seams in stone are more than weathering."
 
 [[step]]
-index     = 3
+index = 2
 objective = "Descend to the echoing chamber and decipher the inscription."
-hint      = "The words may not be loud, but they are deep."
+hint = "The words may not be loud, but they are deep."
+
+[[step]]
+index = 3
+objective = "Return the token to Kale"
 
 [[reward]]
-type   = "xp"
+type = "xp"
 amount = 80
 
 [[reward]]
-type   = "gold"
+type = "gold"
 amount = 20

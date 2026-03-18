@@ -21,7 +21,7 @@ defense = 6
 xp_reward = 0
 gold_reward = 0
 hostile = false
-give_accepts = [{item_id = "resonant_token", message = "Kale turns the token over in his hand, listening. 'So the echoes have found you too.'", script = [{op = "set_flag", flag = "rl_kale_trusts_you"}, {op = "prestige", amount = 5, reason = "shared a relic of the old rivers"}, {op = "give_gold", amount = 10}]}]
+give_accepts = [{item_id = "resonant_token", message = "Kale turns the token over in his hand, listening. 'So the echoes have found you too.'", script = [{op = "set_flag", flag = "rl_kale_trusts_you"}, {op = "prestige", amount = 5, reason = "shared a relic of the old rivers"}, {op = "give_gold", amount = 10}, {op = "complete_quest", quest_id = "rivers_remember"}]}]
 
 [[npc]]
 id = "sela_mapmaker"

@@ -203,6 +203,7 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
 .editor-header {
   display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
   padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10; background: var(--bg);
 }
 .editor-type { font-size: 13px; padding: 2px 8px; border-radius: 3px; color: var(--bg); font-weight: 700; }
 .editor-title { font-size: 18px; font-weight: 600; color: var(--text); flex: 1; }
