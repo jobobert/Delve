@@ -641,6 +641,86 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
 .error-row .err-msg { flex: 1; line-height: 1.4; }
 .error-row .err-fix { color: var(--text-dim); font-style: italic; font-size: 12px; }
 
+/* ── Todo panel ──────────────────────────────────────────────────────── */
+.todo-panel {
+  background: var(--panel); border-top: 2px solid #F29E00;
+  display: flex; flex-direction: column;
+  max-height: 260px; min-height: 0; flex-shrink: 0;
+}
+.todo-panel.hidden { display: none; }
+.todo-panel.collapsed .todo-panel-body { display: none; }
+.todo-panel-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 12px; cursor: pointer; background: #1a1200;
+  font-size: 14px; font-weight: bold; color: #F29E00; flex-shrink: 0;
+  user-select: none;
+}
+.todo-panel-header:hover { background: #261900; }
+.todo-panel-header .todo-panel-title { flex: 1; }
+.todo-count-badge {
+  background: #F29E00; color: #111; font-size: 11px; font-weight: bold;
+  padding: 1px 7px; border-radius: 10px; min-width: 18px; text-align: center;
+}
+.todo-panel-body {
+  overflow-y: auto; flex: 1; padding: 4px 0;
+  display: flex; flex-direction: column;
+}
+.todo-filter-bar {
+  display: flex; gap: 4px; padding: 4px 12px 6px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.todo-filter {
+  background: none; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text-dim); font-size: 12px; padding: 2px 10px; cursor: pointer;
+}
+.todo-filter:hover { border-color: #F29E00; color: #F29E00; }
+.todo-filter.active { background: #F29E00; border-color: #F29E00; color: #111; font-weight: bold; }
+#todo-list { overflow-y: auto; flex: 1; }
+.todo-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 12px; font-size: 13px; border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.todo-row.done .todo-text { text-decoration: line-through; opacity: 0.45; }
+.todo-row input[type=checkbox] { accent-color: #F29E00; cursor: pointer; flex-shrink: 0; }
+.todo-text { flex: 1; line-height: 1.4; word-break: break-word; }
+.todo-obj-link {
+  font-size: 11px; background: rgba(242,158,0,0.15); border: 1px solid rgba(242,158,0,0.4);
+  color: #F29E00; border-radius: 4px; padding: 1px 6px; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0;
+}
+.todo-obj-link:hover { background: rgba(242,158,0,0.3); }
+.todo-del-btn {
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 0 2px; flex-shrink: 0;
+}
+.todo-del-btn:hover { color: #ef5350; }
+/* Inline editor todos section */
+.editor-todos {
+  margin: 12px 16px 20px; padding: 10px 14px;
+  border: 1px solid rgba(242,158,0,0.35); border-radius: 6px;
+  background: rgba(242,158,0,0.04);
+}
+.editor-todos-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  font-size: 13px; font-weight: bold; color: #F29E00;
+}
+.editor-todos-header span { flex: 1; }
+.editor-todos-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.editor-todo-row {
+  display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text);
+}
+.editor-todo-row input[type=checkbox] { accent-color: #F29E00; cursor: pointer; }
+.editor-todo-row.done .editor-todo-text { text-decoration: line-through; opacity: 0.45; }
+.editor-todo-text { flex: 1; word-break: break-word; }
+.editor-todo-del { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 0 2px; }
+.editor-todo-del:hover { color: #ef5350; }
+.editor-todo-add { display: flex; gap: 6px; margin-top: 4px; }
+.editor-todo-add input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 13px; padding: 4px 8px; }
+.editor-todo-add input:focus { outline: none; border-color: #F29E00; }
+/* Tree icon for todos */
+.list-icon-todo { color: #F29E00; font-size: 0.65em; vertical-align: middle; }
+
 #map-info {
   width: 230px; flex-shrink: 0;
   display: none; flex-direction: column;

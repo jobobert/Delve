@@ -17,9 +17,8 @@
   <button class="hbtn" id="btn-config" onclick="openConfig()" disabled title="Edit world configuration (config.toml)">Config</button>
   <button class="hbtn" id="btn-world-notes" onclick="openWorldNotes()" disabled title="Edit world.md — world-level notes and lore">World Notes</button>
   <button class="hbtn" id="btn-reload" onclick="reloadWorld()" title="Reload world data">Reload</button>
-  <button class="hbtn" id="btn-new-world" onclick="openNewWorld()" title="Create a new world">+ World</button>
   <button class="hbtn" id="btn-validate" onclick="openValidate()">Validate</button>
-  <button class="hbtn" id="btn-errors" onclick="buildErrorList()" title="Refresh error panel">Errors</button>
+  <button class="hbtn" id="btn-todos" onclick="toggleTodoPanel()" title="Show todo list" disabled>Todos</button>
   <button class="hbtn" id="btn-map" onclick="toggleMap()" title="Show world map">Map</button>
   <button class="hbtn primary" id="btn-new" onclick="openNew()">+ New</button>
   <button class="hbtn" id="btn-save" onclick="saveSelected()" disabled>Save</button>
@@ -73,6 +72,22 @@
         <span id="error-panel-toggle">&#x25B2;</span>
       </div>
       <div id="error-panel-body" class="error-panel-body"></div>
+    </div>
+    <div id="todo-panel" class="todo-panel hidden">
+      <div class="todo-panel-header" onclick="toggleTodoPanel()">
+        <span class="todo-panel-title">Todos</span>
+        <span id="todo-count-badge" class="todo-count-badge" style="display:none"></span>
+        <button class="hbtn small" style="font-size:12px;padding:2px 8px" onclick="event.stopPropagation();openAddGlobalTodo()">+ Add</button>
+        <span id="todo-panel-toggle">&#x25B2;</span>
+      </div>
+      <div id="todo-panel-body" class="todo-panel-body">
+        <div class="todo-filter-bar">
+          <button class="todo-filter active" data-filter="open" onclick="setTodoFilter('open')">Open</button>
+          <button class="todo-filter" data-filter="all" onclick="setTodoFilter('all')">All</button>
+          <button class="todo-filter" data-filter="done" onclick="setTodoFilter('done')">Done</button>
+        </div>
+        <div id="todo-list"></div>
+      </div>
     </div>
   </div>
 
@@ -244,6 +259,7 @@
       <div id="new-error" style="color:var(--red);font-size:12px;margin-top:6px;display:none"></div>
     </div>
     <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('new-modal');openNewWorld()" title="Create a new world">+ World</button>
       <button class="hbtn" onclick="closeModal('new-modal')">Cancel</button>
       <button class="hbtn primary" onclick="createNew()">Create</button>
     </div>
@@ -449,6 +465,8 @@ async function loadWorld(worldId) {
   document.getElementById('xref-body').innerHTML = '<div class="xref-empty">Select an object to see where it is used.</div>';
   document.getElementById('btn-config').disabled       = false;
   document.getElementById('btn-world-notes').disabled  = false;
+  document.getElementById('btn-todos').disabled        = false;
+  renderTodoPanel();
   setStatus(`${WORLD_CONFIG.world_name} loaded`, 'ok');
   _restoreUiState();
 }
@@ -578,6 +596,8 @@ function renderTypeList(type) {
         if (obj.start) listIcons += '<span class="list-icon list-icon-start" title="Start room">&#9733;</span>';
         if (Array.isArray(obj.flags) && obj.flags.includes('town')) listIcons += '<span class="list-icon list-icon-town" title="Town">&#8962;</span>';
       }
+      const _openTodos = loadTodos().filter(t => !t.done && t.type === type && t.zone_id === zid && t.obj_id === id);
+      if (_openTodos.length > 0) listIcons += `<span class="list-icon list-icon-todo" title="${_openTodos.length} open todo(s)">\u25c6</span>`;
       el.innerHTML = `<span class="badge ${badgeCls}">${badgeLtr}</span><span class="item-label">${escHtml(name)}</span>${listIcons}`;
       el.addEventListener('click', () => selectObject(type, zid, obj));
       el.addEventListener('dragstart', e => {
@@ -1423,6 +1443,7 @@ function renderRoomEditor(main) {
   main.appendChild(sectionTitle('Notes'));
   main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => d.admin_comment = v),
     null, 'Developer note. Ignored by the engine at runtime.'));
+  appendEditorTodos(main, 'room', SELECTED.zone_id, d.id);
 }
 
 // ── NPC editor ──────────────────────────────────────────────────────
@@ -1673,6 +1694,7 @@ function renderShop(main, d) {
 
   rebuild();
   main.appendChild(container);
+  appendEditorTodos(main, 'npc', SELECTED.zone_id, d.id);
 }
 
 // ── Item editor ──────────────────────────────────────────────────────
@@ -1760,6 +1782,7 @@ function renderItemEditor(main) {
   main.appendChild(sectionTitle('Notes'));
   main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => d.admin_comment = v),
     null, 'Developer note. Ignored by the engine at runtime.'));
+  appendEditorTodos(main, 'item', SELECTED.zone_id, d.id);
 }
 
 // ── Quest editor ─────────────────────────────────────────────────────
@@ -1932,6 +1955,7 @@ function renderQuestRewards(main, d) {
   };
   rebuild();
   main.appendChild(container);
+  appendEditorTodos(main, 'quest', SELECTED.zone_id, d._id || d.id);
 }
 
 // ── Style editor ──────────────────────────────────────────────────────
@@ -2015,6 +2039,7 @@ function renderStyleEditor(main) {
   // Passives
   main.appendChild(sectionTitle('Passives', 'Passive abilities triggered during combat.\nEach fires when trigger matches and player proficiency >= threshold.'));
   renderStylePassives(main, d);
+  appendEditorTodos(main, 'style', SELECTED.zone_id, d.id);
 }
 
 // ── Zone editor ──────────────────────────────────────────────────────
@@ -2279,6 +2304,7 @@ function _renderRouteWaypoints(main, d) {
 
   redraw();
   main.appendChild(container);
+  appendEditorTodos(main, 'process', SELECTED.zone_id, d.id);
 }
 
 // ── World Notes (world.md) ────────────────────────────────────────────────────
@@ -2676,6 +2702,7 @@ function renderDialogueEditor(main) {
     d.node.forEach((node, ni) => container.appendChild(buildDlgNodeCard(node, ni, d, rebuild)));
   }
   rebuild();
+  appendEditorTodos(main, 'dialogue', SELECTED.zone_id, d._npc_id);
 }
 
 function buildDlgNodeCard(node, ni, dlg, rebuild) {
@@ -3148,8 +3175,13 @@ async function saveSelected() {
     const clean = serialiseQuest(data);
     const res = await fetch('/api/write_file', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, data: clean }) });
     const j = await res.json();
-    if (j.ok) { DIRTY = false; _setDirtyUI(false); setStatus('Saved', 'ok'); _saveUiState(); }
-    else setStatus('Error: ' + j.error, 'err');
+    if (j.ok) {
+      DIRTY = false; _setDirtyUI(false); setStatus('Saved', 'ok');
+      const _savedKey = { type, zone_id, id: data._id || data.id || '' };
+      await reloadWorld();
+      _restoreSelection(_savedKey);
+      _saveUiState();
+    } else setStatus('Error: ' + j.error, 'err');
     return;
   }
 
@@ -3157,8 +3189,13 @@ async function saveSelected() {
     const clean = serialiseDlg(data);
     const res = await fetch('/api/write_file', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, data: clean }) });
     const j = await res.json();
-    if (j.ok) { DIRTY = false; _setDirtyUI(false); setStatus('Saved', 'ok'); _saveUiState(); }
-    else setStatus('Error: ' + j.error, 'err');
+    if (j.ok) {
+      DIRTY = false; _setDirtyUI(false); setStatus('Saved', 'ok');
+      const _savedKey = { type, zone_id, id: data._npc_id || '' };
+      await reloadWorld();
+      _restoreSelection(_savedKey);
+      _saveUiState();
+    } else setStatus('Error: ' + j.error, 'err');
     return;
   }
 
@@ -4233,6 +4270,228 @@ function _renderErrorIssues(errs) {
     }
     body.appendChild(row);
   }
+}
+
+// ── Todo list ───────────────────────────────────────────────────────────
+
+let _todoFilter = 'open';
+let _todoPanelCollapsed = false;
+
+function _todosKey() { return 'wct_todos_' + WORLD_ID; }
+
+function loadTodos() {
+  if (!WORLD_ID) return [];
+  try { return JSON.parse(localStorage.getItem(_todosKey()) || '[]'); } catch { return []; }
+}
+
+function saveTodos(arr) {
+  if (!WORLD_ID) return;
+  localStorage.setItem(_todosKey(), JSON.stringify(arr));
+}
+
+function addTodo(text, type, zone_id, obj_id) {
+  if (!text.trim()) return;
+  const todos = loadTodos();
+  todos.push({ id: 'todo_' + Date.now(), text: text.trim(), done: false, type: type || null, zone_id: zone_id || null, obj_id: obj_id || null, created: Date.now() });
+  saveTodos(todos);
+  _afterTodoChange(type, zone_id, obj_id);
+}
+
+function toggleTodo(id) {
+  const todos = loadTodos();
+  const t = todos.find(x => x.id === id);
+  if (t) { t.done = !t.done; saveTodos(todos); _afterTodoChange(t.type, t.zone_id, t.obj_id); }
+}
+
+function deleteTodo(id) {
+  const todos = loadTodos();
+  const t = todos.find(x => x.id === id);
+  const arr = todos.filter(x => x.id !== id);
+  saveTodos(arr);
+  if (t) _afterTodoChange(t.type, t.zone_id, t.obj_id);
+}
+
+function getTodosForObject(type, zone_id, obj_id) {
+  return loadTodos().filter(t => t.type === type && t.zone_id === zone_id && t.obj_id === obj_id);
+}
+
+function _afterTodoChange(type, zone_id, obj_id) {
+  renderTodoPanel();
+  _refreshTreeTodoIcons();
+  // Refresh inline editor section if the current object matches
+  if (SELECTED && type === SELECTED.type && zone_id === SELECTED.zone_id) {
+    const eid = SELECTED.data?.id || SELECTED.data?._id || SELECTED.data?._npc_id;
+    if (eid === obj_id) {
+      const sec = document.getElementById('editor-todos-section');
+      if (sec) renderEditorTodosInto(sec, type, zone_id, obj_id);
+    }
+  }
+}
+
+function _todoBadgeLtr(type) {
+  return { room:'R', npc:'N', item:'I', quest:'Q', dialogue:'D', style:'S', process:'P' }[type] || '?';
+}
+
+function renderTodoPanel() {
+  const panel  = document.getElementById('todo-panel');
+  const list   = document.getElementById('todo-list');
+  const badge  = document.getElementById('todo-count-badge');
+  const btn    = document.getElementById('btn-todos');
+  if (!panel || !list) return;
+
+  const all    = loadTodos();
+  const open   = all.filter(t => !t.done);
+
+  // Update badge and toolbar button
+  if (badge) { badge.textContent = open.length; badge.style.display = open.length ? '' : 'none'; }
+  if (btn) { btn.textContent = open.length ? `Todos (${open.length})` : 'Todos'; }
+
+  // Show/hide panel
+  if (all.length === 0) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+
+  // Filter
+  let show = all;
+  if (_todoFilter === 'open') show = open;
+  if (_todoFilter === 'done') show = all.filter(t => t.done);
+
+  list.innerHTML = '';
+  if (show.length === 0) {
+    list.innerHTML = `<div style="padding:10px 14px;color:var(--text-dim);font-size:13px">No todos in this view.</div>`;
+    return;
+  }
+  for (const t of show) {
+    const row = document.createElement('div');
+    row.className = 'todo-row' + (t.done ? ' done' : '');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = t.done;
+    cb.addEventListener('change', () => toggleTodo(t.id));
+
+    const txt = document.createElement('span');
+    txt.className = 'todo-text'; txt.textContent = t.text;
+
+    const del = document.createElement('button');
+    del.className = 'todo-del-btn'; del.textContent = '\u00d7'; del.title = 'Delete';
+    del.addEventListener('click', () => { if (confirm('Delete this todo?')) deleteTodo(t.id); });
+
+    row.appendChild(cb);
+    row.appendChild(txt);
+
+    if (t.type && t.zone_id && t.obj_id) {
+      const lnk = document.createElement('span');
+      lnk.className = 'todo-obj-link';
+      lnk.textContent = `[${_todoBadgeLtr(t.type)}] ${t.obj_id}`;
+      lnk.title = `Navigate to ${t.type} '${t.obj_id}'`;
+      lnk.addEventListener('click', () => navigateTo(t.type, t.zone_id, t.obj_id));
+      row.appendChild(lnk);
+    }
+    row.appendChild(del);
+    list.appendChild(row);
+  }
+}
+
+function setTodoFilter(f) {
+  _todoFilter = f;
+  document.querySelectorAll('.todo-filter').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  renderTodoPanel();
+}
+
+function toggleTodoPanel() {
+  const panel = document.getElementById('todo-panel');
+  const tog   = document.getElementById('todo-panel-toggle');
+  if (!panel) return;
+  _todoPanelCollapsed = !_todoPanelCollapsed;
+  if (_todoPanelCollapsed) { panel.classList.add('collapsed'); if (tog) tog.innerHTML = '&#x25BC;'; }
+  else                     { panel.classList.remove('collapsed'); if (tog) tog.innerHTML = '&#x25B2;'; }
+}
+
+function openAddGlobalTodo() {
+  const text = prompt('New todo:');
+  if (text) addTodo(text, null, null, null);
+}
+
+// ── Inline editor todos ──────────────────────────────────────────────
+
+function renderEditorTodosInto(container, type, zone_id, obj_id) {
+  container.innerHTML = '';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'editor-todos-header';
+  const titleSp = document.createElement('span');
+  titleSp.textContent = 'Todos';
+  hdr.appendChild(titleSp);
+  container.appendChild(hdr);
+
+  const listDiv = document.createElement('div');
+  listDiv.className = 'editor-todos-list';
+
+  const todos = getTodosForObject(type, zone_id, obj_id);
+  for (const t of todos) {
+    const row = document.createElement('div');
+    row.className = 'editor-todo-row' + (t.done ? ' done' : '');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = t.done;
+    cb.addEventListener('change', () => toggleTodo(t.id));
+
+    const txt = document.createElement('span');
+    txt.className = 'editor-todo-text'; txt.textContent = t.text;
+
+    const del = document.createElement('button');
+    del.className = 'editor-todo-del'; del.textContent = '\u00d7'; del.title = 'Delete todo';
+    del.addEventListener('click', () => { if (confirm('Delete this todo?')) deleteTodo(t.id); });
+
+    row.appendChild(cb); row.appendChild(txt); row.appendChild(del);
+    listDiv.appendChild(row);
+  }
+  container.appendChild(listDiv);
+
+  // Add row
+  const addRow = document.createElement('div');
+  addRow.className = 'editor-todo-add';
+  const inp = document.createElement('input');
+  inp.placeholder = 'Add a todo...';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'hbtn small'; addBtn.textContent = '+ Add';
+  addBtn.style.cssText = 'font-size:12px;padding:2px 10px';
+  const doAdd = () => { if (inp.value.trim()) { addTodo(inp.value, type, zone_id, obj_id); inp.value = ''; } };
+  addBtn.addEventListener('click', doAdd);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+  addRow.appendChild(inp); addRow.appendChild(addBtn);
+  container.appendChild(addRow);
+}
+
+function appendEditorTodos(main, type, zone_id, obj_id) {
+  const wrap = document.createElement('div');
+  wrap.className = 'editor-todos';
+  wrap.id = 'editor-todos-section';
+  renderEditorTodosInto(wrap, type, zone_id, obj_id);
+  main.appendChild(wrap);
+}
+
+// ── Tree todo icons ──────────────────────────────────────────────────
+
+function _refreshTreeTodoIcons() {
+  const todos = loadTodos();
+  document.querySelectorAll('#detail-list .tree-item').forEach(el => {
+    const type    = el.dataset.type;
+    const zone_id = el.dataset.zone;
+    const obj_id  = el.dataset.id;
+    let icon = el.querySelector('.list-icon-todo');
+    const openCount = todos.filter(t => !t.done && t.type === type && t.zone_id === zone_id && t.obj_id === obj_id).length;
+    if (openCount > 0) {
+      if (!icon) {
+        icon = document.createElement('span');
+        icon.className = 'list-icon list-icon-todo';
+        el.appendChild(icon);
+      }
+      icon.title = openCount + ' open todo(s)';
+      icon.textContent = '\u25c6';
+    } else {
+      if (icon) icon.remove();
+    }
+  });
 }
 
 function _localValidateIssues() {

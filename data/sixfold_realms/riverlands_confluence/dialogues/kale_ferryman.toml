@@ -25,7 +25,10 @@ next = "ask_passage"
 id   = "ask_remember"
 line = "'Once, they were calm. Now they bring echoes from the Peaks, the Fens, the Heartwood... even the Gloam.'"
 script = [
-  { op = "advance_quest", quest_id = "rivers_remember", step = 1 },
+  { op = "if_not_flag", flag = "rl_kale_quest_talked", then = [
+    { op = "set_flag", flag = "rl_kale_quest_talked" },
+    { op = "advance_quest", quest_id = "rivers_remember", step = 2 },
+  ]},
 ]
 
 [[response]]
