@@ -240,6 +240,7 @@
         <button class="type-btn"        data-type="item"  onclick="setNewType('item')">Item</button>
         <button class="type-btn"        data-type="zone"  onclick="setNewType('zone')">Zone</button>
         <button class="type-btn"        data-type="process" onclick="setNewType('process')">Process</button>
+        <button class="type-btn"        data-type="quest"   onclick="setNewType('quest')">Quest</button>
       </div>
       <div class="field-row zone-select-row" id="new-zone-row">
         <label>Zone</label>
@@ -262,6 +263,159 @@
       <button class="hbtn" onclick="closeModal('new-modal');openNewWorld()" title="Create a new world">+ World</button>
       <button class="hbtn" onclick="closeModal('new-modal')">Cancel</button>
       <button class="hbtn primary" onclick="createNew()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Trigger Wizard -->
+<div class="modal-backdrop hidden" id="trigger-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <span class="modal-title" id="trig-modal-title">Add Trigger</span>
+      <button class="modal-close" onclick="closeModal('trigger-modal')">&#215;</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Panel 1: Type selection -->
+      <div class="trig-panel active" id="trig-panel-type">
+        <label style="display:block;margin-bottom:10px;font-size:13px;color:var(--text-dim)">What fires this trigger?</label>
+        <div class="trig-type-grid">
+          <div class="trig-type-btn" data-ttype="room_enter" onclick="_trigSelectType('room_enter')">
+            <div style="font-size:20px">&#128205;</div>Room<br><span style="font-size:10px">on_enter</span>
+          </div>
+          <div class="trig-type-btn" data-ttype="item_get" onclick="_trigSelectType('item_get')">
+            <div style="font-size:20px">&#128076;</div>Item Pick Up<br><span style="font-size:10px">on_get</span>
+          </div>
+          <div class="trig-type-btn" data-ttype="item_use" onclick="_trigSelectType('item_use')">
+            <div style="font-size:20px">&#10024;</div>Item Use<br><span style="font-size:10px">on_use</span>
+          </div>
+          <div class="trig-type-btn" data-ttype="npc_kill" onclick="_trigSelectType('npc_kill')">
+            <div style="font-size:20px">&#9876;&#65039;</div>NPC Kill<br><span style="font-size:10px">kill_script</span>
+          </div>
+          <div class="trig-type-btn" data-ttype="npc_dialogue" onclick="_trigSelectType('npc_dialogue')">
+            <div style="font-size:20px">&#128172;</div>NPC Dialogue<br><span style="font-size:10px">new node</span>
+          </div>
+          <div class="trig-type-btn" data-ttype="npc_give" onclick="_trigSelectType('npc_give')">
+            <div style="font-size:20px">&#127873;</div>Give Item to NPC<br><span style="font-size:10px">give_accepts</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Entity picker -->
+      <div class="trig-panel" id="trig-panel-entity">
+        <div class="field-row">
+          <label id="trig-entity-label">Choose entity</label>
+          <select class="field-select" id="trig-entity-sel" onchange="_trigEntityChanged()"></select>
+        </div>
+      </div>
+
+      <!-- Panel 3a: Config for room/item/npc-kill -->
+      <div class="trig-panel" id="trig-panel-simple">
+        <div class="field-row">
+          <label>Guard</label>
+          <select class="field-select" id="trig-guard-type" onchange="_trigGuardToggle()">
+            <option value="none">None</option>
+            <option value="flag" selected>Flag (if_not_flag)</option>
+            <option value="quest_active">Quest active at step</option>
+            <option value="quest_complete">Quest complete</option>
+          </select>
+        </div>
+        <div class="field-row" id="trig-guard-flag-row">
+          <label>Flag name</label>
+          <input class="field-input" id="trig-guard-flag" placeholder="quest_id_step_N">
+        </div>
+        <div class="field-row" id="trig-guard-step-row" style="display:none">
+          <label>At step</label>
+          <input class="field-input" type="number" id="trig-guard-step" min="1" placeholder="1">
+        </div>
+      </div>
+
+      <!-- Panel 3b: Config for NPC dialogue -->
+      <div class="trig-panel" id="trig-panel-dialogue">
+        <div class="field-row">
+          <label>Node ID <span style="color:var(--text-dim);font-size:11px">(auto-generated)</span></label>
+          <input class="field-input id-field" id="trig-node-id" placeholder="quest_id_step_N">
+        </div>
+        <div class="field-row">
+          <label>NPC line <span style="color:var(--text-dim);font-size:11px">(what the NPC says)</span></label>
+          <textarea class="field-textarea" id="trig-node-line" rows="3" placeholder="You've done well, adventurer..."></textarea>
+        </div>
+        <div class="field-row">
+          <label>Parent node <span style="color:var(--text-dim);font-size:11px">(response attaches here)</span></label>
+          <select class="field-select" id="trig-parent-node-sel"></select>
+        </div>
+        <div class="field-row">
+          <label>Player response text <span style="color:var(--text-dim);font-size:11px">(what the player says)</span></label>
+          <input class="field-input" id="trig-resp-text" placeholder="I've returned with the item.">
+        </div>
+        <div class="field-row inline" style="margin-bottom:6px">
+          <input type="checkbox" id="trig-resp-cond-chk" onchange="_trigRespCondToggle()">
+          <label for="trig-resp-cond-chk" style="text-transform:none;letter-spacing:0">Condition on response (optional)</label>
+        </div>
+        <div class="field-row" id="trig-resp-cond-row" style="display:none">
+          <label>Condition flag (show only if player has flag)</label>
+          <input class="field-input" id="trig-resp-cond-flag" placeholder="some_flag">
+        </div>
+        <div class="field-row">
+          <label>Guard</label>
+          <select class="field-select" id="trig-dlg-guard-type" onchange="_trigDlgGuardToggle()">
+            <option value="none">None</option>
+            <option value="flag" selected>Flag (if_not_flag)</option>
+            <option value="quest_active">Quest active at step</option>
+            <option value="quest_complete">Quest complete</option>
+          </select>
+        </div>
+        <div class="field-row" id="trig-dlg-guard-flag-row">
+          <label>Flag name</label>
+          <input class="field-input" id="trig-dlg-guard-flag" placeholder="quest_id_step_N">
+        </div>
+        <div class="field-row" id="trig-dlg-guard-step-row" style="display:none">
+          <label>At step</label>
+          <input class="field-input" type="number" id="trig-dlg-guard-step" min="1" placeholder="1">
+        </div>
+      </div>
+
+      <!-- Panel 3c: Config for NPC give_accepts -->
+      <div class="trig-panel" id="trig-panel-give">
+        <div class="field-row">
+          <label>Item to give</label>
+          <select class="field-select" id="trig-give-item-sel"></select>
+        </div>
+        <div class="field-row">
+          <label>Accept message <span style="color:var(--text-dim);font-size:11px">(shown when player gives the item)</span></label>
+          <textarea class="field-textarea" id="trig-give-message" rows="2" placeholder="Thank you for returning this..."></textarea>
+        </div>
+        <div class="field-row">
+          <label>Guard</label>
+          <select class="field-select" id="trig-give-guard-type" onchange="_trigGiveGuardToggle()">
+            <option value="none">None</option>
+            <option value="flag" selected>Flag (if_not_flag)</option>
+            <option value="quest_active">Quest active at step</option>
+            <option value="quest_complete">Quest complete</option>
+          </select>
+        </div>
+        <div class="field-row" id="trig-give-guard-flag-row">
+          <label>Flag name</label>
+          <input class="field-input" id="trig-give-guard-flag" placeholder="quest_id_step_N">
+        </div>
+        <div class="field-row" id="trig-give-guard-step-row" style="display:none">
+          <label>At step</label>
+          <input class="field-input" type="number" id="trig-give-guard-step" min="1" placeholder="1">
+        </div>
+      </div>
+
+      <!-- Panel 4: Review -->
+      <div class="trig-panel" id="trig-panel-review">
+        <div id="trig-review-text" style="font-size:13px;color:var(--text);line-height:1.6;background:var(--panel);padding:10px;border-radius:4px;border:1px solid var(--border)"></div>
+      </div>
+
+      <div id="trig-modal-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></div>
+    </div>
+    <div class="modal-footer trig-wizard-nav">
+      <button class="hbtn" id="trig-back-btn" style="display:none" onclick="_trigBack()">&#8592; Back</button>
+      <div style="flex:1"></div>
+      <button class="hbtn" onclick="closeModal('trigger-modal')">Cancel</button>
+      <button class="hbtn primary" id="trig-next-btn" onclick="_trigNext()">Next &#8594;</button>
     </div>
   </div>
 </div>
@@ -1816,6 +1970,465 @@ function serialiseQuest(data) {
   return out;
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// Add Trigger Wizard
+// ═══════════════════════════════════════════════════════════════════════
+
+let _trigCtx = null;  // { questData, stepKey, trigType, zoneId, entityId }
+let _trigStep = 1;    // 1=type, 2=entity, 3=config, 4=review
+
+function openTriggerWizard(questData, stepKey) {
+  _trigCtx = { questData, stepKey, trigType: null, zoneId: null, entityId: null };
+  _trigStep = 1;
+  const qid = questData.id || questData._id || 'quest';
+  const stepLabel = stepKey === 'complete' ? 'completion' : `step ${stepKey}`;
+  document.getElementById('trig-modal-title').textContent = `Add Trigger — ${qid} (${stepLabel})`;
+  document.getElementById('trig-modal-error').style.display = 'none';
+  _showTrigPanel('type');
+  openModal('trigger-modal');
+}
+
+function _showTrigPanel(which) {
+  document.querySelectorAll('.trig-panel').forEach(p => p.classList.remove('active'));
+  if (which === 'type') {
+    document.getElementById('trig-panel-type').classList.add('active');
+    document.getElementById('trig-back-btn').style.display = 'none';
+    document.getElementById('trig-next-btn').textContent = 'Next \u2192';
+    _trigStep = 1;
+  } else if (which === 'entity') {
+    document.getElementById('trig-panel-entity').classList.add('active');
+    document.getElementById('trig-back-btn').style.display = '';
+    document.getElementById('trig-next-btn').textContent = 'Next \u2192';
+    _trigStep = 2;
+  } else if (which === 'config') {
+    const t = _trigCtx.trigType;
+    if (t === 'npc_dialogue') document.getElementById('trig-panel-dialogue').classList.add('active');
+    else if (t === 'npc_give') document.getElementById('trig-panel-give').classList.add('active');
+    else document.getElementById('trig-panel-simple').classList.add('active');
+    document.getElementById('trig-back-btn').style.display = '';
+    document.getElementById('trig-next-btn').textContent = 'Next \u2192';
+    _trigStep = 3;
+  } else if (which === 'review') {
+    document.getElementById('trig-panel-review').classList.add('active');
+    document.getElementById('trig-back-btn').style.display = '';
+    document.getElementById('trig-next-btn').textContent = 'Stage Trigger';
+    document.getElementById('trig-review-text').innerHTML = _buildReviewText();
+    _trigStep = 4;
+  }
+}
+
+function _trigSelectType(t) {
+  document.querySelectorAll('.trig-type-btn').forEach(b => b.classList.toggle('active', b.dataset.ttype === t));
+  _trigCtx.trigType = t;
+}
+
+function _trigEntityChanged() {
+  const sel = document.getElementById('trig-entity-sel');
+  const opt = sel.options[sel.selectedIndex];
+  _trigCtx.zoneId   = opt?.dataset.zone || '';
+  _trigCtx.entityId = opt?.value || '';
+}
+
+function _trigGuardToggle() {
+  const v = document.getElementById('trig-guard-type').value;
+  document.getElementById('trig-guard-flag-row').style.display  = v === 'flag'         ? '' : 'none';
+  document.getElementById('trig-guard-step-row').style.display  = v === 'quest_active' ? '' : 'none';
+}
+function _trigDlgGuardToggle() {
+  const v = document.getElementById('trig-dlg-guard-type').value;
+  document.getElementById('trig-dlg-guard-flag-row').style.display  = v === 'flag'         ? '' : 'none';
+  document.getElementById('trig-dlg-guard-step-row').style.display  = v === 'quest_active' ? '' : 'none';
+}
+function _trigGiveGuardToggle() {
+  const v = document.getElementById('trig-give-guard-type').value;
+  document.getElementById('trig-give-guard-flag-row').style.display  = v === 'flag'         ? '' : 'none';
+  document.getElementById('trig-give-guard-step-row').style.display  = v === 'quest_active' ? '' : 'none';
+}
+function _trigRespCondToggle() {
+  document.getElementById('trig-resp-cond-row').style.display =
+    document.getElementById('trig-resp-cond-chk').checked ? '' : 'none';
+}
+
+function _trigBack() {
+  if (_trigStep === 2) _showTrigPanel('type');
+  else if (_trigStep === 3) _showTrigPanel('entity');
+  else if (_trigStep === 4) _showTrigPanel('config');
+}
+
+function _trigNext() {
+  const errEl = document.getElementById('trig-modal-error');
+  errEl.style.display = 'none';
+
+  if (_trigStep === 1) {
+    if (!_trigCtx.trigType) { errEl.textContent = 'Choose a trigger type.'; errEl.style.display = ''; return; }
+    _populateEntitySel();
+    _showTrigPanel('entity');
+
+  } else if (_trigStep === 2) {
+    const sel = document.getElementById('trig-entity-sel');
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt?.value) { errEl.textContent = 'Select an entity.'; errEl.style.display = ''; return; }
+    _trigCtx.zoneId   = opt.dataset.zone;
+    _trigCtx.entityId = opt.value;
+    _populateConfigPanel();
+    _showTrigPanel('config');
+
+  } else if (_trigStep === 3) {
+    if (!_validateConfig(errEl)) return;
+    _showTrigPanel('review');
+
+  } else if (_trigStep === 4) {
+    _stageTrigger();
+  }
+}
+
+function _populateEntitySel() {
+  const sel   = document.getElementById('trig-entity-sel');
+  const label = document.getElementById('trig-entity-label');
+  sel.innerHTML = '';
+  const t = _trigCtx.trigType;
+  const typeMap = { room_enter:'rooms', item_get:'items', item_use:'items',
+                    npc_kill:'npcs', npc_dialogue:'npcs', npc_give:'npcs' };
+  const key = typeMap[t] || 'rooms';
+  label.textContent = 'Choose ' + { room_enter:'room', item_get:'item', item_use:'item',
+    npc_kill:'NPC', npc_dialogue:'NPC', npc_give:'NPC' }[t];
+  for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+    for (const ent of (zone[key] || [])) {
+      const opt = document.createElement('option');
+      opt.value = ent.id; opt.dataset.zone = zid;
+      opt.textContent = `[${zid}] ${ent.id} — ${ent.name || ent.id}`;
+      sel.appendChild(opt);
+    }
+  }
+  _trigEntityChanged();
+}
+
+function _populateConfigPanel() {
+  const qid    = _trigCtx.questData.id || _trigCtx.questData._id || 'quest';
+  const sk     = _trigCtx.stepKey;
+  const sfx    = sk === 'complete' ? 'done' : `step${sk}`;
+  const defFlag = `${qid}_${sfx}`;
+  const defStep = sk === 'complete' ? '' : (sk ?? '');
+  const t = _trigCtx.trigType;
+
+  if (t === 'npc_dialogue') {
+    document.getElementById('trig-node-id').value = `${qid}_${sfx}`;
+    document.getElementById('trig-node-line').value = '';
+    document.getElementById('trig-resp-text').value = '';
+    document.getElementById('trig-dlg-guard-type').value = 'flag';
+    document.getElementById('trig-dlg-guard-flag-row').style.display = '';
+    document.getElementById('trig-dlg-guard-step-row').style.display = 'none';
+    document.getElementById('trig-dlg-guard-flag').value = defFlag;
+    document.getElementById('trig-dlg-guard-step').value = defStep;
+    // Populate parent node selector from NPC's dialogue
+    const pSel = document.getElementById('trig-parent-node-sel');
+    pSel.innerHTML = '';
+    const zone = WORLD_DATA?.zones[_trigCtx.zoneId];
+    const dlg  = (zone?.dialogues || []).find(d => d._npc_id === _trigCtx.entityId);
+    const rootOpt = document.createElement('option');
+    rootOpt.value = 'root'; rootOpt.textContent = 'root (default start)';
+    pSel.appendChild(rootOpt);
+    for (const n of (dlg?.node || [])) {
+      if (!n.id || n.id === 'root') continue;
+      const opt = document.createElement('option');
+      opt.value = n.id;
+      const preview = (n.line || '').slice(0, 40);
+      opt.textContent = `${n.id}${preview ? ' — ' + preview : ''}`;
+      pSel.appendChild(opt);
+    }
+    if (!dlg) {
+      const warn = document.createElement('option');
+      warn.textContent = '(no dialogue file yet — will be created)';
+      warn.disabled = true;
+      pSel.appendChild(warn);
+    }
+  } else if (t === 'npc_give') {
+    document.getElementById('trig-give-guard-type').value = 'flag';
+    document.getElementById('trig-give-guard-flag-row').style.display = '';
+    document.getElementById('trig-give-guard-step-row').style.display = 'none';
+    document.getElementById('trig-give-guard-flag').value = defFlag;
+    document.getElementById('trig-give-guard-step').value = defStep;
+    document.getElementById('trig-give-message').value = '';
+    // Populate item selector
+    const iSel = document.getElementById('trig-give-item-sel');
+    iSel.innerHTML = '';
+    for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+      for (const item of (zone.items || [])) {
+        const opt = document.createElement('option');
+        opt.value = item.id; opt.dataset.zone = zid;
+        opt.textContent = `[${zid}] ${item.id} — ${item.name || item.id}`;
+        iSel.appendChild(opt);
+      }
+    }
+  } else {
+    document.getElementById('trig-guard-type').value = 'flag';
+    document.getElementById('trig-guard-flag-row').style.display = '';
+    document.getElementById('trig-guard-step-row').style.display = 'none';
+    document.getElementById('trig-guard-flag').value = defFlag;
+    document.getElementById('trig-guard-step').value = defStep;
+  }
+}
+
+function _validateConfig(errEl) {
+  const t = _trigCtx.trigType;
+  if (t === 'npc_dialogue') {
+    const line = document.getElementById('trig-node-line').value.trim();
+    const resp = document.getElementById('trig-resp-text').value.trim();
+    const nid  = document.getElementById('trig-node-id').value.trim();
+    if (!nid)  { errEl.textContent = 'Node ID is required.'; errEl.style.display = ''; return false; }
+    if (!line) { errEl.textContent = 'NPC line text is required.'; errEl.style.display = ''; return false; }
+    if (!resp) { errEl.textContent = 'Player response text is required.'; errEl.style.display = ''; return false; }
+  } else if (t === 'npc_give') {
+    const iSel = document.getElementById('trig-give-item-sel');
+    if (!iSel.value) { errEl.textContent = 'Select an item.'; errEl.style.display = ''; return false; }
+  }
+  return true;
+}
+
+function _buildReviewText() {
+  const t  = _trigCtx.trigType;
+  const qid = _trigCtx.questData.id || _trigCtx.questData._id || '?';
+  const sk  = _trigCtx.stepKey;
+  const opStr = sk === 'complete'
+    ? `complete_quest: ${qid}`
+    : `advance_quest: ${qid} → step ${sk}`;
+  const entityId = _trigCtx.entityId;
+  const zoneId   = _trigCtx.zoneId;
+
+  const lines = [
+    `<strong>Op:</strong> ${escHtml(opStr)}`,
+    `<strong>Entity:</strong> ${escHtml(entityId)} in zone ${escHtml(zoneId)}`,
+  ];
+
+  if (t === 'room_enter') lines.push('<strong>Field:</strong> room.on_enter');
+  else if (t === 'item_get') lines.push('<strong>Field:</strong> item.on_get');
+  else if (t === 'item_use') lines.push('<strong>Field:</strong> item.on_use');
+  else if (t === 'npc_kill') lines.push('<strong>Field:</strong> npc.kill_script');
+  else if (t === 'npc_dialogue') {
+    const nid  = document.getElementById('trig-node-id').value;
+    const line = document.getElementById('trig-node-line').value.slice(0, 60);
+    const parent = document.getElementById('trig-parent-node-sel').value;
+    const resp = document.getElementById('trig-resp-text').value;
+    lines.push(`<strong>New node:</strong> id=${escHtml(nid)}`);
+    lines.push(`<strong>NPC line:</strong> "${escHtml(line)}${line.length >= 60 ? '...' : ''}"`);
+    lines.push(`<strong>Response from [${escHtml(parent)}]:</strong> "${escHtml(resp)}"`);
+  } else if (t === 'npc_give') {
+    const iSel = document.getElementById('trig-give-item-sel');
+    lines.push(`<strong>Item:</strong> ${escHtml(iSel.value)}`);
+    lines.push(`<strong>Field:</strong> npc.give_accepts`);
+  }
+
+  const gc = _getGuardConfig();
+  if (gc.type === 'flag' && gc.flag)
+    lines.push(`<strong>Guard:</strong> if_not_flag "${escHtml(gc.flag)}" + set_flag`);
+  else if (gc.type === 'quest_active')
+    lines.push(`<strong>Guard:</strong> if_quest (${escHtml(_trigCtx.questData.id||'')} at step ${escHtml(gc.step||'?')})`);
+  else if (gc.type === 'quest_complete')
+    lines.push(`<strong>Guard:</strong> if_quest_complete (${escHtml(_trigCtx.questData.id||'')})`);
+  else if (gc.type === 'none')
+    lines.push('<strong>Guard:</strong> none');
+
+  lines.push('');
+  lines.push('<em>This will be saved when you click Save on the quest.</em>');
+  return lines.join('<br>');
+}
+
+function _getGuardConfig() {
+  const t = _trigCtx.trigType;
+  const pfx = t === 'npc_dialogue' ? 'trig-dlg-guard' : t === 'npc_give' ? 'trig-give-guard' : 'trig-guard';
+  const type = document.getElementById(`${pfx}-type`).value;
+  return {
+    type,
+    flag: type === 'flag'         ? (document.getElementById(`${pfx}-flag`)?.value.trim() || null) : null,
+    step: type === 'quest_active' ? (document.getElementById(`${pfx}-step`)?.value || null)        : null,
+  };
+}
+
+function _stageTrigger() {
+  const t = _trigCtx.trigType;
+  const qd = _trigCtx.questData;
+  const sk = _trigCtx.stepKey;
+  qd._staged_triggers = qd._staged_triggers || [];
+
+  const gc = _getGuardConfig();
+  const entry = {
+    trigger_type: t,
+    zone_id:   _trigCtx.zoneId,
+    entity_id: _trigCtx.entityId,
+    quest_id:  qd.id || qd._id || '',
+    step:      sk === 'complete' ? null : sk,
+    guard_type: gc.type,
+    guard_flag: gc.flag || null,
+    guard_step: gc.step ? Number(gc.step) : null,
+  };
+
+  if (t === 'npc_dialogue') {
+    entry.node_id         = document.getElementById('trig-node-id').value.trim();
+    entry.node_line       = document.getElementById('trig-node-line').value.trim();
+    entry.parent_node_id  = document.getElementById('trig-parent-node-sel').value;
+    entry.response_text   = document.getElementById('trig-resp-text').value.trim();
+    entry.response_condition = document.getElementById('trig-resp-cond-chk').checked
+      ? (document.getElementById('trig-resp-cond-flag').value.trim() || null) : null;
+  } else if (t === 'npc_give') {
+    entry.item_id       = document.getElementById('trig-give-item-sel').value;
+    entry.accept_message = document.getElementById('trig-give-message').value.trim();
+  }
+
+  qd._staged_triggers.push(entry);
+  markDirty();
+  closeModal('trigger-modal');
+  _refreshAllTriggerSections(qd);
+  // Refresh in-editor graph (also updates _liveQuestGraph)
+  const _editorEl = document.getElementById('editor');
+  if (_editorEl?.querySelector('.dlg-graph-wrap') && SELECTED?.type === 'quest') {
+    _showQuestGraph(_editorEl, qd, true);
+  } else {
+    _updateLiveQuestGraph(qd);
+  }
+  // Push updated SVG directly to popup window (if open)
+  _pushToQuestPopup();
+}
+
+// Render quest graph offscreen to update window._liveQuestGraph.
+function _updateLiveQuestGraph(quest) {
+  const tmp = document.createElement('div');
+  _showQuestGraph(tmp, quest);
+  tmp.querySelector('.dlg-graph-wrap')?._cleanup?.();
+}
+
+// Push the latest _liveQuestGraph SVG to the popup window if it is open.
+function _pushToQuestPopup() {
+  if (!window._questGraphWin || window._questGraphWin.closed) return;
+  const g = window._liveQuestGraph;
+  if (g) {
+    try { window._questGraphWin.pushGraph(g.svgStr); } catch(e) {}
+  }
+}
+
+// Badge letter + CSS class for each entity_type
+const _TRIG_BADGE = {
+  dialogue: ['D', 'tc-badge-D'],
+  npc:      ['K', 'tc-badge-K'],
+  item:     ['I', 'tc-badge-I'],
+  room:     ['R', 'tc-badge-R'],
+  craft:    ['C', 'tc-badge-C'],
+};
+
+// Render saved + staged triggers for one step (or 'complete') into `sec` container.
+function _renderStepTriggers(sec, questData, stepKey) {
+  sec.innerHTML = '';
+  const questId  = questData.id || questData._id || '';
+  const triggers = _collectQuestTriggers(questId);
+  const saved    = triggers[stepKey] || [];
+  const staged   = (questData._staged_triggers || []).filter(t =>
+    (t.step === null ? 'complete' : t.step) === stepKey);
+
+  const label = document.createElement('div');
+  label.className = 'trigger-section-label';
+  label.textContent = stepKey === 'complete' ? 'Completion Triggers' : `Triggers → Step ${stepKey}`;
+  sec.appendChild(label);
+
+  const list = document.createElement('div');
+  list.className = 'trigger-list';
+
+  const _typeLabel = t => {
+    if (t.node_id === 'kill_script')  return `kill`;
+    if (t.node_id === 'on_get')       return `on_get`;
+    if (t.node_id === 'on_use')       return `on_use`;
+    if (t.node_id === 'on_enter')     return `on_enter`;
+    if (t.node_id === 'on_complete')  return `on_complete`;
+    return `dlg:${t.node_id}`;
+  };
+
+  // Saved triggers
+  for (const t of saved) {
+    const chip = document.createElement('div');
+    chip.className = 'trigger-chip';
+    const [letter, cls] = _TRIG_BADGE[t.entity_type] || ['?', ''];
+    chip.innerHTML = `
+      <span class="tc-badge ${cls}">${letter}</span>
+      <span class="tc-entity" title="${escHtml(t.npc_id)} · ${escHtml(_typeLabel(t))} [${escHtml(t.zone_id)}]">
+        ${escHtml(t.npc_id)} · ${escHtml(_typeLabel(t))}
+      </span>
+      <span class="tc-nav" title="Navigate to entity">&#8594;</span>`;
+    chip.querySelector('.tc-nav').addEventListener('click', () => {
+      _navigateToTrigger(t);
+    });
+    list.appendChild(chip);
+  }
+
+  // Staged triggers
+  for (let si = 0; si < staged.length; si++) {
+    const t = staged[si];
+    const chip = document.createElement('div');
+    chip.className = 'trigger-chip staged';
+    const etBadge = { room_enter:'R', item_get:'I', item_use:'I', npc_kill:'K', npc_dialogue:'D', npc_give:'I' };
+    const etCls   = { room_enter:'tc-badge-R', item_get:'tc-badge-I', item_use:'tc-badge-I',
+                      npc_kill:'tc-badge-K', npc_dialogue:'tc-badge-D', npc_give:'tc-badge-I' };
+    const letter  = etBadge[t.trigger_type] || '?';
+    const cls     = etCls[t.trigger_type] || '';
+    const label2  = { room_enter:'on_enter', item_get:'on_get', item_use:'on_use',
+                      npc_kill:'kill', npc_dialogue:'dlg node', npc_give:'give_accepts' };
+    chip.innerHTML = `
+      <span class="tc-badge ${cls}">${letter}</span>
+      <span class="tc-entity" title="Staged (unsaved): ${escHtml(t.entity_id)} · ${escHtml(label2[t.trigger_type]||'')}">
+        <em>staged</em> — ${escHtml(t.entity_id)} · ${escHtml(label2[t.trigger_type]||'')}
+      </span>
+      <span class="tc-remove" title="Remove staged trigger">&times;</span>`;
+    const globalIdx = (questData._staged_triggers || []).indexOf(t);
+    chip.querySelector('.tc-remove').addEventListener('click', () => {
+      questData._staged_triggers.splice(globalIdx, 1);
+      markDirty();
+      _refreshAllTriggerSections(questData);
+    });
+    list.appendChild(chip);
+  }
+
+  if (!saved.length && !staged.length) {
+    const empty = document.createElement('div');
+    empty.className = 'trigger-empty';
+    empty.textContent = 'No triggers wired yet.';
+    list.appendChild(empty);
+  }
+
+  sec.appendChild(list);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'hbtn trigger-add-btn';
+  addBtn.textContent = '+ Add Trigger';
+  addBtn.addEventListener('click', () => openTriggerWizard(questData, stepKey));
+  sec.appendChild(addBtn);
+}
+
+// Refresh all trigger sections in the current quest editor without full re-render
+function _refreshAllTriggerSections(questData) {
+  document.querySelectorAll('[data-trig-step]').forEach(sec => {
+    const raw = sec.dataset.trigStep;
+    const stepKey = raw === 'complete' ? 'complete' : Number(raw);
+    _renderStepTriggers(sec, questData, stepKey);
+  });
+}
+
+// Navigate to the entity referenced by a trigger
+function _navigateToTrigger(t) {
+  if (!WORLD_DATA?.zones) return;
+  const zone = WORLD_DATA.zones[t.zone_id];
+  if (!zone) return;
+  if (t.entity_type === 'dialogue') {
+    const dlg = (zone.dialogues || []).find(d => d._npc_id === t.npc_id);
+    if (dlg) selectObject('dialogue', t.zone_id, dlg);
+  } else if (t.entity_type === 'item') {
+    const item = (zone.items || []).find(it => it.id === t.npc_id);
+    if (item) selectObject('item', t.zone_id, item);
+  } else if (t.entity_type === 'room') {
+    const room = (zone.rooms || []).find(r => r.id === t.npc_id);
+    if (room) selectObject('room', t.zone_id, room);
+  } else if (t.entity_type === 'npc') {
+    const npc = (zone.npcs || []).find(n => n.id === t.npc_id);
+    if (npc) selectObject('npc', t.zone_id, npc);
+  }
+}
+
 function renderQuestEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('quest', 'badge-quest', d.title || d._id || d.id));
@@ -1857,6 +2470,14 @@ function renderQuestEditor(main) {
 
   main.appendChild(sectionTitle('Rewards', 'Awarded automatically when the quest is completed via:\n  { op = "complete_quest", quest_id = "id" }\nTypes: gold (direct payment), xp (experience), item (give to player).'));
   renderQuestRewards(main, d);
+
+  // ── Completion trigger viewer ──────────────────────────────────
+  const compTrigSec = document.createElement('div');
+  compTrigSec.className = 'trigger-section';
+  compTrigSec.dataset.trigStep = 'complete';
+  main.appendChild(sectionTitle('Completion Triggers', 'Entities whose scripts call: { op = "complete_quest", quest_id = "id" }'));
+  main.appendChild(compTrigSec);
+  _renderStepTriggers(compTrigSec, d, 'complete');
 
   main.appendChild(sectionTitle('Notes'));
   main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => { d.admin_comment = v; markDirty(); }),
@@ -1904,6 +2525,14 @@ function renderQuestSteps(main, d) {
         null, 'Optional hint shown in the journal to help guide the player.'));
       card.appendChild(fieldRow('on_advance', scriptButton('on_advance', step.on_advance, ops => { d.step[i].on_advance = ops; markDirty(); }),
         null, 'Script ops to run automatically when this step is reached via advance_quest.'));
+
+      // ── Trigger viewer ──────────────────────────────────────────
+      const stepIndex = step.index ?? (i + 1);
+      const trigSec = document.createElement('div');
+      trigSec.className = 'trigger-section';
+      trigSec.dataset.trigStep = String(stepIndex);
+      card.appendChild(trigSec);
+      _renderStepTriggers(trigSec, d, stepIndex);
       container.appendChild(card);
     });
     const addBtn = document.createElement('button'); addBtn.className='hbtn'; addBtn.textContent='+ Add step';
@@ -3180,19 +3809,38 @@ async function saveSelected() {
     return;
   }
 
-  // For quests: write the entire file (they're one quest per file typically)
+  // For quests: write quest TOML, then flush any staged triggers
   let payload;
   if (type === 'quest') {
     const clean = serialiseQuest(data);
     const res = await fetch('/api/write_file', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, data: clean }) });
     const j = await res.json();
-    if (j.ok) {
-      DIRTY = false; _setDirtyUI(false); setStatus('Saved', 'ok');
-      const _savedKey = { type, zone_id, id: data._id || data.id || '' };
-      await reloadWorld();
-      _restoreSelection(_savedKey);
-      _saveUiState();
-    } else setStatus('Error: ' + j.error, 'err');
+    if (!j.ok) { setStatus('Error: ' + j.error, 'err'); return; }
+
+    // Flush staged triggers
+    const staged = data._staged_triggers || [];
+    if (staged.length > 0) {
+      setStatus('Saving triggers...', '');
+      const tres = await fetch('/api/save_staged_triggers', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ world_id: WORLD_ID, triggers: staged }),
+      });
+      const tj = await tres.json();
+      if (!tj.ok) {
+        const errList = (tj.errors || []).join('; ');
+        setStatus('Trigger save error(s): ' + errList, 'err');
+        return;
+      }
+      data._staged_triggers = [];
+    }
+
+    DIRTY = false; _setDirtyUI(false);
+    setStatus(staged.length ? `Saved (${staged.length} trigger${staged.length !== 1 ? 's' : ''} applied)` : 'Saved', 'ok');
+    const _savedKey = { type, zone_id, id: data._id || data.id || '' };
+    await reloadWorld();
+    _restoreSelection(_savedKey);
+    _saveUiState();
     return;
   }
 
@@ -3322,7 +3970,7 @@ const OP_SCHEMA = {
   give_item:        [{key:'item_id',    type:'item_ref', label:'item'}],
   take_item:        [{key:'item_id',    type:'item_ref', label:'item'}],
   spawn_item:       [{key:'item_id',    type:'item_ref', label:'item'}],
-  spawn_npc:        [{key:'npc_id',     type:'npc_ref',  label:'npc'}, {key:'room_id', type:'room_ref', label:'room (blank=current)'}],
+  spawn_npc:        [{key:'npc_id',     type:'npc_ref',  label:'npc'}, {key:'room_id', type:'room_ref', label:'room', placeholder:'blank = current room'}],
   advance_quest:    [{key:'quest_id',   type:'quest_ref',label:'quest'}, {key:'step', type:'num', label:'step'}],
   complete_quest:   [{key:'quest_id',   type:'quest_ref',label:'quest'}],
   teach_style:      [{key:'style_id',   type:'style_ref',label:'style'}],
@@ -3453,6 +4101,7 @@ function buildOpFieldInput(f, op, onChange) {
   // text / ref types
   const inp = document.createElement('input'); inp.type='text'; inp.className='op-input';
   inp.value = val || '';
+  if (f.placeholder) inp.placeholder = f.placeholder;
   const dlMap = {item_ref:'dl-items',npc_ref:'dl-npcs',room_ref:'dl-rooms',quest_ref:'dl-quests',skill_ref:'dl-skills',style_ref:'dl-styles',flag:'',tag:'',effect:'dl-status-effects'};
   if (dlMap[f.type]) inp.setAttribute('list', dlMap[f.type]);
   inp.addEventListener('input', () => {
@@ -3828,6 +4477,10 @@ async function createNew() {
   } else if (_newType === 'process') {
     endpoint = '/api/create_process';
     payload  = { world_id: WORLD_ID, zone_id: zone_id, process: {id, name, interval: 1, autostart: false} };
+  } else if (_newType === 'quest') {
+    endpoint = '/api/create_quest';
+    payload  = { world_id: WORLD_ID, zone_id: zone_id,
+                 quest: { id, title: name, giver: '', summary: '', step: [], reward: [] } };
   }
 
   const res  = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
@@ -5585,6 +6238,64 @@ function _dotFmtCondition(c) {
   return p.join(', ');
 }
 
+// ── Shared quest-trigger scanner ───────────────────────────────────────────
+// Returns { [stepNumOrComplete]: [triggerObj] }
+// triggerObj = { npc_id, node_id, to_step, flags_required, flags_set,
+//               flags_cleared, other_ops, zone_id, entity_type }
+function _collectQuestTriggers(questId) {
+  const result = {};
+  const _record = (op, entityId, nodeId, condList, script, zone_id, entity_type) => {
+    const tmp = [];
+    _dlgRecordTrans(op, questId, entityId, nodeId, condList, script, tmp);
+    if (!tmp.length) return;
+    const t = tmp[0];
+    t.zone_id    = zone_id;
+    t.entity_type = entity_type;
+    const k = t.to_step === null ? 'complete' : t.to_step;
+    (result[k] = result[k] || []).push(t);
+  };
+  if (!WORLD_DATA?.zones) return result;
+  for (const [zone_id, zone] of Object.entries(WORLD_DATA.zones)) {
+    // Dialogues
+    for (const dlg of (zone.dialogues || [])) {
+      const npcId = dlg._npc_id || '';
+      const nm = {};
+      (dlg.node || []).forEach(n => { if (n.id) nm[n.id] = {...n, response: []}; });
+      (dlg.response || []).forEach(r => { if (nm[r.node]) nm[r.node].response.push(r); });
+      for (const [nid, node] of Object.entries(nm)) {
+        _flattenOps(node.script || []).forEach(op =>
+          _record(op, npcId, nid, [node.condition], node.script || [], zone_id, 'dialogue'));
+        (node.response || []).forEach(resp =>
+          _flattenOps(resp.script || []).forEach(op =>
+            _record(op, npcId, nid, [node.condition, resp.condition], resp.script || [], zone_id, 'dialogue')));
+      }
+    }
+    // NPC kill_scripts
+    for (const npc of (zone.npcs || []))
+      _flattenOps(npc.kill_script || []).forEach(op =>
+        _record(op, npc.id, 'kill_script', [], npc.kill_script || [], zone_id, 'npc'));
+    // Item on_get / on_use
+    for (const item of (zone.items || [])) {
+      _flattenOps(item.on_get || []).forEach(op =>
+        _record(op, item.id, 'on_get', [], item.on_get || [], zone_id, 'item'));
+      _flattenOps(item.on_use || []).forEach(op =>
+        _record(op, item.id, 'on_use', [], item.on_use || [], zone_id, 'item'));
+    }
+    // Room on_enter
+    for (const room of (zone.rooms || []))
+      _flattenOps(room.on_enter || []).forEach(op =>
+        _record(op, room.id, 'on_enter', [], room.on_enter || [], zone_id, 'room'));
+    // Crafting on_complete
+    for (const craftFile of (zone.crafting || []))
+      for (const comm of (craftFile.commission || [])) {
+        const cid = comm.id || comm.npc_id || 'commission';
+        _flattenOps(comm.on_complete || []).forEach(op =>
+          _record(op, cid, 'on_complete', [], comm.on_complete || [], zone_id, 'craft'));
+      }
+  }
+  return result;
+}
+
 function exportQuestDot() {
   if (!SELECTED || SELECTED.type !== 'quest') return;
   const quest   = SELECTED.data;
@@ -5598,55 +6309,7 @@ function exportQuestDot() {
   const C_COND_BG = '#E3F2FD';
   const T_OPEN = '<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4" BGCOLOR="white">';
 
-  // Collect transitions by scanning dialogues + kill_scripts + on_get + on_use + on_enter
-  const transitions = [];
-  for (const [, zone] of Object.entries(WORLD_DATA?.zones || {})) {
-    // Dialogues
-    for (const dlg of (zone.dialogues || [])) {
-      const npcId = dlg._npc_id || '';
-      const nm = {};
-      (dlg.node||[]).forEach(n => { if(n.id) nm[n.id] = {...n, response:[]}; });
-      (dlg.response||[]).forEach(r => { if(nm[r.node]) nm[r.node].response.push(r); });
-      for (const [nid, node] of Object.entries(nm)) {
-        _flattenOps(node.script||[]).forEach(op =>
-          _dlgRecordTrans(op, questId, npcId, nid, [node.condition], node.script||[], transitions));
-        (node.response||[]).forEach(resp =>
-          _flattenOps(resp.script||[]).forEach(op =>
-            _dlgRecordTrans(op, questId, npcId, nid, [node.condition, resp.condition], resp.script||[], transitions)));
-      }
-    }
-    // NPC kill_scripts
-    for (const npc of (zone.npcs || [])) {
-      _flattenOps(npc.kill_script||[]).forEach(op =>
-        _dlgRecordTrans(op, questId, npc.id, 'kill_script', [], npc.kill_script||[], transitions));
-    }
-    // Item on_get and on_use scripts
-    for (const item of (zone.items || [])) {
-      _flattenOps(item.on_get||[]).forEach(op =>
-        _dlgRecordTrans(op, questId, item.id, 'on_get', [], item.on_get||[], transitions));
-      _flattenOps(item.on_use||[]).forEach(op =>
-        _dlgRecordTrans(op, questId, item.id, 'on_use', [], item.on_use||[], transitions));
-    }
-    // Room on_enter scripts
-    for (const room of (zone.rooms || [])) {
-      _flattenOps(room.on_enter||[]).forEach(op =>
-        _dlgRecordTrans(op, questId, room.id, 'on_enter', [], room.on_enter||[], transitions));
-    }
-    // Crafting commission on_complete scripts
-    for (const craftFile of (zone.crafting || [])) {
-      for (const comm of (craftFile.commission || [])) {
-        const cid = comm.id || comm.npc_id || 'commission';
-        _flattenOps(comm.on_complete||[]).forEach(op =>
-          _dlgRecordTrans(op, questId, cid, 'on_complete', [], comm.on_complete||[], transitions));
-      }
-    }
-  }
-
-  const byTo = {};
-  transitions.forEach(t => {
-    const k = t.to_step === null ? 'complete' : t.to_step;
-    (byTo[k] = byTo[k] || []).push(t);
-  });
+  const byTo = _collectQuestTriggers(questId);
 
   const steps   = (quest.step || []).slice().sort((a,b) => a.index - b.index);
   const rewards = quest.reward || [];
@@ -5902,37 +6565,70 @@ function _dlgGraphNodeClick(nid, node, detailEl) {
   detailEl.appendChild(body);
 }
 
-function _popoutGraph(svgEl, title) {
+function _popoutGraph(svgEl, title, liveMode = false) {
   const svgStr = new XMLSerializer().serializeToString(svgEl);
   const win = window.open('', '_blank', 'width=1100,height=750');
   if (!win) { alert('Pop-up blocked — please allow pop-ups for this page.'); return; }
+  if (liveMode) window._questGraphWin = win;
+
+  const refreshBtnHtml = liveMode
+    ? `<button id="refresh-btn" style="margin-left:auto;padding:3px 10px;background:#1565C0;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer">&#8635; Refresh</button>`
+    : '';
+
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>${escHtml(title)}</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:#181c23;color:#cdd3de;font-family:Consolas,monospace;display:flex;flex-direction:column;height:100vh;overflow:hidden}
-header{flex-shrink:0;padding:6px 14px;background:#2f3033;border-bottom:1px solid #8390a9;font-size:14px;font-weight:600}
+header{flex-shrink:0;padding:6px 14px;background:#2f3033;border-bottom:1px solid #8390a9;font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px}
+#live-dot{width:7px;height:7px;border-radius:50%;background:#2e7d32;flex-shrink:0;display:${liveMode?'block':'none'}}
 #canvas{flex:1;overflow:hidden;position:relative;cursor:grab}
 #canvas.dragging{cursor:grabbing}
 svg{display:block;transform-origin:0 0;user-select:none;overflow:visible}
 </style></head><body>
-<header>${escHtml(title)}</header>
+<header><span id="live-dot"></span>${escHtml(title)}${refreshBtnHtml}</header>
 <div id="canvas">${svgStr}</div>
 <script>
 (function(){
   const canvas=document.getElementById('canvas');
-  const svg=canvas.querySelector('svg');
   let scale=1,ox=40,oy=40,dragging=false,lx,ly;
-  function applyT(){svg.style.transform='translate('+ox+'px,'+oy+'px) scale('+scale+')';}
+  function getSvg(){return canvas.querySelector('svg');}
+  function applyT(){const s=getSvg();if(s)s.style.transform='translate('+ox+'px,'+oy+'px) scale('+scale+')';}
   applyT();
   canvas.addEventListener('mousedown',e=>{dragging=true;lx=e.clientX;ly=e.clientY;canvas.classList.add('dragging');});
   window.addEventListener('mouseup',()=>{dragging=false;canvas.classList.remove('dragging');});
   window.addEventListener('mousemove',e=>{if(!dragging)return;ox+=e.clientX-lx;oy+=e.clientY-ly;lx=e.clientX;ly=e.clientY;applyT();});
   canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();const mx=e.clientX-r.left;const my=e.clientY-r.top;const ds=e.deltaY<0?1.12:1/1.12;ox=mx-(mx-ox)*ds;oy=my-(my-oy)*ds;scale*=ds;applyT();},{passive:false});
+
+  // Exposed so the parent window can push SVG updates directly
+  window.pushGraph = function(svgStr){
+    canvas.innerHTML = svgStr;
+    const s=getSvg();
+    if(s){s.style.cssText='display:block;transform-origin:0 0;user-select:none;overflow:visible';applyT();}
+  };
+
+  const refreshBtn = document.getElementById('refresh-btn');
+  if(refreshBtn){
+    refreshBtn.addEventListener('click', function(){
+      try{ window.opener && window.opener._refreshQuestPopup && window.opener._refreshQuestPopup(); }catch(e){}
+    });
+  }
 })();
 <\/script></body></html>`);
   win.document.close();
 }
+
+// Called by the popup's Refresh button. Re-renders the quest graph and pushes SVG to the popup.
+window._refreshQuestPopup = function() {
+  if (!window._questGraphWin || window._questGraphWin.closed) return;
+  if (SELECTED?.type === 'quest' && SELECTED?.data) {
+    _updateLiveQuestGraph(SELECTED.data);
+  }
+  const g = window._liveQuestGraph;
+  if (g) {
+    try { window._questGraphWin.pushGraph(g.svgStr); } catch(e) {}
+  }
+};
 
 function _showDlgGraph(main, d) {
   const existing = main.querySelector('.dlg-graph-wrap');
@@ -6117,7 +6813,7 @@ function _showDlgGraph(main, d) {
 
 // ── Quest Graph ────────────────────────────────────────────────────────────
 
-function _showQuestGraph(main, quest) {
+function _showQuestGraph(main, quest, forceRefresh = false) {
   const existing = main.querySelector('.dlg-graph-wrap');
   if (existing) {
     existing._cleanup?.();
@@ -6126,70 +6822,27 @@ function _showQuestGraph(main, quest) {
       el.style.display = ''; el.removeAttribute('data-dlg-hidden');
     });
     main.querySelector('[data-role="quest-graph-btn"]')?.classList.remove('primary');
-    return;
+    if (!forceRefresh) return;
   }
   const formEls = [...main.children].filter(el => !el.classList.contains('editor-header'));
   formEls.forEach(el => { el.style.display = 'none'; el.setAttribute('data-dlg-hidden', '1'); });
 
   const questId  = quest.id || quest._id || 'unknown';
   const steps    = {};
-  for (const s of (quest.step || [])) steps[s.index] = s;
+  (quest.step || []).forEach((s, i) => { steps[s.index ?? (i + 1)] = s; });
   const stepNums = Object.keys(steps).map(Number).sort((a,b) => a - b);
 
-  // Collect transitions from loaded world data (dialogues + kill_scripts + on_get + on_use + on_enter)
-  const byStep = {};
-  if (WORLD_DATA?.zones) {
-    const tempTrans = [];
-    for (const zone of Object.values(WORLD_DATA.zones)) {
-      // Dialogues
-      for (const dlg of (zone.dialogues || [])) {
-        const npcId = dlg._npc_id || '';
-        const nodeRespMap = {};
-        (dlg.node || []).forEach(n => { nodeRespMap[n.id || n._id || 'root'] = []; });
-        (dlg.response || []).forEach(r => { const p = r.node || ''; if (nodeRespMap[p]) nodeRespMap[p].push(r); });
-        for (const node of (dlg.node || [])) {
-          const nid = node.id || node._id || 'root';
-          const nc  = node.condition, ns = node.script || [];
-          for (const op of _flattenOps(ns))
-            _dlgRecordTrans(op, questId, npcId, nid, [nc], ns, tempTrans);
-          const resps = nodeRespMap[nid] || node.response || [];
-          for (const resp of resps)
-            for (const op of _flattenOps(resp.script || []))
-              _dlgRecordTrans(op, questId, npcId, nid, [nc, resp.condition], resp.script, tempTrans);
-        }
-      }
-      // NPC kill_scripts
-      for (const npc of (zone.npcs || [])) {
-        for (const op of _flattenOps(npc.kill_script || []))
-          _dlgRecordTrans(op, questId, npc.id, 'kill_script', [], npc.kill_script, tempTrans);
-      }
-      // Item on_get and on_use scripts
-      for (const item of (zone.items || [])) {
-        for (const op of _flattenOps(item.on_get || []))
-          _dlgRecordTrans(op, questId, item.id, 'on_get', [], item.on_get, tempTrans);
-        for (const op of _flattenOps(item.on_use || []))
-          _dlgRecordTrans(op, questId, item.id, 'on_use', [], item.on_use, tempTrans);
-      }
-      // Room on_enter scripts
-      for (const room of (zone.rooms || [])) {
-        for (const op of _flattenOps(room.on_enter || []))
-          _dlgRecordTrans(op, questId, room.id, 'on_enter', [], room.on_enter, tempTrans);
-      }
-      // Crafting commission on_complete scripts
-      for (const craftFile of (zone.crafting || [])) {
-        for (const comm of (craftFile.commission || [])) {
-          const cid = comm.id || comm.npc_id || 'commission';
-          for (const op of _flattenOps(comm.on_complete || []))
-            _dlgRecordTrans(op, questId, cid, 'on_complete', [], comm.on_complete, tempTrans);
-        }
-      }
-    }
-    // Group by step number (null = complete_quest)
-    for (const t of tempTrans) {
-      const key = t.to_step ?? 'complete';
-      if (!byStep[key]) byStep[key] = [];
-      byStep[key].push(t);
-    }
+  const byStep = _collectQuestTriggers(questId);
+  // Merge staged (unsaved) triggers so graph reflects current editor state
+  const _nodeLabel = { room_enter:'on_enter', item_get:'on_get', item_use:'on_use',
+                       npc_kill:'kill_script', npc_dialogue:'dlg', npc_give:'give_accepts' };
+  for (const t of (quest._staged_triggers || [])) {
+    const k = t.step === null ? 'complete' : t.step;
+    (byStep[k] = byStep[k] || []).push({
+      npc_id: t.entity_id, node_id: t.trigger_type === 'npc_dialogue' ? (t.node_id || 'dlg') : (_nodeLabel[t.trigger_type] || t.trigger_type),
+      to_step: t.step, flags_required: [], flags_set: t.guard_flag ? [t.guard_flag] : [],
+      flags_cleared: [], other_ops: ['staged'], zone_id: t.zone_id, entity_type: t.trigger_type, _staged: true,
+    });
   }
 
   const NS  = 'http://www.w3.org/2000/svg';
@@ -6347,7 +7000,7 @@ function _showQuestGraph(main, quest) {
   const qPopBtn = document.createElement('button');
   qPopBtn.className = 'hbtn'; qPopBtn.textContent = 'Pop out';
   qPopBtn.title = 'Open graph in a new window';
-  qPopBtn.addEventListener('click', () => _popoutGraph(svg, 'Quest: ' + (quest.title || quest.id || '')));
+  qPopBtn.addEventListener('click', () => _popoutGraph(svg, 'Quest: ' + (quest.title || quest.id || ''), true));
   tb.appendChild(backBtn); tb.appendChild(expBtn); tb.appendChild(qPopBtn); tb.appendChild(stepInfo);
 
   const wrap = document.createElement('div');
@@ -6356,6 +7009,12 @@ function _showQuestGraph(main, quest) {
   main.appendChild(wrap);
 
   wrap._cleanup = _dlgGraphMakePanZoom(canvas, svg);
+
+  // Publish serialized SVG for live popup polling
+  window._liveQuestGraph = {
+    svgStr: new XMLSerializer().serializeToString(svg),
+    ver: ((window._liveQuestGraph?.ver) || 0) + 1,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════

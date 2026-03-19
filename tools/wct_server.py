@@ -566,6 +566,134 @@ def _write_file(file_rel: str, data: dict) -> tuple[bool, str]:
         return False, f"Write error: {e}"
 
 
+def _apply_quest_trigger(t: dict, world_id: str) -> None:
+    """Apply one staged trigger entry to the appropriate TOML file.
+
+    Trigger dict keys:
+      trigger_type  room_enter | item_get | item_use | npc_kill | npc_dialogue | npc_give
+      zone_id       zone the entity lives in
+      entity_id     id of the room/item/npc
+      quest_id      quest this advances
+      step          int step number, or None → complete_quest
+      guard_flag    flag name to wrap in if_not_flag guard, or None
+      --- dialogue only ---
+      node_id           id for the new dialogue node
+      node_line         NPC's text for the new node
+      parent_node_id    existing node id to attach the response to
+      response_text     player's response text
+      response_condition  flag name for response condition, or None
+      --- npc_give only ---
+      item_id         item the player gives
+      accept_message  message shown on accept
+    """
+    ttype     = t.get("trigger_type", "")
+    zone_id    = t.get("zone_id", "")
+    entity_id  = t.get("entity_id", "")
+    quest_id   = t.get("quest_id", "")
+    step       = t.get("step")         # None → complete_quest
+    guard_type = t.get("guard_type", "flag" if t.get("guard_flag") else "none")
+    guard_flag = t.get("guard_flag")   # used when guard_type == "flag"
+    guard_step = t.get("guard_step")   # used when guard_type == "quest_active"
+
+    if not all([ttype, zone_id, entity_id, quest_id]):
+        raise ValueError("Missing required fields in trigger")
+
+    base = DATA_DIR / world_id / zone_id
+
+    # Build the core quest op
+    if step is None:
+        quest_op: dict = {"op": "complete_quest", "quest_id": quest_id}
+    else:
+        quest_op = {"op": "advance_quest", "quest_id": quest_id, "step": int(step)}
+
+    # Optionally wrap in a guard
+    if guard_type == "flag" and guard_flag:
+        ops_block: list = [{"op": "if_not_flag", "flag": guard_flag,
+                            "then": [{"op": "set_flag", "flag": guard_flag}, quest_op]}]
+    elif guard_type == "quest_active":
+        ops_block = [{"op": "if_quest", "quest_id": quest_id,
+                      "step": int(guard_step) if guard_step is not None else 1,
+                      "then": [quest_op]}]
+    elif guard_type == "quest_complete":
+        ops_block = [{"op": "if_quest_complete", "quest_id": quest_id,
+                      "then": [quest_op]}]
+    else:
+        ops_block = [quest_op]
+
+    # ── room/item/npc-kill ──────────────────────────────────────────
+    if ttype in ("room_enter", "item_get", "item_use", "npc_kill"):
+        if ttype == "room_enter":
+            file_path = base / "rooms.toml"; arr_key = "room";  field = "on_enter"
+        elif ttype == "item_get":
+            file_path = base / "items.toml"; arr_key = "item";  field = "on_get"
+        elif ttype == "item_use":
+            file_path = base / "items.toml"; arr_key = "item";  field = "on_use"
+        else:  # npc_kill
+            file_path = base / "npcs.toml";  arr_key = "npc";   field = "kill_script"
+
+        data = toml_load(file_path) if file_path.exists() else {}
+        entity = next((e for e in data.get(arr_key, []) if e.get("id") == entity_id), None)
+        if entity is None:
+            raise ValueError(f"Entity '{entity_id}' not found in {file_path.name}")
+        entity[field] = list(entity.get(field, [])) + ops_block
+        ok, err = _write_file(str(file_path.relative_to(ROOT)), data)
+        if not ok:
+            raise RuntimeError(err)
+
+    # ── npc_give ────────────────────────────────────────────────────
+    elif ttype == "npc_give":
+        item_id = t.get("item_id", "")
+        message = t.get("accept_message", "")
+        if not item_id:
+            raise ValueError("item_id required for npc_give trigger")
+        file_path = base / "npcs.toml"
+        data = toml_load(file_path) if file_path.exists() else {}
+        npc = next((n for n in data.get("npc", []) if n.get("id") == entity_id), None)
+        if npc is None:
+            raise ValueError(f"NPC '{entity_id}' not found in npcs.toml")
+        give_entry: dict = {"item_id": item_id, "message": message, "script": ops_block}
+        npc.setdefault("give_accepts", []).append(give_entry)
+        ok, err = _write_file(str(file_path.relative_to(ROOT)), data)
+        if not ok:
+            raise RuntimeError(err)
+
+    # ── npc_dialogue ────────────────────────────────────────────────
+    elif ttype == "npc_dialogue":
+        node_id    = t.get("node_id", "").strip()
+        node_line  = t.get("node_line", "")
+        parent_id  = t.get("parent_node_id", "root") or "root"
+        resp_text  = t.get("response_text", "")
+        resp_cond_flag = t.get("response_condition") or None
+
+        if not node_id:
+            raise ValueError("node_id is required for npc_dialogue trigger")
+
+        dlg_dir  = base / "dialogues"
+        dlg_file = dlg_dir / f"{entity_id}.toml"
+        dlg_dir.mkdir(parents=True, exist_ok=True)
+        if dlg_file.exists():
+            dlg: dict = toml_load(dlg_file)
+        else:
+            dlg = {"node": [{"id": "root", "line": "Hello, traveller."}], "response": []}
+
+        # Add the new node
+        new_node: dict = {"id": node_id, "line": node_line, "script": ops_block}
+        dlg.setdefault("node", []).append(new_node)
+
+        # Add response from parent node
+        new_response: dict = {"node": parent_id, "text": resp_text, "next": node_id}
+        if resp_cond_flag:
+            new_response["condition"] = {"flag": resp_cond_flag}
+        dlg.setdefault("response", []).append(new_response)
+
+        ok, err = _write_file(str(dlg_file.relative_to(ROOT)), dlg)
+        if not ok:
+            raise RuntimeError(err)
+
+    else:
+        raise ValueError(f"Unknown trigger type: {ttype}")
+
+
 # ── HTTP Handler ──────────────────────────────────────────────────────────────
 
 class WCTHandler(BaseHTTPRequestHandler):
@@ -905,6 +1033,23 @@ class WCTHandler(BaseHTTPRequestHandler):
             self._send_json({"ok": ok, "error": err,
                              "file": str(file_path.relative_to(ROOT))})
 
+        elif path == "/api/create_quest":
+            world_id   = body.get("world_id", "")
+            zone_id    = body.get("zone_id", "")
+            quest_data = body.get("quest", {})
+            qid        = quest_data.get("id", "").strip()
+            if not world_id or not zone_id or not qid:
+                self._send_json({"ok": False, "error": "world_id, zone_id and quest.id required"})
+                return
+            quest_dir = DATA_DIR / world_id / zone_id / "quests"
+            quest_dir.mkdir(parents=True, exist_ok=True)
+            file_path = quest_dir / f"{qid}.toml"
+            if file_path.exists():
+                self._send_json({"ok": False, "error": f"Quest '{qid}' already exists"})
+                return
+            ok, err = _write_file(str(file_path.relative_to(ROOT)), quest_data)
+            self._send_json({"ok": ok, "error": err, "file": str(file_path.relative_to(ROOT))})
+
         elif path == "/api/create_dialogue":
             world_id = body.get("world_id", "")
             zone_id  = body.get("zone_id", "")
@@ -921,6 +1066,20 @@ class WCTHandler(BaseHTTPRequestHandler):
             starter = {"node": [{"id": "root", "line": "Hello, traveller."}], "response": []}
             ok, err = _write_file(str(file_path.relative_to(ROOT)), starter)
             self._send_json({"ok": ok, "error": err, "file": str(file_path.relative_to(ROOT))})
+
+        elif path == "/api/save_staged_triggers":
+            world_id = body.get("world_id", "")
+            triggers = body.get("triggers", [])
+            if not world_id:
+                self._send_json({"ok": False, "error": "world_id required"})
+                return
+            errors = []
+            for trig in triggers:
+                try:
+                    _apply_quest_trigger(trig, world_id)
+                except Exception as e:
+                    errors.append(f"{trig.get('entity_id','?')}: {e}")
+            self._send_json({"ok": len(errors) == 0, "errors": errors})
 
         elif path == "/api/zone_comment":
             world_id = body.get("world_id", "")

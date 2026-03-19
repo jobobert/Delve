@@ -1,0 +1,14 @@
+id = "ashwood_chasing_butterflies"
+title = "Chasing Butterflies"
+
+[[step]]
+index = 1
+objective = "Go to the clearing and find the butterfly"
+
+[[step]]
+index = 2
+objective = "Catch the butterfly"
+
+[[reward]]
+type = "gold"
+amount = 5

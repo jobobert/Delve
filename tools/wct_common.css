@@ -759,6 +759,50 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
   font-size: 12px; color: var(--text-dim); flex-shrink: 0; min-width: 24px;
 }
 
+/* ── Quest trigger viewer (per-step) ────────────────────────────── */
+.trigger-section { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--border); }
+.trigger-section-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-dim); margin-bottom: 6px;
+}
+.trigger-list { display: flex; flex-direction: column; gap: 4px; }
+.trigger-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: 4px;
+  background: var(--panel); border: 1px solid var(--border);
+  font-size: 12px; font-family: Consolas, monospace; cursor: default;
+}
+.trigger-chip.staged { border-color: var(--amber); background: #1e1900; }
+.trigger-chip .tc-badge {
+  flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 1px 5px;
+  border-radius: 3px; color: var(--bg);
+}
+.tc-badge-D { background: #5b8fb9; }
+.tc-badge-R { background: #2e7d32; }
+.tc-badge-I { background: #7c5cbf; }
+.tc-badge-K { background: #c62828; }
+.tc-badge-C { background: #a66000; }
+.trigger-chip .tc-entity { color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trigger-chip .tc-nav { flex-shrink: 0; padding: 0 5px; cursor: pointer; color: var(--text-dim); }
+.trigger-chip .tc-nav:hover { color: var(--amber); }
+.trigger-chip .tc-remove { flex-shrink: 0; cursor: pointer; color: var(--text-dim); }
+.trigger-chip .tc-remove:hover { color: var(--red); }
+.trigger-empty { font-size: 12px; color: var(--text-dim); font-style: italic; padding: 2px 0; }
+.trigger-add-btn { margin-top: 6px; font-size: 12px; }
+
+/* ── Trigger wizard modal ────────────────────────────────────────── */
+.trig-type-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.trig-type-btn {
+  padding: 10px 6px; text-align: center; border-radius: 4px;
+  background: var(--panel); border: 1px solid var(--border);
+  cursor: pointer; font-size: 13px; color: var(--text-dim); transition: border-color .1s;
+}
+.trig-type-btn:hover { border-color: var(--accent); color: var(--text); }
+.trig-type-btn.active { border-color: var(--amber); color: var(--amber); background: #1e1900; }
+.trig-panel { display: none; }
+.trig-panel.active { display: block; }
+.trig-wizard-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+
 /* ── In-editor graph views (dialogue + quest) ───────────────────── */
 .dlg-graph-wrap   { display:flex; flex-direction:column; flex:1; overflow:hidden; margin:-20px; }
 .dlg-graph-canvas { flex:1; overflow:hidden; position:relative; background:var(--bg); cursor:grab; }

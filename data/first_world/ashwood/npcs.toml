@@ -1,143 +1,156 @@
 # data/ashwood/npcs.toml — NPCs native to the Ashwood zone.
 
 [[npc]]
-id          = "ranger_wren"
-name        = "Ranger Wren"
-tags        = ["humanoid", "fast", "small"]
-style       = "serpent_strike"
-style_prof  = 45
-desc_short  = "A lean ranger in mottled green and brown, watching the road."
-desc_long   = "She sits with her back to the stone pillar, facing the forest, knife moving in slow rhythmic strokes against the whetstone. Her gear is well-used and well-maintained — there's a difference, and she clearly knows it. Her eyes flick to you when you arrive and she assesses you in about two seconds."
-hp          = 55
-max_hp      = 55
-attack      = 11
-defense     = 7
-xp_reward   = 0
+id = "ranger_wren"
+name = "Ranger Wren"
+tags = ["humanoid", "fast", "small"]
+style = "serpent_strike"
+style_prof = 45
+desc_short = "A lean ranger in mottled green and brown, watching the road."
+desc_long = "She sits with her back to the stone pillar, facing the forest, knife moving in slow rhythmic strokes against the whetstone. Her gear is well-used and well-maintained — there's a difference, and she clearly knows it. Her eyes flick to you when you arrive and she assesses you in about two seconds."
+hp = 55
+max_hp = 55
+attack = 11
+defense = 7
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "I'd tell you to turn back, but the fact that you're here means you already decided not to. So: be careful, go east slowly, and don't touch the birds on the ground."
+hostile = false
+dialogue = "I'd tell you to turn back, but the fact that you're here means you already decided not to. So: be careful, go east slowly, and don't touch the birds on the ground."
 
 [[npc]]
-id          = "corrupted_wolf"
-name        = "Corrupted Wolf"
-tags        = ["beast", "fast", "small"]
-style       = "serpent_strike"
-style_prof  = 30
-desc_short  = "A grey wolf with glowing amber eyes and unnatural speed."
-desc_long   = "Bigger than a normal wolf, moving wrong — too smooth, too fast, its joints seeming to flex further than they should. The amber glow in its eyes isn't a reflection of light. It tracks you without blinking, then lunges."
-hp          = 35
-max_hp      = 35
-attack      = 11
-defense     = 3
-xp_reward   = 20
+id = "corrupted_wolf"
+name = "Corrupted Wolf"
+tags = ["beast", "fast", "small"]
+style = "serpent_strike"
+style_prof = 30
+desc_short = "A grey wolf with glowing amber eyes and unnatural speed."
+desc_long = "Bigger than a normal wolf, moving wrong — too smooth, too fast, its joints seeming to flex further than they should. The amber glow in its eyes isn't a reflection of light. It tracks you without blinking, then lunges."
+hp = 35
+max_hp = 35
+attack = 11
+defense = 3
+xp_reward = 20
 gold_reward = 0
-hostile     = true
-dialogue    = "The wolf snarls, eyes burning amber."
+hostile = true
+dialogue = "The wolf snarls, eyes burning amber."
 
 [[npc]]
-id          = "garrison_ghost"
-name        = "Ghost of Private Marsh"
-tags        = ["undead", "slow"]
-style       = "brawling"
-style_prof  = 0
-desc_short  = "A translucent figure in old military uniform, barely visible."
-desc_long   = "The ghost of a soldier, faint as breath in cold air. The uniform is old — a style no living soldier wears anymore. It doesn't seem dangerous, just... present. Watchful. As if it stayed to make sure the job got finished."
-hp          = 1
-max_hp      = 1
-attack      = 0
-defense     = 0
-xp_reward   = 0
+id = "garrison_ghost"
+name = "Ghost of Private Marsh"
+tags = ["undead", "slow"]
+style = "brawling"
+style_prof = 0
+desc_short = "A translucent figure in old military uniform, barely visible."
+desc_long = "The ghost of a soldier, faint as breath in cold air. The uniform is old — a style no living soldier wears anymore. It doesn't seem dangerous, just... present. Watchful. As if it stayed to make sure the job got finished."
+hp = 1
+max_hp = 1
+attack = 0
+defense = 0
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "The key. The armory. Take what's there and finish this. We couldn't."
+hostile = false
+dialogue = "The key. The armory. Take what's there and finish this. We couldn't."
 
 [[npc]]
-id          = "riddle_spirit"
-name        = "The Arbiter"
-tags        = ["spirit", "slow"]
-style       = "iron_root"
-style_prof  = 0
-desc_short  = "A formless shimmer of light that resolves, briefly, into something like a face."
-desc_long   = "The Arbiter doesn't have a body exactly — it's more like an impression of one, hovering at eye height and shifting like heat haze over summer stone. Its voice, when it speaks, seems to come from inside your head rather than the air around you."
-hp          = 1
-max_hp      = 1
-attack      = 0
-defense     = 0
-xp_reward   = 0
+id = "riddle_spirit"
+name = "The Arbiter"
+tags = ["spirit", "slow"]
+style = "iron_root"
+style_prof = 0
+desc_short = "A formless shimmer of light that resolves, briefly, into something like a face."
+desc_long = "The Arbiter doesn't have a body exactly — it's more like an impression of one, hovering at eye height and shifting like heat haze over summer stone. Its voice, when it speaks, seems to come from inside your head rather than the air around you."
+hp = 1
+max_hp = 1
+attack = 0
+defense = 0
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "The altar holds the question. Your answer determines whether you may pass. Think, seeker. The answer is already in your hands — not your weapons. Your map."
+hostile = false
+dialogue = "The altar holds the question. Your answer determines whether you may pass. Think, seeker. The answer is already in your hands — not your weapons. Your map."
 
 [[npc]]
-id          = "shrine_keeper"
-name        = "Shrine Keeper"
-tags        = ["humanoid", "slow"]
-style       = "iron_root"
-style_prof  = 60
-desc_short  = "An old monk in simple robes, tending the shrine's eternal flames."
-desc_long   = "Ancient, patient, and apparently unbothered by the corruption spreading through the forest around his shrine. He tends the pale blue braziers with the calm focus of someone who has been doing this for a very long time. He looks at you the way you might look at a brief weather event — with mild interest, no alarm."
-hp          = 50
-max_hp      = 50
-attack      = 10
-defense     = 12
-xp_reward   = 0
+id = "shrine_keeper"
+name = "Shrine Keeper"
+tags = ["humanoid", "slow"]
+style = "iron_root"
+style_prof = 60
+desc_short = "An old monk in simple robes, tending the shrine's eternal flames."
+desc_long = "Ancient, patient, and apparently unbothered by the corruption spreading through the forest around his shrine. He tends the pale blue braziers with the calm focus of someone who has been doing this for a very long time. He looks at you the way you might look at a brief weather event — with mild interest, no alarm."
+hp = 50
+max_hp = 50
+attack = 10
+defense = 12
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "The seal must be opened correctly, or it opens not at all. You have found the key already, or you have not. If you have not — the ruins to the east hold what you need."
+hostile = false
+dialogue = "The seal must be opened correctly, or it opens not at all. You have found the key already, or you have not. If you have not — the ruins to the east hold what you need."
 
 [[npc]]
-id          = "ashwood_wolf"
-name        = "Ashwood Wolf"
-tags        = ["beast", "fast", "small"]
-style       = "evasion"
-style_prof  = 40
-desc_short  = "A massive dark wolf, ash-grey and fire-eyed."
-desc_long   = "Twice the size of a surface wolf, its fur the color of ash, its eyes like hot coals. It moves with a fluid confidence that says it has never lost a fight in this place. It snaps its jaw once, testing, then commits."
-hp          = 50
-max_hp      = 50
-attack      = 14
-defense     = 5
-xp_reward   = 35
+id = "ashwood_wolf"
+name = "Ashwood Wolf"
+tags = ["beast", "fast", "small"]
+style = "evasion"
+style_prof = 40
+desc_short = "A massive dark wolf, ash-grey and fire-eyed."
+desc_long = "Twice the size of a surface wolf, its fur the color of ash, its eyes like hot coals. It moves with a fluid confidence that says it has never lost a fight in this place. It snaps its jaw once, testing, then commits."
+hp = 50
+max_hp = 50
+attack = 14
+defense = 5
+xp_reward = 35
 gold_reward = 0
-hostile     = true
-dialogue    = "The great wolf howls, shaking dust from the cave ceiling."
+hostile = true
+dialogue = "The great wolf howls, shaking dust from the cave ceiling."
 
 [[npc]]
-id          = "ashwood_drake"
-name        = "Ashwood Drake"
-tags        = ["beast", "large", "slow", "drake"]
-style       = "iron_root"
-style_prof  = 85
-desc_short  = "A massive scaled creature, ancient and deliberate."
-desc_long   = "The Ashwood Drake is old in the way mountains are old — its existence is a geological fact rather than a biological one. Fifteen feet from snout to tail, covered in layered scales the color of dried blood, with claws that have worn grooves into the cave floor from decades of pacing. It moves slowly and with enormous purpose. When it strikes, it is not fast. It is inevitable."
-hp          = 200
-max_hp      = 200
-attack      = 22
-defense     = 18
-xp_reward   = 500
+id = "ashwood_drake"
+name = "Ashwood Drake"
+tags = ["beast", "large", "slow", "drake"]
+style = "iron_root"
+style_prof = 85
+desc_short = "A massive scaled creature, ancient and deliberate."
+desc_long = "The Ashwood Drake is old in the way mountains are old — its existence is a geological fact rather than a biological one. Fifteen feet from snout to tail, covered in layered scales the color of dried blood, with claws that have worn grooves into the cave floor from decades of pacing. It moves slowly and with enormous purpose. When it strikes, it is not fast. It is inevitable."
+hp = 200
+max_hp = 200
+attack = 22
+defense = 18
+xp_reward = 500
 gold_reward = 50
-hostile     = true
-dialogue    = "The Drake regards you with ancient, intelligent contempt."
-kill_script = [
-  { op = "set_flag",  flag = "ashwood_drake_slain" },
-  { op = "give_item", item_id = "drakes_fang" },
-  { op = "message",   text = "The Ashwood Drake collapses with a sound like a falling wall. In the silence that follows, the orange glow fades from the cave walls. You pry a fang from its jaw — proof for Elder Mira.", tag = "combat_kill" },
-  { op = "advance_quest", quest_id = "ashwood_contract", step = 6 },
-]
+hostile = true
+dialogue = "The Drake regards you with ancient, intelligent contempt."
+kill_script = [{op = "set_flag", flag = "ashwood_drake_slain"}, {op = "give_item", item_id = "drakes_fang"}, {op = "message", text = "The Ashwood Drake collapses with a sound like a falling wall. In the silence that follows, the orange glow fades from the cave walls. You pry a fang from its jaw — proof for Elder Mira.", tag = "combat_kill"}, {op = "advance_quest", quest_id = "ashwood_contract", step = 6}]
 
 [[npc]]
-id          = "ashwood_warden"
-name        = "Ashwood Warden"
-tags        = ["humanoid", "slow", "banker"]
-style       = "evasion"
-style_prof  = 25
-desc_short  = "A weathered ranger keeping field accounts for those heading into the forest."
-desc_long   = "She set up here when the corruption started pushing people back to the gate with nowhere safe to leave their gear. A locked strongbox sits behind her, chained to the pillar. She doesn't look like she expects trouble, but she looks like she's handled it before."
-hp          = 45
-max_hp      = 45
-attack      = 8
-defense     = 6
-xp_reward   = 0
+id = "ashwood_warden"
+name = "Ashwood Warden"
+tags = ["humanoid", "slow", "banker"]
+style = "evasion"
+style_prof = 25
+desc_short = "A weathered ranger keeping field accounts for those heading into the forest."
+desc_long = "She set up here when the corruption started pushing people back to the gate with nowhere safe to leave their gear. A locked strongbox sits behind her, chained to the pillar. She doesn't look like she expects trouble, but she looks like she's handled it before."
+hp = 45
+max_hp = 45
+attack = 8
+defense = 6
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "I hold gear for those going deeper. Same account as Millhaven — whatever you deposited there, you can pull here."
+hostile = false
+dialogue = "I hold gear for those going deeper. Same account as Millhaven — whatever you deposited there, you can pull here."
+
+[[npc]]
+id = "ashwood_butterfly"
+name = "Butterfly"
+hp = 10
+max_hp = 10
+attack = 2
+defense = 5
+xp_reward = 10
+gold_reward = 0
+kill_script = [{op = "complete_quest", quest_id = "ashwood_chasing_butterflies"}]
+desc_short = "A grotesquely huge butterfly"
+description = "A grotesquely huge butterfly"
+desc_long = "It's wide wings splotchy and tattered after too many years flapping"
+hostile = true
+style = "evasion"
+style_prof = 100
+tags = ["animal"]
