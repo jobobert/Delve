@@ -11,7 +11,7 @@ coord = [0, 0]
 flags = ["town", "no_combat"]
 start = true
 exits = {north = "rl_mural_promenade", east = "rl_market_row", south = "rl_lower_piers", west = "rl_ferryman_shack"}
-spawns = ["sela_mapmaker", "rl_banker"]
+spawns = ["rl_sela_mapmaker", "rl_banker"]
 items = ["mural_inscription_fragment"]
 on_enter = [{op = "if_not_flag", flag = "rl_intro_seen", then = [{op = "message", tag = "system", text = "The rivers feel wrong here—like they are listening."}, {op = "set_flag", flag = "rl_intro_seen"}], else = []}]
 
@@ -24,7 +24,7 @@ flags = ["no_combat"]
 exits = {south = "rl_ferrydock_square", north = {to = "rl_hidden_stair", show_if = {op = "has_flag", flag = "rl_stair_noticed"}, desc = "a faint seam in the stone, where steps descend into darkness"}}
 items = ["mural_inscription_fragment"]
 on_enter = [{op = "if_not_flag", flag = "rl_mural_examined", then = [{op = "message", tag = "system", text = "The mural shows five rivers feeding a central circle, cracked down the middle."}, {op = "set_flag", flag = "rl_mural_examined"}, {op = "advance_quest", quest_id = "rivers_remember", step = 2}], else = []}, {op = "if_not_flag", flag = "rl_stair_noticed", then = [{op = "skill_check", skill = "perception", dc = 12, on_pass = [{op = "message", tag = "system", text = "Your eye catches a faint seam in the stone — steps, descending north beneath the mural."}, {op = "set_flag", flag = "rl_stair_noticed"}], on_fail = [{op = "message", tag = "system", text = "The stonework here seems unnaturally regular, but you can't make out anything specific."}, {op = "skill_grow", skill = "perception", amount = 2}]}], else = []}]
-spawns = ["river_child"]
+spawns = ["rl_river_child"]
 
 [[room]]
 id = "rl_hidden_stair"
@@ -45,7 +45,7 @@ description = "A circular chamber carved into the bedrock, its walls etched with
 coord = [0, 3]
 exits = {up = "rl_hidden_stair", west = {to = "rl_echoing_antichamber", show_if = {op = "has_flag", flag = "rl_echo_lore_seen"}, desc = "a low passage cut into the western wall, carved with concentric rings"}}
 items = ["resonant_token"]
-on_enter = [{op = "if_not_flag", flag = "rl_echo_lore_seen", then = [{op = "message", tag = "lore", text = "Faint words shimmer across the stone: 'Five conduits feed the heart. When one falters, all tremble.'"}, {op = "set_flag", flag = "rl_echo_lore_seen"}, {op = "advance_quest", quest_id = "rivers_remember", step = 3}, {op = "complete_quest", quest_id = "rivers_remember"}, {op = "prestige", amount = 1, reason = "deciphered the inscription in the Echoing Chamber"}, {op = "process_start", process_id = "nessa_realm_route"}, {op = "message", tag = "system", text = "Word of this place will travel far. You sense that traders and wanderers will now find their way here."}]}]
+on_enter = [{op = "if_not_flag", flag = "rl_echo_lore_seen", then = [{op = "message", tag = "lore", text = "Faint words shimmer across the stone: 'Five conduits feed the heart. When one falters, all tremble.'"}, {op = "set_flag", flag = "rl_echo_lore_seen"}, {op = "advance_quest", quest_id = "rivers_remember", step = 3}, {op = "prestige", amount = 1, reason = "deciphered the inscription in the Echoing Chamber"}, {op = "process_start", process_id = "nessa_realm_route"}, {op = "message", tag = "system", text = "Word of this place will travel far. You sense that traders and wanderers will now find their way here."}], else = []}]
 
 [[room]]
 id = "rl_market_row"
@@ -54,7 +54,7 @@ description = "A line of stalls and awnings, some abandoned, others stubbornly o
 coord = [1, 0]
 flags = ["no_combat"]
 exits = {west = "rl_ferrydock_square", east = "rl_inn_common", south = "rl_city_center", north = "rl_blacksmith_shop"}
-spawns = ["vendor_supplies", "crafter_boatwright", "nessa_realm_walker"]
+spawns = ["rl_brann_stallkeeper", "rl_loran_boatwright", "rl_nessa_realm_walker"]
 
 [[room]]
 id = "rl_inn_common"
@@ -64,7 +64,7 @@ coord = [2, 0]
 flags = ["healing", "no_combat"]
 heal_rate = 8
 exits = {west = "rl_market_row", up = "rl_inn_rooms", east = "rl_stable"}
-spawns = ["innkeeper_mara"]
+spawns = ["rl_innkeeper_mara"]
 
 [[room]]
 id = "rl_inn_rooms"
@@ -86,7 +86,7 @@ hazard_message = "Spray from the unstable currents stings your skin."
 exits = {north = "rl_ferrydock_square", south = "rl_unstable_current"}
 items = ["driftwood_crate"]
 on_enter = [{op = "if_not_flag", flag = "rl_piers_warned", then = [{op = "message", tag = "system", text = "Someone has carved: 'Do not fall in. The river does not let go.'"}, {op = "set_flag", flag = "rl_piers_warned"}]}]
-spawns = [{id = "mire_wolf", spawn_chance = 0.5}]
+spawns = [{id = "rl_mire_wolf", spawn_chance = 0.5}]
 hazard_chance = 0.75
 
 [[room]]
@@ -99,7 +99,7 @@ hazard_damage = 4
 hazard_message = "The current tugs at your balance and your thoughts."
 exits = {north = "rl_lower_piers", south = {to = "rl_hovel", show_if = "rl_current_read"}}
 on_enter = [{op = "message", tag = "system", text = "You feel as though the river is trying to pull you somewhere that isn't here."}, {op = "skill_check", skill = "navigation", dc = 10, on_pass = [{op = "message", tag = "system", text = "You read the eddies and step where the planks are most stable."}, {op = "set_flag", flag = "rl_current_read"}], on_fail = [{op = "damage", amount = 5, message = "You misjudge a step and slam into the railing."}]}]
-spawns = [{id = "echo_wraith", spawn_chance = 0.5}]
+spawns = [{id = "rl_echo_wraith", spawn_chance = 0.5}]
 
 [[room]]
 id = "rl_ferry_berth_peaks"
@@ -112,7 +112,7 @@ id = "rl_ferryman_shack"
 name = "Ferryman’s Shack"
 description = "A weathered wooden shack filled with ropes, charts, and ferry logs. The ferryman often rests here between crossings."
 exits = {east = "rl_ferrydock_square", north = "rl_ferry_berth_peaks"}
-spawns = ["kale_ferryman"]
+spawns = ["rl_kale_ferryman"]
 
 [[room]]
 id = "rl_hovel"

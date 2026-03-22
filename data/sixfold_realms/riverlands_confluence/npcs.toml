@@ -7,7 +7,7 @@
 # ── Ferryman Kale — quest giver, lore ───────────────────────────────────────
 
 [[npc]]
-id = "kale_ferryman"
+id = "rl_kale_ferryman"
 name = "Ferryman Kale"
 desc_short = "A weathered ferryman with river lines etched into his face."
 desc_long = "Kale's eyes track the currents more than the people, as if listening to something only he can hear. His hands are rope-calloused, his boots permanently waterlogged."
@@ -24,7 +24,7 @@ hostile = false
 give_accepts = [{item_id = "resonant_token", message = "Kale turns the token over in his hand, listening. 'So the echoes have found you too.'", script = [{op = "set_flag", flag = "rl_kale_trusts_you"}, {op = "prestige", amount = 5, reason = "shared a relic of the old rivers"}, {op = "give_gold", amount = 10}, {op = "complete_quest", quest_id = "rivers_remember"}]}]
 
 [[npc]]
-id = "sela_mapmaker"
+id = "rl_sela_mapmaker"
 name = "Mapmaker Sela"
 desc_short = "A sharp-eyed cartographer surrounded by half-finished maps."
 desc_long = "Lines of ink crisscross her table, some crossed out, others circled with frustration. She glances at you without pausing her work."
@@ -42,7 +42,7 @@ shop = [{item_id = "clarity_stew", price = 6}, {item_id = "resonant_token", pric
 kill_script = [{op = "message", tag = "system", text = "As Sela falls, her ink spills across the maps like a spreading river."}, {op = "set_flag", flag = "rl_sela_dead"}]
 
 [[npc]]
-id = "vendor_supplies"
+id = "rl_brann_stallkeeper"
 name = "Stallkeeper Brann"
 desc_short = "A stocky merchant arranging goods with practiced efficiency."
 desc_long = "Brann's stall holds ropes, hooks, and jars labeled in a neat hand. He nods when you approach, no words wasted."
@@ -59,7 +59,7 @@ hostile = false
 shop = [{item_id = "clarity_stew", price = 8}, {item_id = "ferryman_hook", price = 25}, {item_id = "rl_travel_rations", price = 5}, {item_id = "rl_water_flask", price = 3}, {item_id = "rl_torch_bundle", price = 4}, {item_id = "rl_rope_coil", price = 6}, {item_id = "rl_basic_repair_kit", price = 8}, {item_id = "rl_small_pouch", price = 2}, {item_id = "rl_minor_tonic", price = 6}, {item_id = "rl_antifog_oil", price = 7}]
 
 [[npc]]
-id = "innkeeper_mara"
+id = "rl_innkeeper_mara"
 name = "Innkeeper Mara"
 desc_short = "A broad-shouldered woman with tired eyes and a ready smile."
 desc_long = "Mara moves with the efficiency of someone who has kept this place running through worse than bad weather. A set of keys hangs at her belt."
@@ -77,7 +77,7 @@ rest_cost = 5
 shop = [{item_id = "rl_guest_room_key", price = 5}]
 
 [[npc]]
-id = "river_child"
+id = "rl_river_child"
 name = "River Child"
 desc_short = "A barefoot child tossing pebbles into the water."
 desc_long = "They watch the ripples with intense concentration, as if expecting an answer. When they notice you watching, they don't flinch."
@@ -94,7 +94,7 @@ hostile = false
 dialogue = "Sometimes the river whispers names. Sometimes it forgets them."
 
 [[npc]]
-id = "crafter_boatwright"
+id = "rl_loran_boatwright"
 name = "Loran the Boatwright"
 desc_short = "A skilled craftsman who builds and repairs river vessels."
 desc_long = "Loran has spent decades shaping hulls and patching ferries. His hands are calloused, and his eyes are sharp with experience."
@@ -110,7 +110,7 @@ gold_reward = 0
 hostile = false
 
 [[npc]]
-id = "nessa_realm_walker"
+id = "rl_nessa_realm_walker"
 name = "Nessa the Realm-Walker"
 desc_short = "A road-worn trader whose pack is covered in pins and tokens from distant places."
 desc_long = "Nessa's coat is stitched with patches from every zone she has passed through — Peaks wax, Gloam-shadow, Heartwood bark, Mistfen quartz. She moves like someone who has made peace with being always in transit."
@@ -127,7 +127,7 @@ hostile = false
 shop = [{item_id = "rl_echo_pendant", price = 55}, {item_id = "dp_peak_forge_vial", price = 30}, {item_id = "gr_twilight_ink", price = 25}, {item_id = "mf_bog_lens", price = 45}, {item_id = "mp_spore_silk_sash", price = 50}, {item_id = "vh_sap_salve", price = 35}]
 
 [[npc]]
-id = "mire_wolf"
+id = "rl_mire_wolf"
 name = "Mire Wolf"
 desc_short = "A lean, river-damp wolf that has learned to stalk the docks."
 desc_long = "Its grey coat is slick with spray, its eyes pale and calculating. It circles wide before committing, watching for an opening."
@@ -146,7 +146,7 @@ respawn_time = 5
 kill_script = [{op = "message", tag = "combat_death", text = "The mire wolf slumps and slides off the pier edge into the churning water below."}]
 
 [[npc]]
-id = "drift_serpent"
+id = "rl_drift_serpent"
 name = "Drift Serpent"
 desc_short = "A long, pale serpent that rides the impossible currents beneath the planking."
 desc_long = "It moves like liquid, like the river itself shaped into something with intent. Its bite carries a faint numbing cold."
@@ -166,7 +166,7 @@ kill_script = [{op = "message", tag = "combat_death", text = "The drift serpent 
 round_script = [{op = "if_combat_round", min = 2, then = [{op = "if_npc_hp", max = 15, then = [{op = "apply_status", effect = "poisoned", duration = 3}, {op = "message", tag = "combat", text = "The serpent's bite carries a cold sting — poison seeps in."}]}]}]
 
 [[npc]]
-id = "echo_wraith"
+id = "rl_echo_wraith"
 name = "Echo Wraith"
 desc_short = "A translucent shape that ripples like a reflection on disturbed water."
 desc_long = "Not quite solid, not quite absent. It moves with eerie patience, its form shifting between the shadow of a person and the shape of something older."

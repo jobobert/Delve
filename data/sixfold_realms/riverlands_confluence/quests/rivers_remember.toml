@@ -1,6 +1,6 @@
 id = "rivers_remember"
 title = "The Rivers Remember"
-giver = "kale_ferryman"
+giver = "rl_kale_ferryman"
 summary = "Kale believes the rivers are carrying echoes from the fractured realms. Follow where the waters lead."
 
 [[step]]

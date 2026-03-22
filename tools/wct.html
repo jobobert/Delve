@@ -1527,6 +1527,7 @@ function spawnWidget(d) {
 function renderRoomEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('room', 'badge-room', d.name || d.id));
+  appendEditorTodos(main, 'room', SELECTED.zone_id, d.id);
 
   // ID with auto-lock
   appendIdRow(main, d, 'room', SELECTED.zone_id);
@@ -1597,7 +1598,6 @@ function renderRoomEditor(main) {
   main.appendChild(sectionTitle('Notes'));
   main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => d.admin_comment = v),
     null, 'Developer note. Ignored by the engine at runtime.'));
-  appendEditorTodos(main, 'room', SELECTED.zone_id, d.id);
 }
 
 // ── NPC editor ──────────────────────────────────────────────────────
@@ -1605,6 +1605,7 @@ function renderRoomEditor(main) {
 function renderNpcEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('npc', 'badge-npc', d.name || d.id));
+  appendEditorTodos(main, 'npc', SELECTED.zone_id, d.id);
   appendIdRow(main, d, 'npc', SELECTED.zone_id);
   main.appendChild(fieldRow('Name', textInput(d.name, v => d.name = v),
     null, 'Display name shown in the room and combat log.\nCan be a list for random variation on spawn:\n  name = ["Grey Wolf", "Black Wolf"]'));
@@ -1848,7 +1849,6 @@ function renderShop(main, d) {
 
   rebuild();
   main.appendChild(container);
-  appendEditorTodos(main, 'npc', SELECTED.zone_id, d.id);
 }
 
 // ── Item editor ──────────────────────────────────────────────────────
@@ -1856,6 +1856,7 @@ function renderShop(main, d) {
 function renderItemEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('item', 'badge-item', d.name || d.id));
+  appendEditorTodos(main, 'item', SELECTED.zone_id, d.id);
   appendIdRow(main, d, 'item', SELECTED.zone_id);
   main.appendChild(fieldRow('Name', textInput(d.name, v => d.name = v),
     null, 'Display name shown in inventory, rooms, and combat.'));
@@ -1936,7 +1937,6 @@ function renderItemEditor(main) {
   main.appendChild(sectionTitle('Notes'));
   main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => d.admin_comment = v),
     null, 'Developer note. Ignored by the engine at runtime.'));
-  appendEditorTodos(main, 'item', SELECTED.zone_id, d.id);
 }
 
 // ── Quest editor ─────────────────────────────────────────────────────
@@ -2309,6 +2309,7 @@ function _pushToQuestPopup() {
 const _TRIG_BADGE = {
   dialogue: ['D', 'tc-badge-D'],
   npc:      ['K', 'tc-badge-K'],
+  npc_give: ['G', 'tc-badge-I'],
   item:     ['I', 'tc-badge-I'],
   room:     ['R', 'tc-badge-R'],
   craft:    ['C', 'tc-badge-C'],
@@ -2337,6 +2338,7 @@ function _renderStepTriggers(sec, questData, stepKey) {
     if (t.node_id === 'on_use')       return `on_use`;
     if (t.node_id === 'on_enter')     return `on_enter`;
     if (t.node_id === 'on_complete')  return `on_complete`;
+    if (t.node_id === 'give_accepts') return `give_accepts`;
     return `dlg:${t.node_id}`;
   };
 
@@ -2447,6 +2449,7 @@ function renderQuestEditor(main) {
     _showQuestGraph(main, d);
   });
   main.querySelector('.editor-actions')?.appendChild(questGrfBtn);
+  appendEditorTodos(main, 'quest', SELECTED.zone_id, d._id || d.id);
   main.appendChild(fieldRow('Quest ID', (() => {
     const inp = document.createElement('input');
     inp.type='text'; inp.className='field-input id-field';
@@ -2584,7 +2587,6 @@ function renderQuestRewards(main, d) {
   };
   rebuild();
   main.appendChild(container);
-  appendEditorTodos(main, 'quest', SELECTED.zone_id, d._id || d.id);
 }
 
 // ── Style editor ──────────────────────────────────────────────────────
@@ -2605,6 +2607,7 @@ function _tagsInput(arr, onChange) {
 function renderStyleEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('style', 'badge-style', d.name || d.id || ''));
+  appendEditorTodos(main, 'style', SELECTED.zone_id, d.id);
 
   // Identity
   main.appendChild(sectionTitle('Identity'));
@@ -2668,7 +2671,6 @@ function renderStyleEditor(main) {
   // Passives
   main.appendChild(sectionTitle('Passives', 'Passive abilities triggered during combat.\nEach fires when trigger matches and player proficiency >= threshold.'));
   renderStylePassives(main, d);
-  appendEditorTodos(main, 'style', SELECTED.zone_id, d.id);
 }
 
 // ── Zone editor ──────────────────────────────────────────────────────
@@ -2811,6 +2813,7 @@ function renderProcessEditor(main) {
   const d   = SELECTED.data;
   const zid = SELECTED.zone_id;
   main.appendChild(editorHeader('process', 'badge-proc', d.name || d.id || ''));
+  appendEditorTodos(main, 'process', SELECTED.zone_id, d.id);
 
   // Identity
   main.appendChild(sectionTitle('Identity'));
@@ -2933,7 +2936,6 @@ function _renderRouteWaypoints(main, d) {
 
   redraw();
   main.appendChild(container);
-  appendEditorTodos(main, 'process', SELECTED.zone_id, d.id);
 }
 
 // ── World Notes (world.md) ────────────────────────────────────────────────────
@@ -3297,6 +3299,7 @@ function renderDialogueEditor(main) {
     _showDlgGraph(main, d);
   });
   main.querySelector('.editor-actions')?.appendChild(dlgGrfBtn);
+  appendEditorTodos(main, 'dialogue', SELECTED.zone_id, d._npc_id);
   if (d._npc_id) {
     const npc = ALL_NPCS[d._npc_id];
     const dlgBackBtn = document.createElement('button');
@@ -3342,7 +3345,6 @@ function renderDialogueEditor(main) {
     d.node.forEach((node, ni) => container.appendChild(buildDlgNodeCard(node, ni, d, rebuild)));
   }
   rebuild();
-  appendEditorTodos(main, 'dialogue', SELECTED.zone_id, d._npc_id);
 }
 
 function buildDlgNodeCard(node, ni, dlg, rebuild) {
@@ -6274,6 +6276,11 @@ function _collectQuestTriggers(questId) {
     for (const npc of (zone.npcs || []))
       _flattenOps(npc.kill_script || []).forEach(op =>
         _record(op, npc.id, 'kill_script', [], npc.kill_script || [], zone_id, 'npc'));
+    // NPC give_accepts scripts
+    for (const npc of (zone.npcs || []))
+      for (const ga of (npc.give_accepts || []))
+        _flattenOps(ga.script || []).forEach(op =>
+          _record(op, npc.id, 'give_accepts', [], ga.script || [], zone_id, 'npc_give'));
     // Item on_get / on_use
     for (const item of (zone.items || [])) {
       _flattenOps(item.on_get || []).forEach(op =>
