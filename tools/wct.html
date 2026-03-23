@@ -1550,13 +1550,13 @@ function renderRoomEditor(main) {
   const exitBtn = document.createElement('button');
   exitBtn.className = 'exit-btn';
   exitBtn.textContent = `Edit exits (${Object.keys(d.exits || {}).length})`;
-  let exitPrev = renderExitsPreview(d.exits);
+  let exitPrev = renderExitsPreview(d.exits, d.id);
   exitWrap.appendChild(exitBtn);
   exitWrap.appendChild(exitPrev);
   exitBtn.addEventListener('click', () => openExitModal(d, exits => {
     d.exits = exits;
     exitBtn.textContent = `Edit exits (${Object.keys(exits).length})`;
-    const p2 = renderExitsPreview(exits);
+    const p2 = renderExitsPreview(exits, d.id);
     exitWrap.replaceChild(p2, exitPrev);
     exitPrev = p2;
     markDirty();
@@ -4130,10 +4130,65 @@ function saveScript() {
 // Exit editor modal
 // ═══════════════════════════════════════════════════════════════════════
 
-let _exitData = {};   // direction → {to, locked, lock_tag, desc, show_if, on_exit, on_enter, on_look}
+let _exitData = {};      // direction → {to, locked, lock_tag, desc, show_if, on_exit, on_enter, on_look}
+let _currentRoomId = ''; // room being edited in exit modal
+
+// Parse any show_if value (string shorthand or dict) into {op, val1, val2}
+function _parseShowIf(sif) {
+  if (!sif) return {op: '', val1: '', val2: ''};
+  if (typeof sif === 'string') {
+    const colon = sif.indexOf(':');
+    if (colon !== -1) return {op: sif.slice(0, colon).trim(), val1: sif.slice(colon + 1).trim(), val2: ''};
+    return {op: 'has_flag', val1: sif.trim(), val2: ''};
+  }
+  const op = sif.op || '';
+  if (op === 'has_flag' || op === 'not_flag') return {op, val1: sif.flag    || '', val2: ''};
+  if (op === 'has_item')                      return {op, val1: sif.item_id || '', val2: ''};
+  if (op === 'min_level')                     return {op, val1: String(sif.level  ?? ''), val2: ''};
+  if (op === 'min_skill')                     return {op, val1: sif.skill   || '', val2: String(sif.value ?? '')};
+  return {op, val1: '', val2: ''};
+}
+
+// Write structured values back to v.show_if as a dict (or clear it)
+function _writeShowIf(v, op, val1, val2) {
+  if (!op) { v.show_if = ''; return; }
+  if (op === 'has_flag' || op === 'not_flag') { v.show_if = {op, flag:    val1};                           return; }
+  if (op === 'has_item')                      { v.show_if = {op, item_id: val1};                           return; }
+  if (op === 'min_level')                     { v.show_if = {op, level:   parseInt(val1)    || 1};         return; }
+  if (op === 'min_skill')                     { v.show_if = {op, skill:   val1, value: parseFloat(val2) || 0}; return; }
+  v.show_if = {op};
+}
+
+// Format a show_if value for compact display in the exit preview
+function _fmtShowIf(sif) {
+  if (!sif) return '';
+  if (typeof sif === 'string') return sif;
+  const op = sif.op || '?';
+  if (op === 'has_flag'  || op === 'not_flag') return `${op}: ${sif.flag    || ''}`;
+  if (op === 'has_item')                       return `${op}: ${sif.item_id || ''}`;
+  if (op === 'min_level')                      return `${op}: ${sif.level   ?? ''}`;
+  if (op === 'min_skill')                      return `${op}: ${sif.skill   || ''} \u2265 ${sif.value ?? 0}`;
+  return op;
+}
+
+function _exitHasReverse(dir, targetId, currentRoomId) {
+  if (!dir || !targetId || !currentRoomId) return true;
+  const revDir = MAP_REVERSE_DIR[dir];
+  if (!revDir) return true; // custom/unknown direction — no expected reverse
+  const targetMeta = ALL_ROOMS[targetId];
+  if (!targetMeta) return true; // unknown target — don't flag
+  const zone = WORLD_DATA?.zones?.[targetMeta.zone_id];
+  if (!zone) return true;
+  const room = (zone.rooms || []).find(r => r.id === targetId);
+  if (!room) return true;
+  const revExitVal = (room.exits || {})[revDir];
+  const revDest = typeof revExitVal === 'string' ? revExitVal : revExitVal?.to;
+  return revDest === currentRoomId;
+}
 
 function openExitModal(roomData, callback) {
   _exitCallback = callback;
+  _currentRoomId = roomData.id || '';
   // Convert exits to working copy
   _exitData = {};
   for (const [dir, v] of Object.entries(roomData.exits || {})) {
@@ -4213,6 +4268,29 @@ function buildExitRow(dir, v) {
   top.appendChild(rmBtn);
   card.appendChild(top);
 
+  // Mismatch warning
+  const mismatchWarn = document.createElement('div');
+  mismatchWarn.className = 'exit-mismatch-warn';
+  mismatchWarn.style.display = 'none';
+  card.appendChild(mismatchWarn);
+  const _updateMismatch = () => {
+    const curDir = dirInp.value;
+    const curTo  = v.to;
+    if (_currentRoomId && curDir && curTo && !_exitHasReverse(curDir, curTo, _currentRoomId)) {
+      const revDir = MAP_REVERSE_DIR[curDir];
+      mismatchWarn.textContent = revDir
+        ? `No reverse: "${curTo}" is missing ${revDir} \u2192 "${_currentRoomId}"`
+        : 'No known reverse direction for this exit';
+      mismatchWarn.style.display = '';
+    } else {
+      mismatchWarn.style.display = 'none';
+    }
+  };
+  _updateMismatch();
+  dirInp.addEventListener('change', _updateMismatch);
+  toInp.addEventListener('change', _updateMismatch);
+  toInp.addEventListener('input', _updateMismatch);
+
   // Lock tag row (visible only when locked)
   const lockRow = document.createElement('div'); lockRow.className='exit-row-advanced';
   lockRow.style.display = v.locked ? '' : 'none';
@@ -4232,13 +4310,52 @@ function buildExitRow(dir, v) {
   descInp.addEventListener('input', () => v.desc = descInp.value);
   advRow.appendChild(descLbl); advRow.appendChild(descInp);
 
-  const sifLbl = document.createElement('span'); sifLbl.className='op-field-label'; sifLbl.textContent='show_if:';
-  const sifInp = document.createElement('input'); sifInp.type='text'; sifInp.className='op-input';
-  sifInp.style.width='110px'; sifInp.value = v.show_if || '';
-  sifInp.title = 'Condition flag: "has_flag:my_flag" or "not_flag:my_flag"';
-  sifInp.addEventListener('input', () => v.show_if = sifInp.value);
-  advRow.appendChild(sifLbl); advRow.appendChild(sifInp);
   card.appendChild(advRow);
+
+  // show_if condition builder
+  const sifRow = document.createElement('div'); sifRow.className = 'exit-row-advanced';
+  const sifLbl = document.createElement('span'); sifLbl.className = 'op-field-label'; sifLbl.textContent = 'show_if:';
+  sifRow.appendChild(sifLbl);
+
+  const SIF_OPS = ['', 'has_flag', 'not_flag', 'has_item', 'min_level', 'min_skill'];
+  const SIF_PLACEHOLDER = {has_flag:'flag', not_flag:'flag', has_item:'item_id', min_level:'level', min_skill:'skill'};
+  const SIF_LIST = {has_flag: null, not_flag: null, has_item: 'dl-items', min_level: null, min_skill: null};
+
+  const parsed = _parseShowIf(v.show_if);
+
+  const opSel = document.createElement('select'); opSel.className = 'op-input'; opSel.style.width = '100px';
+  SIF_OPS.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o || '(none)'; opSel.appendChild(opt); });
+  opSel.value = parsed.op;
+
+  const val1Inp = document.createElement('input'); val1Inp.type = 'text'; val1Inp.className = 'op-input'; val1Inp.style.flex = '1';
+  const val2Inp = document.createElement('input'); val2Inp.type = 'number'; val2Inp.className = 'op-input'; val2Inp.style.width = '60px';
+  val2Inp.min = 0; val2Inp.step = 1; val2Inp.placeholder = 'value';
+
+  const updateSifInputs = () => {
+    const op = opSel.value;
+    const show1 = !!op;
+    const show2 = op === 'min_skill';
+    const isNum = op === 'min_level';
+    val1Inp.style.display = show1 ? '' : 'none';
+    val2Inp.style.display = show2 ? '' : 'none';
+    val1Inp.placeholder = SIF_PLACEHOLDER[op] || '';
+    val1Inp.type = isNum ? 'number' : 'text';
+    val1Inp.min = isNum ? 1 : undefined;
+    const listId = SIF_LIST[op];
+    if (listId) val1Inp.setAttribute('list', listId); else val1Inp.removeAttribute('list');
+  };
+
+  val1Inp.value = parsed.val1;
+  val2Inp.value = parsed.val2;
+  updateSifInputs();
+
+  const commitSif = () => _writeShowIf(v, opSel.value, val1Inp.value.trim(), val2Inp.value);
+  opSel.addEventListener('change', () => { updateSifInputs(); commitSif(); _updateMismatch(); });
+  val1Inp.addEventListener('input', () => { commitSif(); _updateMismatch(); });
+  val2Inp.addEventListener('input', commitSif);
+
+  sifRow.appendChild(opSel); sifRow.appendChild(val1Inp); sifRow.appendChild(val2Inp);
+  card.appendChild(sifRow);
 
   // Script buttons row
   const scriptRow = document.createElement('div'); scriptRow.className='exit-row-advanced';
@@ -4294,6 +4411,47 @@ function saveExits() {
   }
   if (_exitCallback) _exitCallback(exits);
   closeModal('exit-modal');
+  _offerReverseExits(exits, _currentRoomId);
+}
+
+async function _offerReverseExits(exits, currentRoomId) {
+  if (!currentRoomId) return;
+  for (const [dir, v] of Object.entries(exits)) {
+    const targetId = typeof v === 'string' ? v : v.to;
+    if (!targetId) continue;
+    const revDir = MAP_REVERSE_DIR[dir];
+    if (!revDir) continue;
+    const targetMeta = ALL_ROOMS[targetId];
+    if (!targetMeta) continue;
+    const zone = WORLD_DATA?.zones?.[targetMeta.zone_id];
+    if (!zone) continue;
+    const room = (zone.rooms || []).find(r => r.id === targetId);
+    if (!room) continue;
+
+    const revExitVal = (room.exits || {})[revDir];
+    const revDest = typeof revExitVal === 'string' ? revExitVal : revExitVal?.to;
+    if (revDest === currentRoomId) continue; // already correct
+
+    const msg = revDest
+      ? `"${targetId}" has ${revDir} \u2192 "${revDest}" (not back to "${currentRoomId}").\nReplace with ${revDir} \u2192 "${currentRoomId}"?`
+      : `"${targetId}" has no ${revDir} exit.\nAdd ${revDir} \u2192 "${currentRoomId}"?`;
+    if (!confirm(msg)) continue;
+
+    if (!room.exits) room.exits = {};
+    room.exits[revDir] = currentRoomId;
+    ALL_ROOMS[targetId] = {...room, zone_id: targetMeta.zone_id};
+
+    const file = room._file;
+    if (!file) { setStatus(`No _file on ${targetId} — reverse not saved`, 'err'); continue; }
+    const payload = buildFileData('room', file, room);
+    const res = await fetch('/api/write_file', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ file, data: payload }),
+    });
+    const j = await res.json();
+    if (j.ok) setStatus(`Added ${revDir} \u2192 ${currentRoomId} on ${targetId}`, 'ok');
+    else      setStatus(`Error saving reverse exit on ${targetId}: ${j.error}`, 'err');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -4364,7 +4522,7 @@ function renderScriptPreview(ops) {
   return div;
 }
 
-function renderExitsPreview(exits) {
+function renderExitsPreview(exits, currentRoomId) {
   const div = document.createElement('div'); div.className = 'exits-preview';
   const entries = Object.entries(exits || {});
   if (!entries.length) {
@@ -4374,13 +4532,30 @@ function renderExitsPreview(exits) {
   entries.forEach(([dir, v]) => {
     const row = document.createElement('div'); row.className = 'exits-preview-row';
     const dirEl = document.createElement('span'); dirEl.className = 'exits-dir'; dirEl.textContent = dir;
-    const target = typeof v === 'string' ? v : (v.to || '?');
-    const locked  = typeof v === 'object' && v.locked;
+    const target  = typeof v === 'string' ? v : (v.to || '?');
+    const locked   = typeof v === 'object' && v.locked;
+    const showIf   = typeof v === 'object' && v.show_if;
     const tEl = document.createElement('span'); tEl.className = 'exits-target'; tEl.textContent = '→ ' + target;
     row.appendChild(dirEl); row.appendChild(tEl);
     if (locked) {
       const lEl = document.createElement('span'); lEl.className = 'exits-lock'; lEl.textContent = '[locked]';
       row.appendChild(lEl);
+    }
+    if (showIf) {
+      const fmt = _fmtShowIf(showIf);
+      const sEl = document.createElement('span'); sEl.className = 'exits-showif';
+      sEl.textContent = '[if: ' + fmt + ']';
+      sEl.title = 'show_if condition: ' + fmt;
+      row.appendChild(sEl);
+    }
+    if (currentRoomId && target !== '?' && !_exitHasReverse(dir, target, currentRoomId)) {
+      const revDir = MAP_REVERSE_DIR[dir];
+      const wEl = document.createElement('span'); wEl.className = 'exits-mismatch';
+      wEl.textContent = '[!]';
+      wEl.title = revDir
+        ? `No reverse: "${target}" is missing ${revDir} \u2192 "${currentRoomId}"`
+        : 'No known reverse direction';
+      row.appendChild(wEl);
     }
     div.appendChild(row);
   });

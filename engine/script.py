@@ -162,20 +162,31 @@ class GameContext:
     processes: "object | None" = None
 
 
-def eval_exit_condition(cond: dict, ctx: "GameContext") -> bool:
-    """Evaluate a show_if condition dict against the current player state.
+def eval_exit_condition(cond, ctx: "GameContext") -> bool:
+    """Evaluate a show_if condition against the current player state.
 
     Returns True (exit is visible/usable) if the condition passes.
     Unknown op values default to True so future world data doesn't break
     older engine versions.
 
-    Supported ops:
+    Accepts a dict or a string shorthand:
+      "has_flag:flag_name"   — player has the flag set
+      "not_flag:flag_name"   — player does NOT have the flag
+      "flag_name"            — bare flag name, treated as has_flag
+
+    Supported dict ops:
       has_flag   flag (str)              — player has the flag set
       not_flag   flag (str)              — player does NOT have the flag
       min_level  level (int)             — player.level >= level
       has_item   item_id (str)           — item in inventory or equipped
       min_skill  skill (str), value (N)  — player.skills[skill] >= value
     """
+    if isinstance(cond, str):
+        if ":" in cond:
+            op_part, _, flag_part = cond.partition(":")
+            cond = {"op": op_part.strip(), "flag": flag_part.strip()}
+        else:
+            cond = {"op": "has_flag", "flag": cond.strip()}
     op = cond.get("op", "")
     p  = ctx.player
     if op == "has_flag":

@@ -89,7 +89,15 @@ Click any object in the sidebar to open its editor in the main panel. Click **Sa
 
 Fields: ID (read-only), Name, Description, Flags, Light level, Start room, Exits, Item spawns, NPC spawns, on_enter script, admin comment.
 
-- **Exits** — each exit has: direction, destination room (autocomplete), optional lock/key, show_if condition, on_exit script
+- **Exits** — click **Edit exits** to open the exit modal. Each exit has:
+  - **Direction** — any string (`north`, `up`, `enter`, etc.)
+  - **Destination** — room ID with autocomplete
+  - **Locked / lock_tag** — optional door lock
+  - **desc** — flavor text shown when the player examines the exit
+  - **show_if** — inline condition builder: select an op (`has_flag`, `not_flag`, `has_item`, `min_level`, `min_skill`) from the dropdown, then fill in the required field(s). Selecting `(none)` removes the condition. See §4.5 of WORLD_MANUAL.md for op details.
+  - **on_exit / on_enter / on_look** — script buttons for each hook
+  - **`[!]` mismatch indicator** — shown in the exit preview (and in the modal card) when the target room has no matching reverse exit. When saving, the WCT offers to create the reverse exit automatically.
+  - **`[if: ...]` indicator** — shown in the exit preview when a `show_if` condition is set, e.g. `[if: has_flag: rl_stair_noticed]`
 - **on_enter** — script ops executed when a player enters the room
 
 ### NPC Editor
@@ -215,6 +223,17 @@ In the dialogue editor, click **Graph** to toggle the interactive SVG flow diagr
 In the quest editor, click **Graph** to toggle the interactive flow diagram showing:
 - Quest steps as nodes
 - Trigger edges from dialogues, room on_enter, item on_get/on_use, and NPC kill_script
+
+---
+
+## Todos
+
+Each editor has an inline **Todos** panel at the very top (above the ID field) for per-object design notes and tasks.
+
+- Check the checkbox to mark a todo done; click **×** to delete
+- The **Todos** button in the top bar opens a world-wide panel listing all open todos (filterable by open/done/all)
+- Tree items with open todos show a ◆ icon in the sidebar
+- The top bar button shows the open count: `Todos (3)`
 
 ---
 

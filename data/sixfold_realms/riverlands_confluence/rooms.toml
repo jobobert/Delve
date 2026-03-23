@@ -105,14 +105,15 @@ spawns = [{id = "rl_echo_wraith", spawn_chance = 0.5}]
 id = "rl_ferry_berth_peaks"
 name = "Peaks Ferry Berth"
 description = "A wooden landing platform where the Riverlands ferry moors before the climb into Dragon Peaks."
-exits = {north = "dp_approach_1"}
+exits = {north = "dp_approach_1", south = "rl_ferryman_shack"}
 
 [[room]]
 id = "rl_ferryman_shack"
 name = "Ferryman’s Shack"
 description = "A weathered wooden shack filled with ropes, charts, and ferry logs. The ferryman often rests here between crossings."
-exits = {east = "rl_ferrydock_square", north = "rl_ferry_berth_peaks"}
+exits = {east = "rl_ferrydock_square", north = {to = "rl_ferry_berth_peaks", desc = "Beyond the shack you can see the ferry, berthed and waiting for its passengers.", show_if = {op = "has_flag", flag = "rl_has_resonant_token"}}}
 spawns = ["rl_kale_ferryman"]
+desc_long = "Light peeks through holes in water-logged walls, a significant smell of must and age lingers in the air. The shack is not exactly comfortable, but you see why the Ferryman spends his time here."
 
 [[room]]
 id = "rl_hovel"

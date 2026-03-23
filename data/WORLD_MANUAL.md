@@ -256,6 +256,8 @@ spawns = [
 
 Exits connect rooms. Each entry in `exits` maps a direction name to a destination.
 
+> **Exits are one-way by default.** If room A has `north = "room_b"`, room B does not automatically get `south = "room_a"`. Each room must define its own exits. The WCT flags mismatched exits with a `[!]` indicator and offers to create the reverse exit when you save.
+
 ### 4.1 Plain-string Exit (simplest)
 
 ```toml
@@ -339,6 +341,16 @@ exits = {
 | `min_skill` | `skill`, `value` | player.skills[skill] ≥ value |
 
 Unknown `op` values default to **true** (visible), so old world data is forward-compatible.
+
+**String shorthand** — the engine also accepts a plain string for `show_if` as a convenience:
+
+```toml
+show_if = "has_flag:spoke_to_watchman"   # equivalent to {op="has_flag", flag="spoke_to_watchman"}
+show_if = "not_flag:door_locked"         # equivalent to {op="not_flag", flag="door_locked"}
+show_if = "my_flag"                      # bare name — treated as has_flag
+```
+
+The dict form is preferred for clarity. The WCT always writes the dict form.
 
 **Examples:**
 
