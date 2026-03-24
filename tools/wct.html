@@ -1052,6 +1052,7 @@ function selectObject(type, zone_id, data) {
   }
   SELECTED = { type, zone_id, data: structuredClone(data), _orig_id: data.id || data._id || data._npc_id || '' };
   DIRTY    = false; _setDirtyUI(false);
+  _stagedReverseExits = [];
 
   // Cross-reference panel
   const xrefId = data.id || data._id || data._npc_id || '';
@@ -3882,17 +3883,23 @@ async function saveSelected() {
       if (type==='item')  ALL_ITEMS[data.id]  = {...data, zone_id};
     }
     rebuildDataLists();
-    // Flush staged reverse exit writes (skip same-file entries — already serialized above)
-    for (const {file: rfile, room, targetId, writeKey, srcId} of _stagedReverseExits) {
-      if (rfile === file) continue; // buildFileData already wrote this room
-      const rr = await fetch('/api/write_file', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({file: rfile, data: buildFileData('room', rfile, room)}),
-      });
-      const rj = await rr.json();
-      if (!rj.ok) setStatus(`Error saving reverse exit on ${targetId}: ${rj.error}`, 'err');
+    // Flush staged reverse exit writes — only after a room save, skip same-file entries
+    if (type === 'room' && _stagedReverseExits.length) {
+      let reverseErr = false;
+      const flushedFiles = new Set([file]); // seed with primary file — skip same-file entries
+      for (const {file: rfile, room, targetId} of _stagedReverseExits) {
+        if (flushedFiles.has(rfile)) continue; // already written (same file or earlier duplicate)
+        flushedFiles.add(rfile);
+        const rr = await fetch('/api/write_file', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({file: rfile, data: buildFileData('room', rfile, room)}),
+        });
+        const rj = await rr.json();
+        if (!rj.ok) { setStatus(`Error saving reverse exit on ${targetId}: ${rj.error}`, 'err'); reverseErr = true; break; }
+      }
+      if (reverseErr) return; // leave queue intact so user can retry
+      _stagedReverseExits = [];
     }
-    _stagedReverseExits = [];
     await reloadWorld();
     if (_savedKey) _restoreSelection(_savedKey);
     _saveUiState();
@@ -4260,10 +4267,12 @@ function buildExitRow(dir, v) {
   dirInp.style.width='90px'; dirInp.value = dir; dirInp.placeholder = 'direction';
   dirInp.setAttribute('list','dl-directions');
   dirInp.addEventListener('change', () => {
-    if (dirInp.value !== dir && dirInp.value) {
-      _exitData[dirInp.value] = _exitData[dir];
+    const norm = dirInp.value.trim().toLowerCase();
+    if (norm !== dirInp.value) dirInp.value = norm;
+    if (norm !== dir && norm) {
+      _exitData[norm] = _exitData[dir];
       delete _exitData[dir];
-      dir = dirInp.value;
+      dir = norm;
     }
   });
   top.appendChild(dirInp);
@@ -4451,7 +4460,7 @@ function _offerReverseExits(exits, currentRoomId) {
   if (!currentRoomId) return;
   for (const [dir, v] of Object.entries(exits)) {
     const targetId = typeof v === 'string' ? v : v.to;
-    if (!targetId) continue;
+    if (!targetId || targetId === currentRoomId) continue;
     const revDir = MAP_REVERSE_DIR[_canonDir(dir)];
     if (!revDir) continue;
     const targetMeta = ALL_ROOMS[targetId];
