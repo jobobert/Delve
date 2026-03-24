@@ -291,7 +291,7 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
 .exits-lock   { font-size: 13px; color: var(--yellow); margin-left: 4px; }
 .exits-showif { font-size: 12px; color: var(--text-dim); margin-left: 4px; font-style: italic; cursor: help; }
 .exits-mismatch { font-size: 12px; color: var(--yellow); font-weight: 700; margin-left: 4px; cursor: help; }
-.exit-mismatch-warn { font-size: 12px; color: var(--yellow); padding: 2px 8px 4px; }
+.exits-mismatch-warn { font-size: 12px; color: var(--yellow); padding: 2px 8px 4px; }
 
 /* script / exit buttons */
 .script-btn {

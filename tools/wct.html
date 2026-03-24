@@ -593,6 +593,7 @@ async function loadWorld(worldId) {
   ]);
   WORLD_DATA   = await wdRes.json();
   WORLD_CONFIG = await wcRes.json();
+  _stagedReverseExits = [];
 
   // Build lookup maps
   ALL_ROOMS = {}; ALL_NPCS = {}; ALL_ITEMS = {}; ALL_QUESTS = {};
@@ -3881,10 +3882,22 @@ async function saveSelected() {
       if (type==='item')  ALL_ITEMS[data.id]  = {...data, zone_id};
     }
     rebuildDataLists();
+    // Flush staged reverse exit writes (skip same-file entries — already serialized above)
+    for (const {file: rfile, room, targetId, writeKey, srcId} of _stagedReverseExits) {
+      if (rfile === file) continue; // buildFileData already wrote this room
+      const rr = await fetch('/api/write_file', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({file: rfile, data: buildFileData('room', rfile, room)}),
+      });
+      const rj = await rr.json();
+      if (!rj.ok) setStatus(`Error saving reverse exit on ${targetId}: ${rj.error}`, 'err');
+    }
+    _stagedReverseExits = [];
     await reloadWorld();
     if (_savedKey) _restoreSelection(_savedKey);
     _saveUiState();
   } else {
+    _stagedReverseExits = [];
     setStatus('Error: ' + j.error, 'err');
   }
 }
@@ -4130,8 +4143,9 @@ function saveScript() {
 // Exit editor modal
 // ═══════════════════════════════════════════════════════════════════════
 
-let _exitData = {};      // direction → {to, locked, lock_tag, desc, show_if, on_exit, on_enter, on_look}
-let _currentRoomId = ''; // room being edited in exit modal
+let _exitData = {};             // direction → {to, locked, lock_tag, desc, show_if, on_exit, on_enter, on_look}
+let _currentRoomId = '';        // room being edited in exit modal
+let _stagedReverseExits = [];   // [{file, room, targetId, writeKey, srcId}] — flushed by saveSelected() on success
 
 // Parse any show_if value (string shorthand or dict) into {op, val1, val2}
 function _parseShowIf(sif) {
@@ -4171,9 +4185,25 @@ function _fmtShowIf(sif) {
   return op;
 }
 
+// Direction canonicalization — normalize short forms to long forms
+const _DIR_CANON = {n:'north',s:'south',e:'east',w:'west',ne:'northeast',sw:'southwest',nw:'northwest',se:'southeast',u:'up',d:'down'};
+const _DIR_SHORT = {north:'n',south:'s',east:'e',west:'w',northeast:'ne',southwest:'sw',northwest:'nw',southeast:'se',up:'u',down:'d'};
+function _canonDir(d) { return _DIR_CANON[d] || d; }
+
+// Find a directional exit in roomExits checking both long and short alias forms.
+// Returns {key, val} where key is the actual key used, or {key:null, val:undefined}.
+function _findRevExitEntry(roomExits, revDir) {
+  const canon = _canonDir(revDir);
+  const short  = _DIR_SHORT[canon];
+  for (const k of [canon, short].filter(Boolean)) {
+    if (k in roomExits) return {key: k, val: roomExits[k]};
+  }
+  return {key: null, val: undefined};
+}
+
 function _exitHasReverse(dir, targetId, currentRoomId) {
   if (!dir || !targetId || !currentRoomId) return true;
-  const revDir = MAP_REVERSE_DIR[dir];
+  const revDir = MAP_REVERSE_DIR[_canonDir(dir)];
   if (!revDir) return true; // custom/unknown direction — no expected reverse
   const targetMeta = ALL_ROOMS[targetId];
   if (!targetMeta) return true; // unknown target — don't flag
@@ -4181,7 +4211,7 @@ function _exitHasReverse(dir, targetId, currentRoomId) {
   if (!zone) return true;
   const room = (zone.rooms || []).find(r => r.id === targetId);
   if (!room) return true;
-  const revExitVal = (room.exits || {})[revDir];
+  const {val: revExitVal} = _findRevExitEntry(room.exits || {}, revDir);
   const revDest = typeof revExitVal === 'string' ? revExitVal : revExitVal?.to;
   return revDest === currentRoomId;
 }
@@ -4189,6 +4219,7 @@ function _exitHasReverse(dir, targetId, currentRoomId) {
 function openExitModal(roomData, callback) {
   _exitCallback = callback;
   _currentRoomId = roomData.id || '';
+  _stagedReverseExits = [];
   // Convert exits to working copy
   _exitData = {};
   for (const [dir, v] of Object.entries(roomData.exits || {})) {
@@ -4270,14 +4301,14 @@ function buildExitRow(dir, v) {
 
   // Mismatch warning
   const mismatchWarn = document.createElement('div');
-  mismatchWarn.className = 'exit-mismatch-warn';
+  mismatchWarn.className = 'exits-mismatch-warn';
   mismatchWarn.style.display = 'none';
   card.appendChild(mismatchWarn);
   const _updateMismatch = () => {
     const curDir = dirInp.value;
     const curTo  = v.to;
     if (_currentRoomId && curDir && curTo && !_exitHasReverse(curDir, curTo, _currentRoomId)) {
-      const revDir = MAP_REVERSE_DIR[curDir];
+      const revDir = MAP_REVERSE_DIR[_canonDir(curDir)];
       mismatchWarn.textContent = revDir
         ? `No reverse: "${curTo}" is missing ${revDir} \u2192 "${_currentRoomId}"`
         : 'No known reverse direction for this exit';
@@ -4414,12 +4445,14 @@ function saveExits() {
   _offerReverseExits(exits, _currentRoomId);
 }
 
-async function _offerReverseExits(exits, currentRoomId) {
+// Prompt to add missing reverse exits. Mutates WORLD_DATA in memory and stages
+// the writes — actual disk writes happen in saveSelected() after the primary save.
+function _offerReverseExits(exits, currentRoomId) {
   if (!currentRoomId) return;
   for (const [dir, v] of Object.entries(exits)) {
     const targetId = typeof v === 'string' ? v : v.to;
     if (!targetId) continue;
-    const revDir = MAP_REVERSE_DIR[dir];
+    const revDir = MAP_REVERSE_DIR[_canonDir(dir)];
     if (!revDir) continue;
     const targetMeta = ALL_ROOMS[targetId];
     if (!targetMeta) continue;
@@ -4428,29 +4461,28 @@ async function _offerReverseExits(exits, currentRoomId) {
     const room = (zone.rooms || []).find(r => r.id === targetId);
     if (!room) continue;
 
-    const revExitVal = (room.exits || {})[revDir];
+    const {key: revKey, val: revExitVal} = _findRevExitEntry(room.exits || {}, revDir);
     const revDest = typeof revExitVal === 'string' ? revExitVal : revExitVal?.to;
     if (revDest === currentRoomId) continue; // already correct
 
+    const writeKey = revKey || revDir;
     const msg = revDest
-      ? `"${targetId}" has ${revDir} \u2192 "${revDest}" (not back to "${currentRoomId}").\nReplace with ${revDir} \u2192 "${currentRoomId}"?`
-      : `"${targetId}" has no ${revDir} exit.\nAdd ${revDir} \u2192 "${currentRoomId}"?`;
+      ? `"${targetId}" has ${writeKey} \u2192 "${revDest}" (not back to "${currentRoomId}").\nReplace with ${writeKey} \u2192 "${currentRoomId}"?`
+      : `"${targetId}" has no ${writeKey} exit.\nAdd ${writeKey} \u2192 "${currentRoomId}"?`;
     if (!confirm(msg)) continue;
 
+    // Mutate WORLD_DATA in memory only — disk write is deferred to saveSelected()
     if (!room.exits) room.exits = {};
-    room.exits[revDir] = currentRoomId;
+    if (typeof revExitVal === 'object' && revExitVal !== null) {
+      room.exits[writeKey] = {...revExitVal, to: currentRoomId};
+    } else {
+      room.exits[writeKey] = currentRoomId;
+    }
     ALL_ROOMS[targetId] = {...room, zone_id: targetMeta.zone_id};
 
     const file = room._file;
-    if (!file) { setStatus(`No _file on ${targetId} — reverse not saved`, 'err'); continue; }
-    const payload = buildFileData('room', file, room);
-    const res = await fetch('/api/write_file', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ file, data: payload }),
-    });
-    const j = await res.json();
-    if (j.ok) setStatus(`Added ${revDir} \u2192 ${currentRoomId} on ${targetId}`, 'ok');
-    else      setStatus(`Error saving reverse exit on ${targetId}: ${j.error}`, 'err');
+    if (file) _stagedReverseExits.push({file, room, targetId, writeKey, srcId: currentRoomId});
+    else setStatus(`No _file on ${targetId} — reverse exit staged in memory only`, 'err');
   }
 }
 
@@ -4549,7 +4581,7 @@ function renderExitsPreview(exits, currentRoomId) {
       row.appendChild(sEl);
     }
     if (currentRoomId && target !== '?' && !_exitHasReverse(dir, target, currentRoomId)) {
-      const revDir = MAP_REVERSE_DIR[dir];
+      const revDir = MAP_REVERSE_DIR[_canonDir(dir)];
       const wEl = document.createElement('span'); wEl.className = 'exits-mismatch';
       wEl.textContent = '[!]';
       wEl.title = revDir

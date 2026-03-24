@@ -106,6 +106,7 @@ id = "rl_ferry_berth_peaks"
 name = "Peaks Ferry Berth"
 description = "A wooden landing platform where the Riverlands ferry moors before the climb into Dragon Peaks."
 exits = {north = "dp_approach_1", south = "rl_ferryman_shack"}
+desc_long = "In the berth is a ferry that looks as old as the world, but still surprisingly sound. Barrels and bundles lines the berth, cargo long forgotten by its owner. Maybe one of them has something of use?"
 
 [[room]]
 id = "rl_ferryman_shack"
