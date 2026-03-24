@@ -4268,12 +4268,13 @@ function buildExitRow(dir, v) {
   dirInp.setAttribute('list','dl-directions');
   dirInp.addEventListener('change', () => {
     const norm = dirInp.value.trim().toLowerCase();
-    if (norm !== dirInp.value) dirInp.value = norm;
-    if (norm !== dir && norm) {
-      _exitData[norm] = _exitData[dir];
-      delete _exitData[dir];
-      dir = norm;
-    }
+    if (!norm) { dirInp.value = dir; return; }          // blank → revert to previous
+    if (norm === dir) { dirInp.value = norm; return; }  // no change (just casing fix)
+    if (norm in _exitData) { dirInp.value = dir; alert(`Direction "${norm}" already exists.`); return; }
+    dirInp.value = norm;
+    _exitData[norm] = _exitData[dir];
+    delete _exitData[dir];
+    dir = norm;
   });
   top.appendChild(dirInp);
 
