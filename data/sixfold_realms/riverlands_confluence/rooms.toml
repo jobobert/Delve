@@ -3,489 +3,227 @@ id = "rl_ferrydock_square"
 name = "Ferrydock Square"
 description = "A broad wooden platform where several ferries once departed in steady rhythm."
 desc_long = "Lantern posts lean at odd angles, their glass cracked by subtle tremors in the air. Ropes creak, boats knock against the pilings, and a faded mural of six interlocking circles is painted on the stone embankment to the north."
-coord = [ 0, 0 ]
-flags = [ "town", "no_combat" ]
+coord = [0, 0]
+flags = ["town", "no_combat"]
 start = true
-spawns = [ "rl_sela_mapmaker", "rl_banker" ]
-items = [ "mural_inscription_fragment" ]
-
-
-[room.exits]
-north = "rl_mural_promenade"
-east = "rl_market_row"
-south = "rl_lower_piers"
-west = "rl_ferryman_shack"
-
-
-[[room.on_enter]]
-op = "if_not_flag"
-flag = "rl_intro_seen"
-else = [ ]
-
-
-[[room.on_enter.then]]
-op = "message"
-tag = "system"
-text = "The rivers feel wrong here—like they are listening."
-
-
-[[room.on_enter.then]]
-op = "set_flag"
-flag = "rl_intro_seen"
-
+spawns = ["rl_sela_mapmaker", "rl_banker"]
+items = ["mural_inscription_fragment"]
+exits = {north = "rl_mural_promenade", east = "rl_market_row", south = "rl_lower_piers", west = "rl_ferryman_shack"}
+on_enter = [
+  {op = "if_not_flag", flag = "rl_intro_seen", then = [
+    {op = "message", tag = "system", text = "The rivers feel wrong here\u2014like they are listening."},
+    {op = "set_flag", flag = "rl_intro_seen"}
+  ], else = []}
+]
 
 [[room]]
 id = "rl_mural_promenade"
 name = "Mural Promenade"
 description = "A stone walkway overlooking the confluence, dominated by a weathered mural."
-coord = [ 0, 1 ]
-flags = [ "no_combat" ]
-items = [ "mural_inscription_fragment" ]
-spawns = [ "rl_river_child" ]
-
-
-[room.exits]
-south = "rl_ferrydock_square"
-
-
-[room.exits.north]
-to = "rl_hidden_stair"
-desc = "a faint seam in the stone, where steps descend into darkness"
-
-
-[room.exits.north.show_if]
-op = "has_flag"
-flag = "rl_stair_noticed"
-
-
-[[room.on_enter]]
-op = "if_not_flag"
-flag = "rl_mural_examined"
-else = [ ]
-
-
-[[room.on_enter.then]]
-op = "message"
-tag = "system"
-text = "The mural shows five rivers feeding a central circle, cracked down the middle."
-
-
-[[room.on_enter.then]]
-op = "set_flag"
-flag = "rl_mural_examined"
-
-
-[[room.on_enter.then]]
-op = "advance_quest"
-quest_id = "rivers_remember"
-step = 2
-
-
-[[room.on_enter]]
-op = "if_not_flag"
-flag = "rl_stair_noticed"
-else = [ ]
-
-
-[[room.on_enter.then]]
-op = "skill_check"
-skill = "perception"
-dc = 12
-
-
-[[room.on_enter.then.on_pass]]
-op = "message"
-tag = "system"
-text = "Your eye catches a faint seam in the stone — steps, descending north beneath the mural."
-
-
-[[room.on_enter.then.on_pass]]
-op = "set_flag"
-flag = "rl_stair_noticed"
-
-
-[[room.on_enter.then.on_fail]]
-op = "message"
-tag = "system"
-text = "The stonework here seems unnaturally regular, but you can't make out anything specific."
-
-
-[[room.on_enter.then.on_fail]]
-op = "skill_grow"
-skill = "perception"
-amount = 2
-
+coord = [0, 1]
+flags = ["no_combat"]
+items = ["mural_inscription_fragment"]
+spawns = ["rl_river_child"]
+exits = {south = "rl_ferrydock_square", north = {to = "rl_hidden_stair", desc = "a faint seam in the stone, where steps descend into darkness", show_if = {op = "has_flag", flag = "rl_stair_noticed"}}}
+on_enter = [
+  {op = "if_not_flag", flag = "rl_mural_examined", then = [
+    {op = "message", tag = "system", text = "The mural shows five rivers feeding a central circle, cracked down the middle."},
+    {op = "set_flag", flag = "rl_mural_examined"},
+    {op = "advance_quest", quest_id = "rivers_remember", step = 2}
+  ], else = []},
+  {op = "if_not_flag", flag = "rl_stair_noticed", then = [
+    {op = "skill_check", skill = "perception", dc = 12, on_pass = [
+      {op = "message", tag = "system", text = "Your eye catches a faint seam in the stone \u2014 steps, descending north beneath the mural."},
+      {op = "set_flag", flag = "rl_stair_noticed"}
+    ], on_fail = [
+      {op = "message", tag = "system", text = "The stonework here seems unnaturally regular, but you can't make out anything specific."},
+      {op = "skill_grow", skill = "perception", amount = 2}
+    ]}
+  ], else = []}
+]
 
 [[room]]
 id = "rl_hidden_stair"
 name = "Hidden Stair"
 description = "Narrow stone steps spiral downward, slick with condensation."
-coord = [ 0, 2 ]
-flags = [ "hazard" ]
+coord = [0, 2]
+flags = ["hazard"]
 hazard_damage = 2
 hazard_message = "The air vibrates with a low hum that makes your teeth ache."
 hazard_exempt_flag = "rl_has_resonant_token"
-
-
-[room.exits]
-south = "rl_mural_promenade"
-down = "rl_echoing_chamber"
-
-
-[[room.on_enter]]
-op = "message"
-tag = "system"
-text = "Each step seems to ring with a different tone beneath your boots."
-
+exits = {south = "rl_mural_promenade", down = "rl_echoing_chamber"}
+on_enter = [
+  {op = "message", tag = "system", text = "Each step seems to ring with a different tone beneath your boots."}
+]
 
 [[room]]
 id = "rl_echoing_chamber"
 name = "Echoing Chamber"
 description = "A circular chamber carved into the bedrock, its walls etched with concentric rings."
-coord = [ 0, 3 ]
-items = [ "resonant_token" ]
-
-
-[room.exits]
-up = "rl_hidden_stair"
-
-
-[room.exits.west]
-to = "rl_echoing_antichamber"
-desc = "a low passage cut into the western wall, carved with concentric rings"
-
-
-[room.exits.west.show_if]
-op = "has_flag"
-flag = "rl_echo_lore_seen"
-
-
-[[room.on_enter]]
-op = "if_not_flag"
-flag = "rl_echo_lore_seen"
-else = [ ]
-
-
-[[room.on_enter.then]]
-op = "message"
-tag = "lore"
-text = "Faint words shimmer across the stone: 'Five conduits feed the heart. When one falters, all tremble.'"
-
-
-[[room.on_enter.then]]
-op = "set_flag"
-flag = "rl_echo_lore_seen"
-
-
-[[room.on_enter.then]]
-op = "advance_quest"
-quest_id = "rivers_remember"
-step = 3
-
-
-[[room.on_enter.then]]
-op = "prestige"
-amount = 1
-reason = "deciphered the inscription in the Echoing Chamber"
-
-
-[[room.on_enter.then]]
-op = "process_start"
-process_id = "nessa_realm_route"
-
-
-[[room.on_enter.then]]
-op = "message"
-tag = "system"
-text = "Word of this place will travel far. You sense that traders and wanderers will now find their way here."
-
+coord = [0, 3]
+items = ["resonant_token"]
+exits = {up = "rl_hidden_stair", west = {to = "rl_echoing_antichamber", desc = "a low passage cut into the western wall, carved with concentric rings", show_if = {op = "has_flag", flag = "rl_echo_lore_seen"}}}
+on_enter = [
+  {op = "if_not_flag", flag = "rl_echo_lore_seen", then = [
+    {op = "message", tag = "lore", text = "Faint words shimmer across the stone: 'Five conduits feed the heart. When one falters, all tremble.'"},
+    {op = "set_flag", flag = "rl_echo_lore_seen"},
+    {op = "advance_quest", quest_id = "rivers_remember", step = 3},
+    {op = "prestige", amount = 1, reason = "deciphered the inscription in the Echoing Chamber"},
+    {op = "process_start", process_id = "nessa_realm_route"},
+    {op = "message", tag = "system", text = "Word of this place will travel far. You sense that traders and wanderers will now find their way here."}
+  ], else = []}
+]
 
 [[room]]
 id = "rl_market_row"
 name = "Market Row"
 description = "A line of stalls and awnings, some abandoned, others stubbornly open for trade."
-coord = [ 1, 0 ]
-flags = [ "no_combat" ]
-spawns = [
-"rl_brann_stallkeeper",
-"rl_loran_boatwright",
-"rl_nessa_realm_walker"
-]
-
-
-[room.exits]
-west = "rl_ferrydock_square"
-east = "rl_inn_common"
-south = "rl_city_center"
-north = "rl_blacksmith_shop"
-
+coord = [1, 0]
+flags = ["no_combat"]
+spawns = ["rl_brann_stallkeeper", "rl_loran_boatwright", "rl_nessa_realm_walker"]
+exits = {west = "rl_ferrydock_square", east = "rl_inn_common", south = "rl_city_center", north = "rl_blacksmith_shop"}
 
 [[room]]
 id = "rl_inn_common"
 name = "Confluence Inn Common Room"
 description = "A warm, low-ceilinged hall where the smell of stew fights the damp river air."
-coord = [ 2, 0 ]
-flags = [ "healing", "no_combat" ]
+coord = [2, 0]
+flags = ["healing", "no_combat"]
 heal_rate = 8
-spawns = [ "rl_innkeeper_mara" ]
-
-
-[room.exits]
-west = "rl_market_row"
-up = "rl_inn_rooms"
-east = "rl_stable"
-
+spawns = ["rl_innkeeper_mara"]
+exits = {west = "rl_market_row", up = "rl_inn_rooms", east = "rl_stable"}
 
 [[room]]
 id = "rl_inn_rooms"
 name = "Inn Rooms"
 description = "A narrow hallway with simple doors on either side."
-coord = [ 2, 1 ]
-flags = [ "healing", "no_combat" ]
+coord = [2, 1]
+flags = ["healing", "no_combat"]
 heal_rate = 10
-
-
-[room.exits]
-down = "rl_inn_common"
-east = "rl_guest_room"
-
-
-[room.exits.west]
-to = "rl_guest_room_2"
-locked = true
-lock_tag = "guest_room_key"
-
+exits = {down = "rl_inn_common", east = "rl_guest_room", west = {to = "rl_guest_room_2", locked = true, lock_tag = "guest_room_key"}}
 
 [[room]]
 id = "rl_lower_piers"
 name = "Lower Piers"
 description = "Rotting planks dip dangerously close to the churning water below."
-coord = [ 0, -1 ]
-flags = [ "hazard" ]
+coord = [0, -1]
+flags = ["hazard"]
 hazard_damage = 3
 hazard_message = "Spray from the unstable currents stings your skin."
-items = [ "driftwood_crate" ]
 hazard_chance = 0.75
-
-
-[room.exits]
-north = "rl_ferrydock_square"
-south = "rl_unstable_current"
-
-
-[[room.on_enter]]
-op = "if_not_flag"
-flag = "rl_piers_warned"
-
-
-[[room.on_enter.then]]
-op = "message"
-tag = "system"
-text = "Someone has carved: 'Do not fall in. The river does not let go.'"
-
-
-[[room.on_enter.then]]
-op = "set_flag"
-flag = "rl_piers_warned"
-
-
-[[room.spawns]]
-id = "rl_mire_wolf"
-spawn_chance = 0.5
-
+items = ["driftwood_crate"]
+spawns = [{id = "rl_mire_wolf", spawn_chance = 0.5}]
+exits = {north = "rl_ferrydock_square", south = "rl_unstable_current"}
+on_enter = [
+  {op = "if_not_flag", flag = "rl_piers_warned", then = [
+    {op = "message", tag = "system", text = "Someone has carved: 'Do not fall in. The river does not let go.'"},
+    {op = "set_flag", flag = "rl_piers_warned"}
+  ]}
+]
 
 [[room]]
 id = "rl_unstable_current"
 name = "Unstable Current"
 description = "Here the river narrows, its surface folding in on itself in impossible patterns."
-coord = [ 0, -2 ]
-flags = [ "hazard" ]
+coord = [0, -2]
+flags = ["hazard"]
 hazard_damage = 4
 hazard_message = "The current tugs at your balance and your thoughts."
-
-
-[room.exits]
-north = "rl_lower_piers"
-
-
-[room.exits.south]
-to = "rl_hovel"
-show_if = "rl_current_read"
-
-
-[[room.on_enter]]
-op = "message"
-tag = "system"
-text = "You feel as though the river is trying to pull you somewhere that isn't here."
-
-
-[[room.on_enter]]
-op = "skill_check"
-skill = "navigation"
-dc = 10
-
-
-[[room.on_enter.on_pass]]
-op = "message"
-tag = "system"
-text = "You read the eddies and step where the planks are most stable."
-
-
-[[room.on_enter.on_pass]]
-op = "set_flag"
-flag = "rl_current_read"
-
-
-[[room.on_enter.on_fail]]
-op = "damage"
-amount = 5
-message = "You misjudge a step and slam into the railing."
-
-
-[[room.spawns]]
-id = "rl_echo_wraith"
-spawn_chance = 0.5
-
+spawns = [{id = "rl_echo_wraith", spawn_chance = 0.5}]
+exits = {north = "rl_lower_piers", south = {to = "rl_hovel", show_if = {op = "has_flag", flag = "rl_current_read"}}}
+on_enter = [
+  {op = "message", tag = "system", text = "You feel as though the river is trying to pull you somewhere that isn't here."},
+  {op = "skill_check", skill = "navigation", dc = 10, on_pass = [
+    {op = "message", tag = "system", text = "You read the eddies and step where the planks are most stable."},
+    {op = "set_flag", flag = "rl_current_read"}
+  ], on_fail = [
+    {op = "damage", amount = 5, message = "You misjudge a step and slam into the railing."}
+  ]}
+]
 
 [[room]]
 id = "rl_ferry_berth_peaks"
 name = "Peaks Ferry Berth"
 description = "A wooden landing platform where the Riverlands ferry moors before the climb into Dragon Peaks."
 desc_long = "In the berth is a ferry that looks as old as the world, but still surprisingly sound. Barrels and bundles line the berth, cargo long forgotten by its owner. Maybe one of them has something of use?"
-
-
-[room.exits]
-north = "dp_approach_1"
-south = "rl_ferryman_shack"
-
+exits = {north = "dp_approach_1", south = "rl_ferryman_shack"}
 
 [[room]]
 id = "rl_ferryman_shack"
-name = "Ferryman’s Shack"
+name = "Ferryman's Shack"
 description = "A weathered wooden shack filled with ropes, charts, and ferry logs. The ferryman often rests here between crossings."
-spawns = [ "rl_kale_ferryman" ]
 desc_long = "Light peeks through holes in water-logged walls, a significant smell of must and age lingers in the air. The shack is not exactly comfortable, but you see why the Ferryman spends his time here."
-
-
-[room.exits]
-east = "rl_ferrydock_square"
-
-
-[room.exits.north]
-to = "rl_ferry_berth_peaks"
-desc = "Beyond the shack you can see the ferry, berthed and waiting for its passengers."
-
-
-[room.exits.north.show_if]
-op = "has_flag"
-flag = "rl_has_resonant_token"
-
+spawns = ["rl_kale_ferryman"]
+exits = {east = "rl_ferrydock_square", north = {to = "rl_ferry_berth_peaks", desc = "Beyond the shack you can see the ferry, berthed and waiting for its passengers.", show_if = {op = "has_flag", flag = "rl_has_resonant_token"}}}
 
 [[room]]
 id = "rl_hovel"
 name = "Flooded Shack"
 description = "A sagging one-room shack lodged between the riverbank and a crumbling retaining wall."
-desc_long = "Watermarks stripe the walls at varying heights — a record of past floods, each one higher than the last. A rusted stove sits cold in the corner, and personal effects have been left behind as though the owner stepped out and never came back. A loose board in the floor has shifted."
-items = [ "rl_locket" ]
-
-
-[room.exits]
-north = "rl_unstable_current"
-
+desc_long = "Watermarks stripe the walls at varying heights \u2014 a record of past floods, each one higher than the last. A rusted stove sits cold in the corner, and personal effects have been left behind as though the owner stepped out and never came back. A loose board in the floor has shifted."
+items = ["rl_locket"]
+exits = {north = "rl_unstable_current"}
 
 [[room]]
 id = "rl_guest_room"
 name = "Guest Room"
 description = "A small, tidy room with a single cot, a washbasin, and a hook on the back of the door."
 desc_long = "A candle stub sits on a shelf above the bed. The mattress creaks but holds. Through the window, the river is just visible between the rooftops."
-
-
-[room.exits]
-west = "rl_inn_rooms"
-
+exits = {west = "rl_inn_rooms"}
 
 [[room]]
 id = "rl_guest_room_2"
 name = "Guest Room"
-description = "The room is kept with quiet care — a folded blanket, a small oil lamp, a worn coat hung on a peg."
+description = "The room is kept with quiet care \u2014 a folded blanket, a small oil lamp, a worn coat hung on a peg."
 desc_long = "An old man sits in the single chair by the window, looking out at the water. He turns slowly when you enter, eyes steady despite the tremor in his hands."
-spawns = [ "rl_old_man_aldric" ]
-
-
-[room.exits]
-east = "rl_inn_rooms"
-
+spawns = ["rl_old_man_aldric"]
+exits = {east = "rl_inn_rooms"}
 
 [[room]]
 id = "rl_stable"
 name = "Stable"
 description = "Low-ceilinged and smelling of hay and river mud, the stable houses a row of empty stalls."
-desc_long = "One stall holds a calm mule regarding you without interest. The straw near the back wall has been disturbed — raked over, but not carefully. Someone dug here and tried to cover it."
-items = [ "rl_stable_coinpurse" ]
-
-
-[room.exits]
-west = "rl_inn_common"
-
+desc_long = "One stall holds a calm mule regarding you without interest. The straw near the back wall has been disturbed \u2014 raked over, but not carefully. Someone dug here and tried to cover it."
+items = ["rl_stable_coinpurse"]
+exits = {west = "rl_inn_common"}
 
 [[room]]
 id = "rl_city_center"
 name = "City Center"
 description = "A broad flagstone plaza where the main road through the Confluence widens and opens up."
 desc_long = "A notice board stands at the center, its posts pocked by years of nailed announcements. Officials in river-blue coats move between the surrounding buildings, and the patrol captain has a field table set near the eastern passage."
-spawns = [ "rl_patrol_captain" ]
-flags = [ "no_combat" ]
-
-
-[room.exits]
-north = "rl_market_row"
-east = "rl_city_edge"
-
+flags = ["no_combat"]
+spawns = ["rl_patrol_captain"]
+exits = {north = "rl_market_row", east = "rl_city_edge"}
 
 [[room]]
 id = "rl_blacksmith_shop"
 name = "Blacksmith Shop"
 description = "Heat rolls from a forge set into the rear wall. The smell of hot metal and coal smoke hangs heavy."
 desc_long = "Finished blades and reinforced fittings line the racks in neat rows. The ring of hammer on anvil fills every pause in conversation, and the smith doesn't look up until she's ready."
-spawns = [ "rl_blacksmith_orin" ]
-
-
-[room.exits]
-south = "rl_market_row"
-
+spawns = ["rl_blacksmith_orin"]
+exits = {south = "rl_market_row"}
 
 [[room]]
 id = "rl_city_edge"
 name = "City's Edge"
 description = "The buildings thin and give way here at the edge of the settlement."
-desc_long = "Between the last house and the first tree, a worn sword is wedged point-down into a split log by the path — left by someone who moved on or couldn't. The clearing ahead smells of smoke and herbs."
-items = [ "rl_warden_blade" ]
-
-
-[room.exits]
-west = "rl_city_center"
-south = "rl_clearing"
-
+desc_long = "Between the last house and the first tree, a worn sword is wedged point-down into a split log by the path \u2014 left by someone who moved on or couldn't. The clearing ahead smells of smoke and herbs."
+items = ["rl_warden_blade"]
+exits = {west = "rl_city_center", south = "rl_clearing"}
 
 [[room]]
 id = "rl_clearing"
 name = "Clearing"
 description = "A circle of flat stones surrounds a low fire, with old roots gripping the earth at the edges."
 desc_long = "Braided bundles of herbs hang from low branches, still green against the grey-brown bark. A figure in grey-green robes crouches near the flames, tending a small iron pot with unhurried attention."
-spawns = [ "rl_druid_fenne" ]
-
-
-[room.exits]
-north = "rl_city_edge"
-
+spawns = ["rl_druid_fenne"]
+exits = {north = "rl_city_edge"}
 
 [[room]]
 id = "rl_echoing_antichamber"
 name = "Echoing Antechamber"
 description = "A narrow passage that broadens into a low alcove, its walls carved with the same concentric rings as the chamber beyond."
-desc_long = "The resonant hum is softer here, filtered through layers of stone. In a recess along the far wall, a cloth-wrapped bundle rests on a natural shelf — placed deliberately, long before you arrived."
-items = [ "rl_resonant_blade" ]
-
-
-[room.exits]
-east = "rl_echoing_chamber"
+desc_long = "The resonant hum is softer here, filtered through layers of stone. In a recess along the far wall, a cloth-wrapped bundle rests on a natural shelf \u2014 placed deliberately, long before you arrived."
+items = ["rl_resonant_blade"]
+exits = {east = "rl_echoing_chamber"}

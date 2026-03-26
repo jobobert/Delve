@@ -4294,6 +4294,13 @@ function buildExitRow(dir, v) {
   toInp.addEventListener('drop', e => { e.preventDefault(); toInp.classList.remove('ref-drop'); if(e.dataTransfer.getData('wct/type')==='room'){const id=e.dataTransfer.getData('wct/id');toInp.value=id;v.to=id;} });
   top.appendChild(toInp);
 
+  // Pick room button
+  const toPickBtn = document.createElement('button');
+  toPickBtn.className = 'ref-pick-btn'; toPickBtn.textContent = '[...]';
+  toPickBtn.title = 'Pick room from list';
+  toPickBtn.addEventListener('click', () => openPicker('room', id => { toInp.value = id; v.to = id; _updateMismatch(); }));
+  top.appendChild(toPickBtn);
+
   // Locked checkbox
   const lockCb = document.createElement('input'); lockCb.type='checkbox'; lockCb.checked = v.locked;
   lockCb.style.accentColor='var(--accent)';

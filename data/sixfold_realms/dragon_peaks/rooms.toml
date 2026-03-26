@@ -37,7 +37,6 @@ id = "dp_approach_4"
 name = "Miner's Waystation"
 description = "A small shelter with racks for tools and a brazier for warming hands. Someone has chalked route notes on the wall."
 exits = {west = "dp_approach_3", east = "dp_approach_5"}
-spawns = []
 items = ["rusty_pickaxe_node"]
 flags = ["no_combat"]
 
