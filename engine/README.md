@@ -113,7 +113,7 @@ ScriptRunner(ctx).run(ops)
   └─ _exec(op) for each op in list
        ├─ output ops:    say, message
        ├─ state ops:     set_flag, give_gold, give_xp, heal, damage, …
-       ├─ inventory ops: give_item, take_item, spawn_item
+       ├─ inventory ops: give_item, take_item, spawn_item, spawn_item_random
        ├─ world ops:     unlock_exit, lock_exit
        ├─ quest ops:     advance_quest, complete_quest
        ├─ skill ops:     skill_check (d20 + bonus vs DC), skill_grow, if_skill
@@ -295,7 +295,7 @@ door event arrays. Scripts abort cleanly when `fail` fires.
 Output:              say, message
 Player state:        set_flag, clear_flag, give_gold, take_gold, give_xp,
                      heal, set_hp, damage
-Inventory:           give_item, take_item, spawn_item, spawn_npc
+Inventory:           give_item, take_item, spawn_item, spawn_item_random, spawn_npc
 Quests:              advance_quest, complete_quest
 Styles:              teach_style
 World:               unlock_exit, lock_exit,
@@ -336,6 +336,11 @@ Combat-only passives (on_activate only):
 **`spawn_item`** — drop item into current room (useful in kill scripts):
 ```toml
 { op = "spawn_item", item_id = "dragon_fang" }
+```
+
+**`spawn_item_random`** — pick one item at random from a list and drop it in the current room:
+```toml
+{ op = "spawn_item_random", items = ["iron_sword", "worn_dagger", "rusty_axe"] }
 ```
 
 **`spawn_npc`** — spawn a live NPC instance into a room (defaults to current room):

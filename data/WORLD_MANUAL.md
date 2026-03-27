@@ -1005,6 +1005,16 @@ Displays "A [name] falls to the ground."
 
 ---
 
+**`spawn_item_random`** — Pick one item at random from a list and place it in the current room (or player inventory if room missing)
+
+```toml
+{ op = "spawn_item_random", items = ["iron_sword", "worn_dagger", "rusty_axe"] }
+```
+
+One item ID is chosen at random with equal probability each time the op fires. Displays "A [name] falls to the ground." Useful for loot tables on kill scripts, chest openings, or random world drops.
+
+---
+
 **`spawn_npc`** — Spawn a live copy of an NPC into a room
 
 ```toml
@@ -2938,6 +2948,7 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 | `give_item` | `item_id` | Copy item to inventory |
 | `take_item` | `item_id` | Remove item from inventory |
 | `spawn_item` | `item_id` | Place item in current room |
+| `spawn_item_random` | `items` (list) | Place a randomly chosen item in current room |
 | `spawn_npc` | `npc_id`, `room_id` | Spawn live NPC in room (default: current) |
 | `if_item` | `item_id`, `then`, `else` | Branch on inventory item |
 | `require_tag` | `tag`, `fail_message` | Abort if no item with tag |

@@ -77,14 +77,15 @@
       <div class="todo-panel-header" onclick="toggleTodoPanel()">
         <span class="todo-panel-title">Todos</span>
         <span id="todo-count-badge" class="todo-count-badge" style="display:none"></span>
-        <button class="hbtn small" style="font-size:12px;padding:2px 8px" onclick="event.stopPropagation();openAddGlobalTodo()">+ Add</button>
+        <button class="hbtn small" style="font-size:12px;padding:2px 8px" onclick="event.stopPropagation();openAddTodo()">+ Add</button>
         <span id="todo-panel-toggle">&#x25B2;</span>
       </div>
       <div id="todo-panel-body" class="todo-panel-body">
         <div class="todo-filter-bar">
-          <button class="todo-filter active" data-filter="open" onclick="setTodoFilter('open')">Open</button>
+          <button class="todo-filter active" data-filter="this" onclick="setTodoFilter('this')">This Object</button>
+          <button class="todo-filter" data-filter="open" onclick="setTodoFilter('open')">Open</button>
+          <button class="todo-filter" data-filter="done" onclick="setTodoFilter('done')">Closed</button>
           <button class="todo-filter" data-filter="all" onclick="setTodoFilter('all')">All</button>
-          <button class="todo-filter" data-filter="done" onclick="setTodoFilter('done')">Done</button>
         </div>
         <div id="todo-list"></div>
       </div>
@@ -102,6 +103,10 @@
     <div id="xref-resizer"></div>
     <div id="xref-tags">
       <div class="tag-palette-header">Tags <span id="tag-palette-count"></span></div>
+      <div class="tag-palette-search-row">
+        <input id="tag-palette-search" class="tag-palette-search" placeholder="Filter tags..." oninput="_filterTagPalette(this.value)">
+        <button class="tag-palette-clear" id="tag-palette-clear" onclick="_filterTagPalette('');document.getElementById('tag-palette-search').value=''" title="Clear filter">&#x2715;</button>
+      </div>
       <div id="tag-palette-chips"></div>
     </div>
   </aside>
@@ -512,6 +517,30 @@
 </datalist>
 <datalist id="dl-status-effects"></datalist>
 
+<!-- Add Todo Modal -->
+<div class="modal-backdrop hidden" id="add-todo-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title">Add Todo</span>
+      <button class="modal-close" onclick="closeModal('add-todo-modal')">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row" style="margin-bottom:12px">
+        <label>Text</label>
+        <input class="field-input" id="todo-text-inp" placeholder="Describe the todo..." style="flex:1">
+      </div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">Attach to object (optional)</div>
+      <input class="picker-search" id="todo-obj-search" placeholder="Search objects..." oninput="_buildTodoObjList(this.value)" style="margin-bottom:6px">
+      <div class="picker-list" id="todo-obj-list" style="max-height:220px"></div>
+      <div id="todo-add-error" style="color:var(--red);font-size:12px;margin-top:6px;display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('add-todo-modal')">Cancel</button>
+      <button class="hbtn primary" onclick="_submitAddTodo()">Add Todo</button>
+    </div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -864,6 +893,10 @@ function rebuildTagPalette() {
   if (!box) return;
   box.innerHTML = '';
   if (count) count.textContent = '(' + ALL_TAGS.length + ')';
+  const searchInp = document.getElementById('tag-palette-search');
+  if (searchInp) searchInp.value = '';
+  const clearBtn = document.getElementById('tag-palette-clear');
+  if (clearBtn) clearBtn.style.visibility = 'hidden';
 
   const makeChip = tag => {
     const chip = document.createElement('span');
@@ -907,6 +940,26 @@ function rebuildTagPalette() {
     hdr.textContent = cat || 'Uncategorized';
     box.appendChild(hdr);
     groups[cat].forEach(tag => box.appendChild(makeChip(tag)));
+  });
+}
+
+function _filterTagPalette(q) {
+  const lq = q.trim().toLowerCase();
+  const clearBtn = document.getElementById('tag-palette-clear');
+  if (clearBtn) clearBtn.style.visibility = lq ? 'visible' : 'hidden';
+  document.getElementById('tag-palette-chips').querySelectorAll('.tag-palette-chip, div').forEach(el => {
+    if (el.classList.contains('tag-palette-chip')) {
+      el.style.display = (!lq || el.dataset.tag.toLowerCase().includes(lq)) ? '' : 'none';
+    } else {
+      // category header — hide if all its chips are hidden
+      let next = el.nextElementSibling;
+      let anyVisible = false;
+      while (next && next.classList.contains('tag-palette-chip')) {
+        if (!lq || next.dataset.tag.toLowerCase().includes(lq)) { anyVisible = true; break; }
+        next = next.nextElementSibling;
+      }
+      el.style.display = anyVisible ? '' : 'none';
+    }
   });
 }
 
@@ -1268,6 +1321,16 @@ function selectInput(val, options, onChange) {
   return sel;
 }
 
+// Attach flag drag-drop to any input. onDrop(id) is called with the flag id.
+function _attachFlagDrop(inp, onDrop) {
+  inp.addEventListener('dragover',  e => { if (_dragging?.type === 'flag') { e.preventDefault(); inp.classList.add('ref-drop'); } });
+  inp.addEventListener('dragleave', () => inp.classList.remove('ref-drop'));
+  inp.addEventListener('drop', e => {
+    e.preventDefault(); inp.classList.remove('ref-drop');
+    if (_dragging?.type === 'flag') { inp.value = _dragging.id; onDrop(_dragging.id); }
+  });
+}
+
 function refInput(val, dlId, onChange, type) {
   const row = document.createElement('div');
   row.className = 'ref-row';
@@ -1529,7 +1592,6 @@ function spawnWidget(d) {
 function renderRoomEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('room', 'badge-room', d.name || d.id));
-  appendEditorTodos(main, 'room', SELECTED.zone_id, d.id);
 
   // ID with auto-lock
   appendIdRow(main, d, 'room', SELECTED.zone_id);
@@ -1567,8 +1629,23 @@ function renderRoomEditor(main) {
 
   const ROOM_FLAGS = ['town','no_combat','safe_combat','healing','reduced_stats','sleep','no_camp','hazard','no_large_companion'];
   main.appendChild(sectionTitle('Flags', 'Room behaviour flags. Multiple can be combined.\ntown: marks respawn point   no_combat: blocks attack command\nsafe_combat: zero damage   healing: restores HP per command\nhazard: damage per command   sleep: inn-quality rest here (full HP)\nno_camp: block all resting here (camping not allowed)\nreduced_stats: halved combat stats   no_large_companion: blocks companions'));
-  const flagsArr = Array.isArray(d.flags) ? [...d.flags] : (d.flags ? [d.flags] : []);
-  main.appendChild(chipsWidget(flagsArr, v => { d.flags = v; markDirty(); }, null, 'flag', ROOM_FLAGS));
+  const flagsArr = Array.isArray(d.flags) ? d.flags : (d.flags ? [d.flags] : (d.flags = []));
+  const flagGrid = document.createElement('div');
+  flagGrid.className = 'room-flags-grid';
+  ROOM_FLAGS.forEach(flag => {
+    const btn = document.createElement('button');
+    btn.className = 'room-flag-btn' + (flagsArr.includes(flag) ? ' active' : '');
+    btn.textContent = flag;
+    btn.addEventListener('click', () => {
+      const i = flagsArr.indexOf(flag);
+      if (i === -1) flagsArr.push(flag); else flagsArr.splice(i, 1);
+      d.flags = flagsArr;
+      btn.classList.toggle('active', flagsArr.includes(flag));
+      markDirty();
+    });
+    flagGrid.appendChild(btn);
+  });
+  main.appendChild(flagGrid);
 
   main.appendChild(sectionTitle('Spawns', 'NPCs placed in this room when the zone first loads.\nDrag NPCs from the list or click "+ add spawn".\ncount: how many instances; hostile: override NPC\'s default.'));
   main.appendChild(spawnWidget(d));
@@ -1582,7 +1659,10 @@ function renderRoomEditor(main) {
     null, 'HP lost per command tick when the "hazard" flag is set. Default: 2.'));
   main.appendChild(fieldRow('Hazard Message', textInput(d.hazard_message, v => d.hazard_message = v),
     null, 'Text shown on each hazard tick.\nDefault: "The environment bites at you."'));
-  main.appendChild(fieldRow('Hazard Exempt Flag', textInput(d.hazard_exempt_flag, v => d.hazard_exempt_flag = v),
+  const hefInp = textInput(d.hazard_exempt_flag, v => d.hazard_exempt_flag = v);
+  hefInp.setAttribute('list', 'dl-flags');
+  _attachFlagDrop(hefInp, id => { d.hazard_exempt_flag = id; markDirty(); });
+  main.appendChild(fieldRow('Hazard Exempt Flag', hefInp,
     null, 'Player flag that bypasses hazard damage.\nExample: "has_mining_gear"'));
   main.appendChild(fieldRow('Hazard Chance', numInput(d.hazard_chance, v => d.hazard_chance = v, 0, 1, 0.05),
     null, 'Probability (0–1) hazard fires each command tick. Default: 1.0 (always).'));
@@ -1607,7 +1687,6 @@ function renderRoomEditor(main) {
 function renderNpcEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('npc', 'badge-npc', d.name || d.id));
-  appendEditorTodos(main, 'npc', SELECTED.zone_id, d.id);
   appendIdRow(main, d, 'npc', SELECTED.zone_id);
   main.appendChild(fieldRow('Name', textInput(d.name, v => d.name = v),
     null, 'Display name shown in the room and combat log.\nCan be a list for random variation on spawn:\n  name = ["Grey Wolf", "Black Wolf"]'));
@@ -1730,7 +1809,8 @@ function renderItemCommands(main, d) {
       card.className = 'accept-card';
       const hdr = document.createElement('div'); hdr.className = 'accept-card-header';
       const verbLabel = cmd.verb ? `"${cmd.verb}"` : `Command ${i+1}`;
-      hdr.innerHTML = `<span>${verbLabel}</span>`;
+      const hdrSpan = document.createElement('span'); hdrSpan.textContent = verbLabel;
+      hdr.appendChild(hdrSpan);
       const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='Remove';
       rmBtn.addEventListener('click', () => {
         d.commands.splice(i, 1);
@@ -1741,7 +1821,7 @@ function renderItemCommands(main, d) {
       card.appendChild(hdr);
 
       card.appendChild(fieldRow('Verb',
-        textInput(cmd.verb || '', v => { cmd.verb = v.trim().toLowerCase(); rebuild(); markDirty(); }),
+        textInput(cmd.verb || '', v => { cmd.verb = v.trim().toLowerCase(); hdrSpan.textContent = cmd.verb ? `"${cmd.verb}"` : `Command ${i+1}`; markDirty(); }),
         null, 'The command word the player types (e.g. "open", "push", "read").'));
 
       const visRow = document.createElement('div'); visRow.className = 'field-row inline';
@@ -1858,7 +1938,6 @@ function renderShop(main, d) {
 function renderItemEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('item', 'badge-item', d.name || d.id));
-  appendEditorTodos(main, 'item', SELECTED.zone_id, d.id);
   appendIdRow(main, d, 'item', SELECTED.zone_id);
   main.appendChild(fieldRow('Name', textInput(d.name, v => d.name = v),
     null, 'Display name shown in inventory, rooms, and combat.'));
@@ -2451,7 +2530,6 @@ function renderQuestEditor(main) {
     _showQuestGraph(main, d);
   });
   main.querySelector('.editor-actions')?.appendChild(questGrfBtn);
-  appendEditorTodos(main, 'quest', SELECTED.zone_id, d._id || d.id);
   main.appendChild(fieldRow('Quest ID', (() => {
     const inp = document.createElement('input');
     inp.type='text'; inp.className='field-input id-field';
@@ -2609,7 +2687,6 @@ function _tagsInput(arr, onChange) {
 function renderStyleEditor(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('style', 'badge-style', d.name || d.id || ''));
-  appendEditorTodos(main, 'style', SELECTED.zone_id, d.id);
 
   // Identity
   main.appendChild(sectionTitle('Identity'));
@@ -2815,7 +2892,6 @@ function renderProcessEditor(main) {
   const d   = SELECTED.data;
   const zid = SELECTED.zone_id;
   main.appendChild(editorHeader('process', 'badge-proc', d.name || d.id || ''));
-  appendEditorTodos(main, 'process', SELECTED.zone_id, d.id);
 
   // Identity
   main.appendChild(sectionTitle('Identity'));
@@ -3301,7 +3377,6 @@ function renderDialogueEditor(main) {
     _showDlgGraph(main, d);
   });
   main.querySelector('.editor-actions')?.appendChild(dlgGrfBtn);
-  appendEditorTodos(main, 'dialogue', SELECTED.zone_id, d._npc_id);
   if (d._npc_id) {
     const npc = ALL_NPCS[d._npc_id];
     const dlgBackBtn = document.createElement('button');
@@ -3991,7 +4066,8 @@ const OP_SCHEMA = {
   damage:           [{key:'amount',     type:'num',     label:'amount'}, {key:'message', type:'text', label:'message'}, {key:'silent', type:'bool', label:'silent'}],
   give_item:        [{key:'item_id',    type:'item_ref', label:'item'}],
   take_item:        [{key:'item_id',    type:'item_ref', label:'item'}],
-  spawn_item:       [{key:'item_id',    type:'item_ref', label:'item'}],
+  spawn_item:       [{key:'item_id',    type:'item_ref',      label:'item'}],
+  spawn_item_random:[{key:'items',      type:'item_ref_list', label:'items'}],
   spawn_npc:        [{key:'npc_id',     type:'npc_ref',  label:'npc'}, {key:'room_id', type:'room_ref', label:'room', placeholder:'blank = current room'}],
   advance_quest:    [{key:'quest_id',   type:'quest_ref',label:'quest'}, {key:'step', type:'num', label:'step'}],
   complete_quest:   [{key:'quest_id',   type:'quest_ref',label:'quest'}],
@@ -4108,6 +4184,36 @@ function buildOpRow(op, i, ops, container) {
 
 function buildOpFieldInput(f, op, onChange) {
   const val = op[f.key];
+
+  // List of item refs (e.g. spawn_item_random)
+  if (f.type === 'item_ref_list') {
+    if (!Array.isArray(op[f.key])) op[f.key] = [];
+    const list = op[f.key];
+    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+    const rebuild = () => {
+      wrap.innerHTML = '';
+      list.forEach((id, idx) => {
+        const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:4px;align-items:center;';
+        const inp = document.createElement('input'); inp.type='text'; inp.className='op-input'; inp.style.flex='1';
+        inp.value = id; inp.setAttribute('list','dl-items');
+        inp.addEventListener('input', () => { const m = inp.value.match(/\(([^)]+)\)$/); list[idx] = m ? m[1] : inp.value; onChange(); });
+        const pickBtn = document.createElement('button'); pickBtn.className='ref-pick-btn'; pickBtn.textContent='[...]'; pickBtn.title='Pick item';
+        pickBtn.addEventListener('click', () => openPicker('item', picked => { inp.value = picked; list[idx] = picked; onChange(); }));
+        const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.style.cssText='font-size:11px;padding:1px 6px;';
+        rmBtn.textContent = '×';
+        rmBtn.addEventListener('click', () => { list.splice(idx, 1); rebuild(); onChange(); });
+        row.appendChild(inp); row.appendChild(pickBtn); row.appendChild(rmBtn);
+        wrap.appendChild(row);
+      });
+      const addBtn = document.createElement('button'); addBtn.className='hbtn'; addBtn.style.cssText='font-size:11px;padding:2px 8px;align-self:flex-start;';
+      addBtn.textContent = '+ Add item';
+      addBtn.addEventListener('click', () => { list.push(''); rebuild(); onChange(); });
+      wrap.appendChild(addBtn);
+    };
+    rebuild();
+    return wrap;
+  }
+
   if (f.type === 'bool') {
     const cb = document.createElement('input'); cb.type='checkbox'; cb.style.accentColor='var(--accent)';
     cb.checked = !!val;
@@ -4124,13 +4230,14 @@ function buildOpFieldInput(f, op, onChange) {
   const inp = document.createElement('input'); inp.type='text'; inp.className='op-input';
   inp.value = val || '';
   if (f.placeholder) inp.placeholder = f.placeholder;
-  const dlMap = {item_ref:'dl-items',npc_ref:'dl-npcs',room_ref:'dl-rooms',quest_ref:'dl-quests',skill_ref:'dl-skills',style_ref:'dl-styles',flag:'',tag:'',effect:'dl-status-effects'};
+  const dlMap = {item_ref:'dl-items',npc_ref:'dl-npcs',room_ref:'dl-rooms',quest_ref:'dl-quests',skill_ref:'dl-skills',style_ref:'dl-styles',flag:'dl-flags',tag:'',effect:'dl-status-effects'};
   if (dlMap[f.type]) inp.setAttribute('list', dlMap[f.type]);
   inp.addEventListener('input', () => {
     const m = inp.value.match(/\(([^)]+)\)$/);
     op[f.key] = m ? m[1] : inp.value;
     onChange();
   });
+  if (f.type === 'flag') _attachFlagDrop(inp, id => { op[f.key] = id; onChange(); });
   return inp;
 }
 
@@ -4316,28 +4423,17 @@ function buildExitRow(dir, v) {
   top.appendChild(rmBtn);
   card.appendChild(top);
 
-  // Mismatch warning
+  // Mismatch warning + Define reverse button
   const mismatchWarn = document.createElement('div');
   mismatchWarn.className = 'exits-mismatch-warn';
-  mismatchWarn.style.display = 'none';
+  mismatchWarn.style.cssText = 'display:none;flex-direction:row;align-items:center;gap:8px;';
+  const mismatchText = document.createElement('span');
+  const defRevBtn = document.createElement('button');
+  defRevBtn.className = 'hbtn'; defRevBtn.textContent = 'Define reverse';
+  defRevBtn.style.cssText = 'font-size:11px;padding:1px 8px;flex-shrink:0;';
+  mismatchWarn.appendChild(mismatchText);
+  mismatchWarn.appendChild(defRevBtn);
   card.appendChild(mismatchWarn);
-  const _updateMismatch = () => {
-    const curDir = dirInp.value;
-    const curTo  = v.to;
-    if (_currentRoomId && curDir && curTo && !_exitHasReverse(curDir, curTo, _currentRoomId)) {
-      const revDir = MAP_REVERSE_DIR[_canonDir(curDir)];
-      mismatchWarn.textContent = revDir
-        ? `No reverse: "${curTo}" is missing ${revDir} \u2192 "${_currentRoomId}"`
-        : 'No known reverse direction for this exit';
-      mismatchWarn.style.display = '';
-    } else {
-      mismatchWarn.style.display = 'none';
-    }
-  };
-  _updateMismatch();
-  dirInp.addEventListener('change', _updateMismatch);
-  toInp.addEventListener('change', _updateMismatch);
-  toInp.addEventListener('input', _updateMismatch);
 
   // Lock tag row (visible only when locked)
   const lockRow = document.createElement('div'); lockRow.className='exit-row-advanced';
@@ -4367,7 +4463,7 @@ function buildExitRow(dir, v) {
 
   const SIF_OPS = ['', 'has_flag', 'not_flag', 'has_item', 'min_level', 'min_skill'];
   const SIF_PLACEHOLDER = {has_flag:'flag', not_flag:'flag', has_item:'item_id', min_level:'level', min_skill:'skill'};
-  const SIF_LIST = {has_flag: null, not_flag: null, has_item: 'dl-items', min_level: null, min_skill: null};
+  const SIF_LIST = {has_flag: 'dl-flags', not_flag: 'dl-flags', has_item: 'dl-items', min_level: null, min_skill: null};
 
   const parsed = _parseShowIf(v.show_if);
 
@@ -4398,9 +4494,10 @@ function buildExitRow(dir, v) {
   updateSifInputs();
 
   const commitSif = () => _writeShowIf(v, opSel.value, val1Inp.value.trim(), val2Inp.value);
-  opSel.addEventListener('change', () => { updateSifInputs(); commitSif(); _updateMismatch(); });
-  val1Inp.addEventListener('input', () => { commitSif(); _updateMismatch(); });
+  opSel.addEventListener('change', () => { updateSifInputs(); commitSif(); });
+  val1Inp.addEventListener('input', commitSif);
   val2Inp.addEventListener('input', commitSif);
+  _attachFlagDrop(val1Inp, id => { commitSif(); });
 
   sifRow.appendChild(opSel); sifRow.appendChild(val1Inp); sifRow.appendChild(val2Inp);
   card.appendChild(sifRow);
@@ -4423,6 +4520,133 @@ function buildExitRow(dir, v) {
   scriptRow.appendChild(mkScriptBtn('on_enter', v.on_enter, 'Script run when player arrives via this exit.'));
   scriptRow.appendChild(mkScriptBtn('on_look',  v.on_look,  'Script run when player examines this exit.'));
   card.appendChild(scriptRow);
+
+  // ── Reverse exit definition ─────────────────────────────────────────
+  const revSection = document.createElement('div');
+  revSection.className = 'exit-reverse-section';
+  revSection.style.display = v._reverse ? '' : 'none';
+
+  const revHdr = document.createElement('div'); revHdr.className = 'exit-reverse-header';
+  const revTitleSpan = document.createElement('span'); revTitleSpan.className = 'exit-reverse-title';
+  const revRemBtn = document.createElement('button'); revRemBtn.className = 'hbtn danger';
+  revRemBtn.style.cssText = 'font-size:11px;padding:1px 7px;';
+  revRemBtn.textContent = '\u00d7 Remove';
+  revRemBtn.addEventListener('click', () => { v._reverse = null; revSection.style.display = 'none'; _updateMismatch(); });
+  revHdr.appendChild(revTitleSpan); revHdr.appendChild(revRemBtn);
+  revSection.appendChild(revHdr);
+
+  // Reverse desc
+  const revDescRow = document.createElement('div'); revDescRow.className = 'exit-row-advanced';
+  const revDescLbl = document.createElement('span'); revDescLbl.className = 'op-field-label'; revDescLbl.textContent = 'desc:';
+  const revDescInp = document.createElement('input'); revDescInp.type = 'text'; revDescInp.className = 'op-input'; revDescInp.style.flex = '1';
+  revDescInp.title = 'Description for the reverse exit.';
+  revDescInp.addEventListener('input', () => { if (v._reverse) v._reverse.desc = revDescInp.value; });
+  revDescRow.appendChild(revDescLbl); revDescRow.appendChild(revDescInp);
+  revSection.appendChild(revDescRow);
+
+  // Reverse locked + lock_tag
+  const revLockTopRow = document.createElement('div'); revLockTopRow.className = 'exit-row-advanced';
+  const revLockCb = document.createElement('input'); revLockCb.type = 'checkbox'; revLockCb.style.accentColor = 'var(--accent)';
+  const revLockLbl = document.createElement('label'); revLockLbl.className = 'checkbox-row';
+  revLockLbl.appendChild(revLockCb); revLockLbl.appendChild(document.createTextNode(' locked'));
+  revLockTopRow.appendChild(revLockLbl);
+  revSection.appendChild(revLockTopRow);
+  const revLockTagRow = document.createElement('div'); revLockTagRow.className = 'exit-row-advanced';
+  revLockTagRow.style.display = 'none';
+  const revLockTagLbl = document.createElement('span'); revLockTagLbl.className = 'op-field-label'; revLockTagLbl.textContent = 'lock_tag:';
+  const revLockTagInp = document.createElement('input'); revLockTagInp.type = 'text'; revLockTagInp.className = 'op-input'; revLockTagInp.style.flex = '1';
+  revLockTagInp.addEventListener('input', () => { if (v._reverse) v._reverse.lock_tag = revLockTagInp.value; });
+  revLockTagRow.appendChild(revLockTagLbl); revLockTagRow.appendChild(revLockTagInp);
+  revSection.appendChild(revLockTagRow);
+  revLockCb.addEventListener('change', () => {
+    if (v._reverse) v._reverse.locked = revLockCb.checked;
+    revLockTagRow.style.display = revLockCb.checked ? '' : 'none';
+  });
+
+  // Reverse show_if
+  const revSifRow = document.createElement('div'); revSifRow.className = 'exit-row-advanced';
+  const revSifLbl = document.createElement('span'); revSifLbl.className = 'op-field-label'; revSifLbl.textContent = 'show_if:';
+  const revOpSel = document.createElement('select'); revOpSel.className = 'op-input'; revOpSel.style.width = '100px';
+  SIF_OPS.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o || '(none)'; revOpSel.appendChild(opt); });
+  const revVal1Inp = document.createElement('input'); revVal1Inp.type = 'text'; revVal1Inp.className = 'op-input'; revVal1Inp.style.flex = '1';
+  const revVal2Inp = document.createElement('input'); revVal2Inp.type = 'number'; revVal2Inp.className = 'op-input'; revVal2Inp.style.width = '60px';
+  revVal2Inp.min = 0; revVal2Inp.step = 1; revVal2Inp.placeholder = 'value';
+  const updateRevSif = () => {
+    const op = revOpSel.value;
+    revVal1Inp.style.display = op ? '' : 'none';
+    revVal2Inp.style.display = op === 'min_skill' ? '' : 'none';
+    revVal1Inp.placeholder = SIF_PLACEHOLDER[op] || '';
+    revVal1Inp.type = op === 'min_level' ? 'number' : 'text';
+    if (op === 'min_level') revVal1Inp.min = 1; else revVal1Inp.removeAttribute('min');
+    const lid = SIF_LIST[op]; if (lid) revVal1Inp.setAttribute('list', lid); else revVal1Inp.removeAttribute('list');
+  };
+  const commitRevSif = () => { if (v._reverse) _writeShowIf(v._reverse, revOpSel.value, revVal1Inp.value.trim(), revVal2Inp.value); };
+  revOpSel.addEventListener('change', () => { updateRevSif(); commitRevSif(); });
+  revVal1Inp.addEventListener('input', commitRevSif);
+  revVal2Inp.addEventListener('input', commitRevSif);
+  _attachFlagDrop(revVal1Inp, () => commitRevSif());
+  revSifRow.appendChild(revSifLbl); revSifRow.appendChild(revOpSel); revSifRow.appendChild(revVal1Inp); revSifRow.appendChild(revVal2Inp);
+  revSection.appendChild(revSifRow);
+
+  // Reverse script buttons
+  const revScriptRow = document.createElement('div'); revScriptRow.className = 'exit-row-advanced'; revScriptRow.style.gap = '6px';
+  revSection.appendChild(revScriptRow);
+  card.appendChild(revSection);
+
+  // ── Helpers (defined after all DOM is built) ────────────────────────
+  const _populateRevSection = () => {
+    const rev = v._reverse;
+    if (!rev) return;
+    revDescInp.value        = rev.desc     || '';
+    revLockCb.checked       = !!rev.locked;
+    revLockTagRow.style.display = rev.locked ? '' : 'none';
+    revLockTagInp.value     = rev.lock_tag || '';
+    const rp = _parseShowIf(rev.show_if);
+    revOpSel.value = rp.op; revVal1Inp.value = rp.val1; revVal2Inp.value = rp.val2;
+    updateRevSif();
+    revScriptRow.innerHTML = '';
+    revScriptRow.appendChild(mkScriptBtn('on_exit',  rev.on_exit,  'Script run when player leaves through this reverse exit.'));
+    revScriptRow.appendChild(mkScriptBtn('on_enter', rev.on_enter, 'Script run when player arrives via this reverse exit.'));
+    revScriptRow.appendChild(mkScriptBtn('on_look',  rev.on_look,  'Script run when player examines this reverse exit.'));
+  };
+
+  const _updateRevTitle = () => {
+    const revDir = MAP_REVERSE_DIR[_canonDir(dirInp.value)] || '?';
+    revTitleSpan.textContent = `Reverse: ${v.to || '?'} [${revDir}] \u2192 ${_currentRoomId}`;
+  };
+
+  const _updateMismatch = () => {
+    const curDir = dirInp.value;
+    const curTo  = v.to;
+    if (_currentRoomId && curDir && curTo && !_exitHasReverse(curDir, curTo, _currentRoomId)) {
+      const revDir = MAP_REVERSE_DIR[_canonDir(curDir)];
+      mismatchText.textContent = revDir
+        ? `No reverse: "${curTo}" is missing ${revDir} \u2192 "${_currentRoomId}"`
+        : 'No known reverse direction for this exit';
+      mismatchWarn.style.display = 'flex';
+      defRevBtn.style.display = v._reverse ? 'none' : '';
+    } else {
+      mismatchWarn.style.display = 'none';
+    }
+    if (v._reverse) _updateRevTitle();
+  };
+
+  defRevBtn.addEventListener('click', () => {
+    if (!v._reverse) {
+      v._reverse = {desc:'', locked:false, lock_tag:'', show_if:'', on_exit:[], on_enter:[], on_look:[]};
+      _populateRevSection();
+      _updateRevTitle();
+    }
+    revSection.style.display = '';
+    defRevBtn.style.display = 'none';
+  });
+
+  _updateMismatch();
+  dirInp.addEventListener('change', _updateMismatch);
+  toInp.addEventListener('change', _updateMismatch);
+  toInp.addEventListener('input', _updateMismatch);
+
+  if (v._reverse) { _populateRevSection(); _updateRevTitle(); }
 
   return card;
 }
@@ -4459,16 +4683,17 @@ function saveExits() {
   }
   if (_exitCallback) _exitCallback(exits);
   closeModal('exit-modal');
-  _offerReverseExits(exits, _currentRoomId);
+  _applyDefinedReverses();
 }
 
-// Prompt to add missing reverse exits. Mutates WORLD_DATA in memory and stages
-// the writes — actual disk writes happen in saveSelected() after the primary save.
-function _offerReverseExits(exits, currentRoomId) {
-  if (!currentRoomId) return;
-  for (const [dir, v] of Object.entries(exits)) {
-    const targetId = typeof v === 'string' ? v : v.to;
-    if (!targetId || targetId === currentRoomId) continue;
+// Apply reverse exits that were explicitly defined in the exit editor.
+// Mutates WORLD_DATA in memory; disk writes deferred to saveSelected().
+function _applyDefinedReverses() {
+  if (!_currentRoomId) return;
+  for (const [dir, v] of Object.entries(_exitData)) {
+    if (!v._reverse || !v.to) continue;
+    const targetId = v.to;
+    if (targetId === _currentRoomId) continue;
     const revDir = MAP_REVERSE_DIR[_canonDir(dir)];
     if (!revDir) continue;
     const targetMeta = ALL_ROOMS[targetId];
@@ -4478,27 +4703,30 @@ function _offerReverseExits(exits, currentRoomId) {
     const room = (zone.rooms || []).find(r => r.id === targetId);
     if (!room) continue;
 
-    const {key: revKey, val: revExitVal} = _findRevExitEntry(room.exits || {}, revDir);
-    const revDest = typeof revExitVal === 'string' ? revExitVal : revExitVal?.to;
-    if (revDest === currentRoomId) continue; // already correct
-
+    const {key: revKey} = _findRevExitEntry(room.exits || {}, revDir);
     const writeKey = revKey || revDir;
-    const msg = revDest
-      ? `"${targetId}" has ${writeKey} \u2192 "${revDest}" (not back to "${currentRoomId}").\nReplace with ${writeKey} \u2192 "${currentRoomId}"?`
-      : `"${targetId}" has no ${writeKey} exit.\nAdd ${writeKey} \u2192 "${currentRoomId}"?`;
-    if (!confirm(msg)) continue;
+    const rev = v._reverse;
+    const hasExtras = rev.locked || rev.lock_tag || rev.desc || rev.show_if
+      || rev.on_exit?.length || rev.on_enter?.length || rev.on_look?.length;
 
-    // Mutate WORLD_DATA in memory only — disk write is deferred to saveSelected()
     if (!room.exits) room.exits = {};
-    if (typeof revExitVal === 'object' && revExitVal !== null) {
-      room.exits[writeKey] = {...revExitVal, to: currentRoomId};
+    if (hasExtras) {
+      const e = {to: _currentRoomId};
+      if (rev.locked)              e.locked   = true;
+      if (rev.lock_tag)            e.lock_tag = rev.lock_tag;
+      if (rev.desc)                e.desc     = rev.desc;
+      if (rev.show_if)             e.show_if  = rev.show_if;
+      if (rev.on_exit?.length)     e.on_exit  = rev.on_exit;
+      if (rev.on_enter?.length)    e.on_enter = rev.on_enter;
+      if (rev.on_look?.length)     e.on_look  = rev.on_look;
+      room.exits[writeKey] = e;
     } else {
-      room.exits[writeKey] = currentRoomId;
+      room.exits[writeKey] = _currentRoomId;
     }
     ALL_ROOMS[targetId] = {...room, zone_id: targetMeta.zone_id};
 
     const file = room._file;
-    if (file) _stagedReverseExits.push({file, room, targetId, writeKey, srcId: currentRoomId});
+    if (file) _stagedReverseExits.push({file, room, targetId, writeKey, srcId: _currentRoomId});
     else setStatus(`No _file on ${targetId} — reverse exit staged in memory only`, 'err');
   }
 }
@@ -4748,7 +4976,9 @@ async function createNew() {
 // ═══════════════════════════════════════════════════════════════════════
 
 function openModal(id) {
-  document.getElementById(id).classList.remove('hidden');
+  const el = document.getElementById(id);
+  el.parentNode.appendChild(el); // move to end of DOM so it stacks above any open sibling modal
+  el.classList.remove('hidden');
 }
 function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
@@ -5199,7 +5429,7 @@ function _renderErrorIssues(errs) {
 
 // ── Todo list ───────────────────────────────────────────────────────────
 
-let _todoFilter = 'open';
+let _todoFilter = 'this';
 let _todoPanelCollapsed = false;
 
 function _todosKey() { return 'wct_todos_' + WORLD_ID; }
@@ -5219,38 +5449,29 @@ function addTodo(text, type, zone_id, obj_id) {
   const todos = loadTodos();
   todos.push({ id: 'todo_' + Date.now(), text: text.trim(), done: false, type: type || null, zone_id: zone_id || null, obj_id: obj_id || null, created: Date.now() });
   saveTodos(todos);
-  _afterTodoChange(type, zone_id, obj_id);
+  _afterTodoChange();
 }
 
 function toggleTodo(id) {
   const todos = loadTodos();
   const t = todos.find(x => x.id === id);
-  if (t) { t.done = !t.done; saveTodos(todos); _afterTodoChange(t.type, t.zone_id, t.obj_id); }
+  if (t) { t.done = !t.done; saveTodos(todos); _afterTodoChange(); }
 }
 
 function deleteTodo(id) {
   const todos = loadTodos();
-  const t = todos.find(x => x.id === id);
   const arr = todos.filter(x => x.id !== id);
   saveTodos(arr);
-  if (t) _afterTodoChange(t.type, t.zone_id, t.obj_id);
+  _afterTodoChange();
 }
 
 function getTodosForObject(type, zone_id, obj_id) {
   return loadTodos().filter(t => t.type === type && t.zone_id === zone_id && t.obj_id === obj_id);
 }
 
-function _afterTodoChange(type, zone_id, obj_id) {
+function _afterTodoChange() {
   renderTodoPanel();
   _refreshTreeTodoIcons();
-  // Refresh inline editor section if the current object matches
-  if (SELECTED && type === SELECTED.type && zone_id === SELECTED.zone_id) {
-    const eid = SELECTED.data?.id || SELECTED.data?._id || SELECTED.data?._npc_id;
-    if (eid === obj_id) {
-      const sec = document.getElementById('editor-todos-section');
-      if (sec) renderEditorTodosInto(sec, type, zone_id, obj_id);
-    }
-  }
 }
 
 function _todoBadgeLtr(type) {
@@ -5272,13 +5493,23 @@ function renderTodoPanel() {
   if (btn) { btn.textContent = open.length ? `Todos (${open.length})` : 'Todos'; }
 
   // Show/hide panel
-  if (all.length === 0) { panel.classList.add('hidden'); return; }
+  if (all.length === 0 && !WORLD_ID) { panel.classList.add('hidden'); return; }
   panel.classList.remove('hidden');
 
   // Filter
   let show = all;
-  if (_todoFilter === 'open') show = open;
-  if (_todoFilter === 'done') show = all.filter(t => t.done);
+  if (_todoFilter === 'this') {
+    const selId = SELECTED?.data?.id || SELECTED?.data?._id || SELECTED?.data?._npc_id;
+    if (SELECTED && selId) {
+      show = open.filter(t => t.type === SELECTED.type && t.zone_id === SELECTED.zone_id && t.obj_id === selId);
+    } else {
+      show = [];
+    }
+  } else if (_todoFilter === 'open') {
+    show = open;
+  } else if (_todoFilter === 'done') {
+    show = all.filter(t => t.done);
+  }
 
   list.innerHTML = '';
   if (show.length === 0) {
@@ -5331,68 +5562,77 @@ function toggleTodoPanel() {
   else                     { panel.classList.remove('collapsed'); if (tog) tog.innerHTML = '&#x25B2;'; }
 }
 
-function openAddGlobalTodo() {
-  const text = prompt('New todo:');
-  if (text) addTodo(text, null, null, null);
+let _todoSelEntry = null; // {type, zone_id, obj_id} or null
+
+function openAddTodo() {
+  const defType  = SELECTED?.type    || null;
+  const defZone  = SELECTED?.zone_id || null;
+  const defObjId = (SELECTED?.data?.id || SELECTED?.data?._id || SELECTED?.data?._npc_id) || null;
+  _todoSelEntry  = (defType && defZone && defObjId) ? {type: defType, zone_id: defZone, obj_id: defObjId} : null;
+
+  document.getElementById('todo-text-inp').value = '';
+  document.getElementById('todo-obj-search').value = '';
+  document.getElementById('todo-add-error').style.display = 'none';
+  _buildTodoObjList('');
+  openModal('add-todo-modal');
+  setTimeout(() => document.getElementById('todo-text-inp').focus(), 50);
 }
 
-// ── Inline editor todos ──────────────────────────────────────────────
-
-function renderEditorTodosInto(container, type, zone_id, obj_id) {
-  container.innerHTML = '';
-
-  const hdr = document.createElement('div');
-  hdr.className = 'editor-todos-header';
-  const titleSp = document.createElement('span');
-  titleSp.textContent = 'Todos';
-  hdr.appendChild(titleSp);
-  container.appendChild(hdr);
-
-  const listDiv = document.createElement('div');
-  listDiv.className = 'editor-todos-list';
-
-  const todos = getTodosForObject(type, zone_id, obj_id);
-  for (const t of todos) {
-    const row = document.createElement('div');
-    row.className = 'editor-todo-row' + (t.done ? ' done' : '');
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.checked = t.done;
-    cb.addEventListener('change', () => toggleTodo(t.id));
-
-    const txt = document.createElement('span');
-    txt.className = 'editor-todo-text'; txt.textContent = t.text;
-
-    const del = document.createElement('button');
-    del.className = 'editor-todo-del'; del.textContent = '\u00d7'; del.title = 'Delete todo';
-    del.addEventListener('click', () => { if (confirm('Delete this todo?')) deleteTodo(t.id); });
-
-    row.appendChild(cb); row.appendChild(txt); row.appendChild(del);
-    listDiv.appendChild(row);
+function _todoAllEntries() {
+  const entries = [];
+  const BADGE = {room:'R', npc:'N', item:'I', quest:'Q', process:'P', style:'S'};
+  const KEY   = {room:'rooms', npc:'npcs', item:'items', quest:'quests', process:'processes', style:'styles'};
+  for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+    for (const [type, key] of Object.entries(KEY)) {
+      for (const obj of (zone[key] || [])) {
+        const id    = obj.id || obj._id || obj._npc_id || '';
+        const name  = obj.name || obj.title || id;
+        entries.push({type, zone_id: zid, obj_id: id, name, badge: BADGE[type]});
+      }
+    }
   }
-  container.appendChild(listDiv);
-
-  // Add row
-  const addRow = document.createElement('div');
-  addRow.className = 'editor-todo-add';
-  const inp = document.createElement('input');
-  inp.placeholder = 'Add a todo...';
-  const addBtn = document.createElement('button');
-  addBtn.className = 'hbtn small'; addBtn.textContent = '+ Add';
-  addBtn.style.cssText = 'font-size:12px;padding:2px 10px';
-  const doAdd = () => { if (inp.value.trim()) { addTodo(inp.value, type, zone_id, obj_id); inp.value = ''; } };
-  addBtn.addEventListener('click', doAdd);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
-  addRow.appendChild(inp); addRow.appendChild(addBtn);
-  container.appendChild(addRow);
+  return entries;
 }
 
-function appendEditorTodos(main, type, zone_id, obj_id) {
-  const wrap = document.createElement('div');
-  wrap.className = 'editor-todos';
-  wrap.id = 'editor-todos-section';
-  renderEditorTodosInto(wrap, type, zone_id, obj_id);
-  main.appendChild(wrap);
+function _buildTodoObjList(q) {
+  const list = document.getElementById('todo-obj-list');
+  list.innerHTML = '';
+  const lq = q.toLowerCase();
+
+  // "None" row always at top
+  const noneRow = document.createElement('div');
+  noneRow.className = 'picker-item' + (_todoSelEntry === null ? ' picker-item-selected' : '');
+  noneRow.innerHTML = '<span style="color:var(--text-dim);font-style:italic">(no object)</span>';
+  noneRow.addEventListener('click', () => { _todoSelEntry = null; _buildTodoObjList(document.getElementById('todo-obj-search').value); });
+  list.appendChild(noneRow);
+
+  const entries = _todoAllEntries().filter(e =>
+    !lq || e.name.toLowerCase().includes(lq) || e.obj_id.toLowerCase().includes(lq) || e.zone_id.toLowerCase().includes(lq)
+  );
+  for (const e of entries) {
+    const isSel = _todoSelEntry && _todoSelEntry.type === e.type && _todoSelEntry.zone_id === e.zone_id && _todoSelEntry.obj_id === e.obj_id;
+    const row = document.createElement('div');
+    row.className = 'picker-item' + (isSel ? ' picker-item-selected' : '');
+    row.innerHTML = `<span class="badge badge-${e.type}">${e.badge}</span> ${escHtml(e.name)} <span class="picker-id">${escHtml(e.zone_id)} / ${escHtml(e.obj_id)}</span>`;
+    row.addEventListener('click', () => {
+      _todoSelEntry = {type: e.type, zone_id: e.zone_id, obj_id: e.obj_id};
+      _buildTodoObjList(document.getElementById('todo-obj-search').value);
+    });
+    list.appendChild(row);
+  }
+
+  // Scroll selected item into view
+  const sel = list.querySelector('.picker-item-selected');
+  if (sel) sel.scrollIntoView({block: 'nearest'});
+}
+
+function _submitAddTodo() {
+  const text   = document.getElementById('todo-text-inp').value.trim();
+  const errDiv = document.getElementById('todo-add-error');
+  if (!text) { errDiv.textContent = 'Please enter some text.'; errDiv.style.display = ''; return; }
+  errDiv.style.display = 'none';
+  addTodo(text, _todoSelEntry?.type || null, _todoSelEntry?.zone_id || null, _todoSelEntry?.obj_id || null);
+  closeModal('add-todo-modal');
 }
 
 // ── Tree todo icons ──────────────────────────────────────────────────

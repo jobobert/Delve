@@ -41,6 +41,7 @@ Inventory:
   { op = "give_item",         item_id = "..." }     — deepcopy template → player
   { op = "take_item",         item_id = "..." }     — remove first match; un-equips
   { op = "spawn_item",        item_id = "..." }     — place item in current room
+  { op = "spawn_item_random", items = ["id1", "id2"] } — place a randomly chosen item in current room
   { op = "spawn_npc",         npc_id = "...", room_id = "current" }  — spawn NPC in room
 
 Quests:
@@ -133,6 +134,7 @@ Notes:
 
 from __future__ import annotations
 import copy
+import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -339,6 +341,20 @@ class ScriptRunner:
                     emit(Tag.ITEM, f"  A {item.get('name', item_id)} falls to the ground.")
                 else:
                     p.inventory.append(item)
+
+        elif name == "spawn_item_random":
+            # Pick one item at random from a list, then spawn it in the current room.
+            items = op.get("items", [])
+            if items:
+                item_id = random.choice(items)
+                item    = w.spawn_item(item_id) if w else None
+                if item:
+                    room = w.get_room(p.room_id)
+                    if room is not None and isinstance(room.get("items"), list):
+                        room["items"].append(item)
+                        emit(Tag.ITEM, f"  A {item.get('name', item_id)} falls to the ground.")
+                    else:
+                        p.inventory.append(item)
 
         elif name == "spawn_npc":
             # { op = "spawn_npc", npc_id = "...", room_id = "current" }

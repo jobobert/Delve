@@ -86,7 +86,7 @@ name = "Alloy Market"
 description = "Stalls selling resonant alloys, heat crystals, and forged tools. Vendors call over each other to be heard above the wind."
 exits = {west = "dp_highspire_1", east = "dp_highspire_4"}
 spawns = ["vendor_alloys"]
-flags = ["town", "no_combat"]
+flags = ["no_combat"]
 
 [[room]]
 id = "dp_highspire_4"

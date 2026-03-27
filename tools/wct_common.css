@@ -99,6 +99,17 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
   letter-spacing: .06em; margin-bottom: 5px;
 }
 .tag-palette-header span { color: var(--text-dim); font-size: 12px; }
+.tag-palette-search-row { display: flex; gap: 4px; align-items: center; margin-bottom: 5px; }
+.tag-palette-search {
+  flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text); font-family: inherit; font-size: 12px; padding: 3px 6px;
+}
+.tag-palette-search:focus { outline: none; border-color: var(--accent); }
+.tag-palette-clear {
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 13px; padding: 0 3px; visibility: hidden;
+}
+.tag-palette-clear:hover { color: var(--text); }
 #tag-palette-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .tag-palette-chip {
   background: var(--panel); border: 1px solid var(--border);
@@ -120,6 +131,17 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
 #xref.collapsed #xref-resizer { display: none; }
 #xref.collapsed #xref-tags    { display: none; }
 /* spawn widget */
+.room-flags-grid { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 0; }
+.room-flag-btn {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text-dim); font-size: 12px; padding: 3px 10px; cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.room-flag-btn:hover { border-color: var(--accent); color: var(--text); }
+.room-flag-btn.active {
+  background: rgba(242,158,0,0.18); border-color: var(--accent);
+  color: var(--accent); font-weight: 600;
+}
 .spawn-list { display: flex; flex-direction: column; gap: 6px; }
 .spawn-card {
   display: flex; align-items: center; gap: 8px;
@@ -415,6 +437,12 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
 }
 .exit-row-top { display: flex; align-items: center; gap: 8px; }
 .exit-row-advanced { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.exit-reverse-section {
+  border-top: 1px solid rgba(242,158,0,0.3); margin-top: 4px; padding-top: 6px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.exit-reverse-header { display: flex; align-items: center; gap: 8px; }
+.exit-reverse-title { font-size: 12px; color: #F29E00; font-weight: bold; flex: 1; }
 
 /* ── Ref picker ──────────────────────────────────────────────────── */
 .picker-search {
@@ -429,6 +457,8 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
   display: flex; align-items: center; gap: 8px;
 }
 .picker-item:hover { background: var(--panel); }
+.picker-item-selected { background: rgba(242,158,0,0.15); }
+.picker-item-selected:hover { background: rgba(242,158,0,0.22); }
 .picker-id { font-size: 13px; color: var(--text-dim); }
 
 /* ── Validate modal ─────────────────────────────────────────────── */
@@ -699,29 +729,6 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
   font-size: 16px; line-height: 1; padding: 0 2px; flex-shrink: 0;
 }
 .todo-del-btn:hover { color: #ef5350; }
-/* Inline editor todos section */
-.editor-todos {
-  margin: 12px 16px 20px; padding: 10px 14px;
-  border: 1px solid rgba(242,158,0,0.35); border-radius: 6px;
-  background: rgba(242,158,0,0.04);
-}
-.editor-todos-header {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
-  font-size: 13px; font-weight: bold; color: #F29E00;
-}
-.editor-todos-header span { flex: 1; }
-.editor-todos-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-.editor-todo-row {
-  display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text);
-}
-.editor-todo-row input[type=checkbox] { accent-color: #F29E00; cursor: pointer; }
-.editor-todo-row.done .editor-todo-text { text-decoration: line-through; opacity: 0.45; }
-.editor-todo-text { flex: 1; word-break: break-word; }
-.editor-todo-del { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 0 2px; }
-.editor-todo-del:hover { color: #ef5350; }
-.editor-todo-add { display: flex; gap: 6px; margin-top: 4px; }
-.editor-todo-add input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 13px; padding: 4px 8px; }
-.editor-todo-add input:focus { outline: none; border-color: #F29E00; }
 /* Tree icon for todos */
 .list-icon-todo { color: #F29E00; font-size: 0.65em; vertical-align: middle; }
 
