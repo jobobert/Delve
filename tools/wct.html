@@ -49,6 +49,9 @@
       <button class="type-nav-btn" data-type="process" onclick="setActiveType('process')">
         <span class="badge badge-proc">P</span><span class="type-nav-label">Processes</span>
       </button>
+      <button class="type-nav-btn" data-type="crafting" onclick="setActiveType('crafting')">
+        <span class="badge badge-craft">C</span><span class="type-nav-label">Commissions</span>
+      </button>
     </div>
     <div id="tree-resizer"></div>
     <div id="tree-detail">
@@ -571,8 +574,8 @@ const NPC_TAGS = [
 ];
 
 // Badge letter and CSS class for each entity type — used by the left-pane list, editor header, and tag-usage panel.
-const BADGE_LTR = {room:'R',npc:'N',item:'I',quest:'Q',dialogue:'D',style:'S',process:'P',zone:'Z'};
-const BADGE_CLS = {room:'badge-room',npc:'badge-npc',item:'badge-item',quest:'badge-quest',dialogue:'badge-dlg',style:'badge-style',process:'badge-proc'};
+const BADGE_LTR = {room:'R',npc:'N',item:'I',quest:'Q',dialogue:'D',style:'S',process:'P',zone:'Z',crafting:'C'};
+const BADGE_CLS = {room:'badge-room',npc:'badge-npc',item:'badge-item',quest:'badge-quest',dialogue:'badge-dlg',style:'badge-style',process:'badge-proc',crafting:'badge-craft'};
 
 let SELECTED     = null;  // {type, zone_id, data}  — mutable working copy
 let DIRTY        = false;
@@ -662,7 +665,7 @@ function reloadWorld() {
 function _restoreSelection({type, zone_id, id}) {
   const zone = WORLD_DATA?.zones?.[zone_id];
   if (!zone) return;
-  const key = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type + 's';
+  const key = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type === 'crafting' ? 'crafting' : type + 's';
   const arr = zone[key] || [];
   const obj = arr.find(o => (o.id || o._id || o._npc_id) === id);
   if (obj) selectObject(type, zone_id, obj);
@@ -740,8 +743,8 @@ function renderTypeList(type) {
   list.innerHTML = '';
   if (!WORLD_DATA) return;
 
-  const key      = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type === 'process' ? 'processes' : type + 's';
-  const nameKey  = type === 'quest' ? 'title' : type === 'dialogue' ? '_npc_id' : 'name';
+  const key      = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type === 'process' ? 'processes' : type === 'crafting' ? 'crafting' : type + 's';
+  const nameKey  = type === 'quest' ? 'title' : type === 'dialogue' ? '_npc_id' : type === 'crafting' ? '_npc_id' : 'name';
   const badgeCls = BADGE_CLS[type];
   const badgeLtr = BADGE_LTR[type];
 
@@ -1183,7 +1186,8 @@ function renderEditor() {
   else if (type === 'dialogue') renderDialogueEditor(main);
   else if (type === 'style')   renderStyleEditor(main);
   else if (type === 'zone')    renderZoneEditor(main);
-  else if (type === 'process') renderProcessEditor(main);
+  else if (type === 'process')  renderProcessEditor(main);
+  else if (type === 'crafting') renderCraftingEditor(main);
   else    main.innerHTML = '<div class="empty-state"><h2>Unknown type</h2></div>';
 }
 
@@ -1231,6 +1235,7 @@ async function deleteSelected() {
     if (type === 'process')  zone.processes = (zone.processes || []).filter(r => r.id        !== eid);
     if (type === 'quest')    zone.quests    = (zone.quests    || []).filter(r => (r._id || r.id) !== eid);
     if (type === 'dialogue') zone.dialogues = (zone.dialogues || []).filter(r => r._npc_id   !== eid);
+    if (type === 'crafting') zone.crafting  = (zone.crafting  || []).filter(r => r._npc_id   !== eid);
   }
   if (type === 'room')  delete ALL_ROOMS[eid];
   if (type === 'npc')   delete ALL_NPCS[eid];
@@ -1793,6 +1798,53 @@ function renderNpcEditor(main) {
   });
   dlgRow.appendChild(dlgStatus); dlgRow.appendChild(dlgBtn);
   main.appendChild(dlgRow);
+
+  // ── Crafting commissions section ─────────────────────────────────────
+  main.appendChild(sectionTitle('Crafting Commissions',
+    'Link a crafting commission file to this NPC.\nFile is stored at crafting/<npc_id>.toml in the same zone.\nThe engine detects crafter NPCs by the existence of this file.'));
+
+  const _craftNpcId = d.id || '';
+  const _existingCraft = (() => {
+    for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+      const cf = (zone.crafting || []).find(cf => cf._npc_id === _craftNpcId);
+      if (cf) return {zone_id: zid, data: cf};
+    }
+    return null;
+  })();
+  const craftRow = document.createElement('div');
+  craftRow.style.cssText = 'display:flex;gap:8px;align-items:center;margin-top:6px;';
+  const craftStatus = document.createElement('span');
+  craftStatus.style.cssText = 'font-size:12px;color:var(--text-dim);flex:1';
+  craftStatus.textContent = _existingCraft
+    ? `${(_existingCraft.data.commission || []).length} commission(s) defined`
+    : 'No crafting file';
+  const craftBtn = document.createElement('button');
+  craftBtn.className = _existingCraft ? 'hbtn' : 'hbtn primary';
+  craftBtn.textContent = _existingCraft ? 'Open Commissions' : 'Create Crafting File';
+  craftBtn.addEventListener('click', async () => {
+    if (_existingCraft) {
+      selectObject('crafting', _existingCraft.zone_id, _existingCraft.data);
+    } else {
+      if (!_craftNpcId) { setStatus('Save the NPC first to get an ID', 'err'); return; }
+      const r = await fetch('/api/create_crafting', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({world_id: WORLD_ID, zone_id: SELECTED.zone_id, npc_id: _craftNpcId})
+      });
+      const j = await r.json();
+      if (j.ok) {
+        setStatus('Crafting file created', 'ok');
+        const _saved = SELECTED ? {type: SELECTED.type, zone_id: SELECTED.zone_id, id: SELECTED.data.id || ''} : null;
+        await reloadWorld();
+        if (_saved) _restoreSelection(_saved);
+        for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+          const cf = (zone.crafting || []).find(cf => cf._npc_id === _craftNpcId);
+          if (cf) { selectObject('crafting', zid, cf); break; }
+        }
+      } else { setStatus('Error: ' + j.error, 'err'); }
+    }
+  });
+  craftRow.appendChild(craftStatus); craftRow.appendChild(craftBtn);
+  main.appendChild(craftRow);
 
   main.appendChild(sectionTitle('Notes'));
   main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => d.admin_comment = v),
@@ -3937,6 +3989,20 @@ async function saveSelected() {
     return;
   }
 
+  if (type === 'crafting') {
+    const clean = serialiseCrafting(data);
+    const res = await fetch('/api/write_file', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, data: clean }) });
+    const j = await res.json();
+    if (j.ok) {
+      DIRTY = false; _setDirtyUI(false); setStatus('Saved', 'ok');
+      const _savedKey = { type, zone_id, id: data._npc_id || '' };
+      await reloadWorld();
+      _restoreSelection(_savedKey);
+      _saveUiState();
+    } else setStatus('Error: ' + j.error, 'err');
+    return;
+  }
+
   // For rooms/npcs/items: write_field per changed record isn't reliable for complex data;
   // load full file, update the record, write it back
   const res = await fetch('/api/write_file', {
@@ -4026,6 +4092,261 @@ function serialiseDlg(data) {
     return rr;
   });
   return out;
+}
+
+// ── Crafting / Commission editor ──────────────────────────────────────
+function renderCraftingEditor(main) {
+  const d = SELECTED.data;
+  main.appendChild(editorHeader('crafting', 'badge-craft', d._npc_id || ''));
+
+  // "← NPC" back button
+  if (d._npc_id) {
+    const npc = ALL_NPCS[d._npc_id];
+    const backBtn = document.createElement('button');
+    backBtn.className = 'hbtn';
+    backBtn.textContent = '\u2190 NPC';
+    backBtn.title = 'Back to NPC: ' + (npc?.name || d._npc_id);
+    backBtn.addEventListener('click', () => {
+      if (npc) navigateTo('npc', npc.zone_id, d._npc_id);
+    });
+    main.querySelector('.editor-actions')?.appendChild(backBtn);
+  }
+
+  // Normalise: ensure commission array
+  if (!Array.isArray(d.commission)) d.commission = [];
+
+  // Toolbar
+  const toolbar = document.createElement('div'); toolbar.className = 'dlg-toolbar';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'hbtn primary'; addBtn.textContent = '+ Add Commission';
+  addBtn.addEventListener('click', () => {
+    d.commission.push({
+      id: '', npc_id: d._npc_id || '', label: '', desc: '',
+      slot: '', weapon_tags: [], armor_tags: [],
+      materials: [], turns_required: 30, gold_cost: 0,
+      xp_reward: 0, weight: 0, on_complete: [], qualities: [],
+    });
+    rebuild(); markDirty();
+  });
+  toolbar.appendChild(addBtn);
+  const fileLabel = document.createElement('span'); fileLabel.className = 'dlg-file';
+  fileLabel.textContent = d._file || '';
+  toolbar.appendChild(fileLabel);
+  main.appendChild(toolbar);
+
+  const container = document.createElement('div');
+  main.appendChild(container);
+
+  function rebuild() {
+    container.innerHTML = '';
+    d.commission.forEach((comm, i) => container.appendChild(buildCommissionCard(comm, i, d, rebuild)));
+  }
+  rebuild();
+}
+
+function buildCommissionCard(comm, idx, data, rebuild) {
+  const card = document.createElement('div');
+  card.className = 'dlg-node-card';
+
+  // ── Card header ──────────────────────────────────────────────────────
+  const hdr = document.createElement('div'); hdr.className = 'dlg-node-header';
+  const titleSpan = document.createElement('span');
+  titleSpan.style.cssText = 'font-weight:600;font-size:13px;color:var(--text-dim);flex:1';
+  titleSpan.textContent = comm.id ? `Commission: ${comm.id}` : 'New Commission';
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'hbtn danger'; removeBtn.textContent = 'Remove';
+  removeBtn.style.marginLeft = 'auto';
+  removeBtn.addEventListener('click', () => {
+    data.commission.splice(idx, 1); rebuild(); markDirty();
+  });
+  hdr.appendChild(titleSpan); hdr.appendChild(removeBtn);
+  card.appendChild(hdr);
+
+  const body = document.createElement('div'); body.className = 'dlg-node-body';
+  card.appendChild(body);
+
+  // ── Basic fields ─────────────────────────────────────────────────────
+  const idInp = textInput(comm.id, v => {
+    comm.id = v; titleSpan.textContent = v ? `Commission: ${v}` : 'New Commission'; markDirty();
+  }, 'e.g. war_sword');
+  idInp.style.fontFamily = 'monospace';
+  body.appendChild(fieldRow('ID', idInp, null, 'Unique commission ID. Must be unique across all worlds.'));
+
+  const npcIdInp = textInput(comm.npc_id || data._npc_id || '', v => { comm.npc_id = v; markDirty(); });
+  npcIdInp.style.fontFamily = 'monospace';
+  body.appendChild(fieldRow('NPC ID', npcIdInp, null, 'ID of the crafter NPC. Auto-filled from file name.'));
+
+  body.appendChild(fieldRow('Label', textInput(comm.label, v => { comm.label = v; markDirty(); }, 'e.g. War Sword'),
+    null, 'Base item name (quality prefix is prepended at output time).'));
+  body.appendChild(fieldRow('Desc', textareaInput(comm.desc, v => { comm.desc = v; markDirty(); }, 'Short description shown in commission menu.'),
+    null, 'One-line description shown when the player browses commissions.'));
+
+  // ── Numeric / slot row ────────────────────────────────────────────────
+  body.appendChild(sectionTitle('Properties'));
+  const slots = [['','-- none --'], ...(WORLD_CONFIG?.equipment_slots || []).map(s => [s, s])];
+  const propRow = document.createElement('div'); propRow.className = 'field-row inline';
+  function propPair(lbl, key, isNum, tip, opts) {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;min-width:72px';
+    const l = document.createElement('label'); l.textContent = lbl;
+    if (tip) { const ic = document.createElement('i'); ic.className='help-icon'; ic.textContent='i'; ic.dataset.tip=tip; l.appendChild(ic); }
+    if (opts) {
+      wrap.appendChild(l); wrap.appendChild(selectInput(comm[key] || '', opts, v => { comm[key] = v; markDirty(); }));
+    } else {
+      wrap.appendChild(l); wrap.appendChild(numInput(comm[key], v => { comm[key] = v; markDirty(); }));
+    }
+    return wrap;
+  }
+  propRow.appendChild(propPair('Slot', 'slot', false, 'Equipment slot. Leave blank for non-equippable (use give_item in on_complete instead).', slots));
+  propRow.appendChild(propPair('Weight', 'weight', true, 'Item weight of the finished item.'));
+  propRow.appendChild(propPair('Turns', 'turns_required', true, 'Moves required before commission is ready.'));
+  propRow.appendChild(propPair('Gold Cost', 'gold_cost', true, 'Upfront gold deposit deducted when commission is placed.'));
+  propRow.appendChild(propPair('XP', 'xp_reward', true, 'XP awarded to the player on collection.'));
+  body.appendChild(propRow);
+
+  // ── Tags ─────────────────────────────────────────────────────────────
+  body.appendChild(sectionTitle('Tags', 'weapon_tags and armor_tags added to the final item.\nOnly one set is typically used depending on slot type.'));
+  if (!Array.isArray(comm.weapon_tags)) comm.weapon_tags = [];
+  if (!Array.isArray(comm.armor_tags))  comm.armor_tags  = [];
+  body.appendChild(fieldRow('Weapon Tags', chipsWidget(comm.weapon_tags, v => { comm.weapon_tags = v; markDirty(); })));
+  body.appendChild(fieldRow('Armor Tags',  chipsWidget(comm.armor_tags,  v => { comm.armor_tags  = v; markDirty(); })));
+
+  // ── Materials ─────────────────────────────────────────────────────────
+  body.appendChild(sectionTitle('Materials', 'Item IDs the player must give to the crafter. Duplicates allowed (e.g. three iron_ingots).'));
+  if (!Array.isArray(comm.materials)) comm.materials = [];
+  body.appendChild(fieldRow('Materials', chipsWidget(comm.materials, v => { comm.materials = v; markDirty(); }, 'dl-items', 'item'),
+    null, 'Drag items from the item list or type an ID. Duplicates allowed.'));
+
+  // ── on_complete script ───────────────────────────────────────────────
+  body.appendChild(sectionTitle('on_complete Script', 'Script ops run when the player collects the finished item.\nUsed for quest integration, prestige, custom messages, give_item (non-equippable output), etc.'));
+  if (!Array.isArray(comm.on_complete)) comm.on_complete = [];
+  const scriptWrap = document.createElement('div'); scriptWrap.style.marginTop = '4px';
+  scriptWrap.appendChild(scriptButton('on_complete', comm.on_complete, ops => { comm.on_complete = ops; markDirty(); }));
+  body.appendChild(scriptWrap);
+
+  // ── Quality tiers ────────────────────────────────────────────────────
+  body.appendChild(sectionTitle('Quality Tiers', 'Weighted random tiers rolled at collection time.\nEach tier can add stat bonuses, a tag (special), a name prefix, and flavour messages.'));
+  if (!Array.isArray(comm.qualities)) comm.qualities = [];
+  const tiersContainer = document.createElement('div');
+  body.appendChild(tiersContainer);
+
+  function rebuildTiers() {
+    tiersContainer.innerHTML = '';
+    comm.qualities.forEach((tier, ti) => tiersContainer.appendChild(buildQualityTierCard(tier, ti, comm, rebuildTiers)));
+    const addTierBtn = document.createElement('button');
+    addTierBtn.className = 'hbtn'; addTierBtn.textContent = '+ Add Tier';
+    addTierBtn.style.marginTop = '4px';
+    addTierBtn.addEventListener('click', () => {
+      comm.qualities.push({ tier: 'standard', weight: 55, attack_bonus: 0, defense_bonus: 0, carry_bonus: 0, max_hp_bonus: 0, special: '', name_prefix: '', equip_msg: '', craft_message: '' });
+      rebuildTiers(); markDirty();
+    });
+    tiersContainer.appendChild(addTierBtn);
+  }
+  rebuildTiers();
+
+  return card;
+}
+
+function buildQualityTierCard(tier, tIdx, comm, rebuildTiers) {
+  const TIER_NAMES = ['poor', 'standard', 'exceptional', 'masterwork'];
+  const card = document.createElement('div');
+  card.style.cssText = 'border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-bottom:6px;background:var(--bg2);';
+
+  // ── Tier header row ───────────────────────────────────────────────────
+  const topRow = document.createElement('div'); topRow.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px';
+
+  const tierDlId = 'dl-tier-names-' + Math.random().toString(36).slice(2,6);
+  const tierDl = document.createElement('datalist'); tierDl.id = tierDlId;
+  TIER_NAMES.forEach(n => { const o = document.createElement('option'); o.value = n; tierDl.appendChild(o); });
+  card.insertBefore(tierDl, card.firstChild);
+
+  function lbl(text) {
+    const l = document.createElement('label'); l.textContent = text;
+    l.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:2px;display:block';
+    return l;
+  }
+  function col(labelText, el) {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:0;';
+    wrap.appendChild(lbl(labelText)); wrap.appendChild(el); return wrap;
+  }
+
+  const tierInp = textInput(tier.tier || 'standard', v => { tier.tier = v; markDirty(); }, 'poor/standard/...');
+  tierInp.setAttribute('list', tierDlId); tierInp.style.cssText = 'width:110px;font-family:monospace';
+  topRow.appendChild(col('Tier', tierInp));
+
+  const wtInp = numInput(tier.weight ?? 55, v => { tier.weight = v; markDirty(); }, 1, 999);
+  wtInp.style.width = '60px';
+  topRow.appendChild(col('Weight', wtInp));
+
+  function bonusCol(label, key) {
+    const inp = numInput(tier[key] ?? 0, v => { tier[key] = v; markDirty(); });
+    inp.style.width = '58px';
+    return col(label, inp);
+  }
+  topRow.appendChild(bonusCol('ATK +', 'attack_bonus'));
+  topRow.appendChild(bonusCol('DEF +', 'defense_bonus'));
+  topRow.appendChild(bonusCol('Carry +', 'carry_bonus'));
+  topRow.appendChild(bonusCol('HP +', 'max_hp_bonus'));
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'hbtn danger'; removeBtn.textContent = '×'; removeBtn.title = 'Remove tier';
+  removeBtn.style.cssText = 'margin-left:auto;align-self:flex-end;';
+  removeBtn.addEventListener('click', () => { comm.qualities.splice(tIdx, 1); rebuildTiers(); markDirty(); });
+  topRow.appendChild(removeBtn);
+  card.appendChild(topRow);
+
+  // ── Optional flavor row ────────────────────────────────────────────────
+  const flavRow = document.createElement('div'); flavRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;';
+
+  function textCol(labelText, key, placeholder) {
+    const inp = textInput(tier[key] || '', v => { tier[key] = v; markDirty(); }, placeholder);
+    inp.style.width = '100%';
+    return col(labelText, inp);
+  }
+  flavRow.appendChild(textCol('Special Tag', 'special', 'e.g. sharp'));
+  flavRow.appendChild(textCol('Name Prefix', 'name_prefix', 'e.g. Fine '));
+  flavRow.appendChild(textCol('Equip Msg', 'equip_msg', 'Shown when equipped'));
+  flavRow.appendChild(textCol('Craft Msg', 'craft_message', 'NPC flavour on collect'));
+  card.appendChild(flavRow);
+
+  return card;
+}
+
+function serialiseCrafting(data) {
+  const commissions = (data.commission || []).map(c => {
+    const out = {};
+    // Required fields always written
+    out.id             = c.id || '';
+    out.npc_id         = c.npc_id || '';
+    out.label          = c.label || '';
+    out.desc           = c.desc || '';
+    out.slot           = c.slot || '';
+    out.weapon_tags    = Array.isArray(c.weapon_tags) ? [...c.weapon_tags] : [];
+    out.armor_tags     = Array.isArray(c.armor_tags)  ? [...c.armor_tags]  : [];
+    out.materials      = Array.isArray(c.materials)   ? [...c.materials]   : [];
+    out.turns_required = c.turns_required ?? 30;
+    out.gold_cost      = c.gold_cost ?? 0;
+    // Optional — omit if zero / blank
+    if (c.xp_reward)  out.xp_reward  = c.xp_reward;
+    if (c.weight)     out.weight     = c.weight;
+    // on_complete — omit if empty
+    if (Array.isArray(c.on_complete) && c.on_complete.length) out.on_complete = c.on_complete;
+    // Quality tiers
+    const qualities = (c.qualities || []).map(q => {
+      const qt = { tier: q.tier || 'standard', weight: q.weight ?? 50 };
+      if (q.attack_bonus)   qt.attack_bonus   = q.attack_bonus;
+      if (q.defense_bonus)  qt.defense_bonus  = q.defense_bonus;
+      if (q.carry_bonus)    qt.carry_bonus    = q.carry_bonus;
+      if (q.max_hp_bonus)   qt.max_hp_bonus   = q.max_hp_bonus;
+      if (q.special)        qt.special        = q.special;
+      if (q.name_prefix)    qt.name_prefix    = q.name_prefix;
+      if (q.equip_msg)      qt.equip_msg      = q.equip_msg;
+      if (q.craft_message)  qt.craft_message  = q.craft_message;
+      return qt;
+    });
+    if (qualities.length) out.qualities = qualities;
+    return out;
+  });
+  return { commission: commissions };
 }
 
 function stripPrivate(obj) {
@@ -5866,7 +6187,7 @@ function _restoreUiState() {
 function navigateTo(type, zone_id, id) {
   const zone = WORLD_DATA?.zones?.[zone_id];
   if (!zone) return;
-  const key = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type + 's';
+  const key = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues' : type === 'crafting' ? 'crafting' : type + 's';
   const arr = zone[key] || [];
   const obj = arr.find(o => (o.id || o._id || o._npc_id) === id);
   if (obj) selectObject(type, zone_id, obj);

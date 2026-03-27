@@ -210,6 +210,7 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
 .badge-dlg    { background: var(--dlg-col); }
 .badge-style  { background: #d45f6e; }
 .badge-proc   { background: #7c5cbf; }
+.badge-craft  { background: #b87333; }
 
 /* ── Editor ─────────────────────────────────────────────────────── */
 #editor {

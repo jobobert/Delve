@@ -139,6 +139,50 @@ Each dialogue file (`dialogues/<npc_id>.toml`) is a tree of nodes and responses.
 
 Drag responses to reorder them. Click **Graph** for the interactive dialogue flow diagram.
 
+### Commissions Editor (Crafting tab)
+
+The **Commissions** tab (copper **C** badge) lists crafting files grouped by zone. Each entry is one `crafting/<npc_id>.toml` file — the engine detects crafter NPCs by the existence of this file, so the filename must exactly match the NPC's `id`.
+
+**Creating a crafting file:**
+- Open the NPC editor for the crafter NPC, scroll to the **Crafting Commissions** section, and click **Create Crafting File**. This creates `crafting/<npc_id>.toml` and navigates to the new editor.
+- Alternatively, select the **Commissions** tab and use **+ Add Commission** after navigating to an existing file.
+
+**Commission card fields:**
+
+| Field | Description |
+|-------|-------------|
+| ID | Unique commission ID (snake_case, globally unique across all worlds) |
+| NPC ID | Auto-filled from file name; must match the crafter NPC's `id` |
+| Label | Base item name — quality `name_prefix` is prepended at runtime |
+| Desc | One-line description shown in the commission menu |
+| Slot | Equipment slot for the finished item. Leave blank for non-equippable outputs (use `give_item` in on_complete instead) |
+| Weight | Item weight of the finished item |
+| Turns | Player moves required before the commission is ready |
+| Gold Cost | Upfront gold deposit deducted when the commission is placed |
+| XP | XP awarded to the player on collection |
+| Weapon / Armor Tags | Tag arrays added to the finished item. Only fill the set that matches the slot type |
+| Materials | Item IDs the player must give to the crafter. Duplicates are allowed (e.g. three `iron_ingot` entries) |
+| on_complete | Script ops run on collect — use `advance_quest`, `complete_quest`, `prestige`, `give_item` (for non-equippable output), etc. |
+
+**Quality Tiers:**
+
+Each commission has one or more quality tiers, selected by weighted random roll at collection time.
+
+| Field | Description |
+|-------|-------------|
+| Tier | Tier name (`poor`, `standard`, `exceptional`, `masterwork` or custom) |
+| Weight | Probability weight (higher = more common). Typical spread: 20/55/20/5 |
+| ATK + | `attack_bonus` added to weapon stat |
+| DEF + | `defense_bonus` added to armor stat |
+| Carry + | `carry_bonus` added to bag/pack capacity |
+| HP + | `max_hp_bonus` added to player max HP |
+| Special Tag | Extra tag appended to weapon/armor tags (e.g. `sharp`, `reinforced`) |
+| Name Prefix | Prepended to label (e.g. `Fine ` → "Fine War Sword") |
+| Equip Msg | Message shown when the player equips the finished item |
+| Craft Msg | NPC flavour line shown at collection (commonly only on masterwork) |
+
+**Deleting a crafting file:** Click **Delete** in the editor header. This deletes the entire `crafting/<npc_id>.toml` file. The NPC remains unchanged.
+
 ### Style Editor
 
 Styles define a fighting style's passive abilities. Each passive has: ability ID, proficiency threshold, trigger (on_hit, on_defend, etc.), and script ops.

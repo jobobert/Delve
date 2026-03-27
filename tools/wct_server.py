@@ -393,7 +393,8 @@ def _load_world(world_id: str) -> dict:
             for path in sorted(craft_dir.glob("*.toml")):
                 try:
                     data = toml_load(path)
-                    data["_file"] = str(path.relative_to(ROOT))
+                    data["_file"]   = str(path.relative_to(ROOT))
+                    data["_npc_id"] = path.stem
                     zone["crafting"].append(data)
                 except Exception:
                     pass
@@ -1067,6 +1068,23 @@ class WCTHandler(BaseHTTPRequestHandler):
             ok, err = _write_file(str(file_path.relative_to(ROOT)), starter)
             self._send_json({"ok": ok, "error": err, "file": str(file_path.relative_to(ROOT))})
 
+        elif path == "/api/create_crafting":
+            world_id = body.get("world_id", "")
+            zone_id  = body.get("zone_id", "")
+            npc_id   = body.get("npc_id", "").strip()
+            if not world_id or not zone_id or not npc_id:
+                self._send_json({"ok": False, "error": "world_id, zone_id and npc_id required"})
+                return
+            craft_dir  = DATA_DIR / world_id / zone_id / "crafting"
+            craft_dir.mkdir(parents=True, exist_ok=True)
+            file_path  = craft_dir / f"{npc_id}.toml"
+            if file_path.exists():
+                self._send_json({"ok": False, "error": f"Crafting '{npc_id}.toml' already exists"})
+                return
+            starter = {"commission": []}
+            ok, err = _write_file(str(file_path.relative_to(ROOT)), starter)
+            self._send_json({"ok": ok, "error": err, "file": str(file_path.relative_to(ROOT))})
+
         elif path == "/api/save_staged_triggers":
             world_id = body.get("world_id", "")
             triggers = body.get("triggers", [])
@@ -1191,6 +1209,17 @@ class WCTHandler(BaseHTTPRequestHandler):
                     return
                 try:
                     dlg_path.unlink()
+                    self._send_json({"ok": True, "error": ""})
+                except Exception as e:
+                    self._send_json({"ok": False, "error": str(e)})
+
+            elif type_ == "crafting":
+                craft_path = DATA_DIR / world_id / zone_id / "crafting" / f"{eid}.toml"
+                if not craft_path.exists():
+                    self._send_json({"ok": False, "error": f"Crafting '{eid}.toml' not found"})
+                    return
+                try:
+                    craft_path.unlink()
                     self._send_json({"ok": True, "error": ""})
                 except Exception as e:
                     self._send_json({"ok": False, "error": str(e)})
