@@ -570,7 +570,22 @@ const NPC_TAGS = [
   'bandit','guard','merchant','elder','mage','soldier','rogue','healer','ranger',
   'male','female','child','ancient','corrupted','blessed','noble','outcast',
   'faction_hostile','faction_friendly',
-  'armored','fast','slow','large','small','group','spar','criminal',
+  'armored','fast','slow','large','small','group','spar','criminal','coward','prestige_neutral',
+];
+
+// Tags with specific engine behaviour (§5.4). Rendered as toggle buttons.
+const ENGINE_NPC_TAGS = [
+  { tag: 'humanoid',         tip: 'Style proficiency gains apply in full' },
+  { tag: 'beast',            tip: 'Some dialogue conditions can filter by creature type' },
+  { tag: 'armored',          tip: 'Advisory — used by style affinity checks' },
+  { tag: 'large',            tip: 'Blocked from rooms with the no_large_companion flag' },
+  { tag: 'fast',             tip: 'Advisory — used by style affinities' },
+  { tag: 'slow',             tip: 'Advisory — used by style affinities' },
+  { tag: 'prestige_neutral', tip: 'Player prestige score does not affect this NPC\'s attitude' },
+  { tag: 'criminal',         tip: 'Goes hostile when player prestige ≥ +100 (high honour)' },
+  { tag: 'guard',            tip: 'Goes hostile when player prestige ≤ −50 (low honour)' },
+  { tag: 'coward',           tip: 'Flees first (grants player a free attack) when player prestige ≥ +60' },
+  { tag: 'spar',             tip: 'Cannot be killed — HP floors at 1 HP' },
 ];
 
 // Badge letter and CSS class for each entity type — used by the left-pane list, editor header, and tag-usage panel.
@@ -646,6 +661,7 @@ async function loadWorld(worldId) {
   renderTypeList(_ACTIVE_TYPE);
   TAG_COMMENTS = _loadTagComments();
   TAG_CATEGORIES = _loadTagCategories();
+  _applyEngineTagDefaults();
   rebuildTagPalette();
   SELECTED = null; DIRTY = false; _setDirtyUI(false);
   renderEditor();
@@ -771,7 +787,8 @@ function renderTypeList(type) {
     items.className = 'zone-items';
     arr.forEach(obj => {
       const id   = obj.id || obj._id || obj._npc_id || '';
-      const name = obj[nameKey] || id;
+      const _nameRaw = obj[nameKey];
+      const name = (Array.isArray(_nameRaw) ? _nameRaw[0] : _nameRaw) || id;
       const el   = document.createElement('div');
       el.className = 'tree-item';
       el.draggable = true;
@@ -1002,6 +1019,15 @@ function _allTagCategoryOptions() {
   const base = ['npc', 'item', 'room', 'key'];
   const used = new Set([...base, ...Object.values(TAG_CATEGORIES)]);
   return [...used].sort();
+}
+
+// Seed TAG_COMMENTS / TAG_CATEGORIES for engine-defined NPC tags (§5.4).
+// Only fills in values that the user has not already set.
+function _applyEngineTagDefaults() {
+  ENGINE_NPC_TAGS.forEach(({ tag, tip }) => {
+    if (!TAG_COMMENTS[tag])   TAG_COMMENTS[tag]   = tip;
+    if (!TAG_CATEGORIES[tag]) TAG_CATEGORIES[tag] = 'default - npc';
+  });
 }
 
 function showTagPopup(tag) {
@@ -1300,6 +1326,49 @@ function numInput(val, onChange, min, max, step) {
   if (step !== undefined) inp.step = step;
   inp.addEventListener('input', () => { onChange(Number(inp.value)); markDirty(); });
   return inp;
+}
+
+// Widget for fields that support random spawn variation (WORLD_MANUAL §5.2).
+// Allows any scalar field to hold multiple values — one is picked at random at spawn.
+// val: scalar or array. onChange(newVal): called with scalar if 1 item, array if multiple.
+// makeInput(v, onV): factory that creates a single-value input element.
+function variantWidget(val, onChange, makeInput) {
+  const arr = Array.isArray(val) ? [...val] : [(val !== undefined && val !== null) ? val : ''];
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+
+  function emit() { onChange(arr.length === 1 ? arr[0] : [...arr]); }
+
+  function rebuild() {
+    wrap.innerHTML = '';
+    arr.forEach((v, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:3px;align-items:center;';
+      const inp = makeInput(v, newV => { arr[i] = newV; emit(); });
+      row.appendChild(inp);
+      if (arr.length > 1) {
+        const rm = document.createElement('button');
+        rm.className = 'hbtn'; rm.textContent = '×'; rm.title = 'Remove this variant';
+        rm.style.cssText = 'padding:1px 5px;font-size:11px;flex-shrink:0;';
+        rm.addEventListener('click', () => { arr.splice(i, 1); rebuild(); emit(); markDirty(); });
+        row.appendChild(rm);
+      }
+      wrap.appendChild(row);
+    });
+    const addBtn = document.createElement('button');
+    addBtn.className = 'hbtn';
+    addBtn.textContent = arr.length > 1 ? '+ variant' : '+ add variant';
+    addBtn.style.cssText = 'font-size:11px;padding:1px 5px;align-self:flex-start;margin-top:1px;';
+    addBtn.addEventListener('click', () => {
+      const last = arr[arr.length - 1];
+      arr.push(typeof last === 'number' ? last : (last || ''));
+      rebuild(); emit(); markDirty();
+    });
+    wrap.appendChild(addBtn);
+  }
+
+  rebuild();
+  return wrap;
 }
 
 function checkboxInput(val, onChange, labelText) {
@@ -1691,14 +1760,17 @@ function renderRoomEditor(main) {
 
 function renderNpcEditor(main) {
   const d = SELECTED.data;
-  main.appendChild(editorHeader('npc', 'badge-npc', d.name || d.id));
+  main.appendChild(editorHeader('npc', 'badge-npc', (Array.isArray(d.name) ? d.name[0] : d.name) || d.id));
   appendIdRow(main, d, 'npc', SELECTED.zone_id);
-  main.appendChild(fieldRow('Name', textInput(d.name, v => d.name = v),
-    null, 'Display name shown in the room and combat log.\nCan be a list for random variation on spawn:\n  name = ["Grey Wolf", "Black Wolf"]'));
-  main.appendChild(fieldRow('Short Description', textareaInput(d.desc_short || d.description, v => { d.desc_short = v; d.description = v; }),
-    null, 'One-line description shown when the player looks at the room.\nCan also be a list for random variation.'));
-  main.appendChild(fieldRow('Long Description', textareaInput(d.desc_long, v => d.desc_long = v),
-    null, 'Full description shown with "examine <npc>".\nCan also be a list for random variation.'));
+  main.appendChild(fieldRow('Name',
+    variantWidget(d.name, v => d.name = v, (v, onV) => textInput(v, onV)),
+    null, 'Display name shown in the room and combat log.\nUse "+ add variant" to create multiple names — one is picked randomly at spawn.\nExample: ["Grey Wolf", "Black Wolf"]'));
+  main.appendChild(fieldRow('Short Description',
+    variantWidget(d.desc_short || d.description, v => { d.desc_short = v; d.description = v; }, (v, onV) => textareaInput(v, onV)),
+    null, 'One-line description shown when the player looks at the room.\nSupports random variation — add multiple values for variety.'));
+  main.appendChild(fieldRow('Long Description',
+    variantWidget(d.desc_long, v => d.desc_long = v, (v, onV) => textareaInput(v, onV)),
+    null, 'Full description shown with "examine <npc>".\nSupports random variation — add multiple values for variety.'));
 
   main.appendChild(sectionTitle('Stats', 'Any scalar stat field can be a list for random variation.\nExample: attack = [5, 6, 7] picks one at spawn.\nOmit hp to auto-sync it with max_hp.'));
   const statsRow = document.createElement('div');
@@ -1707,7 +1779,8 @@ function renderNpcEditor(main) {
     const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.gap='3px';
     const l = document.createElement('label'); l.textContent = lbl;
     if (tip) { const icon = document.createElement('i'); icon.className='help-icon'; icon.textContent='i'; icon.dataset.tip=tip; l.appendChild(icon); }
-    wrap.appendChild(l); wrap.appendChild(numInput(d[key], v => d[key] = v, min));
+    wrap.appendChild(l);
+    wrap.appendChild(variantWidget(d[key], v => d[key] = v, (v, onV) => { const i = numInput(v !== undefined ? v : 0, onV, min); i.style.width='88px'; return i; }));
     return wrap;
   }
   statsRow.appendChild(statPair('HP', 'hp', 0, 'Starting HP. If omitted, auto-syncs to Max HP at spawn.'));
@@ -1726,14 +1799,43 @@ function renderNpcEditor(main) {
     null, 'Gold cost for the player to rest at this NPC (innkeeper behaviour).\nLeave 0 or blank to disable resting.'));
 
   main.appendChild(sectionTitle('Combat Style'));
-  main.appendChild(fieldRow('Style ID', refInput(d.style, 'dl-styles', v => d.style = v, 'style'),
-    null, 'Fighting style reference. Must match a style ID defined in the world\'s styles data.'));
-  main.appendChild(fieldRow('Style Proficiency', numInput(d.style_prof, v => d.style_prof = v, 0, 100),
-    null, '0–100. How well this NPC executes its style.\nHigher values unlock more passive abilities.'));
+  main.appendChild(fieldRow('Style ID',
+    variantWidget(d.style, v => d.style = v, (v, onV) => refInput(v, 'dl-styles', onV, 'style')),
+    null, 'Fighting style reference. Supports random variation — add multiple styles to pick one at spawn.'));
+  main.appendChild(fieldRow('Style Proficiency',
+    variantWidget(d.style_prof, v => d.style_prof = v, (v, onV) => numInput(v !== undefined ? v : 0, onV, 0, 100)),
+    null, '0–100. How well this NPC executes its style.\nSupports random variation — add multiple values to pick one at spawn.'));
 
-  main.appendChild(sectionTitle('Tags', 'Gameplay tags used for style matchup bonuses, prestige tracking,\nand script conditions.\nCommon: humanoid, beast, undead, armored, fast, slow, large, small,\ngroup, spar (yields at 1 HP instead of dying), guard, criminal.\nDrag tags from the palette in the left panel.'));
-  const tags = Array.isArray(d.tags) ? d.tags : (d.tags ? d.tags.split(',').map(t => t.trim()).filter(Boolean) : []);
-  main.appendChild(chipsWidget(tags, v => d.tags = v, null, 'tag', NPC_TAGS));
+  main.appendChild(sectionTitle('Tags', 'Gameplay tags used for style matchup bonuses, prestige tracking, and script conditions.\nEngine-meaningful tags are toggle buttons. Custom tags (style affinities, etc.) go in the field below.'));
+  // Normalise tags to a mutable array on d
+  if (!Array.isArray(d.tags)) d.tags = d.tags ? d.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  // ── Engine-meaningful tags as toggle buttons ─────────────────────────
+  const _engTagSet = new Set(ENGINE_NPC_TAGS.map(e => e.tag));
+  const npcTagGrid = document.createElement('div');
+  npcTagGrid.className = 'room-flags-grid';
+  ENGINE_NPC_TAGS.forEach(({ tag, tip }) => {
+    const btn = document.createElement('button');
+    btn.className = 'room-flag-btn' + (d.tags.includes(tag) ? ' active' : '');
+    btn.textContent = tag;
+    btn.title = tip;
+    btn.addEventListener('click', () => {
+      const i = d.tags.indexOf(tag);
+      if (i === -1) d.tags.push(tag); else d.tags.splice(i, 1);
+      btn.classList.toggle('active', d.tags.includes(tag));
+      markDirty();
+    });
+    npcTagGrid.appendChild(btn);
+  });
+  main.appendChild(npcTagGrid);
+
+  // ── Custom tags (anything not in the engine set) ─────────────────────
+  main.appendChild(sectionTitle('Custom Tags', 'Additional tags for style affinity configs and script conditions.\nDrag tags from the palette in the left panel.'));
+  const _customTagsArr = d.tags.filter(t => !_engTagSet.has(t));
+  main.appendChild(chipsWidget(_customTagsArr, v => {
+    d.tags = [...d.tags.filter(t => _engTagSet.has(t)), ...v];
+    markDirty();
+  }, null, 'tag', NPC_TAGS.filter(t => !_engTagSet.has(t))));
 
   main.appendChild(sectionTitle('Scripts'));
   const scriptDiv = document.createElement('div');
@@ -5068,6 +5170,10 @@ function openPicker(type, callback) {
   if (type === 'npc'   || type === 'dl-npcs')   { entries = Object.entries(ALL_NPCS);   badge = 'N'; title.textContent = 'Pick NPC'; }
   if (type === 'item'  || type === 'dl-items')  { entries = Object.entries(ALL_ITEMS);  badge = 'I'; title.textContent = 'Pick Item'; }
   if (type === 'quest' || type === 'dl-quests') { entries = Object.entries(ALL_QUESTS); badge = 'Q'; title.textContent = 'Pick Quest'; }
+  if (type === 'style' || type === 'dl-styles') {
+    entries = (WORLD_CONFIG.styles || []).map(s => [s.id, {name: s.name || s.id}]);
+    badge = 'S'; title.textContent = 'Pick Style';
+  }
 
   const buildList = (q) => {
     list.innerHTML = '';
