@@ -517,6 +517,15 @@ def _rename_id_in_world(world_path: Path, old_id: str, new_id: str) -> list[str]
         except Exception:
             pass
 
+    # Rename quest file if one exists for old_id
+    for quest_path in world_path.rglob(f'quests/{old_id}.toml'):
+        new_path = quest_path.parent / f'{new_id}.toml'
+        try:
+            quest_path.rename(new_path)
+            changed_files.append(f'{quest_path.relative_to(ROOT)} -> quests/{new_id}.toml')
+        except Exception:
+            pass
+
     return changed_files
 
 

@@ -1679,6 +1679,10 @@ class CommandProcessor:
                     ex_val["locked"] = False
         self._out(Tag.DOOR,
                   f"You unlock the door to the {direction} with your {key['name']}.")
+        if key.get("consumable_key", False):
+            msg = key.get("consumable_key_msg", f"The {key['name']} crumbles after use.")
+            self._out(Tag.SYSTEM, msg)
+            self.player.remove_item(key)
         on_unlock = door.get("on_unlock", [])
         if on_unlock:
             from engine.script import ScriptRunner

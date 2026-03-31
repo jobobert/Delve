@@ -231,7 +231,7 @@ id = "rl_river_scale_vest"
 name = "River-Scale Vest"
 desc_short = "A vest of overlapping scale-shaped river-iron plates stitched to boiled leather."
 desc_long = "Old Aldric made this himself, years before his hands stopped cooperating. The scales flex with your movement but hold against a blade. It carries the marks of careful work and a long life well-used."
-slot = "chest"
+slot = "body"
 weight = 3
 respawn = false
 effects = [{type = "stat_bonus", stat = "defense", amount = 6}]
@@ -252,7 +252,7 @@ id = "rl_iron_pauldrons"
 name = "Iron Pauldrons"
 desc_short = "A pair of solid iron shoulder guards on a leather backing."
 desc_long = "Built to patrol specifications — practical protection without ceremony. The leather backing softens the weight for long wear."
-slot = "chest"
+slot = "body"
 weight = 3
 respawn = false
 effects = [{type = "stat_bonus", stat = "defense", amount = 4}]

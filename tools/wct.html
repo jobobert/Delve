@@ -125,12 +125,8 @@
     <div id="map-legend"></div>
     <span class="map-hint">scroll = pan &nbsp;|&nbsp; wheel = zoom &nbsp;|&nbsp; click room = details</span>
     <span class="map-hint">&#9476; border = auto-placed &nbsp; &#9548; line = locked exit</span>
-    <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none">
-      <input type="checkbox" id="map-show-counts" style="accent-color:var(--accent);cursor:pointer" onchange="renderMap()"> counts
-    </label>
-    <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none">
-      <input type="checkbox" id="map-show-dirs" style="accent-color:var(--accent);cursor:pointer" onchange="renderMap()"> exit labels
-    </label>
+    <button class="hbtn tag-btn" id="map-show-counts" onclick="this.classList.toggle('active');renderMap()">counts</button>
+    <button class="hbtn tag-btn" id="map-show-dirs" onclick="this.classList.toggle('active');renderMap()">exit labels</button>
     <button class="hbtn" onclick="fitMapAll()" title="Zoom to fit all rooms in view">Fit All</button>
     <button class="hbtn" onclick="exportDot(_mapZoneFilter)" title="Download Graphviz .dot file">Export DOT</button>
   </div>
@@ -151,23 +147,6 @@
 
 <!-- ══════════════════════════════ Modals ═══════════════════════════ -->
 
-<!-- Script editor -->
-<div class="modal-backdrop hidden" id="script-modal">
-  <div class="modal" style="max-width:680px">
-    <div class="modal-header">
-      <span class="modal-title" id="script-modal-title">Edit Script</span>
-      <button class="modal-close" onclick="closeModal('script-modal')">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="script-ops-list" id="script-ops-list"></div>
-      <button class="add-op-btn" onclick="addOp(scriptOpsTarget)">+ Add op</button>
-    </div>
-    <div class="modal-footer">
-      <button class="hbtn" onclick="closeModal('script-modal')">Cancel</button>
-      <button class="hbtn primary" onclick="saveScript()">Save</button>
-    </div>
-  </div>
-</div>
 
 <!-- Exit editor -->
 <div class="modal-backdrop hidden" id="exit-modal">
@@ -197,6 +176,7 @@
     <div class="modal-body">
       <input class="picker-search" id="picker-search" placeholder="Search..." oninput="filterPicker(this.value)">
       <div class="picker-list" id="picker-list"></div>
+      <div id="picker-admin-comment" class="picker-admin-comment" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -357,8 +337,7 @@
           <input class="field-input" id="trig-resp-text" placeholder="I've returned with the item.">
         </div>
         <div class="field-row inline" style="margin-bottom:6px">
-          <input type="checkbox" id="trig-resp-cond-chk" onchange="_trigRespCondToggle()">
-          <label for="trig-resp-cond-chk" style="text-transform:none;letter-spacing:0">Condition on response (optional)</label>
+          <button type="button" class="tag-btn" id="trig-resp-cond-chk" onclick="_trigRespCondToggle()">Condition on response (optional)</button>
         </div>
         <div class="field-row" id="trig-resp-cond-row" style="display:none">
           <label>Condition flag (show only if player has flag)</label>
@@ -1345,6 +1324,7 @@ function variantWidget(val, onChange, makeInput) {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;gap:3px;align-items:center;';
       const inp = makeInput(v, newV => { arr[i] = newV; emit(); });
+      if (!inp.style.width) inp.style.flex = '1';
       row.appendChild(inp);
       if (arr.length > 1) {
         const rm = document.createElement('button');
@@ -1372,14 +1352,17 @@ function variantWidget(val, onChange, makeInput) {
 }
 
 function checkboxInput(val, onChange, labelText) {
-  const lbl = document.createElement('label');
-  lbl.className = 'checkbox-row';
-  const cb = document.createElement('input');
-  cb.type = 'checkbox'; cb.checked = !!val;
-  cb.addEventListener('change', () => { onChange(cb.checked); markDirty(); });
-  lbl.appendChild(cb);
-  lbl.appendChild(document.createTextNode(' ' + labelText));
-  return lbl;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'tag-btn' + (val ? ' active' : '');
+  btn.textContent = labelText;
+  btn.addEventListener('click', () => {
+    const newVal = !btn.classList.contains('active');
+    btn.classList.toggle('active', newVal);
+    onChange(newVal);
+    markDirty();
+  });
+  return btn;
 }
 
 function selectInput(val, options, onChange) {
@@ -1411,24 +1394,23 @@ function refInput(val, dlId, onChange, type) {
   const inp = document.createElement('input');
   inp.type = 'text'; inp.className = 'field-input ref-input';
   inp.value = val || '';
-  inp.setAttribute('list', dlId);
-  inp.addEventListener('input', () => {
-    // Extract id if user selected "Name (id)" format
-    const m = inp.value.match(/\(([^)]+)\)$/);
-    const id = m ? m[1] : inp.value;
-    onChange(id); markDirty();
-  });
-  // Drag-and-drop target
-  inp.addEventListener('dragover', e => { e.preventDefault(); inp.classList.add('ref-drop'); });
-  inp.addEventListener('dragleave', () => inp.classList.remove('ref-drop'));
-  inp.addEventListener('drop', e => {
-    e.preventDefault(); inp.classList.remove('ref-drop');
-    const dType = e.dataTransfer.getData('wct/type');
-    if (!type || dType === type) {
-      const id = e.dataTransfer.getData('wct/id');
-      inp.value = id; onChange(id); markDirty();
-    }
-  });
+  inp.addEventListener('input', () => { onChange(inp.value); markDirty(); });
+  if (type === 'flag') {
+    // Flag drag-drop uses _dragging global (not HTML5 dataTransfer)
+    _attachFlagDrop(inp, id => { inp.value = id; onChange(id); markDirty(); });
+  } else {
+    // Entity drag-and-drop target using HTML5 dataTransfer
+    inp.addEventListener('dragover', e => { e.preventDefault(); inp.classList.add('ref-drop'); });
+    inp.addEventListener('dragleave', () => inp.classList.remove('ref-drop'));
+    inp.addEventListener('drop', e => {
+      e.preventDefault(); inp.classList.remove('ref-drop');
+      const dType = e.dataTransfer.getData('wct/type');
+      if (!type || dType === type) {
+        const id = e.dataTransfer.getData('wct/id');
+        inp.value = id; onChange(id); markDirty();
+      }
+    });
+  }
   const btn = document.createElement('button');
   btn.className = 'ref-pick-btn'; btn.textContent = '[...]';
   btn.title = 'Pick from list';
@@ -1480,15 +1462,9 @@ function chipsWidget(arr, onChange, dlId, acceptType, options) {
   const div = document.createElement('div');
   div.className = 'chips-row';
 
-  // Build a datalist: use provided options array, or fall back to dlId datalist
-  let effectiveDlId = dlId || null;
-  if (options && options.length) {
-    effectiveDlId = 'dl-chips-' + Math.random().toString(36).slice(2, 8);
-    const dl = document.createElement('datalist');
-    dl.id = effectiveDlId;
-    options.forEach(o => { const opt = document.createElement('option'); opt.value = o; dl.appendChild(opt); });
-    div.appendChild(dl);
-  }
+  // Derive picker type from acceptType or dlId
+  const DL_TO_PICKER = {'dl-items':'item','dl-npcs':'npc','dl-rooms':'room','dl-flags':'flag','dl-quests':'quest','dl-skills':'skill','dl-status-effects':'effect'};
+  const pickerType = acceptType || DL_TO_PICKER[dlId] || null;
 
   if (acceptType) {
     div.addEventListener('dragover', e => {
@@ -1507,10 +1483,7 @@ function chipsWidget(arr, onChange, dlId, acceptType, options) {
   }
 
   const rebuild = () => {
-    // Preserve the datalist element if we created one
-    const existingDl = div.querySelector('datalist');
     div.innerHTML = '';
-    if (existingDl) div.appendChild(existingDl);
 
     arr.forEach((val, i) => {
       const chip = document.createElement('span');
@@ -1522,31 +1495,41 @@ function chipsWidget(arr, onChange, dlId, acceptType, options) {
       div.appendChild(chip);
     });
 
-    // Inline add button → expands to input+datalist on click
+    // Inline add: text input + optional picker button
     const addBtn = document.createElement('button');
     addBtn.className = 'chip-add'; addBtn.textContent = '+ add';
     addBtn.addEventListener('click', () => {
       addBtn.style.display = 'none';
+      const inpWrap = document.createElement('div'); inpWrap.style.cssText = 'display:inline-flex;gap:2px;align-items:center;';
       const inp = document.createElement('input');
       inp.type = 'text'; inp.className = 'chip-inline-input';
-      inp.placeholder = effectiveDlId ? 'type or pick...' : 'value...';
-      if (effectiveDlId) inp.setAttribute('list', effectiveDlId);
+      inp.placeholder = pickerType ? 'type or pick...' : 'value...';
 
       const commit = () => {
         const val = inp.value.trim();
         if (val && !arr.includes(val)) {
           arr.push(val); onChange([...arr]); rebuild(); markDirty();
           if (acceptType === 'tag') rebuildTagPalette();
-        } else { addBtn.style.display = ''; inp.remove(); }
+        } else { rebuild(); }
       };
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter')  { e.preventDefault(); commit(); }
-        if (e.key === 'Escape') { addBtn.style.display = ''; inp.remove(); }
+        if (e.key === 'Escape') { rebuild(); }
       });
-      // slight delay so datalist option click registers before blur fires
       inp.addEventListener('blur', () => setTimeout(commit, 150));
+      inpWrap.appendChild(inp);
 
-      div.insertBefore(inp, addBtn);
+      if (pickerType) {
+        const pickBtn = document.createElement('button'); pickBtn.type = 'button';
+        pickBtn.className = 'ref-pick-btn'; pickBtn.textContent = '[...]';
+        pickBtn.addEventListener('mousedown', e => e.preventDefault()); // prevent blur on inp
+        pickBtn.addEventListener('click', () => openPicker(pickerType, id => {
+          inp.value = id; commit();
+        }));
+        inpWrap.appendChild(pickBtn);
+      }
+
+      div.insertBefore(inpWrap, addBtn);
       inp.focus();
     });
     div.appendChild(addBtn);
@@ -1604,11 +1587,23 @@ function spawnWidget(d) {
       const card = document.createElement('div');
       card.className = 'spawn-card';
 
+      const idWrap = document.createElement('div'); idWrap.style.cssText = 'display:flex;gap:2px;align-items:center;flex:1;min-width:0;';
       const idInp = document.createElement('input');
       idInp.type = 'text'; idInp.className = 'field-input spawn-id';
       idInp.value = sp.id || ''; idInp.placeholder = 'npc_id';
-      idInp.setAttribute('list', 'dl-npcs');
       idInp.addEventListener('input', () => { sp.id = idInp.value.trim(); markDirty(); });
+      idInp.addEventListener('dragover', e => { e.preventDefault(); idInp.classList.add('ref-drop'); });
+      idInp.addEventListener('dragleave', () => idInp.classList.remove('ref-drop'));
+      idInp.addEventListener('drop', e => {
+        e.preventDefault(); idInp.classList.remove('ref-drop');
+        if (e.dataTransfer.getData('wct/type') === 'npc') {
+          idInp.value = e.dataTransfer.getData('wct/id'); sp.id = idInp.value; markDirty();
+        }
+      });
+      const idPickBtn = document.createElement('button'); idPickBtn.type = 'button';
+      idPickBtn.className = 'ref-pick-btn'; idPickBtn.textContent = '[...]';
+      idPickBtn.addEventListener('click', () => openPicker('npc', id => { idInp.value = id; sp.id = id; markDirty(); }));
+      idWrap.appendChild(idInp); idWrap.appendChild(idPickBtn);
 
       const countWrap = document.createElement('div'); countWrap.className = 'spawn-count-wrap';
       const countLbl = document.createElement('span');
@@ -1634,20 +1629,22 @@ function spawnWidget(d) {
       });
       chanceWrap.appendChild(chanceLbl); chanceWrap.appendChild(chanceInp);
 
-      const hostileLbl = document.createElement('label');
-      hostileLbl.className = 'checkbox-row spawn-hostile';
-      const hostileCb = document.createElement('input');
-      hostileCb.type = 'checkbox'; hostileCb.checked = sp.hostile === true;
-      hostileCb.addEventListener('change', () => { sp.hostile = hostileCb.checked ? true : undefined; markDirty(); });
-      hostileLbl.appendChild(hostileCb);
-      hostileLbl.appendChild(document.createTextNode(' hostile'));
+      const hostileBtn = document.createElement('button');
+      hostileBtn.type = 'button';
+      hostileBtn.className = 'tag-btn' + (sp.hostile === true ? ' active' : '');
+      hostileBtn.textContent = 'hostile';
+      hostileBtn.addEventListener('click', () => {
+        hostileBtn.classList.toggle('active');
+        sp.hostile = hostileBtn.classList.contains('active') ? true : undefined;
+        markDirty();
+      });
 
       const rmBtn = document.createElement('button');
       rmBtn.className = 'spawn-rm'; rmBtn.textContent = '×'; rmBtn.title = 'Remove';
       rmBtn.addEventListener('click', () => { d.spawns.splice(i, 1); rebuild(); markDirty(); });
 
-      card.appendChild(idInp); card.appendChild(countWrap);
-      card.appendChild(chanceWrap); card.appendChild(hostileLbl); card.appendChild(rmBtn);
+      card.appendChild(idWrap); card.appendChild(countWrap);
+      card.appendChild(chanceWrap); card.appendChild(hostileBtn); card.appendChild(rmBtn);
       container.appendChild(card);
     });
 
@@ -1708,7 +1705,7 @@ function renderRoomEditor(main) {
   flagGrid.className = 'room-flags-grid';
   ROOM_FLAGS.forEach(flag => {
     const btn = document.createElement('button');
-    btn.className = 'room-flag-btn' + (flagsArr.includes(flag) ? ' active' : '');
+    btn.className = 'tag-btn' + (flagsArr.includes(flag) ? ' active' : '');
     btn.textContent = flag;
     btn.addEventListener('click', () => {
       const i = flagsArr.indexOf(flag);
@@ -1733,9 +1730,7 @@ function renderRoomEditor(main) {
     null, 'HP lost per command tick when the "hazard" flag is set. Default: 2.'));
   main.appendChild(fieldRow('Hazard Message', textInput(d.hazard_message, v => d.hazard_message = v),
     null, 'Text shown on each hazard tick.\nDefault: "The environment bites at you."'));
-  const hefInp = textInput(d.hazard_exempt_flag, v => d.hazard_exempt_flag = v);
-  hefInp.setAttribute('list', 'dl-flags');
-  _attachFlagDrop(hefInp, id => { d.hazard_exempt_flag = id; markDirty(); });
+  const hefInp = refInput(d.hazard_exempt_flag, 'dl-flags', v => { d.hazard_exempt_flag = v; }, 'flag');
   main.appendChild(fieldRow('Hazard Exempt Flag', hefInp,
     null, 'Player flag that bypasses hazard damage.\nExample: "has_mining_gear"'));
   main.appendChild(fieldRow('Hazard Chance', numInput(d.hazard_chance, v => d.hazard_chance = v, 0, 1, 0.05),
@@ -1816,7 +1811,7 @@ function renderNpcEditor(main) {
   npcTagGrid.className = 'room-flags-grid';
   ENGINE_NPC_TAGS.forEach(({ tag, tip }) => {
     const btn = document.createElement('button');
-    btn.className = 'room-flag-btn' + (d.tags.includes(tag) ? ' active' : '');
+    btn.className = 'tag-btn' + (d.tags.includes(tag) ? ' active' : '');
     btn.textContent = tag;
     btn.title = tip;
     btn.addEventListener('click', () => {
@@ -2054,11 +2049,23 @@ function renderShop(main, d) {
     d.shop.forEach((entry, i) => {
       const card = document.createElement('div'); card.className = 'shop-card';
 
+      const idWrap2 = document.createElement('div'); idWrap2.style.cssText = 'display:flex;gap:2px;align-items:center;flex:1;min-width:0;';
       const idInp = document.createElement('input');
       idInp.type = 'text'; idInp.className = 'field-input spawn-id';
       idInp.value = entry.item_id || ''; idInp.placeholder = 'item_id';
-      idInp.setAttribute('list', 'dl-items');
       idInp.addEventListener('input', () => { entry.item_id = idInp.value.trim(); markDirty(); });
+      idInp.addEventListener('dragover', e => { e.preventDefault(); idInp.classList.add('ref-drop'); });
+      idInp.addEventListener('dragleave', () => idInp.classList.remove('ref-drop'));
+      idInp.addEventListener('drop', e => {
+        e.preventDefault(); idInp.classList.remove('ref-drop');
+        if (e.dataTransfer.getData('wct/type') === 'item') {
+          idInp.value = e.dataTransfer.getData('wct/id'); entry.item_id = idInp.value; markDirty();
+        }
+      });
+      const idPickBtn2 = document.createElement('button'); idPickBtn2.type = 'button';
+      idPickBtn2.className = 'ref-pick-btn'; idPickBtn2.textContent = '[...]';
+      idPickBtn2.addEventListener('click', () => openPicker('item', id => { idInp.value = id; entry.item_id = id; markDirty(); }));
+      idWrap2.appendChild(idInp); idWrap2.appendChild(idPickBtn2);
 
       const priceWrap = document.createElement('div'); priceWrap.className = 'spawn-count-wrap';
       const priceLbl = document.createElement('label'); priceLbl.textContent = 'g';
@@ -2073,7 +2080,7 @@ function renderShop(main, d) {
       rmBtn.className = 'shop-rm'; rmBtn.textContent = '×';
       rmBtn.addEventListener('click', () => { d.shop.splice(i, 1); rebuild(); markDirty(); });
 
-      card.appendChild(idInp); card.appendChild(priceWrap); card.appendChild(rmBtn);
+      card.appendChild(idWrap2); card.appendChild(priceWrap); card.appendChild(rmBtn);
       container.appendChild(card);
     });
 
@@ -2129,12 +2136,18 @@ function renderItemEditor(main) {
   cbRow.appendChild(checkboxInput(d.no_drop, v => d.no_drop = v, 'No Drop'));
   cbRow.appendChild(checkboxInput(d.respawn, v => d.respawn = v, 'Respawn'));
   cbRow.appendChild(checkboxInput(d.scenery, v => d.scenery = v, 'Scenery'));
+  const ckMsgRow = fieldRow('Key Consumed Msg',
+    textInput(d.consumable_key_msg, v => d.consumable_key_msg = v || undefined, 'The {name} crumbles after use.'),
+    null, 'Message shown when the consumable key is destroyed after unlocking. If blank, defaults to "The {name} crumbles after use."');
+  ckMsgRow.style.display = d.consumable_key ? '' : 'none';
+  cbRow.appendChild(checkboxInput(d.consumable_key, v => { d.consumable_key = v; ckMsgRow.style.display = v ? '' : 'none'; }, 'Consumable Key'));
   main.appendChild(cbRow);
   // Inline help text for checkboxes
   const cbHelp = document.createElement('div');
   cbHelp.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:4px';
-  cbHelp.textContent = 'No Drop: cannot be dropped, kept on death.  Respawn: reappears each zone load.  Scenery: visible but cannot be picked up.';
+  cbHelp.textContent = 'No Drop: cannot be dropped, kept on death.  Respawn: reappears each zone load.  Scenery: visible but cannot be picked up.  Consumable Key: removed from inventory after unlocking a door.';
   main.appendChild(cbHelp);
+  main.appendChild(ckMsgRow);
 
   const itemExtraRow = document.createElement('div'); itemExtraRow.className = 'field-row inline';
   function itemExtraPair(lbl, key, tip) {
@@ -2178,11 +2191,13 @@ function renderItemEditor(main) {
 
 function serialiseQuest(data) {
   const out = {};
-  if (data.id)      out.id      = data.id;
-  if (data.title)   out.title   = data.title;
-  if (data.giver)   out.giver   = data.giver;
-  if (data.summary) out.summary = data.summary;
-  if (data.admin_comment) out.admin_comment = data.admin_comment;
+  if (data.id)               out.id               = data.id;
+  if (data.title)            out.title            = data.title;
+  if (data.giver)            out.giver            = data.giver;
+  if (data.summary)          out.summary          = data.summary;
+  if (data.start_message)    out.start_message    = data.start_message;
+  if (data.complete_message) out.complete_message = data.complete_message;
+  if (data.admin_comment)    out.admin_comment    = data.admin_comment;
   // Steps — write as [[step]] array with correct index
   if (data.step && data.step.length) {
     out.step = data.step.map((s, i) => {
@@ -2190,6 +2205,7 @@ function serialiseQuest(data) {
       if (s.objective)        r.objective        = s.objective;
       if (s.hint)             r.hint             = s.hint;
       if (s.completion_flag)  r.completion_flag  = s.completion_flag;
+      if (s.on_advance && s.on_advance.length) r.on_advance = s.on_advance;
       return r;
     });
   }
@@ -2280,8 +2296,10 @@ function _trigGiveGuardToggle() {
   document.getElementById('trig-give-guard-step-row').style.display  = v === 'quest_active' ? '' : 'none';
 }
 function _trigRespCondToggle() {
+  const btn = document.getElementById('trig-resp-cond-chk');
+  btn.classList.toggle('active');
   document.getElementById('trig-resp-cond-row').style.display =
-    document.getElementById('trig-resp-cond-chk').checked ? '' : 'none';
+    btn.classList.contains('active') ? '' : 'none';
 }
 
 function _trigBack() {
@@ -2502,7 +2520,7 @@ function _stageTrigger() {
     entry.node_line       = document.getElementById('trig-node-line').value.trim();
     entry.parent_node_id  = document.getElementById('trig-parent-node-sel').value;
     entry.response_text   = document.getElementById('trig-resp-text').value.trim();
-    entry.response_condition = document.getElementById('trig-resp-cond-chk').checked
+    entry.response_condition = document.getElementById('trig-resp-cond-chk').classList.contains('active')
       ? (document.getElementById('trig-resp-cond-flag').value.trim() || null) : null;
   } else if (t === 'npc_give') {
     entry.item_id       = document.getElementById('trig-give-item-sel').value;
@@ -2684,13 +2702,7 @@ function renderQuestEditor(main) {
     _showQuestGraph(main, d);
   });
   main.querySelector('.editor-actions')?.appendChild(questGrfBtn);
-  main.appendChild(fieldRow('Quest ID', (() => {
-    const inp = document.createElement('input');
-    inp.type='text'; inp.className='field-input id-field';
-    inp.value = d._id || d.id || '';
-    inp.readOnly = true;
-    return inp;
-  })()));
+  appendIdRow(main, d, 'quest', SELECTED.zone_id, {idField: '_id', nameField: 'title'});
   main.appendChild(fieldRow('Title',    textInput(d.title,   v => { d.title   = v; markDirty(); }),
     null, 'Quest name shown in the player\'s journal.'));
   main.appendChild(fieldRow('Giver NPC', refInput(d.giver, 'dl-npcs', v => { d.giver = v; markDirty(); }, 'npc'),
@@ -2844,7 +2856,7 @@ function renderStyleEditor(main) {
 
   // Identity
   main.appendChild(sectionTitle('Identity'));
-  main.appendChild(fieldRow('ID',         textInput(d.id,         v => { d.id = v; markDirty(); })));
+  appendIdRow(main, d, 'style', SELECTED.zone_id);
   main.appendChild(fieldRow('Name',       textInput(d.name,       v => { d.name = v; markDirty(); })));
   main.appendChild(fieldRow('Short desc', textInput(d.desc_short, v => { d.desc_short = v; markDirty(); })));
   main.appendChild(fieldRow('Long desc',  textareaInput(d.desc_long, v => { d.desc_long = v; markDirty(); })));
@@ -3061,10 +3073,10 @@ function renderProcessEditor(main) {
 
   const cbRow = document.createElement('div'); cbRow.className = 'field-row';
   const cbLabel = document.createElement('label'); cbLabel.textContent = 'Autostart';
-  const cb = document.createElement('input'); cb.type = 'checkbox';
-  cb.style.accentColor = 'var(--accent)'; cb.style.width = '16px'; cb.style.height = '16px'; cb.style.cursor = 'pointer';
-  cb.checked = d.autostart || false;
-  cb.addEventListener('change', () => { d.autostart = cb.checked; markDirty(); });
+  const cb = document.createElement('button'); cb.type = 'button';
+  cb.className = 'tag-btn' + (d.autostart ? ' active' : '');
+  cb.textContent = 'autostart';
+  cb.addEventListener('click', () => { cb.classList.toggle('active'); d.autostart = cb.classList.contains('active'); markDirty(); });
   cbRow.appendChild(cbLabel); cbRow.appendChild(cb); main.appendChild(cbRow);
 
   // Script
@@ -3124,11 +3136,8 @@ function _renderRouteWaypoints(main, d) {
       row.style.cssText = 'display:flex;align-items:center;gap:8px;';
 
       // Room ref input
-      const roomInp = document.createElement('input');
-      roomInp.type = 'text'; roomInp.className = 'field-input'; roomInp.style.flex = '1';
-      roomInp.placeholder = 'room_id'; roomInp.value = wp.room_id || '';
-      roomInp.setAttribute('list', 'dl-rooms');
-      roomInp.addEventListener('input', () => { wp.room_id = roomInp.value; markDirty(); });
+      const roomInpRow = refInput(wp.room_id, 'dl-rooms', v => { wp.room_id = v; }, 'room');
+      roomInpRow.style.flex = '1';
 
       // Ticks
       const tickLabel = document.createElement('span'); tickLabel.textContent = 'ticks:';
@@ -3154,7 +3163,7 @@ function _renderRouteWaypoints(main, d) {
       rmBtn.style.padding = '2px 6px'; rmBtn.title = 'Remove waypoint';
       rmBtn.addEventListener('click', () => { d.route.splice(i, 1); markDirty(); redraw(); });
 
-      row.appendChild(roomInp); row.appendChild(tickLabel); row.appendChild(tickInp);
+      row.appendChild(roomInpRow); row.appendChild(tickLabel); row.appendChild(tickInp);
       row.appendChild(upBtn); row.appendChild(dnBtn); row.appendChild(rmBtn);
       container.appendChild(row);
     });
@@ -3820,21 +3829,36 @@ function buildCondEditor(resp, condBtn) {
     typeSel.appendChild(o);
   });
 
+  const val1Wrap = document.createElement('div'); val1Wrap.style.cssText = 'display:flex;gap:2px;align-items:center;';
   const val1Inp = document.createElement('input'); val1Inp.type = 'text'; val1Inp.className = 'dlg-cond-val';
+  const val1PickBtn = document.createElement('button'); val1PickBtn.type = 'button'; val1PickBtn.className = 'ref-pick-btn'; val1PickBtn.textContent = '[...]';
+  val1Wrap.appendChild(val1Inp); val1Wrap.appendChild(val1PickBtn);
+
   const val2Inp = document.createElement('input'); val2Inp.type = 'number'; val2Inp.className = 'dlg-cond-val'; val2Inp.style.width = '60px';
   const val2Label = document.createElement('span'); val2Label.style.cssText = 'font-size:11px;color:var(--text-dim)';
 
   const clearBtn = document.createElement('button'); clearBtn.className = 'hbtn danger'; clearBtn.textContent = 'Clear';
   clearBtn.style.fontSize = '11px'; clearBtn.style.padding = '2px 8px';
 
+  const getPickerType = field => {
+    if (!field) return null;
+    if (field === 'flag' || field === 'not_flag') return 'flag';
+    if (field === 'quest' || field === 'quest_complete') return 'quest';
+    if (field === 'skill') return 'skill';
+    if (field === 'item') return 'item';
+    return null;
+  };
+
   const updateFields = () => {
     const t = typeSel.value;
     const ct = COND_TYPES.find(c => c.key === t) || COND_TYPES[0];
-    val1Inp.style.display = ct.fields.length >= 1 ? '' : 'none';
+    val1Wrap.style.display = ct.fields.length >= 1 ? '' : 'none';
     val2Inp.style.display = ct.fields.length >= 2 ? '' : 'none';
     val2Label.style.display = ct.fields.length >= 2 ? '' : 'none';
     if (ct.fields[0]) {
-      val1Inp.setAttribute('list', ct.fields[0] === 'flag' || ct.fields[0] === 'not_flag' ? 'dl-flags' : ct.fields[0] === 'quest' || ct.fields[0] === 'quest_complete' ? 'dl-quests' : ct.fields[0] === 'skill' ? 'dl-skills' : ct.fields[0] === 'item' ? 'dl-items' : '');
+      const pt = getPickerType(ct.fields[0]);
+      val1PickBtn.style.display = pt ? '' : 'none';
+      val1PickBtn.onclick = pt ? () => openPicker(pt, id => { val1Inp.value = id; applyChange(); }) : null;
       val1Inp.placeholder = ct.fields[0];
       val1Inp.value = resp.condition?.[ct.fields[0]] || '';
     }
@@ -3862,23 +3886,23 @@ function buildCondEditor(resp, condBtn) {
 
   typeSel.addEventListener('change', () => { updateFields(); applyChange(); });
   val1Inp.addEventListener('input', applyChange);
-  val1Inp.addEventListener('dragover', e => { if (_dragging?.type === 'flag') { e.preventDefault(); val1Inp.style.outline = '1px solid var(--accent)'; } });
-  val1Inp.addEventListener('dragleave', () => { val1Inp.style.outline = ''; });
-  val1Inp.addEventListener('drop', e => { e.preventDefault(); val1Inp.style.outline = ''; if (_dragging?.type === 'flag') { val1Inp.value = _dragging.id; applyChange(); } });
+  _attachFlagDrop(val1Inp, id => { val1Inp.value = id; applyChange(); });
   val2Inp.addEventListener('input', applyChange);
   clearBtn.addEventListener('click', () => {
     typeSel.value = ''; resp.condition = undefined;
     updateFields(); condBtn.textContent = '+ cond'; condBtn.style.opacity = '.5'; markDirty();
   });
 
-  div.appendChild(typeSel); div.appendChild(val1Inp);
+  div.appendChild(typeSel); div.appendChild(val1Wrap);
   div.appendChild(val2Label); div.appendChild(val2Inp); div.appendChild(clearBtn);
   return div;
 }
 
 // ── ID row with lock toggle ──────────────────────────────────────────
 
-function appendIdRow(main, d, type, zone_id) {
+function appendIdRow(main, d, type, zone_id, opts = {}) {
+  const idField   = opts.idField   || 'id';
+  const nameField = opts.nameField || 'name';
   let autoId = true;
   const row = document.createElement('div'); row.className = 'field-row';
   const label = document.createElement('label'); label.textContent = 'ID';
@@ -3886,7 +3910,7 @@ function appendIdRow(main, d, type, zone_id) {
   const idRow = document.createElement('div'); idRow.className = 'id-row';
   const inp = document.createElement('input');
   inp.type='text'; inp.className='field-input id-field'; inp.style.flex='1';
-  inp.value = d.id || '';
+  inp.value = d[idField] || '';
   // duplicate check
   const checkDup = () => {
     const id = inp.value;
@@ -3894,16 +3918,17 @@ function appendIdRow(main, d, type, zone_id) {
     if (type==='room')  dup = ALL_ROOMS[id]  && ALL_ROOMS[id]._file  !== d._file;
     if (type==='npc')   dup = ALL_NPCS[id]   && ALL_NPCS[id]._file   !== d._file;
     if (type==='item')  dup = ALL_ITEMS[id]  && ALL_ITEMS[id]._file  !== d._file;
+    if (type==='quest') dup = ALL_QUESTS[id] && ALL_QUESTS[id]._file !== d._file;
     inp.classList.toggle('dup', dup);
   };
-  inp.addEventListener('input', () => { autoId = false; lockBtn.textContent = '\uD83D\uDD12'; d.id = inp.value; checkDup(); markDirty(); });
+  inp.addEventListener('input', () => { autoId = false; lockBtn.textContent = '\uD83D\uDD12'; d[idField] = inp.value; checkDup(); markDirty(); });
   const lockBtn = document.createElement('button');
   lockBtn.className='id-lock'; lockBtn.title='Auto/manual ID';
   lockBtn.textContent = '\uD83D\uDD13'; // unlocked
   lockBtn.addEventListener('click', () => {
     autoId = !autoId;
     lockBtn.textContent = autoId ? '\uD83D\uDD13' : '\uD83D\uDD12';
-    if (autoId && d.name) { inp.value = makeId(zone_id, d.name); d.id = inp.value; checkDup(); markDirty(); }
+    if (autoId && d[nameField]) { inp.value = makeId(zone_id, d[nameField]); d[idField] = inp.value; checkDup(); markDirty(); }
   });
   idRow.appendChild(inp); idRow.appendChild(lockBtn);
   row.appendChild(idRow);
@@ -3994,11 +4019,13 @@ async function saveSelected() {
 
   // ID rename detection
   const _origId = SELECTED._orig_id || '';
-  const _newId  = data.id || data._npc_id || '';
+  const _newId  = data.id || data._id || data._npc_id || '';
   if (_origId && _newId && _origId !== _newId) {
     const refs = XREF[_origId] || [];
     const choice = await _confirmRename(_origId, _newId, refs);
     if (choice === 'cancel') { setStatus('', ''); return; }
+    // For quests: ID is derived from the filename — "save only" reverts the id change
+    if (choice === 'save_only' && type === 'quest') { data._id = _origId; }
     if (choice === 'rename') {
       const res = await fetch('/api/rename_id', {
         method: 'POST',
@@ -4356,11 +4383,6 @@ function buildQualityTierCard(tier, tIdx, comm, rebuildTiers) {
   // ── Tier header row ───────────────────────────────────────────────────
   const topRow = document.createElement('div'); topRow.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px';
 
-  const tierDlId = 'dl-tier-names-' + Math.random().toString(36).slice(2,6);
-  const tierDl = document.createElement('datalist'); tierDl.id = tierDlId;
-  TIER_NAMES.forEach(n => { const o = document.createElement('option'); o.value = n; tierDl.appendChild(o); });
-  card.insertBefore(tierDl, card.firstChild);
-
   function lbl(text) {
     const l = document.createElement('label'); l.textContent = text;
     l.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:2px;display:block';
@@ -4372,8 +4394,13 @@ function buildQualityTierCard(tier, tIdx, comm, rebuildTiers) {
   }
 
   const tierInp = textInput(tier.tier || 'standard', v => { tier.tier = v; markDirty(); }, 'poor/standard/...');
-  tierInp.setAttribute('list', tierDlId); tierInp.style.cssText = 'width:110px;font-family:monospace';
-  topRow.appendChild(col('Tier', tierInp));
+  tierInp.style.cssText = 'width:110px;font-family:monospace';
+  const tierPickBtn = document.createElement('button'); tierPickBtn.type='button';
+  tierPickBtn.className='ref-pick-btn'; tierPickBtn.textContent='[...]'; tierPickBtn.title='Pick tier name';
+  tierPickBtn.addEventListener('click', () => openPicker('tier', id => { tierInp.value = id; tier.tier = id; markDirty(); }));
+  const tierWrap = document.createElement('div'); tierWrap.style.cssText = 'display:flex;gap:2px;align-items:center;';
+  tierWrap.appendChild(tierInp); tierWrap.appendChild(tierPickBtn);
+  topRow.appendChild(col('Tier', tierWrap));
 
   const wtInp = numInput(tier.weight ?? 55, v => { tier.weight = v; markDirty(); }, 1, 999);
   wtInp.style.width = '60px';
@@ -4535,9 +4562,27 @@ const OP_NAMES = Object.keys(OP_SCHEMA).sort();
 function openScriptModal(title, opsArray, callback) {
   scriptOpsTarget   = JSON.parse(JSON.stringify(opsArray));
   scriptOpsCallback = callback;
-  document.getElementById('script-modal-title').textContent = 'Edit Script: ' + title;
-  renderScriptOps(document.getElementById('script-ops-list'), scriptOpsTarget);
-  openModal('script-modal');
+
+  const main = document.getElementById('editor');
+  main.innerHTML = '';
+
+  const hdr = document.createElement('div'); hdr.className = 'script-panel-header';
+  const backBtn = document.createElement('button'); backBtn.className = 'hbtn';
+  backBtn.textContent = '\u2190 Back';
+  backBtn.addEventListener('click', saveScript);
+  const titleEl = document.createElement('span'); titleEl.className = 'script-panel-title';
+  titleEl.textContent = 'Script: ' + title;
+  hdr.appendChild(backBtn); hdr.appendChild(titleEl);
+  main.appendChild(hdr);
+
+  const opsList = document.createElement('div'); opsList.className = 'script-ops-list'; opsList.id = 'script-ops-list';
+  renderScriptOps(opsList, scriptOpsTarget);
+  main.appendChild(opsList);
+
+  const addBtn = document.createElement('button'); addBtn.className = 'add-op-btn';
+  addBtn.textContent = '+ Add op';
+  addBtn.addEventListener('click', () => addOp(scriptOpsTarget));
+  main.appendChild(addBtn);
 }
 
 function renderScriptOps(container, ops) {
@@ -4618,8 +4663,8 @@ function buildOpFieldInput(f, op, onChange) {
       list.forEach((id, idx) => {
         const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:4px;align-items:center;';
         const inp = document.createElement('input'); inp.type='text'; inp.className='op-input'; inp.style.flex='1';
-        inp.value = id; inp.setAttribute('list','dl-items');
-        inp.addEventListener('input', () => { const m = inp.value.match(/\(([^)]+)\)$/); list[idx] = m ? m[1] : inp.value; onChange(); });
+        inp.value = id;
+        inp.addEventListener('input', () => { list[idx] = inp.value; onChange(); });
         const pickBtn = document.createElement('button'); pickBtn.className='ref-pick-btn'; pickBtn.textContent='[...]'; pickBtn.title='Pick item';
         pickBtn.addEventListener('click', () => openPicker('item', picked => { inp.value = picked; list[idx] = picked; onChange(); }));
         const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.style.cssText='font-size:11px;padding:1px 6px;';
@@ -4638,10 +4683,11 @@ function buildOpFieldInput(f, op, onChange) {
   }
 
   if (f.type === 'bool') {
-    const cb = document.createElement('input'); cb.type='checkbox'; cb.style.accentColor='var(--accent)';
-    cb.checked = !!val;
-    cb.addEventListener('change', () => { op[f.key] = cb.checked; onChange(); });
-    return cb;
+    const btn = document.createElement('button'); btn.type='button';
+    btn.className = 'tag-btn' + (!!val ? ' active' : '');
+    btn.textContent = f.label;
+    btn.addEventListener('click', () => { btn.classList.toggle('active'); op[f.key] = btn.classList.contains('active'); onChange(); });
+    return btn;
   }
   if (f.type === 'num') {
     const inp = document.createElement('input'); inp.type='number'; inp.className='op-input';
@@ -4649,18 +4695,41 @@ function buildOpFieldInput(f, op, onChange) {
     inp.addEventListener('input', () => { op[f.key] = Number(inp.value); onChange(); });
     return inp;
   }
-  // text / ref types
+  // ref / flag / effect / tag types → editable text + [...]  picker button
+  const PICKER_MAP = {
+    item_ref:'item', npc_ref:'npc', room_ref:'room', quest_ref:'quest',
+    skill_ref:'skill', style_ref:'style', flag:'flag', effect:'effect', tag:'tag'
+  };
+  const ENTITY_DROP_TYPE = { item_ref:'item', npc_ref:'npc', room_ref:'room', quest_ref:'quest' };
+  if (PICKER_MAP[f.type]) {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:4px;align-items:center;';
+    const inp = document.createElement('input'); inp.type='text'; inp.className='op-input';
+    inp.value = val || '';
+    if (f.placeholder) inp.placeholder = f.placeholder;
+    inp.addEventListener('input', () => { op[f.key] = inp.value; onChange(); });
+    if (f.type === 'flag') {
+      _attachFlagDrop(inp, id => { inp.value = id; op[f.key] = id; onChange(); });
+    } else if (ENTITY_DROP_TYPE[f.type]) {
+      const dt = ENTITY_DROP_TYPE[f.type];
+      inp.addEventListener('dragover', e => { e.preventDefault(); inp.classList.add('ref-drop'); });
+      inp.addEventListener('dragleave', () => inp.classList.remove('ref-drop'));
+      inp.addEventListener('drop', e => {
+        e.preventDefault(); inp.classList.remove('ref-drop');
+        if (e.dataTransfer.getData('wct/type') === dt) {
+          const id = e.dataTransfer.getData('wct/id'); inp.value = id; op[f.key] = id; onChange();
+        }
+      });
+    }
+    const pickBtn = document.createElement('button'); pickBtn.type='button'; pickBtn.className='ref-pick-btn'; pickBtn.textContent='[...]';
+    pickBtn.addEventListener('click', () => openPicker(PICKER_MAP[f.type], id => { inp.value = id; op[f.key] = id; onChange(); }));
+    wrap.appendChild(inp); wrap.appendChild(pickBtn);
+    return wrap;
+  }
+  // plain text (type = 'text', 'num_or_star', or unrecognised)
   const inp = document.createElement('input'); inp.type='text'; inp.className='op-input';
   inp.value = val || '';
   if (f.placeholder) inp.placeholder = f.placeholder;
-  const dlMap = {item_ref:'dl-items',npc_ref:'dl-npcs',room_ref:'dl-rooms',quest_ref:'dl-quests',skill_ref:'dl-skills',style_ref:'dl-styles',flag:'dl-flags',tag:'',effect:'dl-status-effects'};
-  if (dlMap[f.type]) inp.setAttribute('list', dlMap[f.type]);
-  inp.addEventListener('input', () => {
-    const m = inp.value.match(/\(([^)]+)\)$/);
-    op[f.key] = m ? m[1] : inp.value;
-    onChange();
-  });
-  if (f.type === 'flag') _attachFlagDrop(inp, id => { op[f.key] = id; onChange(); });
+  inp.addEventListener('input', () => { op[f.key] = inp.value; onChange(); });
   return inp;
 }
 
@@ -4673,7 +4742,7 @@ function addOp(ops) {
 
 function saveScript() {
   if (scriptOpsCallback) scriptOpsCallback(scriptOpsTarget);
-  closeModal('script-modal');
+  renderEditor();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -4795,7 +4864,6 @@ function buildExitRow(dir, v) {
   // Direction input
   const dirInp = document.createElement('input'); dirInp.type='text'; dirInp.className='op-input';
   dirInp.style.width='90px'; dirInp.value = dir; dirInp.placeholder = 'direction';
-  dirInp.setAttribute('list','dl-directions');
   dirInp.addEventListener('change', () => {
     const norm = dirInp.value.trim().toLowerCase();
     if (!norm) { dirInp.value = dir; return; }          // blank → revert to previous
@@ -4807,6 +4875,10 @@ function buildExitRow(dir, v) {
     dir = norm;
   });
   top.appendChild(dirInp);
+  const dirPickBtn = document.createElement('button'); dirPickBtn.type='button';
+  dirPickBtn.className='ref-pick-btn'; dirPickBtn.textContent='[...]'; dirPickBtn.title='Pick direction';
+  dirPickBtn.addEventListener('click', () => openPicker('direction', id => { dirInp.value = id; dirInp.dispatchEvent(new Event('change')); }));
+  top.appendChild(dirPickBtn);
 
   const arrow = document.createElement('span'); arrow.textContent = '→'; arrow.style.color='var(--dim)';
   top.appendChild(arrow);
@@ -4814,11 +4886,7 @@ function buildExitRow(dir, v) {
   // To room
   const toInp = document.createElement('input'); toInp.type='text'; toInp.className='op-input';
   toInp.style.flex='1'; toInp.value = v.to;
-  toInp.setAttribute('list','dl-rooms');
-  toInp.addEventListener('input', () => {
-    const m = toInp.value.match(/\(([^)]+)\)$/);
-    v.to = m ? m[1] : toInp.value;
-  });
+  toInp.addEventListener('input', () => { v.to = toInp.value; });
   toInp.addEventListener('dragover', e => { e.preventDefault(); toInp.classList.add('ref-drop'); });
   toInp.addEventListener('dragleave', () => toInp.classList.remove('ref-drop'));
   toInp.addEventListener('drop', e => { e.preventDefault(); toInp.classList.remove('ref-drop'); if(e.dataTransfer.getData('wct/type')==='room'){const id=e.dataTransfer.getData('wct/id');toInp.value=id;v.to=id;} });
@@ -4831,14 +4899,16 @@ function buildExitRow(dir, v) {
   toPickBtn.addEventListener('click', () => openPicker('room', id => { toInp.value = id; v.to = id; _updateMismatch(); }));
   top.appendChild(toPickBtn);
 
-  // Locked checkbox
-  const lockCb = document.createElement('input'); lockCb.type='checkbox'; lockCb.checked = v.locked;
-  lockCb.style.accentColor='var(--accent)';
-  lockCb.title='Locked';
-  const lockLbl = document.createElement('label'); lockLbl.className='checkbox-row';
-  lockLbl.appendChild(lockCb); lockLbl.appendChild(document.createTextNode(' locked'));
-  lockCb.addEventListener('change', () => { v.locked = lockCb.checked; lockRow.style.display = v.locked ? '' : 'none'; });
-  top.appendChild(lockLbl);
+  // Locked button
+  const lockBtn = document.createElement('button'); lockBtn.type='button';
+  lockBtn.className='tag-btn' + (v.locked ? ' active' : '');
+  lockBtn.textContent='locked'; lockBtn.title='Locked';
+  lockBtn.addEventListener('click', () => {
+    lockBtn.classList.toggle('active');
+    v.locked = lockBtn.classList.contains('active');
+    lockRow.style.display = v.locked ? '' : 'none';
+  });
+  top.appendChild(lockBtn);
 
   // Remove
   const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='×';
@@ -4886,7 +4956,7 @@ function buildExitRow(dir, v) {
 
   const SIF_OPS = ['', 'has_flag', 'not_flag', 'has_item', 'min_level', 'min_skill'];
   const SIF_PLACEHOLDER = {has_flag:'flag', not_flag:'flag', has_item:'item_id', min_level:'level', min_skill:'skill'};
-  const SIF_LIST = {has_flag: 'dl-flags', not_flag: 'dl-flags', has_item: 'dl-items', min_level: null, min_skill: null};
+  const SIF_PICKER = {has_flag: 'flag', not_flag: 'flag', has_item: 'item', min_skill: 'skill'};
 
   const parsed = _parseShowIf(v.show_if);
 
@@ -4894,7 +4964,11 @@ function buildExitRow(dir, v) {
   SIF_OPS.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o || '(none)'; opSel.appendChild(opt); });
   opSel.value = parsed.op;
 
+  const val1Wrap = document.createElement('div'); val1Wrap.style.cssText = 'display:flex;gap:2px;align-items:center;flex:1;';
   const val1Inp = document.createElement('input'); val1Inp.type = 'text'; val1Inp.className = 'op-input'; val1Inp.style.flex = '1';
+  const val1PickBtn = document.createElement('button'); val1PickBtn.type = 'button'; val1PickBtn.className = 'ref-pick-btn'; val1PickBtn.textContent = '[...]';
+  val1Wrap.appendChild(val1Inp); val1Wrap.appendChild(val1PickBtn);
+
   const val2Inp = document.createElement('input'); val2Inp.type = 'number'; val2Inp.className = 'op-input'; val2Inp.style.width = '60px';
   val2Inp.min = 0; val2Inp.step = 1; val2Inp.placeholder = 'value';
 
@@ -4903,13 +4977,14 @@ function buildExitRow(dir, v) {
     const show1 = !!op;
     const show2 = op === 'min_skill';
     const isNum = op === 'min_level';
-    val1Inp.style.display = show1 ? '' : 'none';
+    val1Wrap.style.display = show1 ? '' : 'none';
     val2Inp.style.display = show2 ? '' : 'none';
     val1Inp.placeholder = SIF_PLACEHOLDER[op] || '';
     val1Inp.type = isNum ? 'number' : 'text';
     val1Inp.min = isNum ? 1 : undefined;
-    const listId = SIF_LIST[op];
-    if (listId) val1Inp.setAttribute('list', listId); else val1Inp.removeAttribute('list');
+    const pt = SIF_PICKER[op] || null;
+    val1PickBtn.style.display = pt ? '' : 'none';
+    val1PickBtn.onclick = pt ? () => openPicker(pt, id => { val1Inp.value = id; commitSif(); }) : null;
   };
 
   val1Inp.value = parsed.val1;
@@ -4922,7 +4997,7 @@ function buildExitRow(dir, v) {
   val2Inp.addEventListener('input', commitSif);
   _attachFlagDrop(val1Inp, id => { commitSif(); });
 
-  sifRow.appendChild(opSel); sifRow.appendChild(val1Inp); sifRow.appendChild(val2Inp);
+  sifRow.appendChild(opSel); sifRow.appendChild(val1Wrap); sifRow.appendChild(val2Inp);
   card.appendChild(sifRow);
 
   // Script buttons row
@@ -4969,10 +5044,8 @@ function buildExitRow(dir, v) {
 
   // Reverse locked + lock_tag
   const revLockTopRow = document.createElement('div'); revLockTopRow.className = 'exit-row-advanced';
-  const revLockCb = document.createElement('input'); revLockCb.type = 'checkbox'; revLockCb.style.accentColor = 'var(--accent)';
-  const revLockLbl = document.createElement('label'); revLockLbl.className = 'checkbox-row';
-  revLockLbl.appendChild(revLockCb); revLockLbl.appendChild(document.createTextNode(' locked'));
-  revLockTopRow.appendChild(revLockLbl);
+  const revLockBtn = document.createElement('button'); revLockBtn.type = 'button'; revLockBtn.className = 'tag-btn'; revLockBtn.textContent = 'locked';
+  revLockTopRow.appendChild(revLockBtn);
   revSection.appendChild(revLockTopRow);
   const revLockTagRow = document.createElement('div'); revLockTagRow.className = 'exit-row-advanced';
   revLockTagRow.style.display = 'none';
@@ -4981,9 +5054,10 @@ function buildExitRow(dir, v) {
   revLockTagInp.addEventListener('input', () => { if (v._reverse) v._reverse.lock_tag = revLockTagInp.value; });
   revLockTagRow.appendChild(revLockTagLbl); revLockTagRow.appendChild(revLockTagInp);
   revSection.appendChild(revLockTagRow);
-  revLockCb.addEventListener('change', () => {
-    if (v._reverse) v._reverse.locked = revLockCb.checked;
-    revLockTagRow.style.display = revLockCb.checked ? '' : 'none';
+  revLockBtn.addEventListener('click', () => {
+    revLockBtn.classList.toggle('active');
+    if (v._reverse) v._reverse.locked = revLockBtn.classList.contains('active');
+    revLockTagRow.style.display = revLockBtn.classList.contains('active') ? '' : 'none';
   });
 
   // Reverse show_if
@@ -4991,24 +5065,29 @@ function buildExitRow(dir, v) {
   const revSifLbl = document.createElement('span'); revSifLbl.className = 'op-field-label'; revSifLbl.textContent = 'show_if:';
   const revOpSel = document.createElement('select'); revOpSel.className = 'op-input'; revOpSel.style.width = '100px';
   SIF_OPS.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o || '(none)'; revOpSel.appendChild(opt); });
+  const revVal1Wrap = document.createElement('div'); revVal1Wrap.style.cssText = 'display:flex;gap:2px;align-items:center;flex:1;';
   const revVal1Inp = document.createElement('input'); revVal1Inp.type = 'text'; revVal1Inp.className = 'op-input'; revVal1Inp.style.flex = '1';
+  const revVal1PickBtn = document.createElement('button'); revVal1PickBtn.type = 'button'; revVal1PickBtn.className = 'ref-pick-btn'; revVal1PickBtn.textContent = '[...]';
+  revVal1Wrap.appendChild(revVal1Inp); revVal1Wrap.appendChild(revVal1PickBtn);
   const revVal2Inp = document.createElement('input'); revVal2Inp.type = 'number'; revVal2Inp.className = 'op-input'; revVal2Inp.style.width = '60px';
   revVal2Inp.min = 0; revVal2Inp.step = 1; revVal2Inp.placeholder = 'value';
   const updateRevSif = () => {
     const op = revOpSel.value;
-    revVal1Inp.style.display = op ? '' : 'none';
+    revVal1Wrap.style.display = op ? '' : 'none';
     revVal2Inp.style.display = op === 'min_skill' ? '' : 'none';
     revVal1Inp.placeholder = SIF_PLACEHOLDER[op] || '';
     revVal1Inp.type = op === 'min_level' ? 'number' : 'text';
     if (op === 'min_level') revVal1Inp.min = 1; else revVal1Inp.removeAttribute('min');
-    const lid = SIF_LIST[op]; if (lid) revVal1Inp.setAttribute('list', lid); else revVal1Inp.removeAttribute('list');
+    const pt = SIF_PICKER[op] || null;
+    revVal1PickBtn.style.display = pt ? '' : 'none';
+    revVal1PickBtn.onclick = pt ? () => openPicker(pt, id => { revVal1Inp.value = id; commitRevSif(); }) : null;
   };
   const commitRevSif = () => { if (v._reverse) _writeShowIf(v._reverse, revOpSel.value, revVal1Inp.value.trim(), revVal2Inp.value); };
   revOpSel.addEventListener('change', () => { updateRevSif(); commitRevSif(); });
   revVal1Inp.addEventListener('input', commitRevSif);
   revVal2Inp.addEventListener('input', commitRevSif);
   _attachFlagDrop(revVal1Inp, () => commitRevSif());
-  revSifRow.appendChild(revSifLbl); revSifRow.appendChild(revOpSel); revSifRow.appendChild(revVal1Inp); revSifRow.appendChild(revVal2Inp);
+  revSifRow.appendChild(revSifLbl); revSifRow.appendChild(revOpSel); revSifRow.appendChild(revVal1Wrap); revSifRow.appendChild(revVal2Inp);
   revSection.appendChild(revSifRow);
 
   // Reverse script buttons
@@ -5021,7 +5100,7 @@ function buildExitRow(dir, v) {
     const rev = v._reverse;
     if (!rev) return;
     revDescInp.value        = rev.desc     || '';
-    revLockCb.checked       = !!rev.locked;
+    revLockBtn.classList.toggle('active', !!rev.locked);
     revLockTagRow.style.display = rev.locked ? '' : 'none';
     revLockTagInp.value     = rev.lock_tag || '';
     const rp = _parseShowIf(rev.show_if);
@@ -5160,9 +5239,9 @@ function _applyDefinedReverses() {
 
 function openPicker(type, callback) {
   _pickerCallback = callback;
-  const title = document.getElementById('picker-modal-title');
-  const list  = document.getElementById('picker-list');
-  list.innerHTML = '';
+  const title    = document.getElementById('picker-modal-title');
+  const list     = document.getElementById('picker-list');
+  const commentEl = document.getElementById('picker-admin-comment');
 
   let entries = [];
   let badge   = '';
@@ -5171,21 +5250,64 @@ function openPicker(type, callback) {
   if (type === 'item'  || type === 'dl-items')  { entries = Object.entries(ALL_ITEMS);  badge = 'I'; title.textContent = 'Pick Item'; }
   if (type === 'quest' || type === 'dl-quests') { entries = Object.entries(ALL_QUESTS); badge = 'Q'; title.textContent = 'Pick Quest'; }
   if (type === 'style' || type === 'dl-styles') {
-    entries = (WORLD_CONFIG.styles || []).map(s => [s.id, {name: s.name || s.id}]);
+    entries = (WORLD_CONFIG.styles || []).map(s => [s.id, s]);
     badge = 'S'; title.textContent = 'Pick Style';
   }
+  if (type === 'skill' || type === 'skill_ref' || type === 'dl-skills') {
+    entries = Object.keys(WORLD_CONFIG.skills || {}).map(id => [id, {name: id}]);
+    badge = 'Sk'; title.textContent = 'Pick Skill';
+  }
+  if (type === 'effect' || type === 'dl-status-effects') {
+    entries = (WORLD_CONFIG.status_effects || []).map(se => [se.id, se]);
+    badge = 'E'; title.textContent = 'Pick Effect';
+  }
+  if (type === 'flag' || type === 'dl-flags') {
+    entries = Object.keys(FLAG_MAP).sort().map(f => [f, {name: f, _usages: FLAG_MAP[f]}]);
+    badge = 'F'; title.textContent = 'Pick Flag';
+  }
+  if (type === 'tag') {
+    entries = ALL_TAGS.map(t => [t, {name: t, _comment: TAG_COMMENTS[t] || ''}]);
+    badge = 'T'; title.textContent = 'Pick Tag';
+  }
+  if (type === 'direction') {
+    const DIRS = ['north','south','east','west','northeast','northwest','southeast','southwest','up','down'];
+    entries = DIRS.map(d => [d, {name: d}]);
+    badge = 'D'; title.textContent = 'Pick Direction';
+  }
+  if (type === 'tier') {
+    const TIERS = ['poor','standard','exceptional','masterwork'];
+    entries = TIERS.map(t => [t, {name: t}]);
+    badge = 'T'; title.textContent = 'Pick Tier';
+  }
+
+  const getComment = (id, obj) => {
+    if (type === 'flag') return (obj._usages || []).length + ' usage' + ((obj._usages||[]).length !== 1 ? 's' : '');
+    if (type === 'tag')  return obj._comment || '';
+    return obj.admin_comment || '';
+  };
 
   const buildList = (q) => {
     list.innerHTML = '';
-    entries.filter(([id, obj]) => !q || (obj.name||obj.title||id).toLowerCase().includes(q.toLowerCase()) || id.toLowerCase().includes(q.toLowerCase()))
+    if (commentEl) { commentEl.textContent = ''; commentEl.style.display = 'none'; }
+    entries
+      .filter(([id, obj]) => !q || (obj.name||obj.title||id).toLowerCase().includes(q.toLowerCase()) || id.toLowerCase().includes(q.toLowerCase()))
       .forEach(([id, obj]) => {
-        const item = document.createElement('div'); item.className = 'picker-item';
-        item.innerHTML = `<span class="badge badge-${type}">${badge}</span> ${escHtml(obj.name||obj.title||id)} <span class="picker-id">${escHtml(id)}</span>`;
-        item.addEventListener('click', () => { if(_pickerCallback) _pickerCallback(id); closeModal('picker-modal'); });
-        list.appendChild(item);
+        const el = document.createElement('div'); el.className = 'picker-item';
+        const displayName = escHtml(obj.name || obj.title || id);
+        const displayId   = (type === 'flag') ? `${(obj._usages||[]).length} use${(obj._usages||[]).length!==1?'s':''}` :
+                            (type === 'tag' || obj.name === id || !obj.name) ? '' : escHtml(id);
+        el.innerHTML = `<span class="badge badge-${type}">${badge}</span> ${displayName}` +
+          (displayId ? ` <span class="picker-id">${displayId}</span>` : '');
+        const comment = getComment(id, obj);
+        el.addEventListener('mouseenter', () => {
+          if (commentEl) { commentEl.textContent = comment; commentEl.style.display = comment ? '' : 'none'; }
+        });
+        el.addEventListener('click', () => { if (_pickerCallback) _pickerCallback(id); closeModal('picker-modal'); });
+        list.appendChild(el);
       });
   };
 
+  if (commentEl) { commentEl.textContent = ''; commentEl.style.display = 'none'; }
   document.getElementById('picker-search').value = '';
   document.getElementById('picker-search').oninput = e => buildList(e.target.value);
   buildList('');
@@ -6127,6 +6249,10 @@ function _localValidateIssues() {
       const iid = item.id || '(no id)';
       if (!item.id)   add('err', `Item missing 'id'`, `Add id = "..."`, 'item', zid, iid);
       if (!item.name) add('err', `Item '${iid}' missing 'name'`, `Add name = "..."`, 'item', zid, iid);
+      const _validSlots = new Set(['', ...(WORLD_CONFIG?.equipment_slots || [])]);
+      if (item.slot !== undefined && !_validSlots.has(item.slot))
+        add('err', `Item '${iid}': unknown slot "${item.slot}"`,
+          `Valid slots: ${(WORLD_CONFIG?.equipment_slots || []).join(', ')} (or "" for non-equippable)`, 'item', zid, iid);
       if (item.scenery && item.slot)
         add('warn', `Item '${iid}': scenery + slot="${item.slot}" — item can never be equipped`,
           `Remove the slot field or remove the scenery flag`, 'item', zid, iid);
@@ -6613,8 +6739,8 @@ function renderMap(zoneFilter) {
   svg.setAttribute('width',  (maxX-minX+1)*(CW+GX) + M*2);
   svg.setAttribute('height', (maxY-minY+1)*(CH+GY) + M*2);
 
-  const showCounts = document.getElementById('map-show-counts')?.checked || false;
-  const showDirs   = document.getElementById('map-show-dirs')?.checked   || false;
+  const showCounts = document.getElementById('map-show-counts')?.classList.contains('active') || false;
+  const showDirs   = document.getElementById('map-show-dirs')?.classList.contains('active')   || false;
 
   // Exit lines — drawn from each room's exit face to the destination's opposite face.
   // This avoids center-to-center lines passing through room boxes.

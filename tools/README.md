@@ -321,8 +321,16 @@ run concurrently with WCT requests.
 ### WCT features
 
 - **Editor** — rooms, NPCs, items, quests, dialogues, fighting styles, and status effects
-  with full field editing, script op editor, exit editor, ref picker, drag-and-drop
-  quest steps and dialogue responses
+  with full field editing, exit editor, drag-and-drop quest steps and dialogue responses
+- **Entity pickers** — every ID reference field has a `[...]` button that opens a scoped
+  picker modal (rooms, NPCs, items, quests, styles, skills, effects, flags, tags, directions,
+  tier names). Type to search, hover for admin comment. Drag-and-drop from the sidebar is
+  also supported on compatible fields.
+- **Script editor panel** — clicking any script button (on_enter, kill_script, on_exit, etc.)
+  opens an inline script editor in the main panel. Click `← Back` to save and return. All
+  op parameter fields use the same pickers as regular editor fields.
+- **Toggle buttons** — boolean fields (hostile, start room, locked, scenery, autostart, etc.)
+  are amber-highlight toggle buttons rather than checkboxes
 - **Map view** — interactive SVG map (pan/zoom), per-zone colour coding, room detail
   panel, one-click edit; NPC/item count badges, exit-direction labels, start-room ★ and
   town ⌂ icons, connected-room gold highlight on selection; zone switch resets pan/zoom

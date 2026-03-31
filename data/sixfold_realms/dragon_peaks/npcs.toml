@@ -8,522 +8,325 @@
 # ââ Warden Selka Thornwright â quest giver, sky_piercer trainer âââââââââââââââ
 
 [[npc]]
-id          = "warden_selka"
-name        = "Warden Selka Thornwright"
-desc_short  = "A stern watchwoman wrapped in wind-leather."
-desc_long   = "Selka studies drake patterns and keeps the watch. She believes dragons can be reasoned with, but not coddled. She teaches Sky-Piercer to those who prove themselves in the Peaks."
-tags        = ["humanoid", "guard"]
-style       = "sky_piercer"
-style_prof  = 45
-hp          = 120
-max_hp      = 120
-attack      = 18
-defense     = 12
-xp_reward   = 120
+id = "warden_selka"
+name = "Warden Selka Thornwright"
+desc_short = "A stern watchwoman wrapped in wind-leather."
+desc_long = "Selka studies drake patterns and keeps the watch. She believes dragons can be reasoned with, but not coddled. She teaches Sky-Piercer to those who prove themselves in the Peaks."
+tags = ["humanoid", "guard"]
+style = "sky_piercer"
+style_prof = 45
+hp = 120
+max_hp = 120
+attack = 18
+defense = 12
+xp_reward = 120
 gold_reward = 40
-hostile     = false
-dialogue    = "We hold the line here. The Peaks demand respect."
-
-give_accepts = [
-  {
-    item_id = "drakebone_fragment",
-    message = "Selka turns the fragment over, eyes narrowing. 'Proof of a hunt. You did well.'",
-    script  = [
-      { op = "prestige",      amount = 8, reason = "brought drakebone to the Warden" },
-      { op = "give_gold",     amount = 50 },
-      { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 2 },
-    ],
-  },
-]
-
-round_script = [
-  { op = "if_prestige", min = 40, then = [
-    { op = "message", tag = "combat_hit", text = "Selka fights with measured strikes, as if honouring an ally." },
-  ] },
-  { op = "if_prestige", max = -20, then = [
-    { op = "message", tag = "combat_hit", text = "Selka's strikes are cold and unforgiving toward those who bring discord." },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "Selka falls with a look of grim satisfaction." },
-  { op = "set_flag", flag = "dp_selka_slain" },
-]
-
-# ââ Master Smith Orun Kett â commission crafter, shopkeeper âââââââââââââââââââ
+hostile = false
+dialogue = "We hold the line here. The Peaks demand respect."
+give_accepts = [{item_id = "drakebone_fragment", message = "Selka turns the fragment over, eyes narrowing. 'Proof of a hunt. You did well.'", script = [{op = "prestige", amount = 8, reason = "brought drakebone to the Warden"}, {op = "give_gold", amount = 50}, {op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 2}]}]
+round_script = [{op = "if_prestige", min = 40, then = [{op = "message", tag = "combat_hit", text = "Selka fights with measured strikes, as if honouring an ally."}]}, {op = "if_prestige", max = -20, then = [{op = "message", tag = "combat_hit", text = "Selka's strikes are cold and unforgiving toward those who bring discord."}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "Selka falls with a look of grim satisfaction."}, {op = "set_flag", flag = "dp_selka_slain"}]
 
 [[npc]]
-id          = "smith_orun"
-name        = "Master Smith Orun Kett"
-desc_short  = "A broad-shouldered smith with soot-streaked hair."
-desc_long   = "Orun forges resonant alloys and experiments with ancient techniques. He can craft unusual weapons and ingots if given the right materials."
-tags        = ["humanoid", "smith", "crafter"]
-style       = "sky_piercer"
-style_prof  = 30
-hp          = 90
-max_hp      = 90
-attack      = 14
-defense     = 10
-xp_reward   = 80
+id = "smith_orun"
+name = "Master Smith Orun Kett"
+desc_short = "A broad-shouldered smith with soot-streaked hair."
+desc_long = "Orun forges resonant alloys and experiments with ancient techniques. He can craft unusual weapons and ingots if given the right materials."
+tags = ["humanoid", "smith", "crafter"]
+style = "sky_piercer"
+style_prof = 30
+hp = 90
+max_hp = 90
+attack = 14
+defense = 10
+xp_reward = 80
 gold_reward = 30
-hostile     = false
-dialogue    = "Metal remembers the hands that shape it."
-
-shop = [
-  { item_id = "resonant_alloy_ingot", price = 120 },
-  { item_id = "volcanic_glass_shard", price = 30  },
-  { item_id = "dp_raw_ore",           price = 60  },
-]
-
-# ââ Tinker Apprentice â flavour âââââââââââââââââââââââââââââââââââââââââââââââ
+hostile = false
+dialogue = "Metal remembers the hands that shape it."
+shop = [{item_id = "resonant_alloy_ingot", price = 120}, {item_id = "volcanic_glass_shard", price = 30}, {item_id = "dp_raw_ore", price = 60}]
 
 [[npc]]
-id          = "tinker_apprentice"
-name        = "Tinker Apprentice"
-desc_short  = "A nervous youth tinkering with small gears."
-desc_long   = "They fumble with tiny resonant coils and look to Orun for guidance. Their hands are quick but their confidence is fragile."
-tags        = ["humanoid"]
-style       = "brawling"
-style_prof  = 10
-hp          = 40
-max_hp      = 40
-attack      = 6
-defense     = 4
-xp_reward   = 20
+id = "tinker_apprentice"
+name = "Tinker Apprentice"
+desc_short = "A nervous youth tinkering with small gears."
+desc_long = "They fumble with tiny resonant coils and look to Orun for guidance. Their hands are quick but their confidence is fragile."
+tags = ["humanoid"]
+style = "brawling"
+style_prof = 10
+hp = 40
+max_hp = 40
+attack = 6
+defense = 4
+xp_reward = 20
 gold_reward = 5
-hostile     = false
-dialogue    = "Don't touch that â Orun will know if it's been moved."
-
-# ââ Alloy Merchant Kar â shopkeeper ââââââââââââââââââââââââââââââââââââââââââ
+hostile = false
+dialogue = "Don't touch that â Orun will know if it's been moved."
 
 [[npc]]
-id          = "vendor_alloys"
-name        = "Alloy Merchant Kar"
-desc_short  = "A trader with a satchel full of glowing ingots."
-desc_long   = "Kar buys and sells rare metals and keeps an eye on miners with good luck. He knows the value of everything that comes out of the mountain."
-tags        = ["humanoid", "townsfolk"]
-style       = "brawling"
-style_prof  = 12
-hp          = 50
-max_hp      = 50
-attack      = 7
-defense     = 5
-xp_reward   = 25
+id = "vendor_alloys"
+name = "Alloy Merchant Kar"
+desc_short = "A trader with a satchel full of glowing ingots."
+desc_long = "Kar buys and sells rare metals and keeps an eye on miners with good luck. He knows the value of everything that comes out of the mountain."
+tags = ["humanoid", "townsfolk"]
+style = "brawling"
+style_prof = 12
+hp = 50
+max_hp = 50
+attack = 7
+defense = 5
+xp_reward = 25
 gold_reward = 10
-hostile     = false
-
-shop = [
-  { item_id = "resonant_alloy_ingot", price = 140 },
-  { item_id = "drakebone_fragment",   price = 220 },
-  { item_id = "dp_raw_ore",           price = 70  },
-  { item_id = "drake_scale",          price = 50  },
-]
-
-# ââ Miner Apprentice â give_accepts trade âââââââââââââââââââââââââââââââââââââ
+hostile = false
+shop = [{item_id = "resonant_alloy_ingot", price = 140}, {item_id = "drakebone_fragment", price = 220}, {item_id = "dp_raw_ore", price = 70}, {item_id = "drake_scale", price = 50}]
 
 [[npc]]
-id          = "miner_apprentice"
-name        = "Miner Apprentice"
-desc_short  = "A calloused miner with a hopeful grin."
-desc_long   = "They trade small favours for tools and gossip about rich veins. Their pickaxe broke last week and they've been making do since."
-tags        = ["humanoid"]
-style       = "brawling"
-style_prof  = 8
-hp          = 45
-max_hp      = 45
-attack      = 6
-defense     = 5
-xp_reward   = 20
+id = "miner_apprentice"
+name = "Miner Apprentice"
+desc_short = "A calloused miner with a hopeful grin."
+desc_long = "They trade small favours for tools and gossip about rich veins. Their pickaxe broke last week and they've been making do since."
+tags = ["humanoid"]
+style = "brawling"
+style_prof = 8
+hp = 45
+max_hp = 45
+attack = 6
+defense = 5
+xp_reward = 20
 gold_reward = 5
-hostile     = false
-dialogue    = "Rich seam deeper in, if you've got the tools."
-
-give_accepts = [
-  {
-    item_id = "scrap_metal",
-    message = "The apprentice brightens. 'I can patch a pickaxe with this.'",
-    script = [
-      { op = "take_item", item_id = "scrap_metal" },
-      { op = "give_item", item_id = "rusty_pickaxe" },
-      { op = "message",   tag = "item", text = "The apprentice hands you a patched pickaxe." },
-    ],
-  },
-]
-
-# ââ ENEMIES âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-
-# Cliff Hawk â ambush predator of the approach paths
-# Fast and diving, knocks things off ledges. Sky-Piercer users handle it well.
+hostile = false
+dialogue = "Rich seam deeper in, if you've got the tools."
+give_accepts = [{item_id = "scrap_metal", message = "The apprentice brightens. 'I can patch a pickaxe with this.'", script = [{op = "take_item", item_id = "scrap_metal"}, {op = "give_item", item_id = "rusty_pickaxe"}, {op = "message", tag = "item", text = "The apprentice hands you a patched pickaxe."}]}]
 
 [[npc]]
-id          = "cliff_hawk"
-name        = "Cliff Hawk"
-desc_short  = "A large mountain hawk with iron-grey talons."
-desc_long   = "It circles in the updrafts and strikes without warning â talons first, fast enough to knock an unprepared traveller sideways."
-tags        = ["beast", "fast", "flying"]
-style       = "sky_piercer"
-style_prof  = 18
-hp          = 28
-max_hp      = 28
-attack      = 10
-defense     = 4
-xp_reward   = 22
+id = "cliff_hawk"
+name = "Cliff Hawk"
+desc_short = "A large mountain hawk with iron-grey talons."
+desc_long = "It circles in the updrafts and strikes without warning â talons first, fast enough to knock an unprepared traveller sideways."
+tags = ["beast", "fast", "flying"]
+style = "sky_piercer"
+style_prof = 18
+hp = 28
+max_hp = 28
+attack = 10
+defense = 4
+xp_reward = 22
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 4
-
-round_script = [
-  { op = "if_combat_round", min = 2, then = [
-    { op = "message", tag = "combat", text = "The hawk stoops into a dive, striking with punishing speed!" },
-    { op = "damage", amount = 3 },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The hawk tumbles from the updraft and disappears over the ledge." },
-]
-
-# Mountain Bandit â opportunist on the approach and lower roads
+round_script = [{op = "if_combat_round", min = 2, then = [{op = "message", tag = "combat", text = "The hawk stoops into a dive, striking with punishing speed!"}, {op = "damage", amount = 3}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "The hawk tumbles from the updraft and disappears over the ledge."}]
 
 [[npc]]
-id          = "mountain_bandit"
-name        = "Mountain Bandit"
-desc_short  = "A rough-edged figure with a weather-worn blade."
-desc_long   = "They work the road between the ferry berth and Highspire, preying on the unprepared. Dangerous in numbers, but alone they tend to cut their losses."
-tags        = ["humanoid", "fast"]
-style       = "brawling"
-style_prof  = 22
-hp          = 55
-max_hp      = 55
-attack      = 13
-defense     = 8
-xp_reward   = 40
+id = "mountain_bandit"
+name = "Mountain Bandit"
+desc_short = "A rough-edged figure with a weather-worn blade."
+desc_long = "They work the road between the ferry berth and Highspire, preying on the unprepared. Dangerous in numbers, but alone they tend to cut their losses."
+tags = ["humanoid", "fast"]
+style = "brawling"
+style_prof = 22
+hp = 55
+max_hp = 55
+attack = 13
+defense = 8
+xp_reward = 40
 gold_reward = 12
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 6
-
-round_script = [
-  { op = "if_combat_round", min = 3, then = [
-    { op = "message", tag = "combat", text = "The bandit feints low and then drives a shoulder into you." },
-    { op = "damage", amount = 5 },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The bandit collapses with a grunt, coins scattering across the stone." },
-  { op = "give_gold", amount = 8 },
-]
-
-# Steam Sprite â born from the vent fields, small elemental
+round_script = [{op = "if_combat_round", min = 3, then = [{op = "message", tag = "combat", text = "The bandit feints low and then drives a shoulder into you."}, {op = "damage", amount = 5}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "The bandit collapses with a grunt, coins scattering across the stone."}, {op = "give_gold", amount = 8}]
 
 [[npc]]
-id          = "steam_sprite"
-name        = "Steam Sprite"
-desc_short  = "A small elemental of scalding vapour."
-desc_long   = "Birthed from the vent field's thermal chaos, it drifts on pockets of pressurised air. Contact burns. It has no malice â just heat."
-tags        = ["beast", "small", "fast"]
-style       = "sky_piercer"
-style_prof  = 15
-hp          = 30
-max_hp      = 30
-attack      = 10
-defense     = 5
-xp_reward   = 25
+id = "steam_sprite"
+name = "Steam Sprite"
+desc_short = "A small elemental of scalding vapour."
+desc_long = "Birthed from the vent field's thermal chaos, it drifts on pockets of pressurised air. Contact burns. It has no malice â just heat."
+tags = ["beast", "small", "fast"]
+style = "sky_piercer"
+style_prof = 15
+hp = 30
+max_hp = 30
+attack = 10
+defense = 5
+xp_reward = 25
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 4
-
-round_script = [
-  { op = "if_combat_round", min = 2, then = [
-    { op = "apply_status", effect = "weakened", duration = 2 },
-    { op = "message", tag = "combat", text = "A burst of scalding steam saps your strength." },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The sprite disperses with a hiss, leaving a patch of scalded stone." },
-]
-
-# Cave Rat â opportunist in the mine tunnels
+round_script = [{op = "if_combat_round", min = 2, then = [{op = "apply_status", effect = "weakened", duration = 2}, {op = "message", tag = "combat", text = "A burst of scalding steam saps your strength."}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "The sprite disperses with a hiss, leaving a patch of scalded stone."}]
 
 [[npc]]
-id          = "cave_rat"
-name        = "Cave Rat"
-desc_short  = "A large rat with heat-resistant fur and sharp teeth."
-desc_long   = "Common in the lower mine tunnels, where they nest in warm pockets near the vents. Individually a nuisance â in packs, a real problem."
-tags        = ["beast", "small", "fast"]
-style       = "brawling"
-style_prof  = 10
-hp          = 18
-max_hp      = 18
-attack      = 7
-defense     = 3
-xp_reward   = 12
+id = "cave_rat"
+name = "Cave Rat"
+desc_short = "A large rat with heat-resistant fur and sharp teeth."
+desc_long = "Common in the lower mine tunnels, where they nest in warm pockets near the vents. Individually a nuisance â in packs, a real problem."
+tags = ["beast", "small", "fast"]
+style = "brawling"
+style_prof = 10
+hp = 18
+max_hp = 18
+attack = 7
+defense = 3
+xp_reward = 12
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 3
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The cave rat squeaks once and goes still." },
-]
-
-# Echo Bat â the Sky Rift's disorienting fliers
+kill_script = [{op = "message", tag = "combat_death", text = "The cave rat squeaks once and goes still."}]
 
 [[npc]]
-id          = "echo_bat"
-name        = "Echo Bat"
-desc_short  = "A large bat whose shriek distorts your perception."
-desc_long   = "Found in the lower Sky Rift passages, where the wind creates natural resonance chambers. Its cry is calibrated to confuse as much as threaten."
-tags        = ["beast", "small", "flying", "fast"]
-style       = "sky_piercer"
-style_prof  = 18
-hp          = 22
-max_hp      = 22
-attack      = 8
-defense     = 4
-xp_reward   = 18
+id = "echo_bat"
+name = "Echo Bat"
+desc_short = "A large bat whose shriek distorts your perception."
+desc_long = "Found in the lower Sky Rift passages, where the wind creates natural resonance chambers. Its cry is calibrated to confuse as much as threaten."
+tags = ["beast", "small", "flying", "fast"]
+style = "sky_piercer"
+style_prof = 18
+hp = 22
+max_hp = 22
+attack = 8
+defense = 4
+xp_reward = 18
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 4
-
-round_script = [
-  { op = "if_combat_round", min = 2, then = [
-    { op = "apply_status", effect = "confused", duration = 2 },
-    { op = "message", tag = "combat", text = "The bat's shriek rattles inside your skull â the world blurs." },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The echo bat tumbles silently into the chasm." },
-]
-
-# Sky Serpent â aerial predator of the upper Sky Rift
+round_script = [{op = "if_combat_round", min = 2, then = [{op = "apply_status", effect = "confused", duration = 2}, {op = "message", tag = "combat", text = "The bat's shriek rattles inside your skull â the world blurs."}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "The echo bat tumbles silently into the chasm."}]
 
 [[npc]]
-id          = "sky_serpent"
-name        = "Sky Serpent"
-desc_short  = "A long, pale serpent that rides the updrafts on membrane wings."
-desc_long   = "It hunts by gliding silently above the platforms before striking downward. Its tail can wrap a rope or ankles with equal ease."
-tags        = ["beast", "flying", "fast"]
-style       = "sky_piercer"
-style_prof  = 28
-hp          = 48
-max_hp      = 48
-attack      = 13
-defense     = 6
-xp_reward   = 45
+id = "sky_serpent"
+name = "Sky Serpent"
+desc_short = "A long, pale serpent that rides the updrafts on membrane wings."
+desc_long = "It hunts by gliding silently above the platforms before striking downward. Its tail can wrap a rope or ankles with equal ease."
+tags = ["beast", "flying", "fast"]
+style = "sky_piercer"
+style_prof = 28
+hp = 48
+max_hp = 48
+attack = 13
+defense = 6
+xp_reward = 45
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 6
-
-round_script = [
-  { op = "if_combat_round", min = 2, then = [
-    { op = "apply_status", effect = "slowed", duration = 2 },
-    { op = "message", tag = "combat", text = "The serpent's tail whips around your legs â your movement is hampered." },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The sky serpent uncoils and falls, caught on the wind a moment before vanishing." },
-]
-
-# Lava Sprite â denizen of the magma sluice
+round_script = [{op = "if_combat_round", min = 2, then = [{op = "apply_status", effect = "slowed", duration = 2}, {op = "message", tag = "combat", text = "The serpent's tail whips around your legs â your movement is hampered."}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "The sky serpent uncoils and falls, caught on the wind a moment before vanishing."}]
 
 [[npc]]
-id          = "lava_sprite"
-name        = "Lava Sprite"
-desc_short  = "A molten elemental shaped like a crouching figure."
-desc_long   = "It emerges from the sluice channels and clings to nearby stone. Anything it touches scorches. Retreating means leaving it in your wake â which is often worse."
-tags        = ["beast", "large"]
-style       = "sky_piercer"
-style_prof  = 20
-hp          = 55
-max_hp      = 55
-attack      = 16
-defense     = 8
-xp_reward   = 50
+id = "lava_sprite"
+name = "Lava Sprite"
+desc_short = "A molten elemental shaped like a crouching figure."
+desc_long = "It emerges from the sluice channels and clings to nearby stone. Anything it touches scorches. Retreating means leaving it in your wake â which is often worse."
+tags = ["beast", "large"]
+style = "sky_piercer"
+style_prof = 20
+hp = 55
+max_hp = 55
+attack = 16
+defense = 8
+xp_reward = 50
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 7
-
-round_script = [
-  { op = "if_combat_round", min = 2, then = [
-    { op = "damage", amount = 6, message = "The lava sprite's heat radiates off it in waves â your skin blisters." },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The lava sprite sags and hardens into a lump of cooling rock." },
-  { op = "spawn_item", item_id = "volcanic_glass_shard" },
-]
-
-# Young Drake Scout â territorial juvenile
+round_script = [{op = "if_combat_round", min = 2, then = [{op = "damage", amount = 6, message = "The lava sprite's heat radiates off it in waves â your skin blisters."}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "The lava sprite sags and hardens into a lump of cooling rock."}, {op = "spawn_item", item_id = "volcanic_glass_shard"}]
 
 [[npc]]
-id          = "young_drake_scout"
-name        = "Young Drake Scout"
-desc_short  = "A juvenile drake testing its wings."
-desc_long   = "Still small but fiercely territorial, this young drake glides between ledges, watching intruders with bright, curious eyes. Its fire is more smoke than flame â but its claws are not."
-tags        = ["beast", "flying", "fast"]
-style       = "sky_piercer"
-style_prof  = 20
-hp          = 45
-max_hp      = 45
-attack      = 10
-defense     = 6
-xp_reward   = 35
+id = "young_drake_scout"
+name = "Young Drake Scout"
+desc_short = "A juvenile drake testing its wings."
+desc_long = "Still small but fiercely territorial, this young drake glides between ledges, watching intruders with bright, curious eyes. Its fire is more smoke than flame â but its claws are not."
+tags = ["beast", "flying", "fast"]
+style = "sky_piercer"
+style_prof = 20
+hp = 45
+max_hp = 45
+attack = 10
+defense = 6
+xp_reward = 35
 gold_reward = 0
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 5
-
-round_script = [
-  { op = "if_combat_round", min = 3, then = [
-    { op = "message", tag = "combat", text = "The drake hisses and exhales a small gout of flame!" },
-    { op = "damage", amount = 4 },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The young drake lets out a sharp cry and falls, wings folding." },
-  { op = "spawn_item", item_id = "drake_scale" },
-]
-
-# Ashwood Drake â mid-tier territorial drake
+round_script = [{op = "if_combat_round", min = 3, then = [{op = "message", tag = "combat", text = "The drake hisses and exhales a small gout of flame!"}, {op = "damage", amount = 4}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "The young drake lets out a sharp cry and falls, wings folding."}, {op = "spawn_item", item_id = "drake_scale"}]
 
 [[npc]]
-id          = "ashwood_drake"
-name        = "Ashwood Drake"
-desc_short  = "A medium drake with ember-flecked scales."
-desc_long   = "Quick and territorial, it uses wing-buffets and short flame bursts to harry intruders. Its name comes from the trail of scorched wood it leaves behind."
-tags        = ["beast", "flying", "large"]
-style       = "sky_piercer"
-style_prof  = 30
-hp          = 80
-max_hp      = 80
-attack      = 14
-defense     = 8
-xp_reward   = 90
+id = "ashwood_drake"
+name = "Ashwood Drake"
+desc_short = "A medium drake with ember-flecked scales."
+desc_long = "Quick and territorial, it uses wing-buffets and short flame bursts to harry intruders. Its name comes from the trail of scorched wood it leaves behind."
+tags = ["beast", "flying", "large"]
+style = "sky_piercer"
+style_prof = 30
+hp = 80
+max_hp = 80
+attack = 14
+defense = 8
+xp_reward = 90
 gold_reward = 10
-hostile     = true
-respawn     = true
+hostile = true
+respawn = true
 respawn_time = 8
-
-round_script = [
-  { op = "if_combat_round", min = 2, then = [
-    { op = "message", tag = "combat", text = "The drake beats its wings, knocking you sideways!" },
-    { op = "damage", amount = 4 },
-  ] },
-  { op = "if_combat_round", min = 4, then = [
-    { op = "message", tag = "combat", text = "The drake spits a gout of flame!" },
-    { op = "damage", amount = 6 },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The drake collapses into a heap of smoking scales." },
-  { op = "spawn_item", item_id = "drake_scale" },
-  { op = "give_xp", amount = 40 },
-]
-
-# Apex Drake Guard â large patrol drake, unlocks thermal gate on death
+round_script = [{op = "if_combat_round", min = 2, then = [{op = "message", tag = "combat", text = "The drake beats its wings, knocking you sideways!"}, {op = "damage", amount = 4}]}, {op = "if_combat_round", min = 4, then = [{op = "message", tag = "combat", text = "The drake spits a gout of flame!"}, {op = "damage", amount = 6}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "The drake collapses into a heap of smoking scales."}, {op = "spawn_item", item_id = "drake_scale"}, {op = "give_xp", amount = 40}]
 
 [[npc]]
-id          = "apex_drake_guard"
-name        = "Apex Drake Guard"
-desc_short  = "A large drake, older and more cunning than the rest."
-desc_long   = "It patrols the outer ledges with methodical patience. The Apex trusts it to screen all who approach."
-tags        = ["beast", "flying", "large"]
-style       = "sky_piercer"
-style_prof  = 40
-hp          = 160
-max_hp      = 160
-attack      = 22
-defense     = 14
-xp_reward   = 220
+id = "apex_drake_guard"
+name = "Apex Drake Guard"
+desc_short = "A large drake, older and more cunning than the rest."
+desc_long = "It patrols the outer ledges with methodical patience. The Apex trusts it to screen all who approach."
+tags = ["beast", "flying", "large"]
+style = "sky_piercer"
+style_prof = 40
+hp = 160
+max_hp = 160
+attack = 22
+defense = 14
+xp_reward = 220
 gold_reward = 0
-hostile     = true
-respawn     = false
-
-round_script = [
-  { op = "if_combat_round", min = 3, then = [
-    { op = "message", tag = "combat", text = "The guard bellows and the air itself seems to press against you." },
-    { op = "damage", amount = 8 },
-  ] },
-]
-
-kill_script = [
-  { op = "message", tag = "combat_death", text = "The guard's cry echoes as it falls, shaking loose stones from the cliff." },
-  { op = "spawn_item", item_id = "drakebone_fragment" },
-  { op = "set_flag",   flag = "dp_guard_slain" },
-  { op = "set_flag",   flag = "dp_thermal_gate_unlocked" },
-]
-
-# Apex Drake â zone boss
+hostile = true
+respawn = false
+round_script = [{op = "if_combat_round", min = 3, then = [{op = "message", tag = "combat", text = "The guard bellows and the air itself seems to press against you."}, {op = "damage", amount = 8}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "The guard's cry echoes as it falls, shaking loose stones from the cliff."}, {op = "spawn_item", item_id = "drakebone_fragment"}, {op = "set_flag", flag = "dp_guard_slain"}, {op = "set_flag", flag = "dp_thermal_gate_unlocked"}]
 
 [[npc]]
-id          = "apex_drake"
-name        = "Apex Drake"
-desc_short  = "A colossal drake with a crown of molten horn."
-desc_long   = "Ancient and intelligent, it defends its hoard and the Thermal Conductor with terrible cunning. It studies a challenger before it commits â and once it does, there is no half-measure."
-tags        = ["beast", "flying", "large", "boss"]
-style       = "sky_piercer"
-style_prof  = 60
-hp          = 600
-max_hp      = 600
-attack      = 36
-defense     = 22
-xp_reward   = 1200
+id = "apex_drake"
+name = "Apex Drake"
+desc_short = "A colossal drake with a crown of molten horn."
+desc_long = "Ancient and intelligent, it defends its hoard and the Thermal Conductor with terrible cunning. It studies a challenger before it commits â and once it does, there is no half-measure."
+tags = ["beast", "flying", "large", "boss"]
+style = "sky_piercer"
+style_prof = 60
+hp = 600
+max_hp = 600
+attack = 36
+defense = 22
+xp_reward = 1200
 gold_reward = 0
-hostile     = true
-respawn     = false
-
-round_script = [
-  { op = "if_prestige", min = 50, then = [
-    { op = "message", tag = "combat", text = "The Apex hesitates, studying you as if weighing an old debt." },
-  ] },
-  { op = "if_prestige", max = -30, then = [
-    { op = "message", tag = "combat", text = "The Apex roars with fury â its attacks grow savage against those it deems dishonorable." },
-    { op = "damage", amount = 6 },
-  ] },
-  { op = "if_combat_round", min = 2, then = [
-    { op = "message", tag = "combat", text = "The Apex breathes a sweeping cone of fire!" },
-    { op = "damage", amount = 20 },
-  ] },
-  { op = "if_combat_round", min = 5, then = [
-    { op = "message", tag = "combat", text = "The Apex slams the ground, sending a shockwave through the ledge!" },
-    { op = "damage", amount = 18 },
-  ] },
-]
-
-kill_script = [
-  { op = "message",     tag = "combat_death", text = "With a final, thunderous cry the Apex collapses, its heat dimming to a slow ember-glow." },
-  { op = "spawn_item",  item_id = "sky_piercer_glaive" },
-  { op = "give_xp",    amount = 1200 },
-  { op = "set_flag",   flag = "dp_apex_slain" },
-  { op = "prestige",   amount = 25, reason = "slain the Apex Drake" },
-]
+hostile = true
+respawn = false
+round_script = [{op = "if_prestige", min = 50, then = [{op = "message", tag = "combat", text = "The Apex hesitates, studying you as if weighing an old debt."}]}, {op = "if_prestige", max = -30, then = [{op = "message", tag = "combat", text = "The Apex roars with fury â its attacks grow savage against those it deems dishonorable."}, {op = "damage", amount = 6}]}, {op = "if_combat_round", min = 2, then = [{op = "message", tag = "combat", text = "The Apex breathes a sweeping cone of fire!"}, {op = "damage", amount = 20}]}, {op = "if_combat_round", min = 5, then = [{op = "message", tag = "combat", text = "The Apex slams the ground, sending a shockwave through the ledge!"}, {op = "damage", amount = 18}]}]
+kill_script = [{op = "message", tag = "combat_death", text = "With a final, thunderous cry the Apex collapses, its heat dimming to a slow ember-glow."}, {op = "spawn_item", item_id = "sky_piercer_glaive"}, {op = "give_xp", amount = 1200}, {op = "set_flag", flag = "dp_apex_slain"}, {op = "prestige", amount = 25, reason = "slain the Apex Drake"}]
 
 [[npc]]
-id          = "dp_banker"
-name        = "Peaks Paymaster"
-tags        = ["humanoid", "banker"]
-style       = "brawling"
-style_prof  = 3
-desc_short  = "A stocky dwarf in a fire-resistant coat, counting coins behind a portable strongbox."
-desc_long   = "The Paymaster runs the Dragon Peaks branch out of a fireproof strongbox bolted to the rock. She keeps accounts for miners and hunters who cannot safely carry their marks to a lowland bank."
-hp          = 20
-max_hp      = 20
-attack      = 2
-defense     = 2
-xp_reward   = 0
+id = "dp_banker"
+name = "Peaks Paymaster"
+tags = ["humanoid", "banker"]
+style = "brawling"
+style_prof = 3
+desc_short = "A stocky dwarf in a fire-resistant coat, counting coins behind a portable strongbox."
+desc_long = "The Paymaster runs the Dragon Peaks branch out of a fireproof strongbox bolted to the rock. She keeps accounts for miners and hunters who cannot safely carry their marks to a lowland bank."
+hp = 20
+max_hp = 20
+attack = 2
+defense = 2
+xp_reward = 0
 gold_reward = 0
-hostile     = false
-dialogue    = "Marks in, marks out  I run the only strongbox on the Peaks. Deposit, withdraw, or check your balance."
+hostile = false
+dialogue = "Marks in, marks out  I run the only strongbox on the Peaks. Deposit, withdraw, or check your balance."

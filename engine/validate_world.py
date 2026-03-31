@@ -119,12 +119,20 @@ def _check_rooms(
 
 def _check_items(zone_id: str, items: list, all_item_ids: set[str]) -> list[dict]:
     issues: list[dict] = []
+    valid_slots = set(wc.EQUIPMENT_SLOTS) | {""}
     for item in items:
         iid = item.get("id") or "(no id)"
         if not item.get("id"):
             issues.append(_err("Item missing 'id'", 'Add id = "..."', "item", zone_id, iid))
         if not item.get("name"):
             issues.append(_err(f"Item '{iid}' missing 'name'", 'Add name = "..."', "item", zone_id, iid))
+        slot = item.get("slot", "")
+        if slot not in valid_slots:
+            issues.append(_err(
+                f"Item '{iid}': unknown slot '{slot}'",
+                f"Valid slots: {sorted(wc.EQUIPMENT_SLOTS)} (or \"\" for non-equippable)",
+                "item", zone_id, iid,
+            ))
         if item.get("scenery") and item.get("slot"):
             issues.append(_warn(
                 f"Item '{iid}': scenery + slot='{item['slot']}' — item can never be equipped",

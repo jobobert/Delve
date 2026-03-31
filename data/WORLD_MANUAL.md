@@ -569,6 +569,8 @@ Items are defined in `[[item]]` blocks in a zone's `items.toml`.
 | `respawn` | bool | No | `false` = removed after pickup, tracked in player's looted set |
 | `no_drop` | bool | No | `true` = cannot be dropped; stays with player on death |
 | `scenery` | bool | No | `true` = visible but cannot be picked up |
+| `consumable_key` | bool | No | `true` = item is removed from inventory after successfully unlocking a door |
+| `consumable_key_msg` | string | No | Message shown when key is consumed (default: `"The {name} crumbles after use."`) — only used if `consumable_key = true` |
 | `gold_value` | int | No | Selling price to NPC merchants |
 | `effects` | list | No | Passive or triggered effects — see [Section 6.2](#62-item-effects) |
 | `on_get` | array | No | Script run when player picks up this item |
@@ -659,6 +661,23 @@ weight      = 0
 tags        = ["barracks_lock"]
 respawn     = false
 ```
+
+**Consumable key (one-time inn room key):**
+```toml
+[[item]]
+id               = "inn_room_key"
+name             = "Room Key"
+desc_short       = "A small brass key with a numbered tag."
+slot             = ""
+weight           = 0
+tags             = ["inn_room_lock"]
+respawn          = false
+no_drop          = true
+consumable_key   = true
+consumable_key_msg = "The key dissolves with a faint shimmer as the door opens."
+```
+The key is destroyed after the player unlocks the door. Pair with a locked exit (`lock_tag = "inn_room_lock"`) and give the key via innkeeper dialogue. The guest room itself should have `flags = ["sleep"]` for full HP recovery.
+
 
 **Scenery / Mining node:**
 ```toml

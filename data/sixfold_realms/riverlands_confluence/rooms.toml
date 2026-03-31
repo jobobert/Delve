@@ -57,7 +57,7 @@ id = "rl_inn_common"
 name = "Confluence Inn Common Room"
 description = "A warm, low-ceilinged hall where the smell of stew fights the damp river air."
 coord = [2, 0]
-flags = ["healing", "no_combat"]
+flags = ["healing", "no_combat", "no_camp"]
 heal_rate = 8
 spawns = ["rl_innkeeper_mara"]
 exits = {west = "rl_market_row", up = "rl_inn_rooms", east = "rl_stable"}
@@ -127,14 +127,17 @@ name = "Guest Room"
 description = "A small, tidy room with a single cot, a washbasin, and a hook on the back of the door."
 desc_long = "A candle stub sits on a shelf above the bed. The mattress creaks but holds. Through the window, the river is just visible between the rooftops."
 exits = {west = "rl_inn_rooms"}
+flags = ["sleep", "no_combat"]
 
 [[room]]
 id = "rl_guest_room_2"
 name = "Guest Room"
-description = "The room is kept with quiet care \\u2014 a folded blanket, a small oil lamp, a worn coat hung on a peg."
+description = "The room is kept with quiet care - a folded blanket, a small oil lamp, a worn coat hung on a peg."
 desc_long = "An old man sits in the single chair by the window, looking out at the water. He turns slowly when you enter, eyes steady despite the tremor in his hands."
 spawns = ["rl_old_man_aldric"]
 exits = {east = "rl_inn_rooms"}
+desc_short = "The room is kept with quiet care - a folded blanket, a small oil lamp, a worn coat hung on a peg."
+flags = ["sleep", "no_combat"]
 
 [[room]]
 id = "rl_stable"

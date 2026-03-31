@@ -81,52 +81,93 @@ Use **Set all to: Delete / Move** at the top for bulk action. Click **Execute** 
 
 ---
 
+## Common UI Patterns
+
+### Toggle Buttons
+
+Boolean fields (start room, hostile, locked, scenery, autostart, no_drop, respawn, etc.) are rendered as small pill-shaped **toggle buttons** rather than checkboxes. Click to toggle on (amber highlight) or off (dim). The active state is stored in the TOML as `true`; the field is omitted entirely when off.
+
+### Entity Pickers (`[...]`)
+
+Every ID reference field has a `[...]` button that opens a **Picker modal** — a searchable, filtered list of valid entries for that field type. The picker is scoped to the correct type automatically: a "To room" field shows only rooms, a shop item field shows only items, a style field shows only styles, etc.
+
+- **Search** — type in the search box to filter by name or ID
+- **Admin comment** — hover any entry to see its `admin_comment` in the footer bar
+- **Flag picker** — shows all known flags with usage counts; drag a flag chip from the References panel directly onto a flag field as an alternative
+- **Tag picker** — shows all known tags; hover to see any tag notes
+- **Direction picker** — shows the 10 standard directions (`north`, `south`, `up`, etc.)
+- **Tier picker** — shows the standard quality tier names (`poor`, `standard`, `exceptional`, `masterwork`)
+
+You can also type directly in the text field or drag-and-drop an entity from the sidebar (rooms, NPCs, items) onto a compatible field — the entity ID is inserted automatically.
+
+### Script Editor Panel
+
+Clicking any **Script** button (e.g. `on_enter (3 ops)`, `kill_script`, `on_exit`) opens the **script editor inline** in the main editor panel — it does not open a modal.
+
+- A `← Back` button in the header saves the script and returns to the parent editor
+- Op fields that reference entities (item, NPC, room, quest, skill, flag, etc.) use the same `[...]` picker buttons as regular editor fields
+- Bool-type op fields are toggle buttons
+
+The script editor replaces the full main panel while open; all other editing is suspended until you click `← Back`.
+
+---
+
 ## Object Editors
 
 Click any object in the sidebar to open its editor in the main panel. Click **Save** (or the keyboard shortcut) to write changes to the TOML file.
 
 ### Room Editor
 
-Fields: ID (read-only), Name, Description, Flags, Light level, Start room, Exits, Item spawns, NPC spawns, on_enter script, admin comment.
+Fields: ID (read-only), Name, Description, Flags, Light level, Start room (toggle), Exits, Item spawns, NPC spawns, on_enter script, admin comment.
 
+- **Start room** — toggle button; exactly one room per zone must be active
 - **Exits** — click **Edit exits** to open the exit modal. Each exit has:
-  - **Direction** — any string (`north`, `up`, `enter`, etc.)
-  - **Destination** — room ID with autocomplete
-  - **Locked / lock_tag** — optional door lock
+  - **Direction** — text field + `[...]` direction picker
+  - **Destination** — text field + `[...]` room picker; supports drag-and-drop from the sidebar
+  - **Locked** — toggle button; reveals the `lock_tag` field when active
   - **desc** — flavor text shown when the player examines the exit
-  - **show_if** — inline condition builder: select an op (`has_flag`, `not_flag`, `has_item`, `min_level`, `min_skill`) from the dropdown, then fill in the required field(s). Selecting `(none)` removes the condition. See §4.5 of WORLD_MANUAL.md for op details.
-  - **on_exit / on_enter / on_look** — script buttons for each hook
-  - **`[!]` mismatch indicator** — shown in the exit preview (and in the modal card) when the target room has no matching reverse exit. When saving, the WCT offers to create the reverse exit automatically.
-  - **`[if: ...]` indicator** — shown in the exit preview when a `show_if` condition is set, e.g. `[if: has_flag: rl_stair_noticed]`
-- **on_enter** — script ops executed when a player enters the room
+  - **show_if** — inline condition builder: select an op (`has_flag`, `not_flag`, `has_item`, `min_level`, `min_skill`) from the dropdown, then fill in the required field with the `[...]` picker or by typing/dragging. Selecting `(none)` removes the condition. See §4.5 of WORLD_MANUAL.md for op details.
+  - **on_exit / on_enter / on_look** — script buttons; click to open the inline script editor panel
+  - **`[!]` mismatch indicator** — shown when the target room has no matching reverse exit; saving offers to create it automatically
+  - **`[if: ...]` indicator** — shown in the exit preview when a `show_if` condition is set
+- **Hazard Exempt Flag** — text field + `[...]` flag picker; supports drag-drop from the References panel
+- **on_enter** — script button; opens the inline script editor panel
 
 ### NPC Editor
 
-Fields: ID, Name, Description, HP, Attack, Defense, Style, Tags, Hostile, Respawn time, Kill script, admin comment.
+Fields: ID, Name, Description, HP, Attack, Defense, Style, Tags, Hostile (toggle), Respawn time, Kill script, Round script, admin comment.
 
-- **Hostile** — if true, NPC attacks on sight
-- **Kill script** — script ops run when the NPC is killed
-- **Tags** — used for `give_item` targeting and dialogue conditions
+- **Style** — `[...]` style picker
+- **Hostile** — toggle button; if active, NPC attacks on sight
+- **Tags** — chip list; click `+ add` to expand an inline field with `[...]` tag picker; drag a tag chip from the tag palette to add
+- **Shop** — each shop entry has a `[...]` item picker for the item ID
+- **Spawn cards** — each spawn entry has a `[...]` NPC picker for the NPC ID, plus a **hostile** toggle
+- **Kill script / Round script** — script buttons; click to open the inline script editor panel
 
 ### Item Editor
 
-Fields: ID, Name, Description, Slot, Weight, Value, Tags, Scenery, Light add, on_get script, on_use script, on_drop script, admin comment.
+Fields: ID, Name, Description, Slot, Weight, Value, Tags, Scenery (toggle), No Drop (toggle), Respawn (toggle), Consumable Key (toggle), Key Consumed Msg, Light add, on_get script, on_use script, on_drop script, admin comment.
 
 - **Slot** — equipment slot (head, chest, legs, feet, hands, weapon, offhand, neck, ring)
-- **Scenery** — if true, item cannot be picked up (use on_get for interaction)
+- **Scenery** — toggle; if active, item cannot be picked up (use on_get for interaction)
+- **Consumable Key** — toggle; if active, the item is removed from the player's inventory after it is used to unlock a door. Pair with a locked exit (`lock_tag`) to create one-time inn keys, puzzle keys, etc.
+- **Key Consumed Msg** — only shown when Consumable Key is active; the message displayed when the key is destroyed. Defaults to `"The {name} crumbles after use."` if left blank.
 - **Light add** — positive/negative contribution to room light level
+- **Tags** — chip list with `[...]` tag picker inline
+- **on_get / on_use / on_drop** — script buttons; click to open the inline script editor panel
 
 ### Quest Editor
 
 Fields: ID (read-only), Title, Giver NPC, Summary, Start Message, Complete Message.
 
+- **Giver NPC** — text field + `[...]` NPC picker
 - **Start Message** — optional extra line shown in the quest banner when the quest starts
 - **Complete Message** — optional line shown on completion (default: "Well done, adventurer.")
 
 **Steps** section — drag to reorder:
-- Objective, Hint, Completion Flag, on_advance script
+- Objective, Hint, Completion Flag (text + `[...]` flag picker), on_advance script button
 
-**Rewards** section — types: `gold`, `xp`, `item`
+**Rewards** section — types: `gold`, `xp`, `item`; item rewards have a `[...]` item picker
 
 Click **Graph** to see an interactive flow diagram of the quest (requires the Quest graph panel). Click **Export DOT** to download a Graphviz `.dot` file.
 
@@ -134,8 +175,9 @@ Click **Graph** to see an interactive flow diagram of the quest (requires the Qu
 
 Each dialogue file (`dialogues/<npc_id>.toml`) is a tree of nodes and responses.
 
-- **Nodes** — NPC speech. Each node has: ID, Lines (NPC text), show_if condition, on_enter/on_exit scripts
-- **Responses** — player choices. Each response has: text, next node, show_if condition, script
+- **Nodes** — NPC speech. Each node has: ID, Lines (NPC text), show_if condition, on_enter/on_exit script buttons
+- **Responses** — player choices. Each response has: text, next node (text + `[...]` node picker), show_if condition, script button
+- **Conditions** — select the condition type from the dropdown; a `[...]` picker appears for the value field, scoped to the correct type (flag → flag picker, quest → quest picker, skill → skill picker, item → item picker)
 
 Drag responses to reorder them. Click **Graph** for the interactive dialogue flow diagram.
 
@@ -170,7 +212,7 @@ Each commission has one or more quality tiers, selected by weighted random roll 
 
 | Field | Description |
 |-------|-------------|
-| Tier | Tier name (`poor`, `standard`, `exceptional`, `masterwork` or custom) |
+| Tier | Tier name — text field with `[...]` tier picker (`poor`, `standard`, `exceptional`, `masterwork`) or enter a custom string |
 | Weight | Probability weight (higher = more common). Typical spread: 20/55/20/5 |
 | ATK + | `attack_bonus` added to weapon stat |
 | DEF + | `defense_bonus` added to armor stat |
@@ -197,9 +239,9 @@ Fields:
 - **Name** — display name shown in the editor
 - **Admin Comment** — design notes
 - **Interval** — number of player action ticks between each process fire (1–999)
-- **Autostart** — if checked, the process starts automatically when a player enters the world; if unchecked, it must be started via a `process_start` script op
-- **Script** — optional script ops run every time the process fires
-- **Route NPC** — NPC ID to move along the waypoints (leave blank for script-only processes)
+- **Autostart** — toggle button; if active, the process starts automatically when a player enters the world; if inactive, it must be started via a `process_start` script op
+- **Script** — script button; opens the inline script editor panel
+- **Route NPC** — text field + `[...]` NPC picker (leave blank for script-only processes)
 - **Loop mode** — `cycle` (wrap back to the first waypoint) or `reverse` (ping-pong back and forth)
 - **Waypoints** — ordered list of `{room_id, ticks}` pairs. The NPC stays at each room for `ticks` process-fires before moving to the next. Use ↑/↓ to reorder, × to remove, and **+ Waypoint** to add.
 
