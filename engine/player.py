@@ -40,6 +40,7 @@ Quest / flag state
 """
 
 from __future__ import annotations
+import copy
 from pathlib import Path
 from engine.toml_io import load as toml_load, dump as toml_dump
 import engine.skills as skills_mod
@@ -81,6 +82,40 @@ def item_on_equip_message(item: dict) -> str:
 
 def item_weight(item: dict) -> int:
     return int(item.get("weight", 0))
+
+
+def _slim_item(item: dict, templates: dict) -> dict:
+    """Return {id, ...overrides} — only fields that differ from the world template.
+
+    If the template is not found (item has no zone definition), returns the full
+    dict unchanged so nothing is lost.
+    """
+    iid  = item.get("id", "")
+    tmpl = templates.get(iid)
+    if not tmpl:
+        return item
+    slim = {"id": iid}
+    for k, v in item.items():
+        if k != "id" and tmpl.get(k) != v:
+            slim[k] = v
+    return slim
+
+
+def _resolve_item(slim: dict, templates: dict) -> dict:
+    """Expand a slim item ref against the world template.
+
+    Merges stored overrides on top of a deepcopy of the template.
+    Falls back to the slim dict itself if the template is not found.
+    """
+    iid  = slim.get("id", "")
+    tmpl = templates.get(iid)
+    if not tmpl:
+        return slim
+    resolved = copy.deepcopy(tmpl)
+    for k, v in slim.items():
+        if k != "id":
+            resolved[k] = v
+    return resolved
 
 
 def effective_light(player: "Player", room: dict | None) -> int:
@@ -241,6 +276,7 @@ class Player:
 
     def save(self) -> None:
         self.player_dir.mkdir(parents=True, exist_ok=True)
+        templates = getattr(self, "_item_templates", {})
         data = {
             "name":          self.name,
             "room_id":       self.room_id,
@@ -252,9 +288,9 @@ class Player:
             "xp":            self.xp,
             "xp_next":       self.xp_next,
             "gold":          self.gold,
-            "inventory":     self.inventory,
+            "inventory":     [_slim_item(i, templates) for i in self.inventory],
             "equipped": {
-                slot: item if item else {}
+                slot: (_slim_item(item, templates) if item else {})
                 for slot, item in self.equipped.items()
             },
             "active_style":  self.active_style,
@@ -269,7 +305,7 @@ class Player:
             "world_id":            self.world_id,
             "bind_room":           self.bind_room,
             "xp_debt":             self.xp_debt,
-            "bank":                self.bank,
+            "bank":                [_slim_item(i, templates) for i in self.bank],
             "bank_slots":          self.bank_slots,
             "banked_gold":         self.banked_gold,
             "prestige":            self.prestige,
@@ -432,6 +468,20 @@ class Player:
         return self.style_prof.get(sid, 0.0)
 
     # ── Inventory helpers ─────────────────────────────────────────────────────
+
+    def _resolve_items(self, templates: dict) -> None:
+        """Expand slim item refs in inventory, equipped, and bank using world templates.
+
+        Called by world.attach_player() once both player and world are ready.
+        Stores the template dict so save() can slim items back down.
+        """
+        self._item_templates = templates
+        self.inventory = [_resolve_item(i, templates) for i in self.inventory]
+        self.equipped  = {
+            slot: (_resolve_item(item, templates) if item else None)
+            for slot, item in self.equipped.items()
+        }
+        self.bank = [_resolve_item(i, templates) for i in self.bank]
 
     def find_item(self, name: str) -> dict | None:
         name_l = name.lower()

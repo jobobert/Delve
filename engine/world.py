@@ -173,13 +173,14 @@ class World:
         self._build_index()
 
     def attach_player(self, player) -> None:
-        """Switch to this player's personal zone state directory.
+        """Switch to this player's personal zone state directory and resolve items.
 
         Call after login and before any zones are loaded.  Safe because
         _build_index() only reads TOML files and never accesses _zone_state_dir.
         """
         self._zone_state_dir = player.zone_state_dir
         self._zone_state_dir.mkdir(parents=True, exist_ok=True)
+        player._resolve_items(self.items)
 
     # ── Zone discovery ────────────────────────────────────────────────────────
 
