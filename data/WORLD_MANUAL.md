@@ -187,10 +187,13 @@ Rooms are defined in `[[room]]` blocks inside a zone's `rooms.toml`.
 | `flags` | list | No | `[]` | Room behaviour flags — see [Appendix A](#appendix-a--room-flags) |
 | `start` | bool | Zone needs one | `false` | Marks the starting room; validator requires exactly one per world |
 | `on_enter` | array | No | `[]` | Script ops run each time the player enters the room |
+| `on_exit` | array | No | `[]` | Script ops run each time the player leaves the room (fires before movement, before any exit-dict `on_exit`) |
 | `on_sleep` | array | No | `[]` | Script ops run when the player sleeps here (before healing — use for flavor, check conditions) |
 | `on_wake` | array | No | `[]` | Script ops run when the player wakes up here (after healing — use for morning flavor, weather, events) |
+| `light` | int | No | `10` | Room ambient light level 0–10. 0 = pitch black; 10 = full light. Players with `vision_threshold` higher than effective light are blinded. |
 | `heal_rate` | int | No | `5` | HP restored per command (only when `healing` flag set) |
 | `hazard_damage` | int | No | `2` | Passive HP damage per command (only when `hazard` flag set) |
+| `hazard_chance` | float | No | `1.0` | Probability 0.0–1.0 that hazard damage fires each command tick |
 | `hazard_message` | string | No | `"The environment bites at you."` | Flavour text for each hazard tick |
 | `hazard_exempt_flag` | string | No | `""` | Player flag that bypasses hazard damage (e.g. `"has_mining_gear"`) |
 | `admin_comment` | string | No | — | Developer notes — ignored by the engine |
@@ -249,6 +252,7 @@ spawns = [
 | `id` | string | **required** | NPC template ID |
 | `count` | int | `1` | Number of copies to spawn |
 | `spawn_chance` | float | `1.0` | Probability 0–1 that this NPC spawns |
+| `hostile` | bool | NPC default | Per-spawn override of the NPC's base `hostile` flag |
 
 ---
 
@@ -572,6 +576,8 @@ Items are defined in `[[item]]` blocks in a zone's `items.toml`.
 | `consumable_key` | bool | No | `true` = item is removed from inventory after successfully unlocking a door |
 | `consumable_key_msg` | string | No | Message shown when key is consumed (default: `"The {name} crumbles after use."`) — only used if `consumable_key = true` |
 | `gold_value` | int | No | Selling price to NPC merchants |
+| `light_add` | int | No | Light contribution while equipped (positive = torch, negative = blindfold). Effective light = `room.light` + sum of all equipped `light_add` values. |
+| `display_prefix` | string | No | Label used to group this item in room descriptions. Default: `"On the ground"`. Example: `"Mounted on the wall"` |
 | `effects` | list | No | Passive or triggered effects — see [Section 6.2](#62-item-effects) |
 | `on_get` | array | No | Script run when player picks up this item |
 | `on_drop` | array | No | Script run when player drops this item |
@@ -790,6 +796,7 @@ kill_script = [
 | Item | `on_drop` | Player drops item |
 | Item | `commands[].ops` | Player types the item's custom verb |
 | Room | `on_enter` | Player enters the room |
+| Room | `on_exit` | Player leaves the room — fires before movement |
 | Room | `on_sleep` | Player sleeps/rests here — fires before healing |
 | Room | `on_wake` | Player wakes up here — fires after healing |
 | Exit dict | `on_exit` | Player leaves via this exit (source room) |
@@ -1352,6 +1359,17 @@ Both are optional — omit whichever branch you don't need.
 ```toml
 { op = "if_quest", quest_id = "the_dragon_hunt", step = 2,
   then = [{ op = "say", text = "You're looking for the dragon's lair?" }],
+}
+```
+
+---
+
+**`if_quest_active`** — Branch on whether a quest has been started but not yet completed
+
+```toml
+{ op = "if_quest_active", quest_id = "the_dragon_hunt",
+  then = [{ op = "say", text = "Still hunting the dragon, I see." }],
+  else = [{ op = "say", text = "You should speak to the guild master." }],
 }
 ```
 
@@ -2979,6 +2997,7 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 | `advance_quest` | `quest_id`, `step` | Start or advance quest |
 | `complete_quest` | `quest_id` | Complete quest and award rewards |
 | `if_quest` | `quest_id`, `step`, `then`, `else` | Branch on quest step |
+| `if_quest_active` | `quest_id`, `then`, `else` | Branch on quest active (started, not complete) |
 | `if_quest_complete` | `quest_id`, `then`, `else` | Branch on quest completion |
 
 **Styles & world**

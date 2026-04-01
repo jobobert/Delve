@@ -1,12 +1,12 @@
 """
-script.py — Lightweight script interpreter for Delve.  (45 ops)
+script.py — Lightweight script interpreter for Delve.  (46 ops)
 
 Scripts are arrays of operation tables in TOML data files.  They appear in:
   • NPC dialogue nodes and responses
   • NPC kill_script arrays
   • NPC give_accepts handlers
-  • Item on_get arrays
-  • Room on_enter arrays
+  • Item on_get / on_drop arrays
+  • Room on_enter / on_exit / on_sleep / on_wake arrays
 
 ScriptRunner evaluates a script against a GameContext (player, world, bus,
 quests).  Scripts run synchronously and in order.  A `fail` op raises
@@ -20,7 +20,7 @@ GameContext
   ctx.bus     — EventBus (emit messages to the frontend)
   ctx.quests  — QuestTracker (start/advance/complete quests)
 
-Operation reference  (53 ops)
+Operation reference  (54 ops)
 ──────────────────────────────
 Output:
   { op = "say",     text = "..." }                  — DIALOGUE-tagged text
@@ -86,6 +86,7 @@ Conditionals (all support then = [...] / else = [...]):
   { op = "if_not_flag" }                            — flag NOT in player.flags
   { op = "if_item",           item_id = "..." }
   { op = "if_quest",          quest_id = "...", step = N }
+  { op = "if_quest_active",   quest_id = "..." }           — quest started, not yet complete
   { op = "if_quest_complete", quest_id = "..." }
 
 Flow control:
@@ -560,6 +561,11 @@ class ScriptRunner:
             q_id   = op.get("quest_id", "")
             step   = int(op.get("step", 0))
             passed = q.at_step(q_id, step)
+            self._run_branch(passed, op)
+
+        elif name == "if_quest_active":
+            q_id   = op.get("quest_id", "")
+            passed = q.is_active(q_id)
             self._run_branch(passed, op)
 
         elif name == "if_quest_complete":

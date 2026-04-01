@@ -68,8 +68,8 @@ name = "Inn Rooms"
 description = "A narrow hallway with simple doors on either side."
 coord = [2, 1]
 flags = ["healing", "no_combat"]
-heal_rate = 10
-exits = {down = "rl_inn_common", east = "rl_guest_room", west = {to = "rl_guest_room_2", locked = true, lock_tag = "guest_room_key"}}
+heal_rate = 5
+exits = {down = "rl_inn_common", east = {to = "rl_guest_room", locked = true, lock_tag = "guest_room_key"}, west = {to = "rl_guest_room_2", locked = true, lock_tag = "rl_aldrics_key", desc = "You can tell this door does not get opened often. You can hear faint shuffling within"}}
 
 [[room]]
 id = "rl_lower_piers"
@@ -118,8 +118,8 @@ id = "rl_hovel"
 name = "Flooded Shack"
 description = "A sagging one-room shack lodged between the riverbank and a crumbling retaining wall."
 desc_long = "Watermarks stripe the walls at varying heights \\u2014 a record of past floods, each one higher than the last. A rusted stove sits cold in the corner, and personal effects have been left behind as though the owner stepped out and never came back. A loose board in the floor has shifted."
-items = ["rl_locket"]
 exits = {north = "rl_unstable_current"}
+on_enter = [{op = "if_quest", then = [{op = "spawn_item", item_id = "rl_locket"}], else = [], quest_id = "rl_locket_return"}]
 
 [[room]]
 id = "rl_guest_room"
@@ -128,10 +128,11 @@ description = "A small, tidy room with a single cot, a washbasin, and a hook on 
 desc_long = "A candle stub sits on a shelf above the bed. The mattress creaks but holds. Through the window, the river is just visible between the rooftops."
 exits = {west = "rl_inn_rooms"}
 flags = ["sleep", "no_combat"]
+admin_comment = "To enter one needs a key from Mara. The room locks upon exit."
 
 [[room]]
 id = "rl_guest_room_2"
-name = "Guest Room"
+name = "Aldric's Guest Room"
 description = "The room is kept with quiet care - a folded blanket, a small oil lamp, a worn coat hung on a peg."
 desc_long = "An old man sits in the single chair by the window, looking out at the water. He turns slowly when you enter, eyes steady despite the tremor in his hands."
 spawns = ["rl_old_man_aldric"]
@@ -146,6 +147,8 @@ description = "Low-ceilinged and smelling of hay and river mud, the stable house
 desc_long = "One stall holds a calm mule regarding you without interest. The straw near the back wall has been disturbed \\u2014 raked over, but not carefully. Someone dug here and tried to cover it."
 items = ["rl_stable_coinpurse"]
 exits = {west = "rl_inn_common"}
+light = 6
+on_enter = [{op = "say", text = ""}]
 
 [[room]]
 id = "rl_city_center"
@@ -212,3 +215,4 @@ exits = {west = "rl_river_bank_2"}
 desc_short = "Just past the bank, under a clump of trees you notice a small camp site"
 desc_long = "The site is not much more than a small group of rocks appropriate for sitting surrounding a well-used fire pit."
 spawns = [{id = "rl_echo_wraith", hostile = true, spawn_chance = 0.4}]
+items = ["rl_aldric_room_key"]

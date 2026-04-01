@@ -717,6 +717,13 @@ class CommandProcessor:
             self._out(Tag.ERROR, f"You can't go {direction} from here.")
             return
         # on_exit — fires in the source room before the player moves
+        # Room-level hook first, then exit-dict hook
+        src_room = self.world.prepare_room(self.player.room_id, self.player)
+        if src_room:
+            room_on_exit = src_room.get("on_exit", [])
+            if room_on_exit:
+                from engine.script import ScriptRunner
+                ScriptRunner(self._ctx).run(room_on_exit)
         if isinstance(exit_val, dict):
             on_exit = exit_val.get("on_exit", [])
             if on_exit:

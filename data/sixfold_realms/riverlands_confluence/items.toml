@@ -16,6 +16,7 @@ desc_long = "Most of the text is eroded, but you can still make out: 'Five condu
 weight = 0
 scenery = true
 respawn = true
+type = "misc"
 
 [[item]]
 id = "resonant_token"
@@ -205,6 +206,7 @@ weight = 0
 tags = ["consumable", "healing", "verdant", "trader_exclusive"]
 respawn = false
 effects = [{type = "on_use", heal = 50}]
+type = "consumable"
 
 [[item]]
 id = "rl_locket"
@@ -235,6 +237,7 @@ slot = "body"
 weight = 3
 respawn = false
 effects = [{type = "stat_bonus", stat = "defense", amount = 6}]
+type = "armor"
 
 [[item]]
 id = "rl_river_iron_sword"
@@ -246,6 +249,8 @@ weight = 2
 respawn = false
 weapon_tags = ["blade", "river"]
 effects = [{type = "stat_bonus", stat = "attack", amount = 7}]
+type = "weapon"
+attack_bonus = 2
 
 [[item]]
 id = "rl_iron_pauldrons"
@@ -267,6 +272,8 @@ weight = 2
 respawn = false
 weapon_tags = ["blade", "river"]
 effects = [{type = "stat_bonus", stat = "attack", amount = 9}]
+type = "weapon"
+attack_bonus = 2
 
 [[item]]
 id = "rl_resonant_blade"
@@ -282,11 +289,14 @@ effects = [{type = "stat_bonus", stat = "attack", amount = 12}, {type = "on_equi
 [[item]]
 id = "rl_guest_room_key"
 name = "Guest Room Key"
-type = "misc"
-description = "A well-used, but functional room key for the Confluence Inn"
-desc_short = "A well-used, but functional room key for the Confluence Inn"
-desc_long = "The key was made with care, but that was a long time ago. There is no way to know how many copies are in the world"
+type = "key"
+description = "A well-used, but functional key"
+desc_short = "A well-used, but functional key"
+desc_long = "The key was made with care, but that was a long time ago. It looks like the keys used at the Confluence Inn"
 tags = ["guest_room_key"]
+on_get = [{op = "say", text = "This looks like a key used at the Inn. Someone must be looking for it"}]
+consumable_key = true
+consumable_key_msg = "You'll need another key if you plan to return"
 
 [[item]]
 id = "rl_barrel"
@@ -300,3 +310,14 @@ name = "Barrel"
 type = "misc"
 description = ""
 commands = [{verb = "open", ops = [{op = "spawn_item_random", items = ["rl_minor_tonic", "rl_torch_bundle", "rl_rope_coil"]}], visible = true}]
+
+[[item]]
+id = "rl_aldric_room_key"
+name = "Aldric's Room Key"
+type = "key"
+description = "A well-used, but functional key"
+desc_short = "A well-used, but functional key"
+desc_long = "A key to a room at the Confluence Inn"
+tags = ["rl_aldrics_key"]
+consumable_key = true
+consumable_key_msg = "You give the key to Aldric who accepts with a touch of embarrassment"

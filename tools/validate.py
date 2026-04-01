@@ -357,9 +357,12 @@ def _collect_all_quest_ops() -> dict[str, set]:
             for item in data.get("item", []):
                 _scan(item.get("on_get", []))
                 _scan(item.get("on_use", []))
-            # Room on_enter
+            # Room scripts
             for room in data.get("room", []):
                 _scan(room.get("on_enter", []))
+                _scan(room.get("on_exit",  []))
+                _scan(room.get("on_sleep", []))
+                _scan(room.get("on_wake",  []))
 
         # Dialogue scripts
         dlg_dir = zone_folder / "dialogues"

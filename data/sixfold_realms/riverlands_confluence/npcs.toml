@@ -74,7 +74,7 @@ xp_reward = 0
 gold_reward = 0
 hostile = false
 rest_cost = 5
-shop = [{item_id = "rl_guest_room_key", price = 5}]
+shop = [{item_id = "rl_guest_room_key", price = 2}]
 
 [[npc]]
 id = "rl_river_child"

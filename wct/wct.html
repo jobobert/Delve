@@ -20,10 +20,10 @@
   <button class="hbtn" id="btn-validate" onclick="openValidate()">Validate</button>
   <button class="hbtn" id="btn-todos" onclick="toggleTodoPanel()" title="Show todo list" disabled>Todos</button>
   <button class="hbtn" id="btn-map" onclick="toggleMap()" title="Show world map">Map</button>
-  <button class="hbtn" id="btn-stop-server" onclick="stopServer()" title="Stop the WCT server">Stop Server</button>
   <button class="hbtn primary" id="btn-new" onclick="openNew()">+ New</button>
   <button class="hbtn" id="btn-save" onclick="saveSelected()" disabled>Save</button>
   <div id="status-bar">Select a world to begin</div>
+  <button class="hbtn danger" id="btn-stop-server" onclick="stopServer()" title="Exit the WCT">Exit</button>
 </header>
 
 <div class="workspace">
@@ -149,23 +149,6 @@
 <!-- ══════════════════════════════ Modals ═══════════════════════════ -->
 
 
-<!-- Exit editor -->
-<div class="modal-backdrop hidden" id="exit-modal">
-  <div class="modal" style="max-width:600px">
-    <div class="modal-header">
-      <span class="modal-title">Edit Exits</span>
-      <button class="modal-close" onclick="closeModal('exit-modal')">×</button>
-    </div>
-    <div class="modal-body">
-      <div id="exit-rows-list"></div>
-      <button class="add-op-btn" onclick="addExitRow()">+ Add exit</button>
-    </div>
-    <div class="modal-footer">
-      <button class="hbtn" onclick="closeModal('exit-modal')">Cancel</button>
-      <button class="hbtn primary" onclick="saveExits()">Save</button>
-    </div>
-  </div>
-</div>
 
 <!-- Ref picker -->
 <div class="modal-backdrop hidden" id="picker-modal">
@@ -1127,6 +1110,7 @@ function selectObject(type, zone_id, data) {
   if (el) el.classList.add('selected');
 
   renderEditor();
+  renderTodoPanel();
   document.getElementById('btn-save').disabled = false;
   _saveUiState();
 }
@@ -1744,7 +1728,10 @@ function renderRoomEditor(main) {
   main.appendChild(sectionTitle('Scripts'));
   const scriptDiv = document.createElement('div');
   scriptDiv.style.display = 'flex'; scriptDiv.style.gap = '8px'; scriptDiv.style.flexWrap = 'wrap';
-  scriptDiv.appendChild(scriptButton('on_enter', d.on_enter, ops => d.on_enter = ops));
+  scriptDiv.appendChild(scriptButton('on_enter',  d.on_enter,  ops => d.on_enter  = ops));
+  scriptDiv.appendChild(scriptButton('on_exit',   d.on_exit,   ops => d.on_exit   = ops));
+  scriptDiv.appendChild(scriptButton('on_sleep',  d.on_sleep,  ops => d.on_sleep  = ops));
+  scriptDiv.appendChild(scriptButton('on_wake',   d.on_wake,   ops => d.on_wake   = ops));
   main.appendChild(scriptDiv);
 
   main.appendChild(sectionTitle('Notes'));
@@ -2118,20 +2105,101 @@ function renderItemEditor(main) {
   main.appendChild(fieldRow('Long Description',  textareaInput(d.desc_long, v => d.desc_long = v),
     null, 'Full description shown with "examine <item>".'));
 
-  main.appendChild(sectionTitle('Bonuses', 'Passive bonuses applied to the player\'s stats while this item is equipped.\nUse the `effects` array in TOML for more complex on-hit or on-equip effects.'));
-  const bonusRow = document.createElement('div'); bonusRow.className = 'field-row inline';
-  function bonusPair(lbl, key, tip) {
+  main.appendChild(sectionTitle('Properties', 'Weight, carry capacity display, and other item properties.'));
+  const propRow = document.createElement('div'); propRow.className = 'field-row inline';
+  function propPair(lbl, key, tip, isNum) {
     const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.gap='3px';
     const l = document.createElement('label'); l.textContent = lbl;
     if (tip) { const icon = document.createElement('i'); icon.className='help-icon'; icon.textContent='i'; icon.dataset.tip=tip; l.appendChild(icon); }
-    wrap.appendChild(l); wrap.appendChild(numInput(d[key], v => d[key] = v));
+    wrap.appendChild(l);
+    wrap.appendChild(isNum
+      ? numInput(d[key], v => { d[key] = v || undefined; markDirty(); })
+      : textInput(d[key] || '', v => { d[key] = v || undefined; markDirty(); }));
     return wrap;
   }
-  bonusRow.appendChild(bonusPair('Attack Bonus',  'attack_bonus'));
-  bonusRow.appendChild(bonusPair('Defense Bonus', 'defense_bonus'));
-  bonusRow.appendChild(bonusPair('HP Bonus',      'hp_bonus', 'Passive bonus to the player\'s max HP while equipped.'));
-  bonusRow.appendChild(bonusPair('Weight', 'weight', 'Item weight (arbitrary units). Used for encumbrance if enabled.\nLeave blank for weightless items.'));
-  main.appendChild(bonusRow);
+  propRow.appendChild(propPair('Weight',         'weight',         'Item weight in stones. Used for encumbrance. Leave blank for weightless.', true));
+  propRow.appendChild(propPair('Gold Value',      'gold_value',     'Sell price to NPC merchants. 0 or blank = not sellable.', true));
+  propRow.appendChild(propPair('Light Add',       'light_add',      'Light contribution while equipped (positive = torch, negative = blindfold).', true));
+  propRow.appendChild(propPair('Display Prefix',  'display_prefix', 'Text used to group this item in room descriptions.\nDefault: "On the ground"  e.g. "Mounted on the wall"', false));
+  main.appendChild(propRow);
+
+  main.appendChild(sectionTitle('Effects',
+    'Effects applied when the item is equipped, used, or hits an enemy.\n' +
+    'stat_bonus: passive stat while equipped (attack/defense/max_hp/carry_capacity)\n' +
+    'on_equip: flavour message shown when equipping\n' +
+    'on_use: heal/special applied when "use <item>" is typed\n' +
+    'on_hit: proc chance on weapon hit (ability: bleed or stun)'));
+  if (!Array.isArray(d.effects)) d.effects = [];
+  const effectsList = document.createElement('div'); effectsList.className = 'effects-list';
+  const rebuildEffects = () => {
+    effectsList.innerHTML = '';
+    d.effects.forEach((fx, i) => {
+      const row = document.createElement('div'); row.className = 'effect-row';
+      // Type selector
+      const typeOpts = [['stat_bonus','stat_bonus'],['on_equip','on_equip'],['on_use','on_use'],['on_hit','on_hit']];
+      const typeSel = document.createElement('select'); typeSel.className = 'op-input'; typeSel.style.cssText = 'width:110px;flex-shrink:0;';
+      typeOpts.forEach(([v,l]) => { const o = document.createElement('option'); o.value=v; o.textContent=l; typeSel.appendChild(o); });
+      typeSel.value = fx.type || 'stat_bonus';
+      typeSel.addEventListener('change', () => { d.effects[i] = {type: typeSel.value}; rebuildEffects(); markDirty(); });
+      row.appendChild(typeSel);
+      // Type-specific fields
+      const fields = document.createElement('div'); fields.style.cssText = 'display:flex;gap:6px;align-items:center;flex:1;flex-wrap:wrap;';
+      const fld = (lbl, inp) => { const s = document.createElement('span'); s.className='op-field-label'; s.textContent=lbl+':'; fields.appendChild(s); fields.appendChild(inp); };
+      if (fx.type === 'stat_bonus') {
+        const statOpts = [['attack','attack'],['defense','defense'],['max_hp','max_hp'],['carry_capacity','carry_capacity']];
+        const statSel = document.createElement('select'); statSel.className = 'op-input'; statSel.style.width='130px';
+        statOpts.forEach(([v,l]) => { const o = document.createElement('option'); o.value=v; o.textContent=l; statSel.appendChild(o); });
+        statSel.value = fx.stat || 'attack';
+        statSel.addEventListener('change', () => { fx.stat = statSel.value; markDirty(); });
+        fld('stat', statSel);
+        const amtInp = document.createElement('input'); amtInp.type='number'; amtInp.className='op-input'; amtInp.style.width='65px';
+        amtInp.value = fx.amount ?? ''; amtInp.placeholder='amount';
+        amtInp.addEventListener('input', () => { fx.amount = Number(amtInp.value); markDirty(); });
+        fld('amount', amtInp);
+      } else if (fx.type === 'on_equip') {
+        const msgInp = document.createElement('input'); msgInp.type='text'; msgInp.className='op-input'; msgInp.style.flex='1'; msgInp.style.minWidth='180px';
+        msgInp.value = fx.message || ''; msgInp.placeholder='Flavour text shown on equip';
+        msgInp.addEventListener('input', () => { fx.message = msgInp.value; markDirty(); });
+        fld('message', msgInp);
+      } else if (fx.type === 'on_use') {
+        const healInp = document.createElement('input'); healInp.type='number'; healInp.className='op-input'; healInp.style.width='65px';
+        healInp.value = fx.heal ?? ''; healInp.placeholder='0';
+        healInp.addEventListener('input', () => { fx.heal = Number(healInp.value); markDirty(); });
+        fld('heal', healInp);
+        const msgInp = document.createElement('input'); msgInp.type='text'; msgInp.className='op-input'; msgInp.style.flex='1'; msgInp.style.minWidth='160px';
+        msgInp.value = fx.message || ''; msgInp.placeholder='Message (optional)';
+        msgInp.addEventListener('input', () => { fx.message = msgInp.value || undefined; markDirty(); });
+        fld('message', msgInp);
+        const specInp = document.createElement('input'); specInp.type='text'; specInp.className='op-input'; specInp.style.width='150px';
+        specInp.value = fx.special || ''; specInp.placeholder='e.g. clear_status_poisoned';
+        specInp.addEventListener('input', () => { fx.special = specInp.value || undefined; markDirty(); });
+        fld('special', specInp);
+      } else if (fx.type === 'on_hit') {
+        const abilOpts = [['bleed','bleed'],['stun','stun']];
+        const abilSel = document.createElement('select'); abilSel.className = 'op-input'; abilSel.style.width='90px';
+        abilOpts.forEach(([v,l]) => { const o = document.createElement('option'); o.value=v; o.textContent=l; abilSel.appendChild(o); });
+        abilSel.value = fx.ability || 'bleed';
+        abilSel.addEventListener('change', () => { fx.ability = abilSel.value; markDirty(); });
+        fld('ability', abilSel);
+        const chanceInp = document.createElement('input'); chanceInp.type='number'; chanceInp.className='op-input'; chanceInp.style.width='70px';
+        chanceInp.min=0; chanceInp.max=1; chanceInp.step=0.05;
+        chanceInp.value = fx.chance ?? ''; chanceInp.placeholder='0.0–1.0';
+        chanceInp.addEventListener('input', () => { fx.chance = Number(chanceInp.value); markDirty(); });
+        fld('chance', chanceInp);
+      }
+      row.appendChild(fields);
+      // Remove button
+      const rmBtn = document.createElement('button'); rmBtn.className='op-remove'; rmBtn.textContent='×'; rmBtn.title='Remove effect';
+      rmBtn.addEventListener('click', () => { d.effects.splice(i,1); rebuildEffects(); markDirty(); });
+      row.appendChild(rmBtn);
+      effectsList.appendChild(row);
+    });
+    const addBtn = document.createElement('button'); addBtn.className='add-op-btn'; addBtn.textContent='+ Add effect';
+    addBtn.addEventListener('click', () => { d.effects.push({type:'stat_bonus',stat:'attack',amount:0}); rebuildEffects(); markDirty(); });
+    effectsList.appendChild(addBtn);
+  };
+  rebuildEffects();
+  main.appendChild(effectsList);
 
   const cbRow = document.createElement('div'); cbRow.className = 'field-row inline';
   cbRow.appendChild(checkboxInput(d.no_drop, v => d.no_drop = v, 'No Drop'));
@@ -4544,6 +4612,7 @@ const OP_SCHEMA = {
   if_not_flag:      [{key:'flag',       type:'flag',    label:'flag'}, {branch:'then'}, {branch:'else'}],
   if_item:          [{key:'item_id',    type:'item_ref', label:'item'}, {branch:'then'}, {branch:'else'}],
   if_quest:         [{key:'quest_id',   type:'quest_ref',label:'quest'}, {key:'step', type:'num', label:'step'}, {branch:'then'}, {branch:'else'}],
+  if_quest_active:  [{key:'quest_id',   type:'quest_ref',label:'quest'}, {branch:'then'}, {branch:'else'}],
   if_quest_complete:[{key:'quest_id',   type:'quest_ref',label:'quest'}, {branch:'then'}, {branch:'else'}],
   fail:             [],
   require_tag:      [{key:'tag',        type:'tag',     label:'tag'}, {key:'fail_message', type:'text', label:'fail msg'}],
@@ -4559,6 +4628,62 @@ const OP_SCHEMA = {
   process_pause:    [{key:'process_id', type:'text',    label:'process'}],
 };
 const OP_NAMES = Object.keys(OP_SCHEMA).sort();
+
+const OP_HELP = {
+  add_affinity:      'Add a tag to the player\'s affinities.',
+  advance_quest:     'Move a quest forward to the specified step number.',
+  apply_status:      'Apply a status effect to the player for N moves.',
+  bank_expand:       'Expand the player\'s bank storage to the given tier.',
+  clear_flag:        'Remove a named flag from the player\'s save file.',
+  clear_status:      'Remove a status effect from the player.',
+  complete_quest:    'Mark a quest as fully completed.',
+  damage:            'Deal damage to the player; optional message is shown instead of the default.',
+  dismiss_companion: 'Dismiss the player\'s active companion with an optional message.',
+  end_combat:        'End the current combat session immediately. (combat scripts only)',
+  fail:              'Abort the script immediately — nothing below this op runs.',
+  give_companion:    'Give the player a companion by companion_id.',
+  give_gold:         'Add gold to the player\'s wallet.',
+  give_item:         'Add an item to the player\'s inventory.',
+  give_xp:           'Award XP. silent=true suppresses the level-up message.',
+  heal:              'Restore HP to the player, capped at max_hp.',
+  if:                'Alias for if_flag — branch then/else based on whether a flag is set.',
+  if_affinity:       'Branch then/else based on whether the player has an affinity tag.',
+  if_combat_round:   'Branch then/else based on whether the current combat round is >= min. (combat scripts only)',
+  if_flag:           'Branch then/else based on whether a named flag is set.',
+  if_item:           'Branch then/else based on whether the player has an item.',
+  if_npc_hp:         'Branch then/else based on whether the NPC\'s HP % is <= max. (combat scripts only)',
+  if_not_flag:       'Branch then/else based on whether a named flag is NOT set.',
+  if_prestige:       'Branch then/else based on prestige range (0 = no limit for min or max).',
+  if_quest:          'Branch then/else based on whether a quest is at exactly the given step. step=0 means the quest is active but not yet advanced. Blank defaults to 0.',
+  if_quest_active:   'Branch then/else based on whether a quest has been started and is not yet complete (any step).',
+  if_quest_complete: 'Branch then/else based on whether a quest is fully completed.',
+  if_skill:          'Branch then/else based on whether a skill value is >= min.',
+  if_status:         'Branch then/else based on whether the player has a status effect.',
+  journal_entry:     'Add a titled entry to the player\'s in-game journal.',
+  lock_exit:         'Lock a directional exit in a room so it cannot be used.',
+  message:           'Emit text with a custom tag for different styling (e.g. tag: "warning").',
+  move_item:         'Move an item from one room to another.',
+  move_npc:          'Move an NPC from its current room to a target room.',
+  prestige:          'Award prestige points to the player.',
+  process_pause:     'Pause a running background process by ID.',
+  process_start:     'Start a background process by ID.',
+  process_stop:      'Stop a background process by ID.',
+  remove_affinity:   'Remove a tag from the player\'s affinities.',
+  require_tag:       'Abort with fail_msg if the player does not have the given affinity tag.',
+  say:               'Print a line of text to the player (styled as NPC speech).',
+  set_flag:          'Set a named flag on the player\'s save file.',
+  set_hp:            'Set the player\'s HP to an exact value.',
+  skill_check:       'Roll a skill check vs dc. Branches on_pass / on_fail. grow=true increments the skill on pass.',
+  skill_grow:        'Directly increase a skill value by the given amount.',
+  spawn_item:        'Place an item on the floor of the current room.',
+  spawn_item_random: 'Place one randomly-chosen item from the list on the floor of the current room.',
+  spawn_npc:         'Spawn an NPC into a room (leave room blank for the current room).',
+  take_gold:         'Deduct gold from the player\'s wallet.',
+  take_item:         'Remove an item from the player\'s inventory.',
+  teach_style:       'Teach the player a fighting style.',
+  teleport_player:   'Move the player to a different room with an optional message.',
+  unlock_exit:       'Make a previously locked directional exit usable again.',
+};
 
 function openScriptModal(title, opsArray, callback) {
   scriptOpsTarget   = JSON.parse(JSON.stringify(opsArray));
@@ -4630,6 +4755,13 @@ function buildOpRow(op, i, ops, container) {
   rmBtn.addEventListener('click', () => { ops.splice(i,1); renderScriptOps(container, ops); markDirty(); });
   hdr.appendChild(rmBtn);
   row.appendChild(hdr);
+
+  const opHelpText = OP_HELP[op.op];
+  if (opHelpText) {
+    const helpEl = document.createElement('div'); helpEl.className = 'op-help';
+    helpEl.textContent = opHelpText;
+    row.appendChild(helpEl);
+  }
 
   // Branch sub-lists (then/else, on_pass/on_fail)
   const branches = schema.filter(f => f.branch);
@@ -4845,8 +4977,28 @@ function openExitModal(roomData, callback) {
       };
     }
   }
+
+  const main = document.getElementById('editor');
+  main.innerHTML = '';
+
+  const hdr = document.createElement('div'); hdr.className = 'script-panel-header';
+  const backBtn = document.createElement('button'); backBtn.className = 'hbtn';
+  backBtn.textContent = '\u2190 Back';
+  backBtn.addEventListener('click', saveExits);
+  const titleEl = document.createElement('span'); titleEl.className = 'script-panel-title';
+  titleEl.textContent = 'Exits: ' + (roomData.name || roomData.id || '');
+  hdr.appendChild(backBtn); hdr.appendChild(titleEl);
+  main.appendChild(hdr);
+
+  const list = document.createElement('div'); list.id = 'exit-rows-list';
+  main.appendChild(list);
+
+  const addBtn = document.createElement('button'); addBtn.className = 'add-op-btn';
+  addBtn.textContent = '+ Add exit';
+  addBtn.addEventListener('click', addExitRow);
+  main.appendChild(addBtn);
+
   renderExitRows();
-  openModal('exit-modal');
 }
 
 function renderExitRows() {
@@ -4936,7 +5088,13 @@ function buildExitRow(dir, v) {
   const lockTagInp = document.createElement('input'); lockTagInp.type='text'; lockTagInp.className='op-input';
   lockTagInp.style.flex='1'; lockTagInp.value = v.lock_tag || '';
   lockTagInp.addEventListener('input', () => v.lock_tag = lockTagInp.value);
-  lockRow.appendChild(lockTagLbl); lockRow.appendChild(lockTagInp);
+  lockTagInp.addEventListener('dragover', e => { if (_dragging?.type==='tag') { e.preventDefault(); lockTagInp.classList.add('ref-drop'); } });
+  lockTagInp.addEventListener('dragleave', () => lockTagInp.classList.remove('ref-drop'));
+  lockTagInp.addEventListener('drop', e => { e.preventDefault(); lockTagInp.classList.remove('ref-drop'); if (_dragging?.type==='tag') { lockTagInp.value=_dragging.id; v.lock_tag=_dragging.id; } });
+  const lockTagPickBtn = document.createElement('button'); lockTagPickBtn.type='button';
+  lockTagPickBtn.className='ref-pick-btn'; lockTagPickBtn.textContent='[...]'; lockTagPickBtn.title='Pick tag';
+  lockTagPickBtn.addEventListener('click', () => openPicker('tag', id => { lockTagInp.value=id; v.lock_tag=id; }));
+  lockRow.appendChild(lockTagLbl); lockRow.appendChild(lockTagInp); lockRow.appendChild(lockTagPickBtn);
   card.appendChild(lockRow);
 
   // Always-visible fields: desc, show_if
@@ -5185,8 +5343,8 @@ function saveExits() {
     }
   }
   if (_exitCallback) _exitCallback(exits);
-  closeModal('exit-modal');
   _applyDefinedReverses();
+  renderEditor();
 }
 
 // Apply reverse exits that were explicitly defined in the exit editor.
@@ -5711,6 +5869,9 @@ function buildXRef() {
           addRef(v.lock_tag, 'room', zid, room.id, rn, `exit (${dir}) lock_tag`);
       }
       scanObj(room.on_enter, 'room', zid, room.id, rn, 'on_enter');
+      scanObj(room.on_exit,  'room', zid, room.id, rn, 'on_exit');
+      scanObj(room.on_sleep, 'room', zid, room.id, rn, 'on_sleep');
+      scanObj(room.on_wake,  'room', zid, room.id, rn, 'on_wake');
     });
 
     // NPCs
@@ -5842,6 +6003,8 @@ function renderXRef(id) {
     };
     _collectQuestRefs(d.on_enter, 'on_enter');
     _collectQuestRefs(d.on_exit,  'on_exit');
+    _collectQuestRefs(d.on_sleep, 'on_sleep');
+    _collectQuestRefs(d.on_wake,  'on_wake');
 
     if (questRefs.size) {
       body.appendChild(groupTitle('Quests'));
@@ -5850,6 +6013,23 @@ function renderXRef(id) {
         body.appendChild(xrefRow('quest', q?.title || qid, ctx,
           q ? () => navigateTo('quest', q.zone_id, qid) : null));
       }
+    }
+  }
+
+  // ── NPC shop items ───────────────────────────────────────────────────
+  if (SELECTED?.type === 'npc') {
+    const d = SELECTED.data;
+    const shop = d.shop || [];
+    if (shop.length) {
+      body.appendChild(groupTitle('Shop'));
+      shop.forEach(entry => {
+        const iid = entry.item_id || '';
+        if (!iid) return;
+        const itm = ALL_ITEMS[iid];
+        const priceCtx = entry.price !== undefined ? `${entry.price}g` : null;
+        body.appendChild(xrefRow('item', itm?.name || iid, priceCtx,
+          itm ? () => navigateTo('item', itm.zone_id, iid) : null));
+      });
     }
   }
 
@@ -7306,10 +7486,17 @@ function _collectQuestTriggers(questId) {
       _flattenOps(item.on_use || []).forEach(op =>
         _record(op, item.id, 'on_use', [], item.on_use || [], zone_id, 'item'));
     }
-    // Room on_enter
-    for (const room of (zone.rooms || []))
+    // Room scripts
+    for (const room of (zone.rooms || [])) {
       _flattenOps(room.on_enter || []).forEach(op =>
         _record(op, room.id, 'on_enter', [], room.on_enter || [], zone_id, 'room'));
+      _flattenOps(room.on_exit  || []).forEach(op =>
+        _record(op, room.id, 'on_exit',  [], room.on_exit  || [], zone_id, 'room'));
+      _flattenOps(room.on_sleep || []).forEach(op =>
+        _record(op, room.id, 'on_sleep', [], room.on_sleep || [], zone_id, 'room'));
+      _flattenOps(room.on_wake  || []).forEach(op =>
+        _record(op, room.id, 'on_wake',  [], room.on_wake  || [], zone_id, 'room'));
+    }
     // Crafting on_complete
     for (const craftFile of (zone.crafting || []))
       for (const comm of (craftFile.commission || [])) {
