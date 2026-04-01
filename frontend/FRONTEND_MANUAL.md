@@ -228,17 +228,20 @@ Tags are the primary hook for styling output.
 
 ## 4. The HTTP game server API
 
-`tools/wct_server.py` hosts both the World Creation Tool (WCT) and a
-game server on the same port (default `7373`).
+`frontend/web_server.py` is the game web frontend server (port `7374`).
+Start it with `python launch_web.py` (new terminal + browser) or
+`python frontend/web_server.py` (direct).
 
 ```
-http://localhost:7373/         → WCT (world editor)
-http://localhost:7373/game     → Web game client (game.html)
+http://localhost:7374/     → game.html (web game client)
 ```
 
-All game endpoints are under `/game`. All responses are JSON unless noted.
+> **WCT is separate.** The World Creation Tool runs on port 7373 via
+> `launch_wct.py` / `wct/wct_server.py`.
 
-### `GET /game/worlds`
+All game endpoints are root-relative. All responses are JSON unless noted.
+
+### `GET /worlds`
 
 List all available worlds.
 
@@ -252,7 +255,7 @@ List all available worlds.
 }
 ```
 
-### `GET /game/players`
+### `GET /players`
 
 List all existing characters (useful for an autocomplete / character select).
 
@@ -265,7 +268,7 @@ List all existing characters (useful for an autocomplete / character select).
 }
 ```
 
-### `GET /game/status`
+### `GET /status`
 
 Return the current session state.
 
@@ -289,7 +292,7 @@ Return the current session state.
 
 Poll this endpoint (e.g., every few seconds) to keep a status bar up-to-date.
 
-### `POST /game/login`
+### `POST /login`
 
 Start a new game session. Fails if a session is already active.
 
@@ -311,7 +314,7 @@ Start a new game session. Fails if a session is already active.
 After a successful login, connect to the SSE stream immediately so you do
 not miss the initial `look` output that the engine emits automatically.
 
-### `GET /game/stream`
+### `GET /stream`
 
 Server-Sent Events stream. Keeps the connection open and pushes JSON event
 objects as they are produced by the engine.
@@ -335,14 +338,14 @@ data: <JSON>\n\n
 
 - `msg` — a tagged engine message. Apply tag-based styling and append to output.
 - `prompt` — the engine is in a blocking-input state (dialogue, crafting).
-  Display the prompt text; the player's next POST to `/game/command` provides
+  Display the prompt text; the player's next POST to `/command` provides
   the response.
 - `player_died` — the player's HP reached 0. Show a death notice. The engine
   automatically follows with a `look` of the respawn room.
 - `error` — the engine thread threw an unhandled exception.
 - `quit` — the session has ended (player typed `quit` or the engine exited).
   Close the SSE connection.
-- `no_session` — SSE was opened before `/game/login` was called.
+- `no_session` — SSE was opened before `/login` was called.
 
 **Keepalive:** the server sends a comment line (`: ping`) every 15 s to keep
 the connection alive through proxies and load balancers. Browser `EventSource`
@@ -352,7 +355,7 @@ objects ignore comment lines automatically.
 will automatically attempt to reconnect. Messages queued in the server while
 the connection was down will be delivered when the new connection arrives.
 
-### `POST /game/command`
+### `POST /command`
 
 Send a command to the active session.
 
@@ -372,7 +375,7 @@ arrives asynchronously over the SSE stream.
 During dialogue or crafting, this endpoint is also used to send the player's
 choice (e.g., `{"cmd": "1"}`).
 
-### `POST /game/quit`
+### `POST /quit`
 
 Signal the engine to quit gracefully. The session emits a `quit` SSE event
 when it finishes.

@@ -19,7 +19,9 @@ A modular, zero-dependency Python 3.10+ MUD engine with TOML-based world data.
 ## Quick start
 
 ```bash
-python main.py
+python launch_cli.py        # CLI frontend
+python launch_web.py        # game web frontend (browser)
+python launch_wct.py        # World Creation Tool (browser)
 ```
 
 Requires Python 3.10+. Zero external dependencies.
@@ -33,12 +35,21 @@ Type `help` in-game for a full command list.
 ```
 mud/
 ├── engine/              Core systems — see engine/README.md for full details
-├── frontend/            CLI renderer and configuration
+├── frontend/            CLI renderer, game web frontend, and configuration
+│   ├── cli.py           CLI frontend
+│   ├── web_server.py    Game web frontend server (port 7374)
+│   ├── game.html        Web frontend HTML
+│   └── game.css         Web frontend styles
+├── wct/                 World Creation Tool (browser-based world editor)
+│   ├── wct_server.py    WCT HTTP server (port 7373)
+│   └── wct.html         Single-page WCT editor UI
 ├── data/                All TOML world data — see data/README.md for full details
 │   ├── players/         Cross-world player saves
 │   └── <world_id>/      World folder (contains config.toml + zone subfolders)
-├── tools/               Authoring and maintenance utilities
-├── main.py              Entry point — selects and launches a frontend
+├── tools/               Authoring and maintenance utilities (validate, map, bot, etc.)
+├── launch_cli.py        Start CLI frontend
+├── launch_web.py        Start game web frontend (new window + browser)
+├── launch_wct.py        Start World Creation Tool (new window + browser)
 ├── config.py            Root-level re-export of frontend/config.py
 ├── requirements.txt     (empty — zero external dependencies)
 ├── README.md            This file
@@ -192,7 +203,11 @@ Structured debug logger writing to `delve.log`. Per-category control:
 
 ```bash
 # Normal play
-python main.py
+python launch_cli.py
+python launch_cli.py --admin
+
+# Game web frontend
+python launch_web.py                         # → http://localhost:7374
 
 # Data integrity — run after every data change
 python tools/validate.py
@@ -201,9 +216,8 @@ python tools/validate.py
 # Includes interactive map (pan/zoom, NPC/item counts, exit labels),
 # in-browser dialogue tree and quest flow graphs, DOT export for all three,
 # and integrated world validator
-python tools/wct_server.py                   # → http://localhost:7373
-python tools/wct_server.py --port 8080
-python tools/wct_server.py --browser         # also open browser automatically
+python launch_wct.py                         # → http://localhost:7373 (new window + browser)
+python wct/wct_server.py                     # direct (no browser auto-open)
 
 # ASCII map (terminal)
 python tools/map.py                          # all zones

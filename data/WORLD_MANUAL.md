@@ -50,7 +50,7 @@ in TOML files under `data/`. The engine loads them at runtime.
 - **Zones** are subfolders of the world folder. Each zone streams in/out of memory independently.
 - All NPC and item state is lazy — NPCs spawn on first player visit, not at startup.
 - Zone state (NPC HP, moved items) persists per-player to `data/players/<name>/zone_state/<zone_id>.json`.
-- Zero external dependencies. Run with `python main.py`.
+- Zero external dependencies. Run with `python launch_cli.py`.
 
 **Test your work** with `python tools/validate.py` before playing.
 

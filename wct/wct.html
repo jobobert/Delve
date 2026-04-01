@@ -20,6 +20,7 @@
   <button class="hbtn" id="btn-validate" onclick="openValidate()">Validate</button>
   <button class="hbtn" id="btn-todos" onclick="toggleTodoPanel()" title="Show todo list" disabled>Todos</button>
   <button class="hbtn" id="btn-map" onclick="toggleMap()" title="Show world map">Map</button>
+  <button class="hbtn" id="btn-stop-server" onclick="stopServer()" title="Stop the WCT server">Stop Server</button>
   <button class="hbtn primary" id="btn-new" onclick="openNew()">+ New</button>
   <button class="hbtn" id="btn-save" onclick="saveSelected()" disabled>Save</button>
   <div id="status-bar">Select a world to begin</div>
@@ -8332,6 +8333,12 @@ async function saveConfig() {
 // ═══════════════════════════════════════════════════════════════════════
 
 init();
+
+async function stopServer() {
+  if (!confirm('Stop the WCT server? This will close the tool.')) return;
+  try { await fetch('/shutdown', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'}); } catch(_) {}
+  document.body.innerHTML = '<div style="font-family:monospace;color:#c8c8c8;background:#141414;height:100vh;display:flex;align-items:center;justify-content:center;font-size:1.1em">WCT server stopped. You may close this tab.</div>';
+}
 </script>
 </body>
 </html>

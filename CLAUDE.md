@@ -7,11 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Common commands
 
 ```bash
-python main.py                            # play the game (CLI)
+python launch_cli.py                      # play the game (CLI)
+python launch_cli.py --admin              # CLI with admin commands
+python launch_wct.py                      # World Creation Tool → http://localhost:7373 (new window + browser)
+python launch_web.py                      # game web frontend → http://localhost:7374 (new window + browser)
 python tools/validate.py                  # data integrity check — run after every data change
 python tools/validate.py --world first_world  # validate one world only
-python tools/wct_server.py                # World Creation Tool → http://localhost:7373
-python tools/wct_server.py --browser      # also opens browser
 python tools/clean.py --all              # wipe players, zone state, caches
 python tools/run_script.py <file> --player <name>  # run a standalone script file
 python tools/offline_bot.py --world first_world --turns 500
@@ -51,8 +52,10 @@ processor = CommandProcessor(world, player, bus)
 | `engine/player.py` | `Player` dataclass; `player.inventory` contains ALL items including equipped ones (filter by `id(item)` to separate). `effective_light(player, room)` and `is_blind(player, room)` are module-level helpers. |
 | `engine/dialogue.py` | `run_inline(npc, player, quests, ctx, bus, input_fn)`. Loads `dialogues/<npc_id>.toml`, evaluates conditions, runs scripts on response. |
 | `engine/toml_io.py` | Custom TOML parser — always use this, never `tomllib`. |
-| `tools/wct_server.py` | Flask-like HTTP server for the WCT browser tool; streams game events via SSE. |
-| `tools/wct.html` + `tools/wct_common.css` | Single-page WCT app; all world editing in the browser. |
+| `wct/wct_server.py` | Lightweight HTTP server (port 7373) for the WCT browser tool. WCT-only routes; no game routes. |
+| `wct/wct.html` + `wct/wct_common.css` | Single-page WCT app; all world editing in the browser. |
+| `frontend/web_server.py` | Standalone HTTP server (port 7374) for the game web frontend; hosts `GameSession` + SSE stream. |
+| `frontend/game.html` + `frontend/game.css` | Game web frontend; API paths are root-relative (`/login`, `/stream`, etc.). |
 
 ### Data layout
 ```
@@ -81,11 +84,17 @@ Worlds and zones are discovered by folder scan — no registry to update.
 Add an `elif name == "my_op":` branch in `ScriptRunner._exec()` in `engine/script.py`, then document it in the module docstring's op table.
 
 ### WCT (World Creation Tool)
-- Server: `tools/wct_server.py` on port 7373; serves `wct.html` and game SSE stream
-- The tool streams `char_snapshot` and `room_snapshot` events via SSE to the browser
+- Server: `wct/wct_server.py` on port 7373; serves `wct.html`; WCT API only (no game routes)
+- Launch with `python launch_wct.py` (starts server in new window + opens browser)
 - Zone collapse state, tag comments persisted in `localStorage` keyed by world ID
 - `FLAG_MAP`: global `{flag_name: [usages]}` built by `buildXRef()` after world load
 - `ALL_TAGS` / `rebuildTagPalette()`: collects unique tags from all NPCs/items for the tag palette
+
+### Web frontend
+- Server: `frontend/web_server.py` on port 7374; serves `game.html` + `game.css` + live play API
+- Launch with `python launch_web.py` (starts server in new window + opens browser)
+- `GameSession` runs the engine in a background thread; output flows via SSE at `/stream`
+- API routes: `/login`, `/command`, `/quit`, `/stream`, `/status`, `/worlds`, `/players`, `/char_snapshot`
 
 ### Windows encoding
 Box-drawing chars (U+2500+), ✓/✗, ⚠ crash on cp1252 consoles. Use ASCII equivalents in runtime-printed strings. Em-dash (U+2014) is safe.

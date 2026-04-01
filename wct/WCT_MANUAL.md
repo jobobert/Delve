@@ -7,9 +7,10 @@ The WCT (World Creation Tool) is a browser-based editor for Delve MUD worlds. It
 ## Running the WCT
 
 ```bash
-python tools/wct_server.py            # starts on http://localhost:7373
-python tools/wct_server.py --browser  # starts and opens your default browser
-python tools/wct_server.py --port 8080
+python launch_wct.py                  # recommended: new terminal window + browser
+python wct/wct_server.py              # starts on http://localhost:7373
+python wct/wct_server.py --browser    # starts and opens your default browser
+python wct/wct_server.py --port 8080
 ```
 
 Open `http://localhost:7373` in your browser. Use the world selector in the top bar to choose a world.

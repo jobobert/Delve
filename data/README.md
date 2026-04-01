@@ -479,8 +479,8 @@ python tools/map.py --html --output my.html  # HTML map to custom path
 python tools/map.py --world <name>           # select world by folder name
 
 # World Creation Tool — browser-based TOML editor with map and dialogue graph
-python tools/wct_server.py                   # → http://localhost:7373  (no auto-open)
-python tools/wct_server.py --browser         # also open browser
+python launch_wct.py                         # → http://localhost:7373 (new window + browser)
+python wct/wct_server.py                     # direct (no browser auto-open)
 
 # Reset
 python tools/clean.py --all                  # wipe players, zone state, and caches

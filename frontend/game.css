@@ -1,0 +1,513 @@
+/* ── Reset ──────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  background: #141414;
+  color: #c8c8c8;
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, 'Courier New', monospace;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ── Login panel ─────────────────────────────────────────────────────────────── */
+#login-panel {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.banner {
+  color: #ffdc64;
+  font-weight: bold;
+  font-size: 1.05em;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  white-space: pre;
+}
+
+.subtitle {
+  color: #8c7a30;
+  margin-bottom: 2.5rem;
+  text-align: center;
+  font-size: 0.9em;
+  letter-spacing: 0.1em;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 320px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #787878;
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.form select,
+.form input[type="text"] {
+  background: #1e1e1e;
+  border: 1px solid #383838;
+  border-radius: 4px;
+  color: #e8e8e8;
+  font-family: inherit;
+  font-size: 1em;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form select:focus,
+.form input[type="text"]:focus { border-color: #50c878; }
+
+#char-info {
+  color: #8cb48c;
+  font-size: 0.85em;
+  min-height: 1.2em;
+  margin-top: -0.4rem;
+}
+
+#connect-btn {
+  background: #1a3d25;
+  border: 1px solid #50c878;
+  border-radius: 4px;
+  color: #50c878;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: bold;
+  padding: 0.65rem;
+  letter-spacing: 0.06em;
+  transition: background 0.15s;
+  margin-top: 0.5rem;
+}
+
+#connect-btn:hover  { background: #22522f; }
+#connect-btn:active { background: #1a3d25; }
+#connect-btn:disabled { opacity: 0.45; cursor: default; }
+
+#login-error {
+  color: #ff5050;
+  font-size: 0.85em;
+  min-height: 1.2em;
+  text-align: center;
+}
+
+/* ── Game panel ──────────────────────────────────────────────────────────────── */
+#game-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Status bar ──────────────────────────────────────────────────────────────── */
+#status-bar {
+  background: #1c1c1c;
+  border-bottom: 1px solid #2a2a2a;
+  padding: 0.35rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+#s-player { color: #ffdc64; font-weight: bold; }
+#s-hp     { font-weight: bold; }
+#s-sep    { color: #383838; }
+#s-room   { color: #787878; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+
+#sidebar-toggle {
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #666;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78em;
+  padding: 0.18rem 0.45rem;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+#sidebar-toggle:hover { color: #aaa; border-color: #555; }
+
+#stop-btn {
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 3px;
+  color: #555;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82em;
+  padding: 0.18rem 0.55rem;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+#stop-btn:hover { border-color: #f05050; color: #f05050; }
+
+/* ── Main area (output + sidebar) ────────────────────────────────────────────── */
+#main-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Output area ─────────────────────────────────────────────────────────────── */
+#output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.6rem 1.1rem;
+  scroll-behavior: auto;
+  min-width: 0;
+}
+
+#output::-webkit-scrollbar       { width: 6px; }
+#output::-webkit-scrollbar-track { background: #1a1a1a; }
+#output::-webkit-scrollbar-thumb { background: #383838; border-radius: 3px; }
+
+.line       { white-space: pre-wrap; word-break: break-word; }
+.line.blank { height: 0.55em; display: block; }
+.echo       { color: #3a5a6a; }
+
+/* ── Character panel (left) ──────────────────────────────────────────────────── */
+#char-panel {
+  width: 200px;
+  min-width: 200px;
+  border-right: 1px solid #242424;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #161616;
+  flex-shrink: 0;
+  transition: width 0.2s ease, min-width 0.2s ease;
+}
+
+#char-panel.collapsed {
+  width: 0;
+  min-width: 0;
+}
+
+#char-panel::-webkit-scrollbar       { width: 4px; }
+#char-panel::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+
+.cp-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78em;
+  padding: 0.15rem 0.55rem;
+  transition: background 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cp-btn:hover { background: #202020; }
+.cp-btn.equip-btn   { color: #c89464; }
+.cp-btn.inv-btn     { color: #a0c8a0; }
+
+.cp-label {
+  color: #505050;
+  font-size: 0.7em;
+  padding: 0.12rem 0.55rem 0.05rem;
+  letter-spacing: 0.05em;
+}
+
+.status-chip {
+  font-size: 0.76em;
+  padding: 0.1rem 0.55rem;
+  color: #d08040;
+}
+
+.attr-row {
+  padding: 0.15rem 0.55rem;
+  font-size: 0.76em;
+}
+.attr-name { color: #787878; margin-bottom: 0.1rem; }
+.attr-bar-wrap {
+  background: #2a2a2a;
+  border-radius: 2px;
+  height: 5px;
+  margin-bottom: 0.15rem;
+}
+.attr-bar {
+  background: #5090c8;
+  border-radius: 2px;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.attr-val { color: #a0b8d0; }
+
+/* ── Sidebar resizer (between output and sidebar) ────────────────────────────── */
+#sidebar-resizer {
+  width: 5px;
+  cursor: col-resize;
+  background: #242424;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+#sidebar-resizer:hover,
+#sidebar-resizer.dragging { background: #505050; }
+
+/* ── Sidebar (right) ─────────────────────────────────────────────────────────── */
+#sidebar {
+  width: 220px;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #161616;
+  flex-shrink: 0;
+  transition: width 0.2s ease, min-width 0.2s ease;
+}
+
+#sidebar.collapsed {
+  width: 0;
+  min-width: 0;
+}
+
+/* ── Map area (map + exits, vertically resizable) ────────────────────────────── */
+#map-area {
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 260px;
+}
+
+/* ── Here resizer (between map-area and here-section) ────────────────────────── */
+#here-resizer {
+  height: 5px;
+  cursor: row-resize;
+  background: #222;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+#here-resizer:hover,
+#here-resizer.dragging { background: #505050; }
+
+.sidebar-section {
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  color: #404040;
+  font-size: 0.68em;
+  letter-spacing: 0.14em;
+  padding: 0.3rem 0.55rem 0.15rem;
+  text-transform: uppercase;
+}
+
+/* Map pane */
+#map-section { flex-shrink: 0; overflow: hidden; }
+
+#map-display {
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, 'Courier New', monospace;
+  color: #3cb450;
+  font-size: 0.76em;
+  white-space: pre;
+  line-height: 1.2;
+  padding: 0.2rem 0.5rem 0.4rem;
+  overflow: auto;
+}
+
+#map-display::-webkit-scrollbar       { width: 4px; height: 4px; }
+#map-display::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+
+/* Exits pane */
+#exits-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.3rem 0.5rem 0.45rem;
+}
+
+.exit-btn {
+  background: #192819;
+  border: 1px solid #2a422a;
+  border-radius: 3px;
+  color: #50c878;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.76em;
+  padding: 0.15rem 0.5rem;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.exit-btn:hover   { background: #213a21; }
+.exit-btn.locked  { border-color: #42341a; color: #c8a050; background: #1e1a10; }
+.exit-btn.locked:hover { background: #282210; }
+
+/* Here pane (NPCs + items) */
+#here-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.3rem 0;
+}
+
+#here-section::-webkit-scrollbar       { width: 4px; }
+#here-section::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+
+.here-empty {
+  color: #363636;
+  font-size: 0.76em;
+  padding: 0.2rem 0.55rem;
+  font-style: italic;
+}
+
+.npc-btn, .item-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8em;
+  padding: 0.15rem 0.55rem;
+  transition: background 0.1s;
+}
+.npc-btn:hover, .item-btn:hover { background: #202020; }
+
+.npc-btn         { color: #e6823c; }
+.npc-btn.hostile { color: #e85050; }
+.item-btn        { color: #64beef; }
+
+/* ── Clickable exit words in main text ───────────────────────────────────────── */
+.exit-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+.exit-link:hover { color: #78e896; }
+
+/* ── Clickable dialogue responses ────────────────────────────────────────────── */
+.dlg-option {
+  display: block;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: #dcc8a0;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  width: 100%;
+}
+.dlg-option:hover { color: #f5e0b4; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px; }
+
+/* ── Tag colours — mirror the CLI palette ────────────────────────────────────── */
+.tag-room_name    { color: #ffdc64; font-weight: bold; }
+.tag-room_divider { color: #645a3c; }
+.tag-room_desc    { color: #c8d2dc; }
+.tag-exit         { color: #50c878; font-weight: bold; }
+.tag-move         { color: #8cb48c; }
+.tag-npc          { color: #e6823c; font-weight: bold; }
+.tag-item         { color: #64beef; }
+.tag-item_equip   { color: #64beef; font-weight: bold; }
+.tag-item_have    { color: #50dc78; font-weight: bold; }
+.tag-item_bank    { color: #78a08c; }
+.tag-item_missing { color: #a05050; }
+.tag-dialogue     { color: #dcc8a0; }
+.tag-combat_hit   { color: #f05050; font-weight: bold; }
+.tag-combat_recv  { color: #c83c3c; }
+.tag-combat_kill  { color: #ffa028; font-weight: bold; }
+.tag-combat_death { color: #b40000; font-weight: bold; }
+.tag-reward_xp    { color: #a078ff; font-weight: bold; }
+.tag-reward_gold  { color: #ffd232; }
+.tag-stats        { color: #a0c8ff; font-family: monospace; }
+.tag-system       { color: #969696; }
+.tag-error        { color: #ff5050; font-weight: bold; }
+.tag-ambiguous    { color: #ffb428; font-weight: bold; }
+.tag-style        { color: #b478ff; font-weight: bold; }
+.tag-shop         { color: #64dcb4; }
+.tag-door         { color: #c8a050; font-weight: bold; }
+.tag-map          { color: #3cb450; }
+.tag-quest        { color: #ffd700; font-weight: bold; }
+.tag-journal      { color: #b4dcff; font-weight: bold; }
+
+/* ── Context menus (inventory + room contents) ───────────────────────────────── */
+#item-menu,
+#here-menu {
+  position: fixed;
+  z-index: 1000;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  min-width: 110px;
+  padding: 3px 0;
+}
+
+.item-menu-btn {
+  background: transparent;
+  border: none;
+  color: #c8c8c8;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82em;
+  padding: 0.35rem 0.85rem;
+  text-align: left;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.item-menu-btn:hover { background: #2e2e2e; color: #e8e8e8; }
+
+/* ── Input bar ───────────────────────────────────────────────────────────────── */
+#input-bar {
+  background: #1c1c1c;
+  border-top: 1px solid #2a2a2a;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.prompt { color: #5090ff; font-weight: bold; }
+
+#cmd-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #e8e8e8;
+  font-family: inherit;
+  font-size: 1em;
+  outline: none;
+}
+
+#send-btn {
+  background: #1a2a4a;
+  border: 1px solid #3a5a8a;
+  border-radius: 3px;
+  color: #5090ff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.88em;
+  padding: 0.3rem 0.9rem;
+  transition: background 0.15s;
+}
+#send-btn:hover { background: #1e3a6a; }

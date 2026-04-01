@@ -17,7 +17,6 @@ None require external packages except where marked.
 | `ai_player.py` | Autonomous AI playtester via Anthropic API | `ANTHROPIC_API_KEY` |
 | `offline_bot.py` | Deterministic offline playtester (no API key needed) | — |
 | `world2html.py` | Export a full world to a self-contained HTML review document | graphviz CLI (optional, for dialogue graphs) |
-| `wct_server.py` | Local web server: World Creation Tool + web game client | — |
 | `run_script.py` | Run a world script file against a named player from the CLI | — |
 | `md2html.py` | Convert a Markdown file to a self-contained HTML page | — |
 
@@ -299,87 +298,16 @@ A `@media print` stylesheet expands all collapsible sections for clean printing.
 
 ---
 
-## wct_server.py
-
-Starts a local HTTP server that serves two tools on the same port:
-
-- **World Creation Tool (WCT)** — browser-based TOML editor with map view, at `/`
-- **Web game client** — single-page play interface (`game.html`), at `/game`
-
-```
-python tools/wct_server.py            # http://localhost:7373  (no browser auto-open)
-python tools/wct_server.py --port 8080
-python tools/wct_server.py --browser  # also open browser automatically
-```
-
-The server does **not** open a browser automatically. Navigate to the URL printed
-on startup, or pass `--browser` to open it.
-
-The server uses a threading model so the SSE stream for the game client can
-run concurrently with WCT requests.
-
-### WCT features
-
-- **Editor** — rooms, NPCs, items, quests, dialogues, fighting styles, and status effects
-  with full field editing, exit editor, drag-and-drop quest steps and dialogue responses
-- **Entity pickers** — every ID reference field has a `[...]` button that opens a scoped
-  picker modal (rooms, NPCs, items, quests, styles, skills, effects, flags, tags, directions,
-  tier names). Type to search, hover for admin comment. Drag-and-drop from the sidebar is
-  also supported on compatible fields.
-- **Script editor panel** — clicking any script button (on_enter, kill_script, on_exit, etc.)
-  opens an inline script editor in the main panel. Click `← Back` to save and return. All
-  op parameter fields use the same pickers as regular editor fields.
-- **Toggle buttons** — boolean fields (hostile, start room, locked, scenery, autostart, etc.)
-  are amber-highlight toggle buttons rather than checkboxes
-- **Map view** — interactive SVG map (pan/zoom), per-zone colour coding, room detail
-  panel, one-click edit; NPC/item count badges, exit-direction labels, start-room ★ and
-  town ⌂ icons, connected-room gold highlight on selection; zone switch resets pan/zoom
-- **Dialogue graph** — click **Graph** in any dialogue editor for an in-browser interactive
-  SVG tree: nodes colour-coded by script op, conditional edges in blue, click any node
-  for a detail panel showing text / conditions / ops / responses
-- **Quest graph** — click **Graph** in any quest editor for an in-browser interactive
-  SVG step-flow diagram: START → steps → COMPLETE, with edge labels showing the source
-  (dialogue / kill_script / on_get / on_enter) that drives each transition; ⚠ warnings
-  where no trigger is found anywhere
-- **References panel** — right-pane cross-reference index shows all entities that
-  reference the selected object, plus a **Flags** section listing every flag the entity
-  reads or writes (with world-wide usage count, clickable for a full usage list)
-- **Error panel** — collapsible panel at the bottom of the editor; lists ERR/WRN rows
-  for missing fields, unknown refs, dialogue issues, and quest giver mismatches;
-  each row is clickable and navigates to the offending entity
-- **DOT export** — download Graphviz `.dot` files for the full world map (map toolbar),
-  any NPC's dialogue tree (dialogue **Export DOT** button), or any quest's step flow
-  (quest **Export DOT** button)
-- **Validate** — run `validate.py` from inside the browser
-- **UI state** — selected object, panel widths, and sidebar collapse state are
-  saved per-world in `localStorage`
-
-### Game server endpoints
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/game` | GET | Serve game.html |
-| `/game/worlds` | GET | List available worlds |
-| `/game/players` | GET | List existing characters |
-| `/game/status` | GET | Current session state (hp, room, alive) |
-| `/game/stream` | GET | Server-Sent Events — streams engine output |
-| `/game/login` | POST | Start a new session `{world_id, player_name}` |
-| `/game/command` | POST | Send a command `{cmd}` |
-| `/game/quit` | POST | End the current session |
-
-See `frontend/FRONTEND_MANUAL.md` for the full protocol reference.
-
----
-
 ## Internal / supporting files
 
 | File | Role |
 |------|------|
 | `graph_common.py` | Shared library for `dialogue_graph.py` and `quest_graph.py` |
-| `wct.html` | WCT browser frontend (HTML + JS) |
-| `wct_common.css` | WCT stylesheet — served at `/css/wct_common.css` by `wct_server.py` |
 | `md2html.py` | Markdown → self-contained HTML converter |
 | `ai_sessions/` | AI playtester logs — not committed |
+
+> **WCT (World Creation Tool)** has moved to `wct/`. Start it with `python launch_wct.py`.
+> See `wct/WCT_MANUAL.md` for the full feature reference.
 
 ---
 

@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """
-tools/wct_server.py — Delve World Creation Tool (WCT) server.
+wct/wct_server.py — Delve World Creation Tool (WCT) server.
 
 A lightweight local HTTP server that serves the WCT frontend and exposes a
 JSON API for reading and writing TOML data files.
 
 Usage:
-    python tools/wct_server.py            # starts on http://localhost:7373
-    python tools/wct_server.py --port 8080
+    python wct/wct_server.py            # starts on http://localhost:7373
+    python wct/wct_server.py --port 8080
+    python launch_wct.py                # recommended: opens server + browser
 
 The WCT does NOT open a browser automatically. Navigate to the URL shown on startup,
 or use --browser to open it automatically.
+
+Game web frontend is served separately — see launch_web.py / frontend/web_server.py.
 """
 
 from __future__ import annotations
@@ -24,7 +27,6 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
-import queue
 import threading
 from socketserver import ThreadingMixIn
 
@@ -50,249 +52,6 @@ import engine.world_config as wc
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     """HTTP server that handles each connection in a dedicated thread."""
     daemon_threads = True
-
-
-# ── Game session helpers ──────────────────────────────────────────────────────
-
-def _char_snapshot_data(player) -> dict:
-    """Build a char_snapshot payload dict from a live Player object."""
-    equipped = []
-    equipped_obj_ids: set[int] = set()
-    for slot, item in (player.equipped or {}).items():
-        if item:
-            equipped_obj_ids.add(id(item))
-            equipped.append({
-                "slot": slot,
-                "id":   item.get("id", ""),
-                "name": item.get("name", slot),
-            })
-
-    # player.inventory contains ALL items including equipped ones (same object
-    # references).  Filter by Python identity so equipped items don't appear
-    # twice — once in Equipped, once in Inventory.
-    inventory = []
-    for item in (player.inventory or []):
-        if id(item) in equipped_obj_ids:
-            continue
-        inventory.append({
-            "id":         item.get("id", ""),
-            "name":       item.get("name", item.get("id", "")),
-            "equip_slot": item.get("equip_slot", ""),
-        })
-
-    # Status effects: wc.STATUS_EFFECTS uses "label" not "name".
-    status_effects = []
-    for eid, turns in (player.status_effects or {}).items():
-        effect_def = wc.get_status_effect(eid) or {}
-        status_effects.append({
-            "id":         eid,
-            "name":       effect_def.get("label", eid),
-            "turns_left": turns if isinstance(turns, int) else 0,
-        })
-
-    world_attrs = []
-    for attr_def in (wc.PLAYER_ATTRS or []):
-        aid   = attr_def.get("id", "")
-        value = (player.world_attrs or {}).get(aid, attr_def.get("default", 0))
-        world_attrs.append({
-            "id":      aid,
-            "name":    attr_def.get("name", aid),
-            "value":   value,
-            "min":     attr_def.get("min", 0),
-            "max":     attr_def.get("max", 100),
-            "display": attr_def.get("display", "number"),
-        })
-
-    return {
-        "type":           "char_snapshot",
-        "equipped":       equipped,
-        "inventory":      inventory,
-        "status_effects": status_effects,
-        "world_attrs":    world_attrs,
-    }
-
-
-# ── Game session ──────────────────────────────────────────────────────────────
-
-_game_session: "GameSession | None" = None
-_session_lock = threading.Lock()
-
-
-class GameSession:
-    """Runs the Delve engine in a background thread and bridges it to HTTP.
-
-    Input (browser → engine): call ``send(cmd)`` to push a command string.
-    Output (engine → browser): read SSE events from ``output_queue``.
-
-    Event dicts pushed to ``output_queue``:
-      {"type": "msg",         "tag": str, "text": str}   — engine Msg
-      {"type": "prompt",      "text": str}                — blocking input prompt
-      {"type": "player_died"}                             — player HP reached 0
-      {"type": "error",       "text": str}                — engine crash
-      {"type": "quit"}                                    — session ended
-    """
-
-    def __init__(self, world_path: Path, player_name: str) -> None:
-        self.world_path   = world_path
-        self.player_name  = player_name
-        self.input_queue  = queue.Queue()
-        self.output_queue = queue.Queue()
-        self.alive              = True
-        self._player            = None   # set once engine initialises in _run
-        self._processor         = None   # set once engine initialises in _run
-        self._last_char_snapshot = None  # cached by game thread; read safely by HTTP thread
-        self._thread = threading.Thread(
-            target=self._run, daemon=True, name=f"game-{player_name}"
-        )
-        self._thread.start()
-
-    # ── Engine thread ─────────────────────────────────────────────────────────
-
-    def _run(self) -> None:
-        try:
-            import engine.world_config as wc
-            from engine.events import EventBus, Event
-            from engine.world import World
-            from engine.player import Player
-            from engine.commands import CommandProcessor
-
-            bus = EventBus()
-            bus.subscribe(Event.OUTPUT,      self._on_output)
-            bus.subscribe(Event.PLAYER_DIED, self._on_player_died)
-
-            wc.init(self.world_path)
-            world = World(self.world_path)
-
-            player = Player.load(self.player_name)
-            if player is None:
-                player = Player.create_new(self.player_name)
-                player.world_id = self.world_path.name
-                player.room_id  = world.start_room
-                player.save()
-
-            world.attach_player(player)
-            self._player    = player
-            self._processor = CommandProcessor(world, player, bus,
-                                               input_fn=self._input_fn)
-            self._processor.do_look()
-            self._emit_room_snapshot(world, player)
-            self._emit_char_snapshot(player)
-
-            while not self._processor.quit_requested:
-                try:
-                    cmd = self.input_queue.get(timeout=0.5)
-                except queue.Empty:
-                    continue
-                self._processor.process(cmd)
-                self._emit_room_snapshot(world, player)
-                self._emit_char_snapshot(player)
-
-        except Exception as exc:
-            import traceback
-            self.output_queue.put({
-                "type": "error",
-                "text": f"Engine error: {exc}\n{traceback.format_exc()}",
-            })
-        finally:
-            self.alive = False
-            self.output_queue.put({"type": "quit"})
-
-    def _input_fn(self, prompt: str = "", choices=None) -> str:
-        """Called by the engine when blocking input is needed (dialogue, crafting).
-
-        Queues a ``prompt`` event so the browser can display the prompt, then
-        blocks until the client sends a response via POST /game/command.
-        """
-        if prompt and prompt.strip():
-            self.output_queue.put({"type": "prompt", "text": prompt.strip()})
-        return self.input_queue.get()   # blocks until the client responds
-
-    def _emit_char_snapshot(self, player) -> None:
-        """Push a char_snapshot event so the browser can update the character panel.
-
-        Also caches the snapshot so the GET /game/char_snapshot endpoint can return
-        it without accessing player state from the HTTP handler thread.
-        """
-        try:
-            snap = _char_snapshot_data(player)
-            self._last_char_snapshot = snap  # written only from game thread
-            self.output_queue.put(snap)
-        except Exception as exc:
-            import traceback
-            print(f"[wct] char_snapshot error: {exc}\n{traceback.format_exc()}",
-                  file=sys.stderr)
-
-    def _emit_room_snapshot(self, world, player) -> None:
-        """Push a room_snapshot event so the browser can update the sidebar."""
-        try:
-            room = world.prepare_room(player.room_id, player)
-            if not room:
-                return
-            exits = []
-            for direction, v in room.get("exits", {}).items():
-                if isinstance(v, dict):
-                    exits.append({
-                        "dir":    direction,
-                        "target": v.get("to", ""),
-                        "locked": bool(v.get("locked", False)),
-                    })
-                else:
-                    exits.append({"dir": direction, "target": v, "locked": False})
-
-            npcs = []
-            for npc in (room.get("_npcs") or []):
-                if npc.get("hp", 1) <= 0:
-                    continue
-                npcs.append({
-                    "id":      npc.get("id", ""),
-                    "name":    npc.get("name", ""),
-                    "hostile": bool(npc.get("hostile", False)),
-                })
-
-            items = []
-            for item in (room.get("items") or []):
-                items.append({
-                    "id":   item.get("id", ""),
-                    "name": item.get("name", item.get("id", "")),
-                })
-
-            self.output_queue.put({
-                "type":  "room_snapshot",
-                "exits": exits,
-                "npcs":  npcs,
-                "items": items,
-            })
-        except Exception as exc:
-            import traceback
-            print(f"[wct] room_snapshot error: {exc}\n{traceback.format_exc()}",
-                  file=sys.stderr)
-
-    def _on_output(self, msg) -> None:
-        self.output_queue.put({"type": "msg", "tag": msg.tag, "text": msg.text})
-
-    def _on_player_died(self) -> None:
-        self.output_queue.put({"type": "player_died"})
-        # Mirror what the CLI does: show the room at the respawn point.
-        if self._processor:
-            self._processor.process("look")
-
-    # ── Public interface ──────────────────────────────────────────────────────
-
-    def send(self, cmd: str) -> None:
-        """Push a command string into the engine's input queue."""
-        self.input_queue.put(cmd)
-
-    @property
-    def status(self) -> dict:
-        p = self._player
-        return {
-            "alive":  self.alive,
-            "world":  self.world_path.name,
-            "player": p.name    if p else "",
-            "hp":     p.hp      if p else 0,
-            "max_hp": p.max_hp  if p else 0,
-            "room":   p.room_id if p else "",
-        }
 
 
 # ── TOML helpers ──────────────────────────────────────────────────────────────
@@ -735,40 +494,6 @@ class WCTHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length) if length else b""
         return json.loads(raw) if raw else {}
 
-    def _stream_game(self) -> None:
-        """Server-Sent Events stream — pushes engine output to the browser."""
-        session = _game_session
-        self.send_response(200)
-        self.send_header("Content-Type",         "text/event-stream")
-        self.send_header("Cache-Control",        "no-cache")
-        self.send_header("Connection",           "keep-alive")
-        self.send_header("X-Accel-Buffering",    "no")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-
-        if not session:
-            self.wfile.write(b'data: {"type":"no_session"}\n\n')
-            self.wfile.flush()
-            return
-
-        while True:
-            try:
-                event = session.output_queue.get(timeout=15)
-                data  = json.dumps(event, ensure_ascii=False, default=str)
-                self.wfile.write(f"data: {data}\n\n".encode())
-                self.wfile.flush()
-                if event.get("type") == "quit":
-                    break
-            except queue.Empty:
-                # Keepalive comment line (not a data event; browser ignores it)
-                try:
-                    self.wfile.write(b": ping\n\n")
-                    self.wfile.flush()
-                except OSError:
-                    break
-            except OSError:
-                break
-
     # ── GET ───────────────────────────────────────────────────────────────────
 
     def do_GET(self):
@@ -794,6 +519,14 @@ class WCTHandler(BaseHTTPRequestHandler):
                 self.wfile.write(body)
             else:
                 self._send_json({"error": "not found"}, 404)
+
+        elif path == "/game/worlds":
+            from engine.world_config import list_worlds, peek_world_name
+            worlds = [
+                {"id": w.name, "name": peek_world_name(w)}
+                for w in list_worlds(DATA_DIR)
+            ]
+            self._send_json({"worlds": worlds})
 
         elif path == "/api/world":
             qs = parse_qs(parsed.query)
@@ -848,7 +581,7 @@ class WCTHandler(BaseHTTPRequestHandler):
             # Run the validator and return its output
             import subprocess
             result = subprocess.run(
-                [sys.executable, str(TOOLS_DIR / "validate.py")],
+                [sys.executable, str(ROOT / "tools" / "validate.py")],
                 cwd=str(ROOT),
                 capture_output=True, text=True, timeout=30
             )
@@ -876,59 +609,6 @@ class WCTHandler(BaseHTTPRequestHandler):
                 self._send_json({"ok": True, "issues": issues})
             except Exception as exc:
                 self._send_json({"ok": False, "error": str(exc), "issues": []})
-
-        # ── Game routes ───────────────────────────────────────────────────────
-
-        elif path == "/game":
-            html_path = FRONTEND_DIR / "game.html"
-            if html_path.exists():
-                self._send_html(html_path.read_text(encoding="utf-8"))
-            else:
-                self._send_json({"error": "game.html not found"}, 404)
-
-        elif path == "/game/worlds":
-            from engine.world_config import list_worlds, peek_world_name
-            worlds = [
-                {"id": w.name, "name": peek_world_name(w)}
-                for w in list_worlds(DATA_DIR)
-            ]
-            self._send_json({"worlds": worlds})
-
-        elif path == "/game/players":
-            players_dir = DATA_DIR / "players"
-            players = []
-            if players_dir.exists():
-                for d in sorted(players_dir.iterdir()):
-                    if d.is_dir() and (d / "player.toml").exists():
-                        try:
-                            pdata = toml_load(d / "player.toml")
-                            players.append({
-                                "name":     pdata.get("name", d.name),
-                                "world_id": pdata.get("world_id", ""),
-                                "hp":       pdata.get("hp", 0),
-                                "max_hp":   pdata.get("max_hp", 0),
-                            })
-                        except Exception:
-                            pass
-            self._send_json({"players": players})
-
-        elif path == "/game/status":
-            gs = _game_session
-            if gs and gs.alive:
-                self._send_json({"session": True, **gs.status})
-            else:
-                self._send_json({"session": False})
-
-        elif path == "/game/char_snapshot":
-            gs   = _game_session
-            snap = gs._last_char_snapshot if (gs and gs.alive) else None
-            if snap:
-                self._send_json({"session": True, **snap})
-            else:
-                self._send_json({"session": False})
-
-        elif path == "/game/stream":
-            self._stream_game()
 
         else:
             self._send_json({"error": f"Not found: {path}"}, 404)
@@ -1379,46 +1059,9 @@ class WCTHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send_json({"ok": False, "error": str(e)})
 
-        # ── Game routes ───────────────────────────────────────────────────────
-
-        elif path == "/game/login":
-            world_id    = body.get("world_id", "").strip()
-            player_name = body.get("player_name", "").strip()
-            if not world_id or not player_name:
-                self._send_json({"ok": False, "error": "world_id and player_name required"})
-                return
-            world_path = DATA_DIR / world_id
-            if not world_path.is_dir() or not ((world_path / "config.toml").exists() or (world_path / "config.py").exists()):
-                self._send_json({"ok": False, "error": f"World '{world_id}' not found"})
-                return
-            with _session_lock:
-                global _game_session
-                if _game_session and _game_session.alive:
-                    self._send_json({
-                        "ok": False,
-                        "error": "A session is already active — quit it first",
-                    })
-                    return
-                _game_session = GameSession(world_path, player_name)
+        elif path == "/shutdown":
             self._send_json({"ok": True})
-
-        elif path == "/game/command":
-            cmd = body.get("cmd", "").strip()
-            if not cmd:
-                self._send_json({"ok": False, "error": "cmd required"})
-                return
-            gs = _game_session
-            if not gs or not gs.alive:
-                self._send_json({"ok": False, "error": "No active session"})
-                return
-            gs.send(cmd)
-            self._send_json({"ok": True})
-
-        elif path == "/game/quit":
-            gs = _game_session
-            if gs and gs.alive:
-                gs.send("quit")
-            self._send_json({"ok": True})
+            threading.Thread(target=self.server.shutdown, daemon=True).start()
 
         else:
             self._send_json({"error": f"Unknown endpoint: {path}"}, 404)
@@ -1434,8 +1077,7 @@ def main():
 
     server = ThreadingHTTPServer(("localhost", args.port), WCTHandler)
     url    = f"http://localhost:{args.port}"
-    print(f"Delve WCT   →  {url}")
-    print(f"Delve Game  →  {url}/game")
+    print(f"Delve WCT  →  {url}")
     print("Press Ctrl+C to stop.\n")
     if args.browser:
         webbrowser.open(url)

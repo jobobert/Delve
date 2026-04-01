@@ -4,466 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Delve</title>
-<style>
-/* ── Reset ──────────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
-
-body {
-  background: #141414;
-  color: #c8c8c8;
-  font-family: 'Cascadia Code', 'Fira Code', Consolas, 'Courier New', monospace;
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-/* ── Login panel ─────────────────────────────────────────────────────────────── */
-#login-panel {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-}
-
-.banner {
-  color: #ffdc64;
-  font-weight: bold;
-  font-size: 1.05em;
-  line-height: 1.2;
-  margin-bottom: 0.5rem;
-  text-align: center;
-  white-space: pre;
-}
-
-.subtitle {
-  color: #8c7a30;
-  margin-bottom: 2.5rem;
-  text-align: center;
-  font-size: 0.9em;
-  letter-spacing: 0.1em;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.1rem;
-  width: 320px;
-}
-
-.form label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  color: #787878;
-  font-size: 0.78em;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.form select,
-.form input[type="text"] {
-  background: #1e1e1e;
-  border: 1px solid #383838;
-  border-radius: 4px;
-  color: #e8e8e8;
-  font-family: inherit;
-  font-size: 1em;
-  padding: 0.5rem 0.75rem;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.form select:focus,
-.form input[type="text"]:focus { border-color: #50c878; }
-
-#char-info {
-  color: #8cb48c;
-  font-size: 0.85em;
-  min-height: 1.2em;
-  margin-top: -0.4rem;
-}
-
-#connect-btn {
-  background: #1a3d25;
-  border: 1px solid #50c878;
-  border-radius: 4px;
-  color: #50c878;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 1em;
-  font-weight: bold;
-  padding: 0.65rem;
-  letter-spacing: 0.06em;
-  transition: background 0.15s;
-  margin-top: 0.5rem;
-}
-
-#connect-btn:hover  { background: #22522f; }
-#connect-btn:active { background: #1a3d25; }
-#connect-btn:disabled { opacity: 0.45; cursor: default; }
-
-#login-error {
-  color: #ff5050;
-  font-size: 0.85em;
-  min-height: 1.2em;
-  text-align: center;
-}
-
-/* ── Game panel ──────────────────────────────────────────────────────────────── */
-#game-panel {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-/* ── Status bar ──────────────────────────────────────────────────────────────── */
-#status-bar {
-  background: #1c1c1c;
-  border-bottom: 1px solid #2a2a2a;
-  padding: 0.35rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-shrink: 0;
-  font-size: 0.85em;
-  white-space: nowrap;
-}
-
-#s-player { color: #ffdc64; font-weight: bold; }
-#s-hp     { font-weight: bold; }
-#s-sep    { color: #383838; }
-#s-room   { color: #787878; overflow: hidden; text-overflow: ellipsis; flex: 1; }
-
-#sidebar-toggle {
-  background: transparent;
-  border: 1px solid #333;
-  border-radius: 3px;
-  color: #666;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.78em;
-  padding: 0.18rem 0.45rem;
-  transition: color 0.15s, border-color 0.15s;
-  flex-shrink: 0;
-  letter-spacing: 0.05em;
-}
-#sidebar-toggle:hover { color: #aaa; border-color: #555; }
-
-#quit-btn {
-  background: transparent;
-  border: 1px solid #444;
-  border-radius: 3px;
-  color: #666;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.82em;
-  padding: 0.18rem 0.55rem;
-  transition: border-color 0.15s, color 0.15s;
-  flex-shrink: 0;
-}
-#quit-btn:hover { border-color: #f05050; color: #f05050; }
-
-/* ── Main area (output + sidebar) ────────────────────────────────────────────── */
-#main-area {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-/* ── Output area ─────────────────────────────────────────────────────────────── */
-#output {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.6rem 1.1rem;
-  scroll-behavior: auto;
-  min-width: 0;
-}
-
-#output::-webkit-scrollbar       { width: 6px; }
-#output::-webkit-scrollbar-track { background: #1a1a1a; }
-#output::-webkit-scrollbar-thumb { background: #383838; border-radius: 3px; }
-
-.line       { white-space: pre-wrap; word-break: break-word; }
-.line.blank { height: 0.55em; display: block; }
-.echo       { color: #3a5a6a; }
-
-/* ── Character panel (left) ──────────────────────────────────────────────────── */
-#char-panel {
-  width: 200px;
-  min-width: 200px;
-  border-right: 1px solid #242424;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: #161616;
-  flex-shrink: 0;
-  transition: width 0.2s ease, min-width 0.2s ease;
-}
-
-#char-panel.collapsed {
-  width: 0;
-  min-width: 0;
-}
-
-#char-panel::-webkit-scrollbar       { width: 4px; }
-#char-panel::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
-
-.cp-btn {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.78em;
-  padding: 0.15rem 0.55rem;
-  transition: background 0.1s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cp-btn:hover { background: #202020; }
-.cp-btn.equip-btn   { color: #c89464; }
-.cp-btn.inv-btn     { color: #a0c8a0; }
-
-.cp-label {
-  color: #505050;
-  font-size: 0.7em;
-  padding: 0.12rem 0.55rem 0.05rem;
-  letter-spacing: 0.05em;
-}
-
-.status-chip {
-  font-size: 0.76em;
-  padding: 0.1rem 0.55rem;
-  color: #d08040;
-}
-
-.attr-row {
-  padding: 0.15rem 0.55rem;
-  font-size: 0.76em;
-}
-.attr-name { color: #787878; margin-bottom: 0.1rem; }
-.attr-bar-wrap {
-  background: #2a2a2a;
-  border-radius: 2px;
-  height: 5px;
-  margin-bottom: 0.15rem;
-}
-.attr-bar {
-  background: #5090c8;
-  border-radius: 2px;
-  height: 100%;
-  transition: width 0.3s ease;
-}
-.attr-val { color: #a0b8d0; }
-
-/* ── Sidebar (right) ─────────────────────────────────────────────────────────── */
-#sidebar {
-  width: 220px;
-  min-width: 220px;
-  border-left: 1px solid #242424;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: #161616;
-  flex-shrink: 0;
-  transition: width 0.2s ease, min-width 0.2s ease;
-}
-
-#sidebar.collapsed {
-  width: 0;
-  min-width: 0;
-}
-
-.sidebar-section {
-  border-bottom: 1px solid #222;
-  flex-shrink: 0;
-}
-
-.sidebar-label {
-  color: #404040;
-  font-size: 0.68em;
-  letter-spacing: 0.14em;
-  padding: 0.3rem 0.55rem 0.15rem;
-  text-transform: uppercase;
-}
-
-/* Map pane */
-#map-section { flex-shrink: 0; }
-
-#map-display {
-  font-family: 'Cascadia Code', 'Fira Code', Consolas, 'Courier New', monospace;
-  color: #3cb450;
-  font-size: 0.76em;
-  white-space: pre;
-  line-height: 1.2;
-  padding: 0.2rem 0.5rem 0.4rem;
-  overflow: auto;
-  max-height: 220px;
-}
-
-#map-display::-webkit-scrollbar       { width: 4px; height: 4px; }
-#map-display::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
-
-/* Exits pane */
-#exits-btns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0.3rem 0.5rem 0.45rem;
-}
-
-.exit-btn {
-  background: #192819;
-  border: 1px solid #2a422a;
-  border-radius: 3px;
-  color: #50c878;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.76em;
-  padding: 0.15rem 0.5rem;
-  transition: background 0.1s;
-  white-space: nowrap;
-}
-.exit-btn:hover   { background: #213a21; }
-.exit-btn.locked  { border-color: #42341a; color: #c8a050; background: #1e1a10; }
-.exit-btn.locked:hover { background: #282210; }
-
-/* Here pane (NPCs + items) */
-#here-section {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.3rem 0;
-}
-
-#here-section::-webkit-scrollbar       { width: 4px; }
-#here-section::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
-
-.here-empty {
-  color: #363636;
-  font-size: 0.76em;
-  padding: 0.2rem 0.55rem;
-  font-style: italic;
-}
-
-.npc-btn, .item-btn {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.8em;
-  padding: 0.15rem 0.55rem;
-  transition: background 0.1s;
-}
-.npc-btn:hover, .item-btn:hover { background: #202020; }
-
-.npc-btn         { color: #e6823c; }
-.npc-btn.hostile { color: #e85050; }
-.item-btn        { color: #64beef; }
-
-/* ── Clickable exit words in main text ───────────────────────────────────────── */
-.exit-link {
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  text-underline-offset: 2px;
-}
-.exit-link:hover { color: #78e896; }
-
-/* ── Clickable dialogue responses ────────────────────────────────────────────── */
-.dlg-option {
-  display: block;
-  background: transparent;
-  border: none;
-  font-family: inherit;
-  font-size: inherit;
-  color: #dcc8a0;
-  text-align: left;
-  cursor: pointer;
-  padding: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  width: 100%;
-}
-.dlg-option:hover { color: #f5e0b4; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px; }
-
-/* ── Tag colours — mirror the CLI palette ────────────────────────────────────── */
-.tag-room_name    { color: #ffdc64; font-weight: bold; }
-.tag-room_divider { color: #645a3c; }
-.tag-room_desc    { color: #c8d2dc; }
-.tag-exit         { color: #50c878; font-weight: bold; }
-.tag-move         { color: #8cb48c; }
-.tag-npc          { color: #e6823c; font-weight: bold; }
-.tag-item         { color: #64beef; }
-.tag-item_equip   { color: #64beef; font-weight: bold; }
-.tag-item_have    { color: #50dc78; font-weight: bold; }
-.tag-item_bank    { color: #78a08c; }
-.tag-item_missing { color: #a05050; }
-.tag-dialogue     { color: #dcc8a0; }
-.tag-combat_hit   { color: #f05050; font-weight: bold; }
-.tag-combat_recv  { color: #c83c3c; }
-.tag-combat_kill  { color: #ffa028; font-weight: bold; }
-.tag-combat_death { color: #b40000; font-weight: bold; }
-.tag-reward_xp    { color: #a078ff; font-weight: bold; }
-.tag-reward_gold  { color: #ffd232; }
-.tag-stats        { color: #a0c8ff; font-family: monospace; }
-.tag-system       { color: #969696; }
-.tag-error        { color: #ff5050; font-weight: bold; }
-.tag-ambiguous    { color: #ffb428; font-weight: bold; }
-.tag-style        { color: #b478ff; font-weight: bold; }
-.tag-shop         { color: #64dcb4; }
-.tag-door         { color: #c8a050; font-weight: bold; }
-.tag-map          { color: #3cb450; }
-.tag-quest        { color: #ffd700; font-weight: bold; }
-.tag-journal      { color: #b4dcff; font-weight: bold; }
-
-/* ── Input bar ───────────────────────────────────────────────────────────────── */
-#input-bar {
-  background: #1c1c1c;
-  border-top: 1px solid #2a2a2a;
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-shrink: 0;
-}
-
-.prompt { color: #5090ff; font-weight: bold; }
-
-#cmd-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: #e8e8e8;
-  font-family: inherit;
-  font-size: 1em;
-  outline: none;
-}
-
-#send-btn {
-  background: #1a2a4a;
-  border: 1px solid #3a5a8a;
-  border-radius: 3px;
-  color: #5090ff;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.88em;
-  padding: 0.3rem 0.9rem;
-  transition: background 0.15s;
-}
-#send-btn:hover { background: #1e3a6a; }
-</style>
+<link rel="stylesheet" href="/game.css">
 </head>
 <body>
-
 <!-- ── Login panel ──────────────────────────────────────────────────────────── -->
 <div id="login-panel">
   <pre class="banner"> ____       _
@@ -497,7 +40,7 @@ body {
     <span id="s-sep">|</span>
     <span id="s-room"></span>
     <button id="sidebar-toggle" title="Toggle map sidebar">&lt;&lt;</button>
-    <button id="quit-btn">Quit</button>
+    <button id="stop-btn" title="Stop the web server and end your session">Stop Server</button>
   </div>
   <div id="main-area">
     <div id="char-panel" class="collapsed">
@@ -519,15 +62,19 @@ body {
       </div>
     </div>
     <div id="output"></div>
+    <div id="sidebar-resizer"></div>
     <div id="sidebar">
-      <div class="sidebar-section" id="map-section">
-        <div class="sidebar-label">Map</div>
-        <pre id="map-display"></pre>
+      <div id="map-area">
+        <div class="sidebar-section" id="map-section">
+          <div class="sidebar-label">Map</div>
+          <pre id="map-display"></pre>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-label">Exits</div>
+          <div id="exits-btns"></div>
+        </div>
       </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Exits</div>
-        <div id="exits-btns"></div>
-      </div>
+      <div id="here-resizer"></div>
       <div id="here-section">
         <div class="sidebar-label">Here</div>
         <div id="here-content"></div>
@@ -540,6 +87,19 @@ body {
            autocomplete="off" spellcheck="false">
     <button id="send-btn">Send</button>
   </div>
+</div>
+
+<div id="item-menu" hidden>
+  <button class="item-menu-btn" id="im-equip">Equip</button>
+  <button class="item-menu-btn" id="im-use">Use</button>
+  <button class="item-menu-btn" id="im-drop">Drop</button>
+  <button class="item-menu-btn" id="im-examine">Examine</button>
+</div>
+
+<div id="here-menu" hidden>
+  <button class="item-menu-btn" id="hm-primary"></button>
+  <button class="item-menu-btn" id="hm-examine">Examine</button>
+  <button class="item-menu-btn" id="hm-npc-extra" hidden></button>
 </div>
 
 <script>
@@ -558,15 +118,18 @@ const loginErr      = $('login-error');
 const outputEl      = $('output');
 const cmdIn         = $('cmd-input');
 const sendBtn       = $('send-btn');
-const quitBtn       = $('quit-btn');
+const stopBtn       = $('stop-btn');
 const sPlayer       = $('s-player');
 const sHp           = $('s-hp');
 const sRoom         = $('s-room');
-const sidebarEl     = $('sidebar');
-const sidebarToggle = $('sidebar-toggle');
-const mapDisplay    = $('map-display');
-const exitsBtns     = $('exits-btns');
-const hereContent   = $('here-content');
+const sidebarEl      = $('sidebar');
+const sidebarToggle  = $('sidebar-toggle');
+const sidebarResizer = $('sidebar-resizer');
+const mapArea        = $('map-area');
+const hereResizer    = $('here-resizer');
+const mapDisplay     = $('map-display');
+const exitsBtns      = $('exits-btns');
+const hereContent    = $('here-content');
 const charPanel     = $('char-panel');
 const charToggle    = $('char-toggle');
 const equipContent  = $('equip-content');
@@ -575,6 +138,15 @@ const statusSection = $('status-section');
 const statusContent = $('status-content');
 const attrsSection  = $('attrs-section');
 const attrsContent  = $('attrs-content');
+const itemMenu      = $('item-menu');
+const imEquip       = $('im-equip');
+const imUse         = $('im-use');
+const imDrop        = $('im-drop');
+const imExamine     = $('im-examine');
+const hereMenu      = $('here-menu');
+const hmPrimary     = $('hm-primary');
+const hmExamine     = $('hm-examine');
+const hmNpcExtra    = $('hm-npc-extra');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -594,20 +166,131 @@ const DIR_RE = /\b(north|south|east|west|northeast|northwest|southeast|southwest
 
 const DLGOPT_RE = /^\s*\[(\d+)\]\s/;
 
-// ── Sidebar state ─────────────────────────────────────────────────────────────
+// ── Inventory context menu ────────────────────────────────────────────────────
+
+function showItemMenu(e, item) {
+  e.preventDefault();
+  imEquip.hidden = !item.equip_slot;
+  // wire up fresh handlers each time
+  imEquip.onclick  = () => { hideItemMenu(); sendCmd(`equip ${item.name}`); };
+  imUse.onclick    = () => { hideItemMenu(); sendCmd(`use ${item.name}`); };
+  imDrop.onclick   = () => { hideItemMenu(); sendCmd(`drop ${item.name}`); };
+  imExamine.onclick = () => { hideItemMenu(); sendCmd(`examine ${item.name}`); };
+
+  itemMenu.removeAttribute('hidden');
+  // position near the cursor, clamped inside the viewport
+  const mw = itemMenu.offsetWidth  || 120;
+  const mh = itemMenu.offsetHeight || 110;
+  itemMenu.style.left = Math.min(e.clientX, window.innerWidth  - mw - 8) + 'px';
+  itemMenu.style.top  = Math.min(e.clientY, window.innerHeight - mh - 8) + 'px';
+}
+
+function hideItemMenu() { itemMenu.setAttribute('hidden', ''); }
+
+document.addEventListener('click',       () => { hideItemMenu(); hideHereMenu(); });
+document.addEventListener('contextmenu', e => {
+  if (e.target.closest('#item-menu') === null) hideItemMenu();
+  if (e.target.closest('#here-menu') === null) hideHereMenu();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { hideItemMenu(); hideHereMenu(); }
+});
+
+function showHereMenu(e, type, entity) {
+  e.preventDefault();
+  if (type === 'npc') {
+    hmPrimary.textContent  = entity.hostile ? 'Attack' : 'Talk';
+    hmPrimary.onclick      = () => { hideHereMenu(); sendCmd((entity.hostile ? 'attack ' : 'talk ') + entity.name); };
+    hmExamine.onclick      = () => { hideHereMenu(); sendCmd(`examine ${entity.name}`); };
+    hmNpcExtra.hidden      = entity.hostile;   // friendly NPCs get "Attack" as secondary
+    if (!entity.hostile) {
+      hmNpcExtra.textContent = 'Attack';
+      hmNpcExtra.onclick     = () => { hideHereMenu(); sendCmd(`attack ${entity.name}`); };
+    }
+  } else {
+    hmPrimary.textContent  = 'Get';
+    hmPrimary.onclick      = () => { hideHereMenu(); sendCmd(`get ${entity.name}`); };
+    hmExamine.onclick      = () => { hideHereMenu(); sendCmd(`examine ${entity.name}`); };
+    hmNpcExtra.hidden      = true;
+  }
+
+  hereMenu.removeAttribute('hidden');
+  const mw = hereMenu.offsetWidth  || 120;
+  const mh = hereMenu.offsetHeight || 90;
+  hereMenu.style.left = Math.min(e.clientX, window.innerWidth  - mw - 8) + 'px';
+  hereMenu.style.top  = Math.min(e.clientY, window.innerHeight - mh - 8) + 'px';
+}
+
+function hideHereMenu() { hereMenu.setAttribute('hidden', ''); }
+
+// ── Sidebar + map resize ──────────────────────────────────────────────────────
+
+let sidebarW = parseInt(localStorage.getItem('delve_sidebar_width') || '220', 10);
+let mapH     = parseInt(localStorage.getItem('delve_map_height')    || '260', 10);
+
+function applySidebarWidth(w) {
+  w = Math.max(120, Math.min(600, w));
+  sidebarW = w;
+  if (!sidebarEl.classList.contains('collapsed')) {
+    sidebarEl.style.width    = w + 'px';
+    sidebarEl.style.minWidth = w + 'px';
+  }
+}
+
+function applyMapHeight(h) {
+  h = Math.max(60, Math.min(700, h));
+  mapH = h;
+  mapArea.style.height = h + 'px';
+}
 
 function initSidebar() {
   const open = localStorage.getItem('delve_sidebar_open') !== 'false';
   if (!open) {
     sidebarEl.classList.add('collapsed');
     sidebarToggle.textContent = '>>';
+  } else {
+    applySidebarWidth(sidebarW);
   }
+  applyMapHeight(mapH);
 }
 
 sidebarToggle.addEventListener('click', () => {
   const isNowCollapsed = sidebarEl.classList.toggle('collapsed');
   sidebarToggle.textContent = isNowCollapsed ? '>>' : '<<';
+  if (!isNowCollapsed) applySidebarWidth(sidebarW);
   localStorage.setItem('delve_sidebar_open', String(!isNowCollapsed));
+});
+
+sidebarResizer.addEventListener('mousedown', e => {
+  e.preventDefault();
+  sidebarResizer.classList.add('dragging');
+  const startX = e.clientX;
+  const startW = sidebarEl.offsetWidth;
+  function onMove(e) { applySidebarWidth(startW + (startX - e.clientX)); }
+  function onUp() {
+    sidebarResizer.classList.remove('dragging');
+    localStorage.setItem('delve_sidebar_width', String(sidebarW));
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+});
+
+hereResizer.addEventListener('mousedown', e => {
+  e.preventDefault();
+  hereResizer.classList.add('dragging');
+  const startY = e.clientY;
+  const startH = mapArea.offsetHeight;
+  function onMove(e) { applyMapHeight(startH + (e.clientY - startY)); }
+  function onUp() {
+    hereResizer.classList.remove('dragging');
+    localStorage.setItem('delve_map_height', String(mapH));
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
 });
 
 // ── Character panel (left) ────────────────────────────────────────────────────
@@ -667,13 +350,11 @@ function updateCharPanel(snap) {
       const btn = document.createElement('button');
       btn.className   = 'cp-btn inv-btn';
       btn.textContent = item.name;
-      if (item.equip_slot) {
-        btn.title = `equip ${item.name}`;
-        btn.addEventListener('click', () => sendCmd(`equip ${item.name}`));
-      } else {
-        btn.title = `use ${item.name}`;
-        btn.addEventListener('click', () => sendCmd(`use ${item.name}`));
-      }
+      btn.title       = item.equip_slot
+        ? `use ${item.name}  |  right-click for more options`
+        : `use ${item.name}  |  right-click for more options`;
+      btn.addEventListener('click', () => sendCmd(`use ${item.name}`));
+      btn.addEventListener('contextmenu', e => showItemMenu(e, item));
       invContent.appendChild(btn);
     });
   }
@@ -747,16 +428,20 @@ function updateSidebar(snap) {
     const btn = document.createElement('button');
     btn.className = 'npc-btn' + (npc.hostile ? ' hostile' : '');
     btn.textContent = (npc.hostile ? '[!] ' : '') + npc.name;
-    btn.title = npc.hostile ? `attack ${npc.name}` : `talk ${npc.name}`;
+    btn.title = npc.hostile
+      ? `attack ${npc.name}  |  right-click for more options`
+      : `talk ${npc.name}  |  right-click for more options`;
     btn.addEventListener('click', () => sendCmd(npc.hostile ? `attack ${npc.name}` : `talk ${npc.name}`));
+    btn.addEventListener('contextmenu', e => showHereMenu(e, 'npc', npc));
     hereContent.appendChild(btn);
   });
   items.forEach(item => {
     const btn = document.createElement('button');
     btn.className = 'item-btn';
     btn.textContent = item.name;
-    btn.title = `get ${item.name}`;
+    btn.title = `get ${item.name}  |  right-click for more options`;
     btn.addEventListener('click', () => sendCmd(`get ${item.name}`));
+    btn.addEventListener('contextmenu', e => showHereMenu(e, 'item', item));
     hereContent.appendChild(btn);
   });
 }
@@ -868,7 +553,7 @@ function addEcho(text) {
 function startSSE() {
   if (sse) { sse.close(); sse = null; }
 
-  sse = new EventSource('/game/stream');
+  sse = new EventSource('/stream');
 
   sse.onmessage = (e) => {
     let ev;
@@ -936,7 +621,7 @@ async function sendCmd(cmd) {
   histIdx = -1;
 
   try {
-    await fetch('/game/command', {
+    await fetch('/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cmd }),
@@ -948,7 +633,7 @@ async function sendCmd(cmd) {
 
 /** Send a command silently (no echo, no history entry). Used for auto-map. */
 function sendSilent(cmd) {
-  fetch('/game/command', {
+  fetch('/command', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cmd }),
@@ -959,7 +644,7 @@ function sendSilent(cmd) {
 
 async function updateStatus() {
   try {
-    const res  = await fetch('/game/status');
+    const res  = await fetch('/status');
     const data = await res.json();
     if (!data.session) return;
 
@@ -994,7 +679,7 @@ async function doLogin() {
   connectBtn.textContent = 'Connecting\u2026';
 
   try {
-    const res  = await fetch('/game/login', {
+    const res  = await fetch('/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ world_id: worldId, player_name: playerName }),
@@ -1010,13 +695,13 @@ async function doLogin() {
 
     showGame();
   } catch (_) {
-    loginErr.textContent   = 'Server error — is wct_server.py running?';
+    loginErr.textContent   = 'Server error — is web_server.py running?';
     connectBtn.disabled    = false;
     connectBtn.textContent = 'Enter World';
   }
 }
 
-function showGame() {
+function showGame(resuming = false) {
   loginPanel.style.display = 'none';
   gamePanel.removeAttribute('hidden');
   initSidebar();
@@ -1025,28 +710,34 @@ function showGame() {
   startSSE();
   updateStatus();
   setInterval(updateStatus, 4000);
+  if (resuming) {
+    // Re-populate panes — the initial look/snapshots ran before we connected
+    setTimeout(() => {
+      fetch('/char_snapshot').then(r => r.json()).then(d => {
+        if (d.session) updateCharPanel(d);
+      }).catch(() => {});
+      sendSilent('look');
+    }, 200);
+  }
 }
 
-// ── Quit ──────────────────────────────────────────────────────────────────────
+// ── Quit / Stop server ────────────────────────────────────────────────────────
 
-quitBtn.addEventListener('click', async () => {
-  if (!confirm('End this session and return to the login screen?')) return;
-  try {
-    await fetch('/game/quit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    });
-  } catch (_) { /* ignore */ }
-  location.reload();
+stopBtn.addEventListener('click', async () => {
+  if (!confirm('Stop the web server? This will end any active session and close the tool.')) return;
+  try { await fetch('/quit',     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (_) {}
+  try { await fetch('/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (_) {}
+  document.body.innerHTML = '<div style="font-family:monospace;color:#c8c8c8;background:#141414;height:100vh;display:flex;align-items:center;justify-content:center;font-size:1.1em">Web server stopped. You may close this tab.</div>';
 });
 
 // ── Initialise ────────────────────────────────────────────────────────────────
 
 async function init() {
+  loginPanel.style.display = 'none';   // hide until we know which screen to show
+
   // Load world list
   try {
-    const res  = await fetch('/game/worlds');
+    const res  = await fetch('/worlds');
     const data = await res.json();
     if (data.worlds.length === 0) {
       loginErr.textContent = 'No worlds found in data/. Create a world config.py to get started.';
@@ -1058,12 +749,12 @@ async function init() {
       worldSel.appendChild(opt);
     });
   } catch (_) {
-    loginErr.textContent = 'Could not reach server — is wct_server.py running?';
+    loginErr.textContent = 'Could not reach server — is web_server.py running?';
   }
 
   // Load player list for autocomplete + world pre-selection
   try {
-    const res  = await fetch('/game/players');
+    const res  = await fetch('/players');
     const data = await res.json();
     players    = data.players;
     const dl   = $('player-suggestions');
@@ -1087,13 +778,15 @@ async function init() {
 
   // Skip login if a session is already active
   try {
-    const res  = await fetch('/game/status');
+    const res  = await fetch('/status');
     const data = await res.json();
     if (data.session) {
-      showGame();
+      showGame(true);   // resuming — re-request state
       return;
     }
   } catch (_) { /* ignore */ }
+
+  loginPanel.style.display = '';   // no active session — show login
 }
 
 // ── Event listeners ───────────────────────────────────────────────────────────
