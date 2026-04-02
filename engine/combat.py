@@ -359,14 +359,14 @@ class CombatSession:
         # ── NPC ally attacks (non-hostile NPCs help the player against attacks_npcs foes) ──
         if self.npc.get("attacks_npcs") and self.npc.get("hp", 0) > 0:
             for ally in list(self.room.get("_npcs", [])):
-                if ally.get("hostile") or ally.get("hp", 0) <= 0:
+                if ally is self.npc or ally.get("hostile") or ally.get("hp", 0) <= 0:
                     continue
                 ally_atk = ally.get("attack", 2)
                 n_def_a  = self.npc.get("defense", 1)
                 ally_dmg = max(1, ally_atk - n_def_a + random.randint(-2, 3))
                 self.npc["hp"] -= ally_dmg
                 self._out(Tag.COMBAT_HIT,
-                    f"{ally['name']} attacks {self.npc.get('name', 'the enemy')} "
+                    f"{ally.get('name', 'an ally')} attacks {self.npc.get('name', 'the enemy')} "
                     f"for {ally_dmg} damage!")
                 log.debug("combat", "npc ally attacked",
                           ally=ally.get("name"), dmg=ally_dmg, npc_hp_after=self.npc["hp"])

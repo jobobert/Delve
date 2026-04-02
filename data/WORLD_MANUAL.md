@@ -2952,7 +2952,7 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 
 ## Appendix C — All Script Ops (Quick Reference)
 
-64 ops total (+ `comment` pseudo-op). Unknown op names are **silently ignored** — forward-compatible with new engine versions.
+Unknown op names are **silently ignored** — forward-compatible with new engine versions.
 
 **Output**
 

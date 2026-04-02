@@ -852,19 +852,21 @@ class CommandProcessor:
             return
         fled = []
         for aggressor in hostiles:
-            for target in non_hostiles:
-                if target in fled:
-                    continue
-                atk  = aggressor.get("attack", 2)
-                def_ = target.get("defense", 1)
-                dmg  = max(1, atk - def_ + random.randint(-2, 3))
-                target["hp"] = max(1, target["hp"] - dmg)
-                self._out(Tag.COMBAT_HIT,
-                    f"{aggressor['name']} attacks {target['name']} for {dmg} damage!")
-                if target["hp"] <= 1:
-                    fled.append(target)
-                    self._out(Tag.OUTPUT,
-                        f"{target['name']} flees from the fight!")
+            # One attack per hostile per tick — pick first available target
+            target = next((t for t in non_hostiles if t not in fled), None)
+            if target is None:
+                break
+            atk  = aggressor.get("attack", 2)
+            def_ = target.get("defense", 1)
+            dmg  = max(1, atk - def_ + random.randint(-2, 3))
+            target["hp"] = max(1, target["hp"] - dmg)
+            self._out(Tag.COMBAT_HIT,
+                f"{aggressor.get('name', 'the enemy')} attacks "
+                f"{target.get('name', 'someone')} for {dmg} damage!")
+            if target["hp"] <= 1:
+                fled.append(target)
+                self._out(Tag.COMBAT_RECV,
+                    f"{target.get('name', 'someone')} flees from the fight!")
         for f in fled:
             try:
                 room["_npcs"].remove(f)

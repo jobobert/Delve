@@ -1235,13 +1235,14 @@ function editorHeader(type, cls, name) {
   const helpBtn = anchor
     ? `<a class="hbtn" href="/manual${anchor}" target="_blank" title="Open manual section for ${escHtml(type)}">?</a>`
     : '';
+  const cloneActions = type !== 'zone' ? `
+      <button class="hbtn" onclick="cloneSelected()" title="Clone this ${escHtml(type)} with a new ID">Clone</button>
+      <button class="hbtn" onclick="openCopyToWorldModal()" title="Copy this ${escHtml(type)} to another world or zone">Copy to World\u2026</button>` : '';
   div.innerHTML = `
     <span class="editor-type ${badgeCls}">${badgeLtr}</span>
     <span class="editor-title">${escHtml(name)}</span>
     <div class="editor-actions">
-      ${helpBtn}
-      <button class="hbtn" onclick="cloneSelected()" title="Clone this ${escHtml(type)} with a new ID">Clone</button>
-      <button class="hbtn" onclick="openCopyToWorldModal()" title="Copy this ${escHtml(type)} to another world or zone">Copy to World\u2026</button>
+      ${helpBtn}${cloneActions}
       <button class="hbtn danger" onclick="deleteSelected()" title="Delete this ${escHtml(type)}">Delete</button>
       <button class="hbtn primary" onclick="saveSelected()">Save</button>
     </div>`;
@@ -1310,7 +1311,7 @@ async function cloneSelected() {
   if (!SELECTED) return;
   if (DIRTY && !confirm('You have unsaved changes. The clone will use the last saved version.\n\nContinue?')) return;
   const { type, zone_id, data } = SELECTED;
-  const sourceId = _getEntityId(data);
+  const sourceId = SELECTED._orig_id || _getEntityId(data);
   const idLabel = (type === 'dialogue' || type === 'crafting') ? 'NPC ID' : 'ID';
   const newId = prompt(`Clone ${type} '${sourceId}'\n\nEnter new ${idLabel}:`, sourceId + '_copy');
   if (!newId || !newId.trim()) return;
@@ -1338,7 +1339,7 @@ async function openCopyToWorldModal() {
   if (!SELECTED) return;
   if (DIRTY && !confirm('You have unsaved changes. The copy will use the last saved version.\n\nContinue?')) return;
   _ctwSource = SELECTED;
-  document.getElementById('ctw-new-id').value = _getEntityId(_ctwSource.data);
+  document.getElementById('ctw-new-id').value = _ctwSource._orig_id || _getEntityId(_ctwSource.data);
   document.getElementById('ctw-error').style.display = 'none';
 
   const worldSel = document.getElementById('ctw-world-sel');
@@ -1382,7 +1383,7 @@ async function _ctwLoadZones(worldId) {
 async function executeCopyToWorld() {
   if (!_ctwSource) return;
   const { type, zone_id, data } = _ctwSource;
-  const sourceId   = _getEntityId(data);
+  const sourceId   = _ctwSource._orig_id || _getEntityId(data);
   const newId      = document.getElementById('ctw-new-id').value.trim();
   const tgtWorld   = document.getElementById('ctw-world-sel').value;
   const tgtZone    = document.getElementById('ctw-zone-sel').value;
@@ -1951,6 +1952,8 @@ function renderNpcEditor(main) {
   const cbRow = document.createElement('div'); cbRow.className = 'field-row inline';
 
   // attacks_npcs toggle — only relevant (and visible) when hostile is true
+  // Clear stale flag if the NPC is not actually hostile
+  if (!d.hostile) delete d.attacks_npcs;
   const attacksNpcsBtn = checkboxInput(d.attacks_npcs || false, v => {
     if (v) d.attacks_npcs = true; else delete d.attacks_npcs;
   }, 'Attacks NPCs');
@@ -4548,6 +4551,8 @@ function serialiseDlg(data) {
     if (lines.length === 1) nn.line = lines[0];
     else if (lines.length > 1) nn.lines = lines;
     else nn.line = '';
+    if (n.condition && Object.keys(n.condition).length) nn.condition = n.condition;
+    if (n.cycle) nn.cycle = n.cycle;
     if (n.script && n.script.length) nn.script = n.script;
     return nn;
   });

@@ -380,6 +380,10 @@ def _clone_entity(src_zone_path: Path, type_: str, source_id: str,
             data = copy.deepcopy(toml_load(src_file))
         except Exception as e:
             return {"ok": False, "error": f"Parse error: {e}", "new_id": ""}
+        # Rewrite npc_id on every commission entry so they reference the new NPC
+        for commission in data.get("commission", []):
+            if "npc_id" in commission:
+                commission["npc_id"] = new_id
         dest_dir = dest_zone_path / "crafting"
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_file = dest_dir / f"{new_id}.toml"
