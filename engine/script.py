@@ -127,6 +127,10 @@ World processes (see engine/processes.py):
   { op = "process_stop",  process_id = "..." }   — deactivate and reset tick counters
   { op = "process_pause", process_id = "..." }   — suspend without resetting counters
 
+Documentation / admin:
+  { op = "comment", text = "..." }               — no-op; inline documentation for world creators
+  Any op may include admin_comment = "..."        — ignored by engine; shown in WCT script editor
+
 Notes:
   - Unknown ops are silently ignored (forward-compatibility).
   - fail and require_tag raise _ScriptAbort, caught by run() — no traceback.
@@ -868,6 +872,9 @@ class ScriptRunner:
             pid = op.get("process_id", "")
             if pid and ctx.processes is not None:
                 ctx.processes.pause(pid)
+
+        elif name == "comment":
+            pass  # admin/documentation comment — no runtime effect
 
         # ── Unknown ops ───────────────────────────────────────────────────────
         # Unknown ops are silently ignored for forward-compatibility.

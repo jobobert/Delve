@@ -187,10 +187,32 @@ def validate_rooms(rooms, items, npcs, styles):
             iid = entry if isinstance(entry, str) else entry.get("id", "")
             if iid and iid not in items:
                 warn(f"Room '{rid}' references unknown item '{iid}'")
+        hostile_spawn_ids   = []
+        peaceful_spawn_ids  = []
         for spawn in room.get("spawns", []):
             nid = spawn if isinstance(spawn, str) else spawn.get("id", "")
             if nid and nid not in npcs:
                 err(f"Room '{rid}' spawns unknown NPC '{nid}'")
+            if not nid or nid not in npcs:
+                continue
+            # Determine effective hostile flag (per-spawn override beats NPC template)
+            if isinstance(spawn, dict) and "hostile" in spawn:
+                is_hostile = bool(spawn["hostile"])
+            else:
+                is_hostile = bool(npcs[nid].get("hostile", False))
+            if is_hostile:
+                hostile_spawn_ids.append(nid)
+            else:
+                peaceful_spawn_ids.append(nid)
+        # Warn if hostile and non-hostile NPCs share the same room without attacks_npcs
+        if hostile_spawn_ids and peaceful_spawn_ids:
+            unresolved = [nid for nid in hostile_spawn_ids
+                          if not npcs[nid].get("attacks_npcs", False)]
+            if unresolved:
+                warn(f"Room '{rid}' spawns both hostile and non-hostile NPCs. "
+                     f"Set attacks_npcs = true on hostile NPC(s) "
+                     f"({', '.join(unresolved)}) if they should fight, "
+                     f"or move them to separate rooms.")
 
 
 def _check_script_item_refs(script_ops: list, items: dict, context: str) -> None:

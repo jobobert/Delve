@@ -154,6 +154,15 @@ drops below a configurable HP threshold, or a safe room is entered.
 Per-character shorthand commands. Startup aliases (diagonals, named exits)
 are defined in `frontend/config.py`. Character aliases take priority on conflict.
 
+Aliases support **command chaining** with `;` — run multiple commands from a single word:
+
+```
+alias combo equip sword; style slashing
+alias rush go north; go north; attack guard
+```
+
+You can also type `;`-separated commands directly without defining an alias.
+
 ### Logging
 Structured debug logger writing to `delve.log`. Per-category control:
 `combat` · `autoattack` · `dialogue` · `script` · `world` · `player` · `command`.
@@ -194,7 +203,7 @@ Structured debug logger writing to `delve.log`. Per-category control:
 | **Quests** | `journal` / `j` | Quest log with commission status |
 | | `talk <npc>` | Branching dialogue |
 | **World** | `map` | Fog-of-war ASCII map |
-| | `alias <n> <cmd>` / `unalias` / `aliases` | Shorthand commands |
+| | `alias <n> <cmd>` / `unalias` / `aliases` | Shorthand commands; use `;` to chain: `alias combo cmd1; cmd2` |
 | | `save` / `quit` | Save and exit |
 
 ---

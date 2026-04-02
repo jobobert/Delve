@@ -396,6 +396,7 @@ NPCs are defined in `[[npc]]` blocks in a zone's `npcs.toml`.
 | `xp_reward` | int / list | **Yes** | **Yes** | XP given to player on NPC death |
 | `gold_reward` | int / list | **Yes** | **Yes** | Gold given to player on NPC death |
 | `hostile` | bool | **Yes** | No | If `true`, NPC attacks player on sight |
+| `attacks_npcs` | bool | No | No | Only meaningful on hostile NPCs. If `true`: (1) this NPC deals tick damage to non-hostile NPCs in the same room each player action — non-hostile NPCs flee at 1 HP (they never permanently die); (2) non-hostile NPCs in the room help the player fight this NPC during combat. `validate.py` warns when hostile and non-hostile NPCs share room spawns without this flag set. |
 | `dialogue` | string | No | No | Fallback line if no dialogue tree file exists |
 | `shop` | list | No | No | Shop inventory; see [Section 5.5](#55-shops) |
 | `rest_cost` | int | No | No | Gold cost for player to rest here (innkeeper behaviour) |
@@ -1655,8 +1656,8 @@ Conditions control whether a node or response is visible.
 | `level_gte` | int | player.level ≥ N |
 | `skill` | string + `min` | player.skills[skill] ≥ min |
 | `gold` | int | player has ≥ N gold |
-| `prestige_min` | int | prestige ≥ N |
-| `prestige_max` | int | prestige ≤ N |
+| `prestige_min` | int | prestige ≥ N (alias: `min_prestige`) |
+| `prestige_max` | int | prestige ≤ N (alias: `max_prestige`) |
 | `affinity` | string | player has this prestige affinity |
 | `no_affinity` | string | player lacks this prestige affinity |
 | `no_companion` | bool (`true`) | player has no active companion |
@@ -1760,9 +1761,10 @@ start_message    = "The forest roads are closed — travel carefully."  # option
 complete_message = "Ashwood breathes easier. Well done."              # optional
 
 [[step]]
-index     = 1
-objective = "Speak with Sergeant Vorn in the Barracks."
-hint      = "Head north from the Town Square."
+index            = 1
+objective        = "Speak with Sergeant Vorn in the Barracks."
+hint             = "Head north from the Town Square."
+completion_flag  = "spoke_to_vorn"
 
 [[step]]
 index     = 2
@@ -1801,6 +1803,7 @@ item_id = "millhaven_commendation"
 | `step.index` | int | Step number (must be ≥ 1); gaps are fine |
 | `step.objective` | string | What the player must do |
 | `step.hint` | string | Optional hint shown in journal |
+| `step.completion_flag` | string | **Optional.** Player flag automatically set when this step is reached. Shorthand for a `set_flag` op in `on_advance` — useful for dialogue conditions. |
 | `step.on_advance` | array | Script ops run automatically when this step is reached |
 | `[[reward]]` | — | Awards given when quest is completed |
 | `reward.type` | `"gold"`, `"xp"`, `"item"` | Reward type |
@@ -2949,7 +2952,7 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 
 ## Appendix C — All Script Ops (Quick Reference)
 
-63 ops total. Unknown op names are **silently ignored** — forward-compatible with new engine versions.
+64 ops total (+ `comment` pseudo-op). Unknown op names are **silently ignored** — forward-compatible with new engine versions.
 
 **Output**
 
@@ -3099,6 +3102,23 @@ to NPCs. Equipping an item into a slot replaces the previous item in that slot.
 | `skip_npc_attack` | — | NPC loses its attack this round (stun, knockback) |
 | `apply_combat_bleed` | — | Start bleed on target (1–3 damage/round) |
 | `heal_self` | `multiplier` | Heal user for `counter_damage * multiplier` HP |
+
+**Documentation / admin (WCT only)**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
+| `comment` | `text` | No-op. Inline documentation block — ignored by engine, rendered as a labelled section in the WCT script editor |
+
+Any op may also carry an `admin_comment` field — a short note visible in the WCT but ignored by the engine:
+
+```toml
+script = [
+  { op = "comment",   text   = "=== Reward the player ===" },
+  { op = "give_gold", amount = 50,
+    admin_comment = "Base reward; adjust per quest difficulty" },
+  { op = "give_xp",   amount = 200 },
+]
+```
 
 ---
 
@@ -4386,3 +4406,352 @@ field ensures the second passive only triggers on rounds where the first also fi
 **NPC `style_prof` too high on common enemies**
 A street thug with `style_prof = 90` will parry almost every round. Save high
 proficiency for bosses. Common enemies in the 10-35 range keep combat readable.
+
+---
+
+## Appendix I — World Creation Tool (WCT)
+
+The WCT is a browser-based editor for Delve MUD worlds. It reads and writes TOML data files
+directly — no build step required. This appendix covers the WCT UI. For TOML field definitions
+and scripting reference, see the relevant numbered sections of this manual.
+
+### I.1 Running the WCT
+
+```bash
+python launch_wct.py                  # recommended: new terminal window + browser
+python wct/wct_server.py              # starts on http://localhost:7373
+python wct/wct_server.py --browser    # starts and opens your default browser
+python wct/wct_server.py --port 8080
+```
+
+Open `http://localhost:7373` in your browser. Use the world selector in the top bar to choose a world.
+
+---
+
+### I.2 Top Bar
+
+| Button | Action |
+|--------|--------|
+| World selector | Switch between worlds |
+| **Config** | Edit `config.toml` (world name, skills, status effects, etc.) |
+| **World Notes** | Edit `world.md` — world-level lore and design notes |
+| **Reload** | Reload all world data from disk |
+| **+ World** | Create a new world |
+| **Validate** | Run `validate.py` against the current world |
+| **Errors** | Refresh the error panel (bottom of sidebar) |
+| **Manual** | Open this manual in a new browser tab (printable) |
+| **Map** | Open the full-screen world map |
+| **+ New** | Create a new room, NPC, item, or zone |
+| **Save** | Save the currently selected object |
+
+---
+
+### I.3 World Selector & World Creation
+
+The world selector shows all worlds found in `data/`. Selecting a world loads all its zones, rooms, NPCs, items, quests, and dialogues.
+
+**Creating a New World**
+
+Click **+ World** in the top bar. A modal asks for:
+
+- **World Name** — display name (e.g. "The Sixfold Realms")
+- **World ID** — folder name, auto-generated from the name (alphanumeric + underscores)
+- **Currency** — currency name (default: "gold")
+
+On creation, the tool creates:
+- `data/<world_id>/config.toml` — minimal world config
+- `data/<world_id>/<world_id>_start/` — a starter zone with empty `rooms.toml`, `items.toml`, `npcs.toml`
+
+Edit `config.toml` via the **Config** button to add skills, status effects, equipment slots, and player attributes.
+
+---
+
+### I.4 Sidebar — Zone Tree
+
+The left sidebar shows the zone tree. Each zone is collapsible.
+
+**Zone Header Controls**
+
+Each zone header has two buttons:
+
+- **Notes** — opens the zone editor (admin comment, name, description)
+- **Delete…** — opens the zone deletion/migration modal
+
+**Creating a Zone**
+
+Click **+ New** in the top bar, then click the **Zone** tab. Enter a zone name/ID and click **Create**. The new zone gets empty `rooms.toml`, `items.toml`, `npcs.toml`.
+
+**Deleting a Zone**
+
+Click **Delete…** on a zone header. A modal lists all objects in the zone (rooms, NPCs, items, quests, dialogues). For each object choose:
+
+- **Delete** — removes the object permanently
+- **Move** — moves it to another zone (use the per-row zone dropdown)
+
+Use **Set all to: Delete / Move** at the top for bulk action. Click **Execute** to apply. The zone folder is removed after all objects are processed.
+
+> Note: `zone.toml`, styles, crafting files, and companions are removed with the zone folder and are not listed individually.
+
+---
+
+### I.5 Common UI Patterns
+
+**Toggle Buttons**
+
+Boolean fields (start room, hostile, locked, scenery, autostart, no_drop, respawn, etc.) are rendered as small pill-shaped **toggle buttons** rather than checkboxes. Click to toggle on (amber highlight) or off (dim). The active state is stored in the TOML as `true`; the field is omitted entirely when off.
+
+**Entity Pickers (`[...]`)**
+
+Every ID reference field has a `[...]` button that opens a **Picker modal** — a searchable, filtered list of valid entries for that field type. The picker is scoped to the correct type automatically: a "To room" field shows only rooms, a shop item field shows only items, a style field shows only styles, etc.
+
+- **Search** — type in the search box to filter by name or ID
+- **Admin comment** — hover any entry to see its `admin_comment` in the footer bar
+- **Flag picker** — shows all known flags with usage counts; drag a flag chip from the References panel directly onto a flag field as an alternative
+- **Tag picker** — shows all known tags; hover to see any tag notes
+- **Direction picker** — shows the 10 standard directions (`north`, `south`, `up`, etc.)
+- **Tier picker** — shows the standard quality tier names (`poor`, `standard`, `exceptional`, `masterwork`)
+
+You can also type directly in the text field or drag-and-drop an entity from the sidebar (rooms, NPCs, items) onto a compatible field — the entity ID is inserted automatically.
+
+**Script Editor Panel**
+
+Clicking any **Script** button (e.g. `on_enter (3 ops)`, `kill_script`, `on_exit`) opens the **script editor inline** in the main editor panel — it does not open a modal.
+
+- A `← Back` button in the header saves the script and returns to the parent editor
+- Op fields that reference entities (item, NPC, room, quest, skill, flag, etc.) use the same `[...]` picker buttons as regular editor fields
+- Bool-type op fields are toggle buttons
+- Use **+ Comment** to add a `comment` pseudo-op for inline documentation (see §7.5)
+- Each op has an optional **admin_comment** field (italic dashed-border input at the bottom of the op row) for per-op notes visible only in the WCT
+
+The script editor replaces the full main panel while open; all other editing is suspended until you click `← Back`.
+
+---
+
+### I.6 Cloning and Copying Objects
+
+Every object editor has **Clone** and **Copy to World…** buttons in the header alongside **Delete** and **Save**.
+
+**Clone**
+
+Click **Clone** to duplicate the selected object within the same world and zone.
+
+- A prompt asks for a new ID. The default suggestion is `<original_id>_copy`.
+- For dialogues and crafting, the "ID" is the NPC ID (the filename stem), so the prompt says **NPC ID**.
+- The clone is appended to the same TOML file (or zone subfolder) as the source, with its ID set to the new value.
+- All fields are deep-copied — scripts, tags, passives, steps, etc.
+- After cloning, the new object is automatically selected and ready to edit.
+
+> The clone always reads the last **saved** version. Unsaved changes are not included. You will be warned if the editor is dirty.
+
+**Copy to World…**
+
+Click **Copy to World…** to copy the selected object into a different world or zone.
+
+A modal appears with three fields:
+
+| Field | Description |
+|-------|-------------|
+| Target World | Dropdown of all worlds in `data/` |
+| Target Zone | Dropdown of zones within the target world (updates when you change the world) |
+| New ID | ID to assign in the target. Pre-filled with the original ID — change it if a collision would occur |
+
+Click **Copy** to execute. If the target world is the same as the current world, the UI reloads and the copied object is automatically selected.
+
+> Script references (flags, room IDs, NPC IDs, item IDs) are copied verbatim. If those entities don't exist in the target world, you'll need to create them or adjust the scripts manually after copying.
+
+---
+
+### I.7 Object Editors
+
+Click any object in the sidebar to open its editor in the main panel. Each editor header has **?** (opens this manual at the relevant section), **Clone**, **Copy to World…**, **Delete**, and **Save** buttons.
+
+**Room Editor** — see §3 and §4 for field definitions.
+
+Fields: ID (read-only), Name, Description, Flags, Light level, Start room (toggle), Exits, Item spawns, NPC spawns, on_enter script, admin comment.
+
+- **Start room** — toggle button; exactly one room per zone must be active
+- **Exits** — click **Edit exits** to open the exit modal. Each exit has:
+  - **Direction** — text field + `[...]` direction picker
+  - **Destination** — text field + `[...]` room picker; supports drag-and-drop from the sidebar
+  - **Locked** — toggle button; reveals the `lock_tag` field when active
+  - **desc** — flavor text shown when the player examines the exit
+  - **show_if** — inline condition builder; see §4.5 for op details
+  - **on_exit / on_enter / on_look** — script buttons; click to open the inline script editor panel
+  - **`[!]` mismatch indicator** — shown when the target room has no matching reverse exit; saving offers to create it automatically
+  - **`[if: ...]` indicator** — shown in the exit preview when a `show_if` condition is set
+- **Hazard Exempt Flag** — text field + `[...]` flag picker; supports drag-drop from the References panel
+- **on_enter** — script button; opens the inline script editor panel
+
+**NPC Editor** — see §5 for field definitions.
+
+Fields: ID, Name, Description, HP, Attack, Defense, Style, Tags, Hostile (toggle), Attacks NPCs (toggle), Respawn time, Kill script, Round script, admin comment.
+
+- **Style** — `[...]` style picker
+- **Hostile** — toggle button; if active, NPC attacks on sight
+- **Attacks NPCs** — only visible when **Hostile** is on; see §5 for details
+- **Tags** — chip list; click `+ add` to expand an inline field with `[...]` tag picker; drag a tag chip from the tag palette to add
+- **Shop** — each shop entry has a `[...]` item picker for the item ID
+- **Spawn cards** — each spawn entry has a `[...]` NPC picker for the NPC ID, plus a **hostile** toggle
+- **Kill script / Round script** — script buttons; click to open the inline script editor panel
+
+**Item Editor** — see §6 for field definitions.
+
+Fields: ID, Name, Description, Slot, Weight, Value, Tags, Scenery (toggle), No Drop (toggle), Respawn (toggle), Consumable Key (toggle), Key Consumed Msg, Light add, on_get script, on_use script, on_drop script, admin comment.
+
+- **Slot** — equipment slot (head, chest, legs, feet, hands, weapon, offhand, neck, ring)
+- **Scenery** — toggle; if active, item cannot be picked up (use on_get for interaction)
+- **Consumable Key** — toggle; if active, the item is removed from inventory after unlocking a door
+- **Light add** — positive/negative contribution to room light level
+- **on_get / on_use / on_drop** — script buttons; click to open the inline script editor panel
+
+**Quest Editor** — see §9 and Appendix E for field definitions and a full design walkthrough.
+
+Fields: ID (read-only), Title, Giver NPC, Summary, Start Message, Complete Message.
+
+- **Giver NPC** — text field + `[...]` NPC picker
+- **Steps** section — drag to reorder; each step has Objective, Hint, Completion Flag (`[...]` flag picker), on_advance script button
+- **Rewards** section — types: `gold`, `xp`, `item`; item rewards have a `[...]` item picker
+- Click **Graph** to see an interactive flow diagram of the quest. Click **Export DOT** to download a Graphviz `.dot` file.
+
+**Dialogue Editor** — see §8 for field definitions.
+
+Each dialogue file (`dialogues/<npc_id>.toml`) is a tree of nodes and responses.
+
+- **Nodes** — NPC speech. Each node has: ID, Lines (NPC text), show_if condition, on_enter/on_exit script buttons
+- **Responses** — player choices. Each response has: text, next node (text + `[...]` node picker), show_if condition, script button
+- **Conditions** — select the condition type from the dropdown; a `[...]` picker appears for the value field scoped to the correct type
+
+Drag responses to reorder them. Click **Graph** for the interactive dialogue flow diagram.
+
+**Commissions Editor (Crafting tab)** — see §14 and Appendix G for field definitions and a design walkthrough.
+
+The **Commissions** tab lists crafting files grouped by zone. Each entry is one `crafting/<npc_id>.toml` file — the filename must exactly match the NPC's `id`.
+
+To create a crafting file: open the NPC editor, scroll to the **Crafting Commissions** section, and click **Create Crafting File**.
+
+**Style Editor** — see §13 and Appendix H for field definitions and a design walkthrough.
+
+Styles define a fighting style's passive abilities. Each passive has: ability ID, proficiency threshold, trigger (on_hit, on_defend, etc.), and script ops.
+
+**Process Editor** — see §21 for field definitions.
+
+Processes are per-player tick-driven background tasks — either a recurring script or an NPC route.
+
+- **Interval** — player action ticks between each process fire
+- **Autostart** — toggle; if active, starts automatically on world entry
+- **Route NPC** — `[...]` NPC picker; leave blank for script-only processes
+- **Loop mode** — `cycle` (wrap) or `reverse` (ping-pong)
+- **Waypoints** — ordered `{room_id, ticks}` pairs; use ↑/↓ to reorder, **+ Waypoint** to add
+
+**Zone Editor (Notes)**
+
+Click the **Notes** button on a zone header to edit zone Name, Description, and Admin Comment.
+
+---
+
+### I.8 World Notes (world.md)
+
+Click **World Notes** in the top bar to open a fullscreen Markdown editor for `data/<world_id>/world.md`. Holds world-level lore, design notes, and cross-zone references. Click **Save world.md** or **Open in New Tab** to edit in a dedicated tab.
+
+---
+
+### I.9 World Config Editor
+
+Click **Config** in the top bar to open `config.toml` in a structured editor.
+
+Sections:
+- **World** — world_name, currency_name, default_style, new_char_hp, vision_threshold
+- **Skills** — list of skill IDs
+- **Equipment Slots** — list of slot names
+- **Player Attributes** — world-specific attributes (id, label, default value)
+- **Status Effects** — `[[status_effect]]` entries (id, label, duration, etc.)
+
+---
+
+### I.10 Map View
+
+Click **Map** to open the full-screen world map (all zones stitched together by room coordinates).
+
+- Click a room to select it and highlight its connections
+- Connected rooms are highlighted gold; start room has a ★ icon; town rooms have a ⌂ icon
+- Cross-zone connections are shown as dashed lines
+
+---
+
+### I.11 Dialogue and Quest Graphs
+
+**Dialogue Graph** — in the dialogue editor, click **Graph** to toggle an interactive SVG flow diagram. Pan (click + drag), zoom (scroll wheel), click a node to highlight it. Click **< Editor** to return.
+
+**Quest Graph** — in the quest editor, click **Graph** to toggle a flow diagram showing quest steps as nodes and trigger edges from dialogues, room on_enter, item on_get/on_use, and NPC kill_script.
+
+---
+
+### I.12 Todos
+
+Each editor has an inline **Todos** panel at the very top for per-object design notes.
+
+- Check the checkbox to mark a todo done; click **×** to delete
+- The **Todos** button in the top bar opens a world-wide panel (filterable by open/done/all)
+- Tree items with open todos show a ◆ icon in the sidebar
+
+---
+
+### I.13 References Panel
+
+Shows where the selected object is referenced in the world:
+- **Used by** — rooms/NPCs/items/scripts that reference this ID
+- **Flags** — flags set, cleared, or checked by this object; click a flag to see all world usages
+
+---
+
+### I.14 Error Panel
+
+Lists ERR and WRN issues detected in the loaded world data. Click any row to navigate to the affected object. Click **Errors** in the top bar to refresh.
+
+---
+
+### I.15 Validate
+
+Click **Validate** to run `validate.py` against the current world. Output is shown in a modal. Fix any ERR lines before publishing; WRN lines are advisory.
+
+---
+
+### I.16 In-Browser Game Terminal
+
+The WCT includes a game terminal tab that lets you play the game inside the browser — useful for testing scripts, quests, and dialogue without switching to the CLI.
+
+---
+
+### I.17 Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| Ctrl+S | Save selected object |
+| Escape | Close open modal |
+
+---
+
+### I.18 File Layout Reference
+
+```
+data/
+  <world_id>/
+    config.toml           ← world config (edited via Config button)
+    world.md              ← world notes (edited via World Notes button)
+    <zone_id>/
+      zone.toml           ← zone name, description, admin_comment
+      rooms.toml          ← [[room]] entries
+      items.toml          ← [[item]] entries
+      npcs.toml           ← [[npc]] entries
+      dialogues/
+        <npc_id>.toml     ← [[node]] and [[response]] entries
+      quests/
+        <quest_id>.toml   ← quest definition
+      crafting/
+        <npc_id>.toml     ← [[commission]] entries
+      companions/
+        <companion_id>.toml
+      styles/
+        styles.toml       ← [[style]] entries
+      processes.toml      ← [[process]] entries (optional)
+```

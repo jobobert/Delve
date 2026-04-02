@@ -19,6 +19,7 @@
   <button class="hbtn" id="btn-reload" onclick="reloadWorld()" title="Reload world data">Reload</button>
   <button class="hbtn" id="btn-validate" onclick="openValidate()">Validate</button>
   <button class="hbtn" id="btn-todos" onclick="toggleTodoPanel()" title="Show todo list" disabled>Todos</button>
+  <button class="hbtn" id="btn-manual" onclick="window.open('/manual','_blank')" title="Open World Manual in new tab (printable)">Manual</button>
   <button class="hbtn" id="btn-map" onclick="toggleMap()" title="Show world map">Map</button>
   <button class="hbtn primary" id="btn-new" onclick="openNew()">+ New</button>
   <button class="hbtn" id="btn-save" onclick="saveSelected()" disabled>Save</button>
@@ -468,6 +469,36 @@
   </div>
 </div>
 
+<!-- Copy to World -->
+<div class="modal-backdrop hidden" id="copy-world-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title">Copy to World</span>
+      <button class="modal-close" onclick="closeModal('copy-world-modal')">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <label class="field-label">Target World</label>
+        <select id="ctw-world-sel" class="field-input" onchange="_ctwLoadZones(this.value)"></select>
+      </div>
+      <div class="field-row">
+        <label class="field-label">Target Zone</label>
+        <select id="ctw-zone-sel" class="field-input"></select>
+      </div>
+      <div class="field-row">
+        <label class="field-label">New ID</label>
+        <input id="ctw-new-id" type="text" class="field-input" placeholder="new_entity_id">
+      </div>
+      <p style="font-size:11px;color:var(--text-dim);margin-top:6px">Script references (flags, room IDs, NPC IDs) may need updating in the target world after copying.</p>
+      <div id="ctw-error" style="color:var(--red);font-size:12px;margin-top:6px;display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('copy-world-modal')">Cancel</button>
+      <button class="hbtn primary" onclick="executeCopyToWorld()">Copy</button>
+    </div>
+  </div>
+</div>
+
 <!-- Datalists for autocomplete -->
 <datalist id="dl-rooms"></datalist>
 <datalist id="dl-npcs"></datalist>
@@ -554,6 +585,18 @@ const ENGINE_NPC_TAGS = [
 // Badge letter and CSS class for each entity type — used by the left-pane list, editor header, and tag-usage panel.
 const BADGE_LTR = {room:'R',npc:'N',item:'I',quest:'Q',dialogue:'D',style:'S',process:'P',zone:'Z',crafting:'C'};
 const BADGE_CLS = {room:'badge-room',npc:'badge-npc',item:'badge-item',quest:'badge-quest',dialogue:'badge-dlg',style:'badge-style',process:'badge-proc',crafting:'badge-craft'};
+
+const MANUAL_ANCHORS = {
+  room:     '#3-rooms',
+  npc:      '#5-npcs',
+  item:     '#6-items',
+  quest:    '#appendix-e-quest-design-walkthrough',
+  dialogue: '#8-the-dialogue-system',
+  style:    '#appendix-h-fighting-style-design-walkthrough',
+  crafting: '#appendix-g-crafting-commission-design-walkthrough',
+  process:  '#21-world-processes',
+  script:   '#appendix-c-all-script-ops-quick-reference',
+};
 
 let SELECTED     = null;  // {type, zone_id, data}  — mutable working copy
 let DIRTY        = false;
@@ -1188,10 +1231,17 @@ function editorHeader(type, cls, name) {
   div.className = 'editor-header';
   const badgeLtr = BADGE_LTR[type] || type.slice(0,1).toUpperCase();
   const badgeCls = cls.startsWith('badge-') ? `badge ${cls}` : cls;
+  const anchor = MANUAL_ANCHORS[type] || '';
+  const helpBtn = anchor
+    ? `<a class="hbtn" href="/manual${anchor}" target="_blank" title="Open manual section for ${escHtml(type)}">?</a>`
+    : '';
   div.innerHTML = `
     <span class="editor-type ${badgeCls}">${badgeLtr}</span>
     <span class="editor-title">${escHtml(name)}</span>
     <div class="editor-actions">
+      ${helpBtn}
+      <button class="hbtn" onclick="cloneSelected()" title="Clone this ${escHtml(type)} with a new ID">Clone</button>
+      <button class="hbtn" onclick="openCopyToWorldModal()" title="Copy this ${escHtml(type)} to another world or zone">Copy to World\u2026</button>
       <button class="hbtn danger" onclick="deleteSelected()" title="Delete this ${escHtml(type)}">Delete</button>
       <button class="hbtn primary" onclick="saveSelected()">Save</button>
     </div>`;
@@ -1238,6 +1288,130 @@ async function deleteSelected() {
   renderTypeList(_ACTIVE_TYPE);
   renderEditor();
   setStatus(`Deleted ${type} '${eid}'`, 'ok');
+}
+
+// ── Clone / Copy to World ─────────────────────────────────────────────────────
+
+function _getEntityId(data) {
+  return data._id || data._npc_id || data.id || '';
+}
+
+function _selectAfterReload(type, zone_id, id) {
+  const zone = WORLD_DATA && WORLD_DATA.zones && WORLD_DATA.zones[zone_id];
+  if (!zone) return;
+  const keyMap = {room:'rooms', npc:'npcs', item:'items', quest:'quests',
+                  dialogue:'dialogues', crafting:'crafting', style:'styles', process:'processes'};
+  const arr = zone[keyMap[type]] || [];
+  const obj = arr.find(o => (o.id || o._id || o._npc_id) === id);
+  if (obj) selectObject(type, zone_id, obj);
+}
+
+async function cloneSelected() {
+  if (!SELECTED) return;
+  if (DIRTY && !confirm('You have unsaved changes. The clone will use the last saved version.\n\nContinue?')) return;
+  const { type, zone_id, data } = SELECTED;
+  const sourceId = _getEntityId(data);
+  const idLabel = (type === 'dialogue' || type === 'crafting') ? 'NPC ID' : 'ID';
+  const newId = prompt(`Clone ${type} '${sourceId}'\n\nEnter new ${idLabel}:`, sourceId + '_copy');
+  if (!newId || !newId.trim()) return;
+  const trimmedId = newId.trim();
+
+  setStatus('Cloning\u2026', '');
+  let res, j;
+  try {
+    res = await fetch('/api/clone_object', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ world_id: WORLD_ID, zone_id, type, source_id: sourceId, new_id: trimmedId, file: data._file || '' })
+    });
+    j = await res.json();
+  } catch(e) { setStatus('Error: ' + e.message, 'err'); return; }
+  if (!j.ok) { setStatus('Clone failed: ' + j.error, 'err'); return; }
+
+  await loadWorld(WORLD_ID);
+  _selectAfterReload(type, zone_id, trimmedId);
+  setStatus(`Cloned '${sourceId}' \u2192 '${trimmedId}'`, 'ok');
+}
+
+let _ctwSource = null;
+
+async function openCopyToWorldModal() {
+  if (!SELECTED) return;
+  if (DIRTY && !confirm('You have unsaved changes. The copy will use the last saved version.\n\nContinue?')) return;
+  _ctwSource = SELECTED;
+  document.getElementById('ctw-new-id').value = _getEntityId(_ctwSource.data);
+  document.getElementById('ctw-error').style.display = 'none';
+
+  const worldSel = document.getElementById('ctw-world-sel');
+  worldSel.innerHTML = '<option value="">Loading\u2026</option>';
+  document.getElementById('ctw-zone-sel').innerHTML = '';
+  openModal('copy-world-modal');
+
+  try {
+    const res = await fetch('/game/worlds');
+    const json = await res.json();
+    worldSel.innerHTML = '';
+    for (const w of (json.worlds || [])) {
+      const opt = document.createElement('option');
+      opt.value = w.id; opt.textContent = w.name ? `${w.id} (${w.name})` : w.id;
+      worldSel.appendChild(opt);
+    }
+    if (worldSel.options.length) await _ctwLoadZones(worldSel.value);
+  } catch(e) {
+    worldSel.innerHTML = '<option value="">Error loading worlds</option>';
+  }
+}
+
+async function _ctwLoadZones(worldId) {
+  const zoneSel = document.getElementById('ctw-zone-sel');
+  if (!worldId) { zoneSel.innerHTML = ''; return; }
+  zoneSel.innerHTML = '<option value="">Loading\u2026</option>';
+  try {
+    const res = await fetch(`/api/list_zones?world_id=${encodeURIComponent(worldId)}`);
+    const json = await res.json();
+    zoneSel.innerHTML = '';
+    for (const z of (json.zones || [])) {
+      const opt = document.createElement('option');
+      opt.value = z.id; opt.textContent = z.name && z.name !== z.id ? `${z.id} (${z.name})` : z.id;
+      zoneSel.appendChild(opt);
+    }
+  } catch(e) {
+    zoneSel.innerHTML = '<option value="">Error loading zones</option>';
+  }
+}
+
+async function executeCopyToWorld() {
+  if (!_ctwSource) return;
+  const { type, zone_id, data } = _ctwSource;
+  const sourceId   = _getEntityId(data);
+  const newId      = document.getElementById('ctw-new-id').value.trim();
+  const tgtWorld   = document.getElementById('ctw-world-sel').value;
+  const tgtZone    = document.getElementById('ctw-zone-sel').value;
+  const errDiv     = document.getElementById('ctw-error');
+
+  if (!newId || !tgtWorld || !tgtZone) {
+    errDiv.textContent = 'Please fill in all fields.'; errDiv.style.display = ''; return;
+  }
+
+  let res, j;
+  try {
+    res = await fetch('/api/copy_to_world', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        source_world_id: WORLD_ID, source_zone_id: zone_id, type,
+        source_id: sourceId, new_id: newId,
+        target_world_id: tgtWorld, target_zone_id: tgtZone, file: data._file || ''
+      })
+    });
+    j = await res.json();
+  } catch(e) { errDiv.textContent = 'Error: ' + e.message; errDiv.style.display = ''; return; }
+  if (!j.ok) { errDiv.textContent = 'Copy failed: ' + j.error; errDiv.style.display = ''; return; }
+
+  closeModal('copy-world-modal');
+  if (tgtWorld === WORLD_ID) {
+    await loadWorld(WORLD_ID);
+    _selectAfterReload(type, tgtZone, newId);
+  }
+  setStatus(`Copied '${sourceId}' \u2192 ${tgtWorld}/${tgtZone}/${newId}`, 'ok');
 }
 
 function fieldRow(labelText, inputEl, note, tip) {
@@ -1775,7 +1949,20 @@ function renderNpcEditor(main) {
   main.appendChild(statsRow);
 
   const cbRow = document.createElement('div'); cbRow.className = 'field-row inline';
-  cbRow.appendChild(checkboxInput(d.hostile, v => d.hostile = v, 'Hostile'));
+
+  // attacks_npcs toggle — only relevant (and visible) when hostile is true
+  const attacksNpcsBtn = checkboxInput(d.attacks_npcs || false, v => {
+    if (v) d.attacks_npcs = true; else delete d.attacks_npcs;
+  }, 'Attacks NPCs');
+  attacksNpcsBtn.title = 'If true: this hostile NPC deals tick damage to non-hostile NPCs in the same room, and those NPCs help the player fight it in combat.';
+  attacksNpcsBtn.style.display = d.hostile ? '' : 'none';
+
+  cbRow.appendChild(checkboxInput(d.hostile, v => {
+    d.hostile = v;
+    attacksNpcsBtn.style.display = v ? '' : 'none';
+    if (!v) { delete d.attacks_npcs; attacksNpcsBtn.classList.remove('active'); }
+  }, 'Hostile'));
+  cbRow.appendChild(attacksNpcsBtn);
   main.appendChild(cbRow);
 
   main.appendChild(fieldRow('Rest Cost', numInput(d.rest_cost, v => d.rest_cost = v || undefined, 0),
@@ -2838,7 +3025,7 @@ function renderQuestSteps(main, d) {
       card.appendChild(fieldRow('Objective',       textareaInput(step.objective,       v => { d.step[i].objective       = v; markDirty(); }),
         null, 'What the player needs to do. Shown in the journal.'));
       card.appendChild(fieldRow('Completion Flag', textInput    (step.completion_flag, v => { d.step[i].completion_flag = v; markDirty(); }),
-        null, 'Player flag name set (via set_flag op) when this step is done.\nUsed in dialogue conditions: { flag = "flagname" }'));
+        null, 'Player flag automatically set when this step is reached.\nShorthand for a set_flag op in on_advance — useful for dialogue show_if conditions.'));
       card.appendChild(fieldRow('Hint',            textInput    (step.hint,            v => { d.step[i].hint            = v; markDirty(); }),
         null, 'Optional hint shown in the journal to help guide the player.'));
       card.appendChild(fieldRow('on_advance', scriptButton('on_advance', step.on_advance, ops => { d.step[i].on_advance = ops; markDirty(); }),
@@ -2906,17 +3093,10 @@ function renderQuestRewards(main, d) {
 
 // ── Style editor ──────────────────────────────────────────────────────
 
-function _tagsInput(arr, onChange) {
-  // Edits a string[] as a comma-separated text field
-  const inp = document.createElement('input');
-  inp.type = 'text'; inp.className = 'field-input';
-  inp.value = (arr || []).join(', ');
-  inp.placeholder = 'comma-separated tags';
-  inp.addEventListener('input', () => {
-    const v = inp.value.split(',').map(s => s.trim()).filter(Boolean);
-    onChange(v); markDirty();
-  });
-  return inp;
+function _normTagArr(v) {
+  if (Array.isArray(v)) return [...v];
+  if (typeof v === 'string') return v.split(',').map(s => s.trim()).filter(Boolean);
+  return [];
 }
 
 function renderStyleEditor(main) {
@@ -2931,9 +3111,11 @@ function renderStyleEditor(main) {
   main.appendChild(fieldRow('Long desc',  textareaInput(d.desc_long, v => { d.desc_long = v; markDirty(); })));
 
   // Combat matchups
-  main.appendChild(sectionTitle('Combat Matchups', 'NPC tags this style is strong/weak against (comma-separated).'));
-  main.appendChild(fieldRow('Strong vs',         _tagsInput(d.strong_vs, v => { d.strong_vs = v; })));
-  main.appendChild(fieldRow('Weak vs',           _tagsInput(d.weak_vs,   v => { d.weak_vs   = v; })));
+  main.appendChild(sectionTitle('Combat Matchups', 'NPC tags this style is strong/weak against.\nDrag tags from the palette or type and press Enter.'));
+  d.strong_vs = _normTagArr(d.strong_vs);
+  d.weak_vs   = _normTagArr(d.weak_vs);
+  main.appendChild(fieldRow('Strong vs', chipsWidget(d.strong_vs, v => { d.strong_vs = v; markDirty(); }, null, 'tag')));
+  main.appendChild(fieldRow('Weak vs',   chipsWidget(d.weak_vs,   v => { d.weak_vs   = v; markDirty(); }, null, 'tag')));
   main.appendChild(fieldRow('Strong multiplier', numInput(d.strong_multiplier, v => { d.strong_multiplier = v; markDirty(); }, 0.1, 5, 0.05),
     null, 'Damage multiplier vs strong_vs enemies (e.g. 1.5 = +50%).'));
   main.appendChild(fieldRow('Weak multiplier',   numInput(d.weak_multiplier, v => { d.weak_multiplier = v; markDirty(); }, 0.1, 5, 0.05),
@@ -2941,9 +3123,9 @@ function renderStyleEditor(main) {
 
   // Base stats
   main.appendChild(sectionTitle('Base Stats', 'Flat bonuses applied when this style is active.'));
-  const bonusRow = document.createElement('div'); bonusRow.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;';
+  const bonusRow = document.createElement('div'); bonusRow.className = 'field-row inline';
   function statPairS(lbl, key, tip, mn, mx, stp) {
-    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+    const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.gap='3px';
     const l = document.createElement('label'); l.textContent = lbl;
     if (tip) { const ic = document.createElement('i'); ic.className='help-icon'; ic.textContent='i'; ic.dataset.tip=tip; l.appendChild(ic); }
     wrap.appendChild(l); wrap.appendChild(numInput(d[key], v => { d[key] = v; markDirty(); }, mn, mx, stp));
@@ -2955,12 +3137,14 @@ function renderStyleEditor(main) {
   main.appendChild(bonusRow);
 
   // Equipment affinity
-  main.appendChild(sectionTitle('Equipment Affinity', 'Weapon/armor tags that receive a bonus at full proficiency.'));
-  main.appendChild(fieldRow('Preferred weapon tags', _tagsInput(d.preferred_weapon_tags, v => { d.preferred_weapon_tags = v; })));
-  main.appendChild(fieldRow('Preferred armor tags',  _tagsInput(d.preferred_armor_tags,  v => { d.preferred_armor_tags  = v; })));
-  const affinityRow = document.createElement('div'); affinityRow.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;';
+  main.appendChild(sectionTitle('Equipment Affinity', 'Weapon/armor tags that receive a bonus at full proficiency.\nDrag tags from the palette or type and press Enter.'));
+  d.preferred_weapon_tags = _normTagArr(d.preferred_weapon_tags);
+  d.preferred_armor_tags  = _normTagArr(d.preferred_armor_tags);
+  main.appendChild(fieldRow('Preferred weapon tags', chipsWidget(d.preferred_weapon_tags, v => { d.preferred_weapon_tags = v; markDirty(); }, null, 'tag')));
+  main.appendChild(fieldRow('Preferred armor tags',  chipsWidget(d.preferred_armor_tags,  v => { d.preferred_armor_tags  = v; markDirty(); }, null, 'tag')));
+  const affinityRow = document.createElement('div'); affinityRow.className = 'field-row inline';
   function affPair(lbl, key, tip) {
-    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+    const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.gap='3px';
     const l = document.createElement('label'); l.textContent = lbl;
     if (tip) { const ic = document.createElement('i'); ic.className='help-icon'; ic.textContent='i'; ic.dataset.tip=tip; l.appendChild(ic); }
     wrap.appendChild(l); wrap.appendChild(numInput(d[key], v => { d[key] = v; markDirty(); }, 0, 1, 0.05));
@@ -3140,13 +3324,9 @@ function renderProcessEditor(main) {
   main.appendChild(fieldRow('Interval', numInput(d.interval ?? 1, v => { d.interval = v; markDirty(); }, 1, 999, 1),
     null, 'Fire every N player action commands (min 1).'));
 
-  const cbRow = document.createElement('div'); cbRow.className = 'field-row';
-  const cbLabel = document.createElement('label'); cbLabel.textContent = 'Autostart';
-  const cb = document.createElement('button'); cb.type = 'button';
-  cb.className = 'tag-btn' + (d.autostart ? ' active' : '');
-  cb.textContent = 'autostart';
-  cb.addEventListener('click', () => { cb.classList.toggle('active'); d.autostart = cb.classList.contains('active'); markDirty(); });
-  cbRow.appendChild(cbLabel); cbRow.appendChild(cb); main.appendChild(cbRow);
+  const cbRow = document.createElement('div'); cbRow.className = 'field-row inline';
+  cbRow.appendChild(checkboxInput(d.autostart, v => { d.autostart = v; markDirty(); }, 'autostart'));
+  main.appendChild(cbRow);
 
   // Script
   main.appendChild(sectionTitle('Script', 'Script ops run on each process fire.\nLeave empty if using Route only.'));
@@ -3174,8 +3354,6 @@ function renderProcessEditor(main) {
   main.appendChild(fieldRow('Route NPC', refInput(d.route_npc || '', 'dl-npcs', v => { d.route_npc = v; markDirty(); }, 'npc'),
     null, 'NPC id to move along the route. Must exist in the world.'));
 
-  const loopRow = document.createElement('div'); loopRow.className = 'field-row';
-  const loopLabel = document.createElement('label'); loopLabel.textContent = 'Loop mode';
   const loopSel = document.createElement('select'); loopSel.className = 'field-select';
   ['cycle', 'reverse'].forEach(v => {
     const opt = document.createElement('option'); opt.value = v; opt.textContent = v;
@@ -3183,7 +3361,7 @@ function renderProcessEditor(main) {
     loopSel.appendChild(opt);
   });
   loopSel.addEventListener('change', () => { d.route_loop = loopSel.value; markDirty(); });
-  loopRow.appendChild(loopLabel); loopRow.appendChild(loopSel); main.appendChild(loopRow);
+  main.appendChild(fieldRow('Loop mode', loopSel, null, '"cycle" wraps back to the first waypoint; "reverse" bounces back and forth.'));
 
   main.appendChild(sectionTitle('Waypoints',
     'Each waypoint: the room the NPC travels to, and how many process-fires to wait there.\n' +
@@ -3196,21 +3374,18 @@ function _renderRouteWaypoints(main, d) {
   d.route = d.route || [];
   const container = document.createElement('div');
   container.id = 'proc-route-container';
-  container.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
 
   const redraw = () => {
     container.innerHTML = '';
     d.route.forEach((wp, i) => {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+      const row = document.createElement('div'); row.className = 'field-row inline';
 
       // Room ref input
       const roomInpRow = refInput(wp.room_id, 'dl-rooms', v => { wp.room_id = v; }, 'room');
       roomInpRow.style.flex = '1';
 
       // Ticks
-      const tickLabel = document.createElement('span'); tickLabel.textContent = 'ticks:';
-      tickLabel.style.cssText = 'font-size:12px;color:var(--text-dim);white-space:nowrap;';
+      const tickLabel = document.createElement('label'); tickLabel.textContent = 'ticks';
       const tickInp = document.createElement('input');
       tickInp.type = 'number'; tickInp.className = 'field-input'; tickInp.style.width = '60px';
       tickInp.min = 1; tickInp.value = wp.ticks ?? 1;
@@ -3524,9 +3699,9 @@ function renderStylePassives(main, d) {
       hdr.appendChild(rmBtn); card.appendChild(hdr);
 
       // Ability id + threshold + trigger row
-      const topRow = document.createElement('div'); topRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;';
+      const topRow = document.createElement('div'); topRow.className = 'field-row inline';
       function passiveField(lbl, el) {
-        const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+        const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.gap='3px';
         const l = document.createElement('label'); l.textContent = lbl;
         wrap.appendChild(l); wrap.appendChild(el); return wrap;
       }
@@ -3544,7 +3719,7 @@ function renderStylePassives(main, d) {
         const o = document.createElement('option'); o.value = t; o.textContent = t;
         if (p.trigger === t) o.selected = true; trigSel.appendChild(o);
       });
-      trigSel.addEventListener('change', () => { d.passives[i].trigger = trigSel.value; markDirty(); });
+      trigSel.addEventListener('change', () => { d.passives[i].trigger = trigSel.value; markDirty(); updateCondRow(); });
       topRow.appendChild(passiveField('Trigger', trigSel));
 
       const reqInp = document.createElement('input'); reqInp.type='text'; reqInp.className='field-input'; reqInp.style.width='120px';
@@ -3553,6 +3728,42 @@ function renderStylePassives(main, d) {
       topRow.appendChild(passiveField('Requires (ability)', reqInp));
 
       card.appendChild(topRow);
+
+      // Trigger-conditional fields
+      const condRow = document.createElement('div'); condRow.className = 'field-row inline'; condRow.style.marginTop = '6px';
+
+      const chanceInp = numInput(p.chance ?? 0.15, v => { d.passives[i].chance = v; markDirty(); }, 0, 1, 0.05);
+      chanceInp.title = 'Base probability this passive fires (0-1). Default: 0.15';
+      const chanceWrap = passiveField('Chance (0-1)', chanceInp);
+
+      const chanceScaleInp = numInput(p.chance_scaling ?? 0, v => { d.passives[i].chance_scaling = v; markDirty(); }, 0, 1, 0.05);
+      chanceScaleInp.title = 'Additional probability per 100 proficiency (0-1). Default: 0.0';
+      const chanceScaleWrap = passiveField('Chance Scaling', chanceScaleInp);
+
+      const defBaseInp = numInput(p.defense_bonus_base ?? 0, v => { d.passives[i].defense_bonus_base = v; markDirty(); }, 0, 999);
+      defBaseInp.title = 'Flat defense bonus while this passive is active (trigger=always)';
+      const defBaseWrap = passiveField('Defense Base', defBaseInp);
+
+      const defScaleInp = numInput(p.defense_bonus_scale ?? 0, v => { d.passives[i].defense_bonus_scale = v; markDirty(); }, 0, 999);
+      defScaleInp.title = 'Defense bonus added per 100 proficiency (trigger=always)';
+      const defScaleWrap = passiveField('Defense Scale', defScaleInp);
+
+      condRow.appendChild(chanceWrap);
+      condRow.appendChild(chanceScaleWrap);
+      condRow.appendChild(defBaseWrap);
+      condRow.appendChild(defScaleWrap);
+
+      function updateCondRow() {
+        const t = trigSel.value;
+        const isChance = (t === 'attack' || t === 'defend');
+        chanceWrap.style.display = isChance ? '' : 'none';
+        chanceScaleWrap.style.display = isChance ? '' : 'none';
+        defBaseWrap.style.display = t === 'always' ? '' : 'none';
+        defScaleWrap.style.display = t === 'always' ? '' : 'none';
+      }
+      updateCondRow();
+
+      card.appendChild(condRow);
 
       // Message
       card.appendChild(fieldRow('Message', textInput(p.message, v => { d.passives[i].message = v; markDirty(); }),
@@ -3724,10 +3935,48 @@ function buildDlgNodeCard(node, ni, dlg, rebuild) {
     addLineBtn.textContent = '+ alt line'; addLineBtn.title = 'Add alternative line (random pick)';
     addLineBtn.style.marginTop = '2px';
     addLineBtn.addEventListener('click', () => { node.lines.push(''); rebuildLines(); markDirty(); });
-    linesDiv.appendChild(addLineBtn);
+    // Cycle toggle — only show when multiple lines exist
+    const cycleBtn = document.createElement('button'); cycleBtn.type = 'button';
+    cycleBtn.className = 'tag-btn' + (node.cycle ? ' active' : '');
+    cycleBtn.textContent = 'cycle'; cycleBtn.style.cssText = 'font-size:11px;margin-top:2px;';
+    cycleBtn.title = 'Cycle: lines shown in order on each visit (default: random pick)';
+    cycleBtn.style.display = (node.lines || []).length > 1 ? '' : 'none';
+    cycleBtn.addEventListener('click', () => {
+      node.cycle = !node.cycle; cycleBtn.classList.toggle('active', node.cycle); markDirty();
+    });
+    linesDiv.appendChild(cycleBtn);
   };
   rebuildLines();
   body.appendChild(linesDiv);
+
+  // ── Node entry condition ───────────────────────────────────────────
+  const nodeCondRow = document.createElement('div'); nodeCondRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px;';
+  const nodeCondLabel = document.createElement('span'); nodeCondLabel.className = 'op-field-label'; nodeCondLabel.textContent = 'condition:';
+  const nodeCondBtn = document.createElement('button'); nodeCondBtn.type = 'button'; nodeCondBtn.className = 'hbtn';
+  nodeCondBtn.style.cssText = 'font-size:11px;padding:2px 8px;opacity:.5;';
+  const _updateNodeCondBtn = () => {
+    const s = summariseCond(node.condition);
+    nodeCondBtn.textContent = s || '+ cond'; nodeCondBtn.style.opacity = s ? '1' : '.5';
+  };
+  _updateNodeCondBtn();
+  let _nodeCondEditorOpen = false;
+  const nodeCondEditorWrap = document.createElement('div'); nodeCondEditorWrap.style.display = 'none';
+  // Use a getter/setter proxy so buildCondEditor writes go straight to node.condition
+  const nodeCondProxy = {};
+  Object.defineProperty(nodeCondProxy, 'condition', {
+    get: () => node.condition,
+    set: v => { node.condition = v; _updateNodeCondBtn(); },
+    configurable: true,
+  });
+  nodeCondBtn.addEventListener('click', () => {
+    _nodeCondEditorOpen = !_nodeCondEditorOpen;
+    nodeCondEditorWrap.style.display = _nodeCondEditorOpen ? '' : 'none';
+    if (_nodeCondEditorOpen && !nodeCondEditorWrap.children.length)
+      nodeCondEditorWrap.appendChild(buildCondEditor(nodeCondProxy, nodeCondBtn));
+  });
+  nodeCondRow.appendChild(nodeCondLabel); nodeCondRow.appendChild(nodeCondBtn);
+  body.appendChild(nodeCondRow);
+  body.appendChild(nodeCondEditorWrap);
 
   // ── Responses belonging to this node ──────────────────────────────
   const respSection = document.createElement('div'); respSection.className = 'dlg-resp-section';
@@ -3861,18 +4110,26 @@ function buildRespRow(resp, dlg, rebuildResps) {
 
 // Condition types and their fields
 const COND_TYPES = [
-  {key:'',               label:'(none)',           fields:[]},
-  {key:'flag',           label:'flag set',         fields:['flag']},
-  {key:'not_flag',       label:'flag NOT set',     fields:['not_flag']},
-  {key:'quest',          label:'quest at step',    fields:['quest','step']},
-  {key:'quest_complete', label:'quest complete',   fields:['quest_complete']},
-  {key:'gold',           label:'has gold ≥',       fields:['gold']},
-  {key:'skill',          label:'skill ≥',          fields:['skill','min']},
-  {key:'item',           label:'has item',         fields:['item']},
+  {key:'',               label:'(none)',              fields:[]},
+  {key:'flag',           label:'flag set',            fields:['flag']},
+  {key:'not_flag',       label:'flag NOT set',        fields:['not_flag']},
+  {key:'quest',          label:'quest at step',       fields:['quest','step']},
+  {key:'quest_complete', label:'quest complete',      fields:['quest_complete']},
+  {key:'not_quest',      label:'quest NOT active',    fields:['not_quest']},
+  {key:'gold',           label:'has gold ≥',          fields:['gold']},
+  {key:'skill',          label:'skill ≥',             fields:['skill','min']},
+  {key:'item',           label:'has item',            fields:['item']},
+  {key:'level_gte',      label:'level ≥',             fields:['level_gte']},
+  {key:'prestige_min',   label:'prestige ≥',          fields:['prestige_min']},
+  {key:'prestige_max',   label:'prestige ≤',          fields:['prestige_max']},
+  {key:'affinity',       label:'has affinity tag',    fields:['affinity']},
+  {key:'no_affinity',    label:'no affinity tag',     fields:['no_affinity']},
+  {key:'no_companion',   label:'has no companion',    fields:[]},
 ];
 
 function condType(cond) {
   if (!cond) return '';
+  if (cond.no_companion) return 'no_companion';
   for (const ct of COND_TYPES) {
     if (ct.key && cond[ct.key] !== undefined) return ct.key;
   }
@@ -3883,8 +4140,12 @@ function summariseCond(cond) {
   if (!cond) return '';
   const t = condType(cond);
   if (!t) return '';
+  if (t === 'no_companion') return 'no_companion';
   const v = cond[t];
   if (t === 'quest' || t === 'skill') return `${t}=${v}${cond.step !== undefined ? ':'+cond.step : ''}${cond.min !== undefined ? '≥'+cond.min : ''}`;
+  if (t === 'prestige_min') return `prestige≥${v}`;
+  if (t === 'prestige_max') return `prestige≤${v}`;
+  if (t === 'level_gte')    return `level≥${v}`;
   return `${t}=${v}`;
 }
 
@@ -3912,9 +4173,10 @@ function buildCondEditor(resp, condBtn) {
   const getPickerType = field => {
     if (!field) return null;
     if (field === 'flag' || field === 'not_flag') return 'flag';
-    if (field === 'quest' || field === 'quest_complete') return 'quest';
+    if (field === 'quest' || field === 'quest_complete' || field === 'not_quest') return 'quest';
     if (field === 'skill') return 'skill';
     if (field === 'item') return 'item';
+    if (field === 'affinity' || field === 'no_affinity') return 'tag';
     return null;
   };
 
@@ -3926,10 +4188,12 @@ function buildCondEditor(resp, condBtn) {
     val2Label.style.display = ct.fields.length >= 2 ? '' : 'none';
     if (ct.fields[0]) {
       const pt = getPickerType(ct.fields[0]);
+      const isNum = ['gold','level_gte','prestige_min','prestige_max'].includes(ct.fields[0]);
       val1PickBtn.style.display = pt ? '' : 'none';
       val1PickBtn.onclick = pt ? () => openPicker(pt, id => { val1Inp.value = id; applyChange(); }) : null;
+      val1Inp.type = isNum ? 'number' : 'text';
       val1Inp.placeholder = ct.fields[0];
-      val1Inp.value = resp.condition?.[ct.fields[0]] || '';
+      val1Inp.value = resp.condition?.[ct.fields[0]] ?? '';
     }
     if (ct.fields[1]) {
       val2Label.textContent = ct.fields[1] + ':';
@@ -3944,7 +4208,11 @@ function buildCondEditor(resp, condBtn) {
     if (!t) { resp.condition = undefined; condBtn.textContent = '+ cond'; condBtn.style.opacity = '.5'; return; }
     const ct = COND_TYPES.find(c => c.key === t);
     const newCond = {};
-    if (ct.fields[0]) newCond[ct.fields[0]] = val1Inp.value;
+    if (t === 'no_companion') { newCond.no_companion = true; }
+    else if (ct.fields[0]) {
+      const isNum = ['gold','level_gte','prestige_min','prestige_max'].includes(ct.fields[0]);
+      newCond[ct.fields[0]] = isNum ? (Number(val1Inp.value) || 0) : val1Inp.value;
+    }
     if (ct.fields[1]) newCond[ct.fields[1]] = Number(val2Inp.value) || 0;
     resp.condition = newCond;
     const summary = summariseCond(newCond);
@@ -4405,8 +4673,8 @@ function buildCommissionCard(comm, idx, data, rebuild) {
   body.appendChild(sectionTitle('Tags', 'weapon_tags and armor_tags added to the final item.\nOnly one set is typically used depending on slot type.'));
   if (!Array.isArray(comm.weapon_tags)) comm.weapon_tags = [];
   if (!Array.isArray(comm.armor_tags))  comm.armor_tags  = [];
-  body.appendChild(fieldRow('Weapon Tags', chipsWidget(comm.weapon_tags, v => { comm.weapon_tags = v; markDirty(); })));
-  body.appendChild(fieldRow('Armor Tags',  chipsWidget(comm.armor_tags,  v => { comm.armor_tags  = v; markDirty(); })));
+  body.appendChild(fieldRow('Weapon Tags', chipsWidget(comm.weapon_tags, v => { comm.weapon_tags = v; markDirty(); }, null, 'tag')));
+  body.appendChild(fieldRow('Armor Tags',  chipsWidget(comm.armor_tags,  v => { comm.armor_tags  = v; markDirty(); }, null, 'tag')));
 
   // ── Materials ─────────────────────────────────────────────────────────
   body.appendChild(sectionTitle('Materials', 'Item IDs the player must give to the crafter. Duplicates allowed (e.g. three iron_ingots).'));
@@ -4446,20 +4714,15 @@ function buildCommissionCard(comm, idx, data, rebuild) {
 
 function buildQualityTierCard(tier, tIdx, comm, rebuildTiers) {
   const TIER_NAMES = ['poor', 'standard', 'exceptional', 'masterwork'];
-  const card = document.createElement('div');
-  card.style.cssText = 'border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-bottom:6px;background:var(--bg2);';
+  const card = document.createElement('div'); card.className = 'step-card';
 
   // ── Tier header row ───────────────────────────────────────────────────
-  const topRow = document.createElement('div'); topRow.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px';
+  const topRow = document.createElement('div'); topRow.className = 'field-row inline'; topRow.style.marginBottom = '8px';
 
-  function lbl(text) {
-    const l = document.createElement('label'); l.textContent = text;
-    l.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:2px;display:block';
-    return l;
-  }
   function col(labelText, el) {
-    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:0;';
-    wrap.appendChild(lbl(labelText)); wrap.appendChild(el); return wrap;
+    const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.gap='3px';
+    const l = document.createElement('label'); l.textContent = labelText;
+    wrap.appendChild(l); wrap.appendChild(el); return wrap;
   }
 
   const tierInp = textInput(tier.tier || 'standard', v => { tier.tier = v; markDirty(); }, 'poor/standard/...');
@@ -4487,17 +4750,17 @@ function buildQualityTierCard(tier, tIdx, comm, rebuildTiers) {
 
   const removeBtn = document.createElement('button');
   removeBtn.className = 'hbtn danger'; removeBtn.textContent = '×'; removeBtn.title = 'Remove tier';
-  removeBtn.style.cssText = 'margin-left:auto;align-self:flex-end;';
+  removeBtn.style.marginLeft = 'auto';
   removeBtn.addEventListener('click', () => { comm.qualities.splice(tIdx, 1); rebuildTiers(); markDirty(); });
   topRow.appendChild(removeBtn);
   card.appendChild(topRow);
 
   // ── Optional flavor row ────────────────────────────────────────────────
-  const flavRow = document.createElement('div'); flavRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;';
+  const flavRow = document.createElement('div'); flavRow.className = 'field-row inline'; flavRow.style.alignItems = 'flex-start';
 
   function textCol(labelText, key, placeholder) {
     const inp = textInput(tier[key] || '', v => { tier[key] = v; markDirty(); }, placeholder);
-    inp.style.width = '100%';
+    inp.style.width = '140px';
     return col(labelText, inp);
   }
   flavRow.appendChild(textCol('Special Tag', 'special', 'e.g. sharp'));
@@ -4698,7 +4961,13 @@ function openScriptModal(title, opsArray, callback) {
   backBtn.addEventListener('click', saveScript);
   const titleEl = document.createElement('span'); titleEl.className = 'script-panel-title';
   titleEl.textContent = 'Script: ' + title;
-  hdr.appendChild(backBtn); hdr.appendChild(titleEl);
+  const helpBtn = document.createElement('a');
+  helpBtn.href = '/manual' + MANUAL_ANCHORS.script;
+  helpBtn.target = '_blank';
+  helpBtn.className = 'hbtn';
+  helpBtn.textContent = '?';
+  helpBtn.title = 'Open script ops reference';
+  hdr.appendChild(backBtn); hdr.appendChild(titleEl); hdr.appendChild(helpBtn);
   main.appendChild(hdr);
 
   const opsList = document.createElement('div'); opsList.className = 'script-ops-list'; opsList.id = 'script-ops-list';
@@ -4709,6 +4978,15 @@ function openScriptModal(title, opsArray, callback) {
   addBtn.textContent = '+ Add op';
   addBtn.addEventListener('click', () => addOp(scriptOpsTarget));
   main.appendChild(addBtn);
+
+  const addCommentBtn = document.createElement('button'); addCommentBtn.className = 'add-op-btn';
+  addCommentBtn.textContent = '+ Comment';
+  addCommentBtn.addEventListener('click', () => {
+    scriptOpsTarget.push({op: 'comment', text: ''});
+    renderScriptOps(opsList, scriptOpsTarget);
+    markDirty();
+  });
+  main.appendChild(addCommentBtn);
 }
 
 function renderScriptOps(container, ops) {
@@ -4720,6 +4998,21 @@ function renderScriptOps(container, ops) {
 
 function buildOpRow(op, i, ops, container) {
   const row = document.createElement('div'); row.className = 'op-row';
+
+  // ── Comment pseudo-op: special rendering, skip normal op UI ──────────
+  if (op.op === 'comment') {
+    row.className = 'comment-op';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'comment-op-input';
+    inp.placeholder = '// comment…'; inp.value = op.text || '';
+    inp.addEventListener('input', () => { op.text = inp.value; markDirty(); });
+    const rmBtn = document.createElement('button');
+    rmBtn.className = 'op-remove'; rmBtn.textContent = '×'; rmBtn.title = 'Remove comment';
+    rmBtn.addEventListener('click', () => { ops.splice(i, 1); renderScriptOps(container, ops); markDirty(); });
+    row.appendChild(inp); row.appendChild(rmBtn);
+    return row;
+  }
+
   const hdr = document.createElement('div'); hdr.className = 'op-row-header';
 
   // Op selector
@@ -4730,7 +5023,9 @@ function buildOpRow(op, i, ops, container) {
     opSel.appendChild(o);
   });
   opSel.addEventListener('change', () => {
+    const prev = ops[i];
     ops[i] = { op: opSel.value };
+    if (prev.admin_comment) ops[i].admin_comment = prev.admin_comment;
     renderScriptOps(container, ops);
     markDirty();
   });
@@ -4763,6 +5058,17 @@ function buildOpRow(op, i, ops, container) {
     row.appendChild(helpEl);
   }
 
+  // Admin comment (per-op note, admin-only, not shown in-game)
+  const commentInp = document.createElement('input');
+  commentInp.type = 'text'; commentInp.className = 'op-admin-comment';
+  commentInp.placeholder = 'note / comment (admin only)…';
+  commentInp.value = op.admin_comment || '';
+  commentInp.addEventListener('input', () => {
+    op.admin_comment = commentInp.value || undefined;
+    markDirty();
+  });
+  row.appendChild(commentInp);
+
   // Branch sub-lists (then/else, on_pass/on_fail)
   const branches = schema.filter(f => f.branch);
   branches.forEach(b => {
@@ -4776,7 +5082,10 @@ function buildOpRow(op, i, ops, container) {
     const addSub = document.createElement('button'); addSub.className='add-op-btn'; addSub.textContent='+ Add op';
     addSub.style.fontSize='11px'; addSub.style.marginTop='2px';
     addSub.addEventListener('click', () => { op[branchKey].push({op:'say',text:''}); renderScriptOps(container, ops); markDirty(); });
-    branchDiv.appendChild(subList); branchDiv.appendChild(addSub);
+    const addSubComment = document.createElement('button'); addSubComment.className='add-op-btn'; addSubComment.textContent='+ Comment';
+    addSubComment.style.fontSize='11px'; addSubComment.style.marginTop='2px';
+    addSubComment.addEventListener('click', () => { op[branchKey].push({op:'comment',text:''}); renderScriptOps(container, ops); markDirty(); });
+    branchDiv.appendChild(subList); branchDiv.appendChild(addSub); branchDiv.appendChild(addSubComment);
     row.appendChild(branchDiv);
   });
 

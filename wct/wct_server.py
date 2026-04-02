@@ -18,6 +18,7 @@ Game web frontend is served separately — see launch_web.py / frontend/web_serv
 
 from __future__ import annotations
 import argparse
+import copy
 import json
 import os
 import re
@@ -286,6 +287,373 @@ def _rename_id_in_world(world_path: Path, old_id: str, new_id: str) -> list[str]
             pass
 
     return changed_files
+
+
+def _clone_entity(src_zone_path: Path, type_: str, source_id: str,
+                  new_id: str, file_rel: str,
+                  dest_zone_path: Path) -> dict:
+    """
+    Clone entity `source_id` of `type_` from `src_zone_path` into `dest_zone_path`
+    under `new_id`.  Works for both same-zone clones and cross-world copies.
+    Returns {"ok": bool, "error": str, "new_id": str}.
+    """
+    if type_ in ("room", "npc", "item", "style", "process"):
+        if not file_rel:
+            return {"ok": False, "error": "file required for room/npc/item/style/process", "new_id": ""}
+        src_file = ROOT / file_rel
+        if not src_file.exists():
+            return {"ok": False, "error": f"Source file not found: {file_rel}", "new_id": ""}
+        try:
+            data = toml_load(src_file)
+        except Exception as e:
+            return {"ok": False, "error": f"Parse error: {e}", "new_id": ""}
+
+        key = type_  # "room", "npc", "item", "style", "process"
+        arr = data.get(key, [])
+        src_obj = next((o for o in arr if o.get("id") == source_id), None)
+        if src_obj is None:
+            return {"ok": False, "error": f"{type_} '{source_id}' not found in source file", "new_id": ""}
+
+        new_obj = copy.deepcopy(src_obj)
+        new_obj["id"] = new_id
+
+        if type_ == "process":
+            target_file = dest_zone_path / "processes.toml"
+        elif type_ == "style":
+            target_file = dest_zone_path / "styles" / "styles.toml"
+        else:
+            target_file = dest_zone_path / f"{type_}s.toml"  # rooms.toml, npcs.toml, items.toml
+
+        target_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            target_data = toml_load(target_file) if target_file.exists() else {}
+        except Exception:
+            target_data = {}
+
+        # Check for duplicate ID in target
+        existing_ids = [o.get("id") for o in target_data.get(key, [])]
+        if new_id in existing_ids:
+            return {"ok": False, "error": f"{type_} '{new_id}' already exists in target", "new_id": ""}
+
+        target_data.setdefault(key, []).append(new_obj)
+        ok, err = _write_file(str(target_file.relative_to(ROOT)), target_data)
+        return {"ok": ok, "error": err, "new_id": new_id}
+
+    elif type_ == "quest":
+        src_file = src_zone_path / "quests" / f"{source_id}.toml"
+        if not src_file.exists():
+            return {"ok": False, "error": f"Quest '{source_id}.toml' not found", "new_id": ""}
+        try:
+            data = copy.deepcopy(toml_load(src_file))
+        except Exception as e:
+            return {"ok": False, "error": f"Parse error: {e}", "new_id": ""}
+        data["id"] = new_id
+        dest_dir = dest_zone_path / "quests"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_file = dest_dir / f"{new_id}.toml"
+        if dest_file.exists():
+            return {"ok": False, "error": f"Quest '{new_id}' already exists in target", "new_id": ""}
+        ok, err = _write_file(str(dest_file.relative_to(ROOT)), data)
+        return {"ok": ok, "error": err, "new_id": new_id}
+
+    elif type_ == "dialogue":
+        src_file = src_zone_path / "dialogues" / f"{source_id}.toml"
+        if not src_file.exists():
+            return {"ok": False, "error": f"Dialogue '{source_id}.toml' not found", "new_id": ""}
+        try:
+            data = copy.deepcopy(toml_load(src_file))
+        except Exception as e:
+            return {"ok": False, "error": f"Parse error: {e}", "new_id": ""}
+        dest_dir = dest_zone_path / "dialogues"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_file = dest_dir / f"{new_id}.toml"
+        if dest_file.exists():
+            return {"ok": False, "error": f"Dialogue '{new_id}.toml' already exists in target", "new_id": ""}
+        ok, err = _write_file(str(dest_file.relative_to(ROOT)), data)
+        return {"ok": ok, "error": err, "new_id": new_id}
+
+    elif type_ == "crafting":
+        src_file = src_zone_path / "crafting" / f"{source_id}.toml"
+        if not src_file.exists():
+            return {"ok": False, "error": f"Crafting '{source_id}.toml' not found", "new_id": ""}
+        try:
+            data = copy.deepcopy(toml_load(src_file))
+        except Exception as e:
+            return {"ok": False, "error": f"Parse error: {e}", "new_id": ""}
+        dest_dir = dest_zone_path / "crafting"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_file = dest_dir / f"{new_id}.toml"
+        if dest_file.exists():
+            return {"ok": False, "error": f"Crafting '{new_id}.toml' already exists in target", "new_id": ""}
+        ok, err = _write_file(str(dest_file.relative_to(ROOT)), data)
+        return {"ok": ok, "error": err, "new_id": new_id}
+
+    else:
+        return {"ok": False, "error": f"Unsupported type '{type_}'", "new_id": ""}
+
+
+# ── Markdown → HTML renderer (for /manual endpoint) ──────────────────────────
+
+def _slugify(text: str) -> str:
+    """Convert heading text to a stable, URL-safe anchor ID."""
+    text = text.lower()
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[\s_]+', '-', text)
+    text = re.sub(r'-+', '-', text)
+    return text.strip('-')
+
+
+def _render_manual_html(md_text: str, title: str = "Manual") -> str:
+    """
+    Convert a subset of Markdown to a full HTML page.
+    Handles: fenced code blocks, tables, ATX headings, horizontal rules,
+    unordered/ordered lists, blockquotes, and inline bold/italic/code/links.
+    Returns a complete HTML string with embedded CSS and a generated TOC.
+    """
+
+    # ── inline processor ─────────────────────────────────────────────────────
+    def _inline(text: str) -> str:
+        # Escape HTML entities first
+        text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        # Inline code (restore angle brackets inside)
+        text = re.sub(r'`([^`]+)`',
+                      lambda m: f'<code>{m.group(1)}</code>', text)
+        # Bold
+        text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+        # Italic
+        text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+        # Links [text](url)
+        text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)',
+                      r'<a href="\2">\1</a>', text)
+        return text
+
+    # ── slug tracker (handles duplicates) ────────────────────────────────────
+    seen_slugs: dict[str, int] = {}
+    def _unique_slug(text: str) -> str:
+        base = _slugify(text)
+        if base not in seen_slugs:
+            seen_slugs[base] = 0
+            return base
+        seen_slugs[base] += 1
+        return f"{base}-{seen_slugs[base]}"
+
+    # ── line-by-line state machine ────────────────────────────────────────────
+    lines      = md_text.split('\n')
+    body_parts: list[str] = []
+    toc_items:  list[tuple[int, str, str]] = []  # (level, text, slug)
+
+    state  = 'normal'   # 'normal' | 'code' | 'table' | 'ul' | 'ol' | 'bq' | 'para'
+    buf:   list[str] = []
+
+    def flush_buf() -> None:
+        if not buf:
+            return
+        if state == 'para':
+            body_parts.append(f'<p>{_inline(" ".join(buf))}</p>')
+        elif state == 'ul':
+            items = '\n'.join(f'  <li>{_inline(l)}</li>' for l in buf)
+            body_parts.append(f'<ul>\n{items}\n</ul>')
+        elif state == 'ol':
+            items = '\n'.join(f'  <li>{_inline(l)}</li>' for l in buf)
+            body_parts.append(f'<ol>\n{items}\n</ol>')
+        elif state == 'bq':
+            inner = _inline(' '.join(buf))
+            body_parts.append(f'<blockquote><p>{inner}</p></blockquote>')
+        elif state == 'table':
+            rows_html = []
+            header_done = False
+            for row in buf:
+                cells = [c.strip() for c in row.strip('|').split('|')]
+                if all(re.match(r'^[-: ]+$', c) for c in cells if c):
+                    if not header_done:
+                        header_done = True  # separator row consumed
+                    continue
+                tag = 'th' if not header_done else 'td'
+                row_html = ''.join(f'<{tag}>{_inline(c)}</{tag}>' for c in cells)
+                rows_html.append(f'<tr>{row_html}</tr>')
+            body_parts.append('<table>\n' + '\n'.join(rows_html) + '\n</table>')
+        buf.clear()
+
+    def set_state(new_state: str) -> None:
+        nonlocal state
+        if state != new_state:
+            flush_buf()
+            state = new_state
+
+    for line in lines:
+        # ── code block ───────────────────────────────────────────────────────
+        if state == 'code':
+            if re.match(r'^\s*```', line):
+                body_parts.append('</code></pre>')
+                state = 'normal'
+            else:
+                escaped = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                body_parts.append(escaped)
+            continue
+
+        if re.match(r'^\s*```', line):
+            flush_buf(); state = 'normal'
+            lang = line.strip()[3:].strip()
+            cls  = f' class="language-{lang}"' if lang else ''
+            body_parts.append(f'<pre><code{cls}>')
+            state = 'code'
+            continue
+
+        # ── headings ─────────────────────────────────────────────────────────
+        m = re.match(r'^(#{1,6})\s+(.+)$', line)
+        if m:
+            flush_buf(); state = 'normal'
+            level = len(m.group(1))
+            text  = m.group(2).strip()
+            slug  = _unique_slug(text)
+            if level <= 3:
+                toc_items.append((level, text, slug))
+            body_parts.append(
+                f'<h{level} id="{slug}">'
+                f'<a class="anchor" href="#{slug}">#</a> {_inline(text)}'
+                f'</h{level}>')
+            continue
+
+        # ── horizontal rule ──────────────────────────────────────────────────
+        if re.match(r'^-{3,}\s*$', line) or re.match(r'^\*{3,}\s*$', line):
+            flush_buf(); state = 'normal'
+            body_parts.append('<hr>')
+            continue
+
+        # ── blank line ───────────────────────────────────────────────────────
+        if not line.strip():
+            flush_buf(); state = 'normal'
+            continue
+
+        # ── table row ────────────────────────────────────────────────────────
+        if line.lstrip().startswith('|') and '|' in line:
+            if state != 'table':
+                flush_buf(); state = 'table'
+            buf.append(line)
+            continue
+        else:
+            if state == 'table':
+                flush_buf(); state = 'normal'
+
+        # ── unordered list ───────────────────────────────────────────────────
+        m = re.match(r'^[ \t]*[-*+]\s+(.+)$', line)
+        if m:
+            if state != 'ul':
+                flush_buf(); state = 'ul'
+            buf.append(m.group(1))
+            continue
+
+        # ── ordered list ─────────────────────────────────────────────────────
+        m = re.match(r'^[ \t]*\d+\.\s+(.+)$', line)
+        if m:
+            if state != 'ol':
+                flush_buf(); state = 'ol'
+            buf.append(m.group(1))
+            continue
+
+        # ── blockquote ───────────────────────────────────────────────────────
+        m = re.match(r'^>\s*(.*)', line)
+        if m:
+            if state != 'bq':
+                flush_buf(); state = 'bq'
+            buf.append(m.group(1))
+            continue
+
+        # ── paragraph text ───────────────────────────────────────────────────
+        if state != 'para':
+            flush_buf(); state = 'para'
+        buf.append(line)
+
+    flush_buf()
+
+    # ── build TOC HTML ───────────────────────────────────────────────────────
+    toc_html_parts = ['<nav id="toc"><div id="toc-inner">',
+                      f'<div class="toc-title">{title}</div><ul>']
+    for level, text, slug in toc_items:
+        indent = 'toc-h3' if level == 3 else ''
+        clean  = re.sub(r'<[^>]+>', '', _inline(text))
+        toc_html_parts.append(
+            f'<li class="{indent}"><a href="#{slug}">{clean}</a></li>')
+    toc_html_parts.append('</ul></div></nav>')
+    toc_html = '\n'.join(toc_html_parts)
+
+    body_html = '\n'.join(body_parts)
+
+    # ── full page ─────────────────────────────────────────────────────────────
+    css = """
+:root{--bg:#1a1a1a;--panel:#111;--border:#2a2a2a;--text:#d4d4d4;--dim:#888;
+  --amber:#F29E00;--code-bg:#0d0d0d;--table-hdr:#222;}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;
+  font-size:15px;line-height:1.65;display:flex;min-height:100vh;}
+#toc{width:240px;min-width:240px;background:var(--panel);border-right:1px solid var(--border);
+  position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;}
+#toc-inner{padding:14px 0;}
+.toc-title{color:var(--amber);font-weight:700;font-size:13px;
+  padding:0 14px 10px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+#toc ul{list-style:none;}
+#toc li a{display:block;padding:3px 14px;color:var(--dim);text-decoration:none;font-size:12px;}
+#toc li a:hover{color:var(--amber);}
+#toc .toc-h3 a{padding-left:26px;font-size:11px;}
+#content{flex:1;max-width:860px;padding:40px 50px;overflow-x:hidden;}
+h1,h2,h3,h4,h5,h6{color:var(--text);margin:1.8em 0 0.6em;}
+h1,h2{color:var(--amber);border-bottom:1px solid var(--border);padding-bottom:4px;}
+h3{color:#bbb;}
+a.anchor{opacity:0;font-size:0.75em;text-decoration:none;color:var(--dim);margin-right:6px;}
+h1:hover a.anchor,h2:hover a.anchor,h3:hover a.anchor,
+h4:hover a.anchor,h5:hover a.anchor,h6:hover a.anchor{opacity:1;}
+p{margin:0.6em 0;}
+a{color:var(--amber);}
+a:hover{text-decoration:underline;}
+code{background:var(--code-bg);color:var(--amber);padding:1px 5px;border-radius:3px;
+  font-family:Consolas,'Courier New',monospace;font-size:0.9em;}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:5px;
+  padding:14px 16px;overflow-x:auto;margin:0.8em 0;}
+pre code{background:none;padding:0;color:#c8c8c8;}
+table{border-collapse:collapse;width:100%;margin:0.8em 0;font-size:14px;}
+th,td{border:1px solid var(--border);padding:6px 12px;text-align:left;}
+th{background:var(--table-hdr);color:var(--amber);}
+tr:nth-child(even) td{background:rgba(255,255,255,.03);}
+ul,ol{margin:0.5em 0 0.5em 1.6em;}
+li{margin:0.25em 0;}
+blockquote{border-left:3px solid var(--amber);margin:0.8em 0;
+  padding:8px 14px;background:rgba(242,158,0,.06);color:var(--dim);}
+blockquote p{margin:0;}
+hr{border:none;border-top:1px solid var(--border);margin:1.6em 0;}
+@media(max-width:700px){
+  body{flex-direction:column;}
+  #toc{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);}
+}
+@media print{
+  body{background:#fff;color:#000;display:block;}
+  #toc{display:none;}
+  #content{max-width:100%;padding:0;margin:0;}
+  h1,h2{color:#000;border-bottom:1px solid #999;}
+  h2{page-break-before:always;}
+  h2:first-of-type{page-break-before:avoid;}
+  code,pre{background:#f5f5f5;color:#000;border-color:#ccc;}
+  th{background:#eee;}
+  a{color:#000;}
+  a.anchor{display:none;}
+}
+"""
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title}</title>
+<style>{css}</style>
+</head>
+<body>
+{toc_html}
+<main id="content">
+{body_html}
+</main>
+</body>
+</html>"""
 
 
 def _write_field(file_rel: str, record_type: str, record_id: str,
@@ -576,6 +944,46 @@ class WCTHandler(BaseHTTPRequestHandler):
                 "status_effects":  wc.STATUS_EFFECTS,
                 "styles":          styles_list,
             })
+
+        elif path == "/manual":
+            md_path = ROOT / "data" / "WORLD_MANUAL.md"
+            try:
+                md_text = md_path.read_text(encoding="utf-8")
+                html    = _render_manual_html(md_text, "Delve World Manual")
+                body    = html.encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", len(body))
+                self.end_headers()
+                self.wfile.write(body)
+            except Exception as e:
+                self._send_json({"error": f"Could not render manual: {e}"}, 500)
+
+        elif path == "/api/list_zones":
+            qs = parse_qs(parsed.query)
+            world_id = (qs.get("world_id") or [""])[0].strip()
+            if not world_id:
+                self._send_json({"error": "world_id required"}, 400)
+                return
+            world_path = DATA_DIR / world_id
+            if not world_path.is_dir():
+                self._send_json({"error": f"World '{world_id}' not found"}, 404)
+                return
+            skip = {"zone_state", "players", "__pycache__"}
+            zones = []
+            for z in sorted(world_path.iterdir()):
+                if not z.is_dir() or z.name in skip:
+                    continue
+                zone_toml = z / "zone.toml"
+                name = z.name
+                if zone_toml.exists():
+                    try:
+                        zdata = toml_load(zone_toml)
+                        name = zdata.get("name", z.name)
+                    except Exception:
+                        pass
+                zones.append({"id": z.name, "name": name})
+            self._send_json({"zones": zones})
 
         elif path == "/api/validate":
             # Run the validator and return its output
@@ -1045,6 +1453,40 @@ class WCTHandler(BaseHTTPRequestHandler):
                 self._send_json({"ok": True})
             except Exception as e:
                 self._send_json({"ok": False, "error": str(e)})
+
+        elif path == "/api/clone_object":
+            world_id  = body.get("world_id", "")
+            zone_id   = body.get("zone_id", "")
+            type_     = body.get("type", "")
+            source_id = body.get("source_id", "").strip()
+            new_id    = body.get("new_id", "").strip()
+            file_rel  = body.get("file", "")
+            if not world_id or not zone_id or not type_ or not source_id or not new_id:
+                self._send_json({"ok": False, "error": "world_id, zone_id, type, source_id, new_id required"})
+                return
+            zone_path = DATA_DIR / world_id / zone_id
+            result = _clone_entity(zone_path, type_, source_id, new_id, file_rel, zone_path)
+            self._send_json(result)
+
+        elif path == "/api/copy_to_world":
+            src_world = body.get("source_world_id", "")
+            src_zone  = body.get("source_zone_id", "")
+            type_     = body.get("type", "")
+            source_id = body.get("source_id", "").strip()
+            new_id    = body.get("new_id", "").strip()
+            tgt_world = body.get("target_world_id", "")
+            tgt_zone  = body.get("target_zone_id", "")
+            file_rel  = body.get("file", "")
+            if not src_world or not src_zone or not type_ or not source_id or not new_id or not tgt_world or not tgt_zone:
+                self._send_json({"ok": False, "error": "source_world_id, source_zone_id, type, source_id, new_id, target_world_id, target_zone_id required"})
+                return
+            src_zone_path = DATA_DIR / src_world / src_zone
+            tgt_zone_path = DATA_DIR / tgt_world / tgt_zone
+            if not tgt_zone_path.exists():
+                self._send_json({"ok": False, "error": f"Target zone '{tgt_world}/{tgt_zone}' not found"})
+                return
+            result = _clone_entity(src_zone_path, type_, source_id, new_id, file_rel, tgt_zone_path)
+            self._send_json(result)
 
         elif path == "/api/world_md":
             world_id = body.get("world_id", "")

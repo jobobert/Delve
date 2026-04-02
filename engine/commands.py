@@ -219,6 +219,13 @@ class CommandProcessor:
         raw = raw.strip()
         if not raw:
             return
+        # Semicolon chaining — split before alias expansion so macros work
+        if ';' in raw:
+            for part in raw.split(';'):
+                part = part.strip()
+                if part:
+                    self.process(part)
+            return
         parts = raw.lower().split(None, 1)
         verb  = parts[0]
         args  = parts[1] if len(parts) > 1 else ""
@@ -241,6 +248,7 @@ class CommandProcessor:
         if verb not in _NO_TICK_COMMANDS:
             self._tick_status_effects()
             self._apply_status_damage()
+            self._tick_npc_combat()
             self._processes.tick(self._ctx)
 
     def do_look(self) -> None:
@@ -826,6 +834,42 @@ class CommandProcessor:
                       f"(-{dmg} HP — {self.player.hp}/{self.player.max_hp})")
             if not self.player.is_alive:
                 self._out(Tag.COMBAT_DEATH, f"The {se_def['id']} claims you.")
+
+    def _tick_npc_combat(self) -> None:
+        """Hostile NPCs with attacks_npcs=True deal tick damage to non-hostile NPCs
+        in the same room each player action. Non-hostile NPCs are floored at 1 HP
+        (they never die) — when reduced to 1 HP they flee the room. They respawn
+        fresh when the zone is next loaded."""
+        room = self._current_room()
+        if not room:
+            return
+        npcs = room.get("_npcs", [])
+        hostiles     = [n for n in npcs
+                        if n.get("hostile") and n.get("attacks_npcs") and n.get("hp", 0) > 0]
+        non_hostiles = [n for n in npcs
+                        if not n.get("hostile") and n.get("hp", 0) > 1]
+        if not hostiles or not non_hostiles:
+            return
+        fled = []
+        for aggressor in hostiles:
+            for target in non_hostiles:
+                if target in fled:
+                    continue
+                atk  = aggressor.get("attack", 2)
+                def_ = target.get("defense", 1)
+                dmg  = max(1, atk - def_ + random.randint(-2, 3))
+                target["hp"] = max(1, target["hp"] - dmg)
+                self._out(Tag.COMBAT_HIT,
+                    f"{aggressor['name']} attacks {target['name']} for {dmg} damage!")
+                if target["hp"] <= 1:
+                    fled.append(target)
+                    self._out(Tag.OUTPUT,
+                        f"{target['name']} flees from the fight!")
+        for f in fled:
+            try:
+                room["_npcs"].remove(f)
+            except ValueError:
+                pass
 
     def _cmd_status(self, verb: str, args: str) -> None:
         """Combined character sheet: stats + equipped + inventory in one view."""

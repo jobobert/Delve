@@ -119,7 +119,7 @@ name = "Flooded Shack"
 description = "A sagging one-room shack lodged between the riverbank and a crumbling retaining wall."
 desc_long = "Watermarks stripe the walls at varying heights \\u2014 a record of past floods, each one higher than the last. A rusted stove sits cold in the corner, and personal effects have been left behind as though the owner stepped out and never came back. A loose board in the floor has shifted."
 exits = {north = "rl_unstable_current"}
-on_enter = [{op = "if_quest", then = [{op = "spawn_item", item_id = "rl_locket"}], else = [], quest_id = "rl_locket_return"}]
+on_enter = [{op = "if_quest", then = [{op = "spawn_item", item_id = "rl_locket"}], else = [], quest_id = "rl_locket_return", admin_comment = "Only show the locket if the script is active. Hmmm... this might create 2 lockets..."}]
 
 [[room]]
 id = "rl_guest_room"
@@ -148,7 +148,6 @@ desc_long = "One stall holds a calm mule regarding you without interest. The str
 items = ["rl_stable_coinpurse"]
 exits = {west = "rl_inn_common"}
 light = 6
-on_enter = [{op = "say", text = ""}]
 
 [[room]]
 id = "rl_city_center"

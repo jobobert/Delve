@@ -37,7 +37,7 @@ header {
 .hbtn {
   background: none; border: 1px solid var(--border); color: var(--text-dim);
   padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: inherit;
-  font-size: 14px; transition: all .15s;
+  font-size: 14px; transition: all .15s; text-decoration: none; display: inline-block;
 }
 .hbtn:hover { border-color: var(--accent); color: var(--accent); }
 .hbtn.primary { border-color: var(--accent); color: var(--accent); }
@@ -439,6 +439,25 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
 }
 .op-remove:hover { color: var(--red); }
 .op-help { font-size: 11px; color: var(--dim); font-style: italic; padding: 0 10px 2px; line-height: 1.4; }
+.op-admin-comment {
+  display: block; width: 100%; box-sizing: border-box;
+  background: transparent; border: none; border-top: 1px dashed var(--border);
+  color: var(--text-dim); font-style: italic; font-size: 11px;
+  padding: 3px 10px; font-family: inherit; outline: none;
+}
+.op-admin-comment:focus { background: var(--panel); }
+.op-admin-comment::placeholder { opacity: 0.5; }
+.comment-op {
+  background: color-mix(in srgb, var(--yellow) 8%, var(--bg));
+  border-left: 3px solid var(--yellow); border-radius: 4px;
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 6px; margin-bottom: 4px;
+}
+.comment-op-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--yellow); font-style: italic; font-size: 12px; font-family: inherit;
+}
+.comment-op-input::placeholder { opacity: 0.5; }
 .op-branch { margin-left: 16px; margin-top: 6px; }
 .op-branch-label { font-size: 13px; color: var(--text-dim); margin-bottom: 4px; font-style: italic; }
 .add-op-btn {
