@@ -13,7 +13,7 @@ Config file format
 ───────────────────
 Worlds use data/<world_id>/config.toml (preferred). Legacy config.py is still
 accepted as a fallback so existing worlds continue to work without changes.
-See data/WORLD_MANUAL.md §1 for the full config.toml field reference.
+See wct/WORLD_MANUAL.md §1 for the full config.toml field reference.
 
 Helper functions
 ──────────────────

@@ -87,7 +87,7 @@ conditions interact to gate content and reward completion.
 `on_sleep`, `on_wake` arrays, and door event arrays. Covers output, player
 state, inventory, quests, styles, world state, skills, status effects,
 prestige, companions, bank, light, player attributes, conditionals, and flow
-control. See `data/WORLD_MANUAL.md` Appendix C for the full op reference.
+control. See `wct/WORLD_MANUAL.md` Appendix C for the full op reference.
 
 ### Skills
 Skills are world-configurable — defined per-world in `data/<world_id>/config.toml`

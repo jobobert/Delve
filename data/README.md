@@ -9,7 +9,7 @@ A **world** is a subfolder of `data/` that contains a `config.toml` (or legacy
 it belongs to.
 
 For a full authoring reference (TOML formats, all script ops, condition keys,
-etc.) see [WORLD_MANUAL.md](WORLD_MANUAL.md) and [engine/README.md](../engine/README.md).
+etc.) see [WORLD_MANUAL.md](../wct/WORLD_MANUAL.md) and [engine/README.md](../engine/README.md).
 
 ---
 

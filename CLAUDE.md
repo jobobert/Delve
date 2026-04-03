@@ -100,11 +100,11 @@ Add an `elif name == "my_op":` branch in `ScriptRunner._exec()` in `engine/scrip
 Box-drawing chars (U+2500+), ✓/✗, ⚠ crash on cp1252 consoles. Use ASCII equivalents in runtime-printed strings. Em-dash (U+2014) is safe.
 
 ### toml file updates
-- Always reference WORLD_MANUAL.md when updating toml files to ensure compliance syntax is utilized.
+- Always reference wct/WORLD_MANUAL.md when updating toml files to ensure compliance syntax is utilized.
 
 ### After adding/updating/removing features
 - Update validate.py - if the change alters how TOML files are written and/or interact with the engine
 - Update the World Creation Tool (WCT) - if the change alters how TOML files are written, including scripting changes, new features, etc. 
 - Update applicable README files - for the section of the code that was altered
-- Update data/WORLD_MANUAL.md - if the change alters how TOML files are written, including scripting changes, new features, etc.
+- Update wct/WORLD_MANUAL.md - if the change alters how TOML files are written, including scripting changes, new features, etc.
 - Update FRONTEND_MANUAL.md - if change alters how frontends need to be coded to interact with the engine

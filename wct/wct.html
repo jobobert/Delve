@@ -2028,9 +2028,20 @@ function renderNpcEditor(main) {
   main.appendChild(fieldRow('Fallback Dialog', textareaInput(d.dialogue, v => { d.dialogue = v || undefined; markDirty(); }),
     null, 'Text shown when this NPC is talked to with no dialogue tree configured,\nor when a dialogue node cannot be found.'));
 
+  main.appendChild(fieldRow('Shared Dialogue File', textInput(d.dialogue_file || '', v => { d.dialogue_file = v || undefined; markDirty(); }),
+    null, 'Path to a shared dialogue file, relative to the world folder (e.g. shared/computer_core.toml).\nWhen set, this NPC loads that file instead of dialogues/<npc_id>.toml.\nMultiple NPCs can point to the same shared file — useful for terminals or multi-room entities.'));
+
   const _dlgNpcId = d.id || '';
-  const _existingDlg = (() => {
+  const _usingSharedDlg = !!d.dialogue_file;
+  // Derive filename stem from dialogue_file (e.g. "shared/computer_core.toml" → "computer_core")
+  const _sharedStem = _usingSharedDlg
+    ? d.dialogue_file.replace(/^.*[\\/]/, '').replace(/\.toml$/i, '') : '';
+  const _existingSharedDlg = (_usingSharedDlg && _sharedStem && WORLD_DATA?.zones?.['shared'])
+    ? ((WORLD_DATA.zones['shared'].dialogues || []).find(dl => dl._npc_id === _sharedStem) || null)
+    : null;
+  const _existingDlg = _usingSharedDlg ? null : (() => {
     for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+      if (zid === 'shared') continue;
       const dl = (zone.dialogues || []).find(dl => dl._npc_id === _dlgNpcId);
       if (dl) return {zone_id: zid, data: dl};
     }
@@ -2041,12 +2052,37 @@ function renderNpcEditor(main) {
   dlgRow.style.marginTop = '6px';
   const dlgStatus = document.createElement('span');
   dlgStatus.style.cssText = 'font-size:12px;color:var(--text-dim);flex:1';
-  dlgStatus.textContent = _existingDlg ? 'Dialogue tree linked' : 'No dialogue tree';
+  dlgStatus.textContent = _usingSharedDlg
+    ? (_existingSharedDlg ? `Shared: ${d.dialogue_file}` : `Not found: ${d.dialogue_file}`)
+    : (_existingDlg ? 'Dialogue tree linked' : 'No dialogue tree');
   const dlgBtn = document.createElement('button');
-  dlgBtn.className = _existingDlg ? 'hbtn' : 'hbtn primary';
-  dlgBtn.textContent = _existingDlg ? 'Open Dialogue' : 'Create Dialogue';
+  dlgBtn.className = (_existingDlg || _existingSharedDlg) ? 'hbtn' : 'hbtn primary';
+  dlgBtn.textContent = _usingSharedDlg
+    ? (_existingSharedDlg ? 'Open Shared Dialogue' : 'Create Shared Dialogue')
+    : (_existingDlg ? 'Open Dialogue' : 'Create Dialogue');
   dlgBtn.addEventListener('click', async () => {
-    if (_existingDlg) {
+    if (_usingSharedDlg) {
+      if (_existingSharedDlg) {
+        selectObject('dialogue', 'shared', _existingSharedDlg);
+      } else {
+        if (!_sharedStem) { setStatus('dialogue_file has no valid filename', 'err'); return; }
+        const r = await fetch('/api/create_dialogue', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({world_id: WORLD_ID, zone_id: 'shared', npc_id: _sharedStem})
+        });
+        const j = await r.json();
+        if (j.ok) {
+          setStatus('Shared dialogue created', 'ok');
+          const _saved = SELECTED ? {type: SELECTED.type, zone_id: SELECTED.zone_id, id: SELECTED.data.id || ''} : null;
+          await reloadWorld();
+          if (_saved) _restoreSelection(_saved);
+          const _newDlg = (WORLD_DATA?.zones?.['shared']?.dialogues || []).find(dl => dl._npc_id === _sharedStem);
+          if (_newDlg) selectObject('dialogue', 'shared', _newDlg);
+        } else {
+          setStatus('Error: ' + j.error, 'err');
+        }
+      }
+    } else if (_existingDlg) {
       selectObject('dialogue', _existingDlg.zone_id, _existingDlg.data);
     } else {
       if (!_dlgNpcId) { setStatus('Save the NPC first to get an ID', 'err'); return; }
@@ -2057,12 +2093,11 @@ function renderNpcEditor(main) {
       const j = await r.json();
       if (j.ok) {
         setStatus('Dialogue created', 'ok');
-        const _saved = SELECTED ? {type: SELECTED.type, zone_id: SELECTED.zone_id,
-          id: SELECTED.data.id || ''} : null;
+        const _saved = SELECTED ? {type: SELECTED.type, zone_id: SELECTED.zone_id, id: SELECTED.data.id || ''} : null;
         await reloadWorld();
         if (_saved) _restoreSelection(_saved);
-        // Now navigate to the new dialogue
         for (const [zid, zone] of Object.entries(WORLD_DATA?.zones || {})) {
+          if (zid === 'shared') continue;
           const dl = (zone.dialogues || []).find(dl => dl._npc_id === _dlgNpcId);
           if (dl) { selectObject('dialogue', zid, dl); break; }
         }

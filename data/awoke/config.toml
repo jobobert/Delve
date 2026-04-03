@@ -1,0 +1,5 @@
+world_name      = "Awoke"
+currency_name   = "Energy"
+default_style   = "brawling"
+new_char_hp     = 100
+vision_threshold = 3

@@ -35,7 +35,7 @@ When you receive a completed version of this file, do the following:
 2. **Exactly one `start = true`** room per world. The validator enforces this.
 3. **Quest rewards**: Use only `type = "gold"`, `type = "xp"`, `type = "item"`. Never `type = "prestige"` — award prestige via a `{ op = "prestige", amount = N, reason = "..." }` script op instead.
 4. **Flat dialogue format**: `[[response]]` blocks are flat with a `node = "parent_id"` field. They are NOT nested inside `[[node]]` blocks. Every dialogue tree must have a node with `id = "root"`.
-5. **Scripts in plain English**: The human describes scripts in plain English in this template. Convert them to the correct TOML op arrays using WORLD_MANUAL.md as reference.
+5. **Scripts in plain English**: The human describes scripts in plain English in this template. Convert them to the correct TOML op arrays using wct/WORLD_MANUAL.md as reference.
 6. **All NPC required fields**: `id`, `name`, `desc_short`, `desc_long`, `tags`, `style`, `style_prof`, `hp`, `max_hp`, `attack`, `defense`, `xp_reward`, `gold_reward`, `hostile`. Never omit any of these.
 7. **Style must exist**: The `style` field on every NPC (and `default_style` in config.toml) must match a style defined in a `styles/styles.toml` file in the world. If the human does not define custom styles, default to `brawling` and generate a minimal brawling style.
 8. **Exit format**: Use inline dict syntax for exits. Plain room IDs are fine for simple exits. Use dict form `{ to = "...", locked = true, lock_tag = "...", ... }` for locked or scripted exits.
@@ -44,7 +44,7 @@ When you receive a completed version of this file, do the following:
 11. **Companions and crafting**: If the human did not fill out these sections, do not generate those files. Do not invent commissions or companions that weren't requested.
 12. **Assumptions**: At the end of your response, list every assumption you made and every field you left at its default value. This helps the human review and correct the output.
 
-**Reference**: `data/WORLD_MANUAL.md` is authoritative for all field names, script ops, and TOML syntax patterns.
+**Reference**: `wct/WORLD_MANUAL.md` is authoritative for all field names, script ops, and TOML syntax patterns.
 
 <!--
 ═══════════════════════════════════════════════════════════════════════════════
@@ -947,4 +947,4 @@ When you receive a completed version of this file, do the following:
 
 ---
 
-*Reference: `data/WORLD_MANUAL.md` — authoritative spec for all TOML field names, script ops, and syntax patterns.*
+*Reference: `wct/WORLD_MANUAL.md` — authoritative spec for all TOML field names, script ops, and syntax patterns.*

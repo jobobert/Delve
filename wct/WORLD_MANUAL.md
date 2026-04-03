@@ -398,6 +398,7 @@ NPCs are defined in `[[npc]]` blocks in a zone's `npcs.toml`.
 | `hostile` | bool | **Yes** | No | If `true`, NPC attacks player on sight |
 | `attacks_npcs` | bool | No | No | Only meaningful on hostile NPCs. If `true`: (1) this NPC deals tick damage to non-hostile NPCs in the same room each player action — non-hostile NPCs flee at 1 HP (they never permanently die); (2) non-hostile NPCs in the room help the player fight this NPC during combat. `validate.py` warns when hostile and non-hostile NPCs share room spawns without this flag set. |
 | `dialogue` | string | No | No | Fallback line if no dialogue tree file exists |
+| `dialogue_file` | string | No | No | Path to a shared dialogue file relative to the world folder (e.g. `shared/computer_core.toml`). When set, overrides the default `dialogues/<npc_id>.toml` lookup. Multiple NPCs can share one file — useful for terminals or multi-room entities. |
 | `shop` | list | No | No | Shop inventory; see [Section 5.5](#55-shops) |
 | `rest_cost` | int | No | No | Gold cost for player to rest here (innkeeper behaviour) |
 | `give_accepts` | list | No | No | Items the NPC accepts; see [Section 5.6](#56-item-acceptance-give_accepts) |

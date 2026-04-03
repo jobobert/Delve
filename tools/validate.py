@@ -263,7 +263,7 @@ _NPC_REQUIRED = ("id", "name", "hp", "max_hp", "attack", "defense",
                   "style_prof", "desc_short", "desc_long")
 
 _NPC_KNOWN = set(_NPC_REQUIRED) | {
-    "shop", "rest_cost", "dialogue", "spawn_chance",
+    "shop", "rest_cost", "dialogue", "dialogue_file", "spawn_chance",
     "respawn", "respawn_time", "kill_script", "gear_affinity",
     "admin_comment", "give_accepts", "round_script",
 }
@@ -318,7 +318,12 @@ def validate_npcs(npcs, items, styles):
         is_hostile   = npc.get("hostile", False)
         has_shop     = bool(npc.get("shop"))
         has_dlg_str  = bool(npc.get("dialogue", "").strip())
-        has_dlg_file = nid in dialogue_ids
+        dlg_file_field = npc.get("dialogue_file", "")
+        if dlg_file_field:
+            shared_path = _CURRENT_WORLD / dlg_file_field
+            if not shared_path.exists():
+                err(f"NPC '{nid}' dialogue_file '{dlg_file_field}' not found")
+        has_dlg_file = (nid in dialogue_ids) or bool(dlg_file_field)
 
         if not has_dlg_file:
             if has_shop:

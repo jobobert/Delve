@@ -4,7 +4,7 @@
 # and overrides all engine defaults. This file is version-controlled and belongs
 # with your world data.
 #
-# See data/WORLD_MANUAL.md for the full field reference.
+# See wct/WORLD_MANUAL.md for the full field reference.
 
 # ── World identity ─────────────────────────────────────────────────────────────
 # Displayed in the map header and world-specific messages.

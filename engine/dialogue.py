@@ -6,6 +6,14 @@ used; otherwise the NPC's plain `dialogue` string is shown and the conversation
 ends. Trees are cached in memory after first load; call reload_tree() or
 reload_all() after editing files during a running session.
 
+Shared dialogue files
+─────────────────────
+An NPC may set `dialogue_file = "shared/computer_core.toml"` (path relative to
+the world root) to load its dialogue tree from an explicit file instead of the
+default `dialogues/<npc_id>.toml`. Multiple NPCs can point to the same file —
+useful for terminals, signs, or any entity that should behave identically across
+many rooms. The shared file uses exactly the same [[node]] / [[response]] format.
+
 Dialogue node format
 ────────────────────
 Each tree has one or more [[node]] sections:
@@ -132,6 +140,28 @@ def _build_path_map() -> dict[str, Path]:
     return result
 
 
+def _load_tree_from_path(path: Path) -> dict | None:
+    """Load a dialogue tree from an explicit path. Cached by resolved path string.
+
+    Used when an NPC sets `dialogue_file` to a shared file rather than the
+    default zone-local dialogues/<npc_id>.toml.
+    """
+    cache_key = str(path.resolve())
+    if cache_key in _CACHE:
+        return _CACHE[cache_key]
+    if not path.exists():
+        _CACHE[cache_key] = None
+        return None
+    raw   = toml_load(path)
+    nodes = {n["id"]: n for n in raw.get("node", []) if n.get("id")}
+    for resp in raw.get("response", []):
+        parent_id = resp.get("node", "")
+        if parent_id in nodes:
+            nodes[parent_id].setdefault("response", []).append(resp)
+    _CACHE[cache_key] = nodes
+    return nodes
+
+
 def load_tree(npc_id: str) -> dict | None:
     """Return {node_id: node_dict} for an NPC's dialogue tree, or None.
 
@@ -255,7 +285,11 @@ class DialogueSession:
         self.player = player
         self.quests = quests
         self.ctx    = ctx
-        self._tree  = load_tree(npc.get("id",""))
+        dlg_file = npc.get("dialogue_file")
+        if dlg_file:
+            self._tree = _load_tree_from_path(_DATA_ROOT / dlg_file)
+        else:
+            self._tree = load_tree(npc.get("id", ""))
         self._node: str = "root"
         self.done   = False
         self._pending_output: list[tuple[str,str]] = []

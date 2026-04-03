@@ -65,7 +65,7 @@ def _load_world(world_id: str) -> dict:
     world = {
         "zones":  {},   # zone_id → {rooms, items, npcs, quests, dialogues, companions, crafting}
     }
-    skip = {"zone_state", "players", "__pycache__"}
+    skip = {"zone_state", "players", "__pycache__", "shared"}
     for zone_dir in sorted(world_base.iterdir()):
         if not zone_dir.is_dir() or zone_dir.name in skip:
             continue
@@ -183,6 +183,30 @@ def _load_world(world_id: str) -> dict:
                 pass
 
         world["zones"][zid] = zone
+
+    # Shared dialogues — data/<world_id>/shared/*.toml
+    # Scanned separately so they don't appear as a game zone, but are
+    # accessible via the NPC editor "Open/Create Shared Dialogue" button.
+    shared_dir = world_base / "shared"
+    if shared_dir.exists():
+        shared_dlgs = []
+        for path in sorted(shared_dir.glob("*.toml")):
+            try:
+                data = toml_load(path)
+                data["_file"]   = str(path.relative_to(ROOT))
+                data["_npc_id"] = path.stem
+                shared_dlgs.append(data)
+            except Exception:
+                pass
+        if shared_dlgs:
+            world["zones"]["shared"] = {
+                "id":         "shared",
+                "_is_shared": True,
+                "rooms":      [], "items":    [], "npcs":      [],
+                "quests":     [], "crafting": [], "companions":[], "styles": [],
+                "processes":  [], "files":    [],
+                "dialogues":  shared_dlgs,
+            }
 
     return world
 
@@ -950,7 +974,7 @@ class WCTHandler(BaseHTTPRequestHandler):
             })
 
         elif path == "/manual":
-            md_path = ROOT / "data" / "WORLD_MANUAL.md"
+            md_path = TOOLS_DIR / "WORLD_MANUAL.md"
             try:
                 md_text = md_path.read_text(encoding="utf-8")
                 html    = _render_manual_html(md_text, "Delve World Manual")
@@ -1159,7 +1183,8 @@ class WCTHandler(BaseHTTPRequestHandler):
             if not world_id or not zone_id or not npc_id:
                 self._send_json({"ok": False, "error": "world_id, zone_id and npc_id required"})
                 return
-            dlg_dir   = DATA_DIR / world_id / zone_id / "dialogues"
+            dlg_dir   = (DATA_DIR / world_id / "shared") if zone_id == "shared" \
+                        else (DATA_DIR / world_id / zone_id / "dialogues")
             dlg_dir.mkdir(parents=True, exist_ok=True)
             file_path = dlg_dir / f"{npc_id}.toml"
             if file_path.exists():
@@ -1304,7 +1329,8 @@ class WCTHandler(BaseHTTPRequestHandler):
                     self._send_json({"ok": False, "error": str(e)})
 
             elif type_ == "dialogue":
-                dlg_path = DATA_DIR / world_id / zone_id / "dialogues" / f"{eid}.toml"
+                dlg_path = (DATA_DIR / world_id / "shared" / f"{eid}.toml") if zone_id == "shared" \
+                           else (DATA_DIR / world_id / zone_id / "dialogues" / f"{eid}.toml")
                 if not dlg_path.exists():
                     self._send_json({"ok": False, "error": f"Dialogue '{eid}.toml' not found"})
                     return
