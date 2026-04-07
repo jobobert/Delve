@@ -72,7 +72,7 @@ next = "apologise"
 [[node]]
 id   = "emerald_knowledge"
 line = "The Emerald. Gregor Aldenmoor's stone. I knew Gregor — not well, but I knew of him. If the gem is in that dragon, you'll need something sharper than what you're carrying to get it out. Dragon belly is thick."
-script = [{ op = "skill_check", skill = "social", dc = 10, silent = true, on_pass = [{op = "set_flag", flag = "thornbury_friendly"}, {op = "give_item", item_id = "thornbury_sword"}, {op = "message", text = "She reaches through the cottage wall — which is apparently illusory — and produces a green-bladed shortsword. 'Take it. I have no use for it anymore.'", tag = "system"}], on_fail = [{op = "message", text = "She nods slowly but doesn't offer anything further.", tag = "system"}] }]
+script = [{ op = "skill_check", skill = "social", dc = 10, silent = true, on_pass = [{op = "set_flag", flag = "thornbury_friendly"}, {op = "if_not_flag", flag = "received_thornbury_sword", then = [{op = "set_flag", flag = "received_thornbury_sword"}, {op = "give_item", item_id = "thornbury_sword"}, {op = "message", text = "She reaches through the cottage wall — which is apparently illusory — and produces a green-bladed shortsword. 'Take it. I have no use for it anymore.'", tag = "system"}], else = [{op = "message", text = "She smiles. 'You've already got it, I notice.'", tag = "system"}]}], on_fail = [{op = "message", text = "She nods slowly but doesn't offer anything further.", tag = "system"}] }]
 
 [[response]]
 node = "emerald_knowledge"

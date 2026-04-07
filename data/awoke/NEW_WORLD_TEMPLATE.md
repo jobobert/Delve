@@ -212,7 +212,7 @@ Lighting should be used extensively. Less power = less light, certain areas woul
 - At least one npc needs rescuing
 - A few other crew members should be working on systems
 - The aliens have already been discussed
-- The ships computer (gets "smarter" as repairs are made) - uses a common dialog file for multiple "terminals" across the ship
+- The ship's computer (gets "smarter" as repairs are made) - uses a common dialog file for multiple "terminals" across the ship
 
 ### Item and Tag Notes
 

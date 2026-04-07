@@ -54,6 +54,7 @@ Conditions (on nodes or responses):
   { level_gte = N }              — player.level >= N
   { skill = "id", min = N }      — skill value >= N
   { gold = N }                   — player gold >= N
+  { gold_max = N }               — player gold <= N
   { prestige_min = N }           — prestige >= N
   { prestige_max = N }           — prestige <= N
   { affinity = "tag" }           — player has this prestige affinity
@@ -249,6 +250,10 @@ def _check_condition(cond: dict | None, player, quests) -> bool:
     if "gold" in cond:
         # { gold = 50 }  — player must have at least this much gold
         if player.gold < int(cond["gold"]):
+            return False
+    if "gold_max" in cond:
+        # { gold_max = 9 }  — player must have at most this much gold
+        if player.gold > int(cond["gold_max"]):
             return False
     if "no_companion" in cond:
         # { no_companion = true }  — only show if player has no companion

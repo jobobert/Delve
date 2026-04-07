@@ -2354,7 +2354,7 @@ function renderItemEditor(main) {
     'Effects applied when the item is equipped, used, or hits an enemy.\n' +
     'stat_bonus: passive stat while equipped (attack/defense/max_hp/carry_capacity)\n' +
     'on_equip: flavour message shown when equipping\n' +
-    'on_use: heal/special applied when "use <item>" is typed\n' +
+    'on_use: heal applied when "use <item>" is typed (legacy — prefer the on_use script array in the Scripts section below for complex logic)\n' +
     'on_hit: proc chance on weapon hit (ability: bleed or stun)'));
   if (!Array.isArray(d.effects)) d.effects = [];
   const effectsList = document.createElement('div'); effectsList.className = 'effects-list';
@@ -2470,6 +2470,7 @@ function renderItemEditor(main) {
   scriptDiv.style.display='flex'; scriptDiv.style.gap='8px'; scriptDiv.style.flexWrap='wrap';
   scriptDiv.appendChild(scriptButton('on_get',  d.on_get,  ops => d.on_get  = ops));
   scriptDiv.appendChild(scriptButton('on_drop', d.on_drop, ops => d.on_drop = ops));
+  scriptDiv.appendChild(scriptButton('on_use',  d.on_use,  ops => d.on_use  = ops));
   main.appendChild(scriptDiv);
 
   main.appendChild(sectionTitle('Commands',
@@ -4199,7 +4200,7 @@ function buildDlgNodeCard(node, ni, dlg, rebuild) {
 
       // Condition badge for this line
       const lineCond = _lineCond(entry);
-      const lineCondBtn = document.createElement('span'); lineCondBtn.className = 'dlg-cond-badge';
+      const lineCondBtn = document.createElement('button'); lineCondBtn.type = 'button'; lineCondBtn.className = 'dlg-cond-badge';
       lineCondBtn.style.cssText = 'font-size:10px;cursor:pointer;';
       const _updateLineCondBtn = () => {
         const s = summariseCond(_lineCond(node.lines[li]));
@@ -4436,6 +4437,7 @@ const COND_TYPES = [
   {key:'quest_complete', label:'quest complete',      fields:['quest_complete']},
   {key:'not_quest',      label:'quest NOT active',    fields:['not_quest']},
   {key:'gold',           label:'has gold ≥',          fields:['gold']},
+  {key:'gold_max',       label:'has gold ≤',          fields:['gold_max']},
   {key:'skill',          label:'skill ≥',             fields:['skill','min']},
   {key:'item',           label:'has item',            fields:['item']},
   {key:'level_gte',      label:'level ≥',             fields:['level_gte']},
@@ -4465,6 +4467,7 @@ function summariseCond(cond) {
   if (t === 'prestige_min') return `prestige≥${v}`;
   if (t === 'prestige_max') return `prestige≤${v}`;
   if (t === 'level_gte')    return `level≥${v}`;
+  if (t === 'gold_max')     return `gold≤${v}`;
   return `${t}=${v}`;
 }
 
@@ -5222,6 +5225,11 @@ const OP_SCHEMA = {
   process_start:    [{key:'process_id', type:'text',    label:'process'}],
   process_stop:     [{key:'process_id', type:'text',    label:'process'}],
   process_pause:    [{key:'process_id', type:'text',    label:'process'}],
+  set_attr:         [{key:'name',       type:'text',    label:'attr name'}, {key:'value', type:'num', label:'value'}],
+  adjust_attr:      [{key:'name',       type:'text',    label:'attr name'}, {key:'amount', type:'num', label:'amount'}],
+  if_attr:          [{key:'name',       type:'text',    label:'attr name'}, {key:'min', type:'num', label:'min'}, {key:'max', type:'num', label:'max'}, {branch:'then'}, {branch:'else'}],
+  adjust_item_stat: [{key:'slot',       type:'text',    label:'slot', placeholder:'slot or item_id'}, {key:'item_id', type:'item_ref', label:'item_id (alt)'}, {key:'stat', type:'text', label:'stat'}, {key:'amount', type:'num', label:'amount'}],
+  set_item_stat:    [{key:'slot',       type:'text',    label:'slot', placeholder:'slot or item_id'}, {key:'item_id', type:'item_ref', label:'item_id (alt)'}, {key:'stat', type:'text', label:'stat'}, {key:'value',  type:'num', label:'value'}],
 };
 const OP_NAMES = Object.keys(OP_SCHEMA).sort();
 
@@ -5279,6 +5287,11 @@ const OP_HELP = {
   teach_style:       'Teach the player a fighting style.',
   teleport_player:   'Move the player to a different room with an optional message.',
   unlock_exit:       'Make a previously locked directional exit usable again.',
+  set_attr:          'Set a world-defined player attribute to an exact value (clamped to min/max).',
+  adjust_attr:       'Add or subtract from a world-defined player attribute (clamped to min/max).',
+  if_attr:           'Branch then/else based on whether a player attribute\'s value is within [min, max].',
+  adjust_item_stat:  'Add or subtract from a stat_bonus on an equipped (or carried) item. Use slot= for equipped items, item_id= for inventory items.',
+  set_item_stat:     'Set a stat_bonus on an equipped (or carried) item to an exact value. Use slot= for equipped items, item_id= for inventory items.',
 };
 
 function openScriptModal(title, opsArray, callback) {
@@ -6535,6 +6548,7 @@ function buildXRef() {
       const iname = item.name || item.id;
       scanObj(item.on_get,  'item', zid, item.id, iname, 'on_get');
       scanObj(item.on_drop, 'item', zid, item.id, iname, 'on_drop');
+      scanObj(item.on_use,  'item', zid, item.id, iname, 'on_use');
     });
 
     // Quests — giver and reward items
@@ -7911,8 +7925,12 @@ function exportDialogueDot() {
     if(n==='give_gold')      return `give_gold: ${op.amount||'?'}`;
     if(n==='give_xp')        return `give_xp: ${op.amount||'?'}`;
     if(n==='damage')         return `damage: ${op.amount||'?'}`;
-    if(n==='advance_quest')  return `advance_quest: ${op.quest_id||'?'} -> step ${op.step||'?'}`;
-    if(n==='complete_quest') return `complete_quest: ${op.quest_id||'?'}`;
+    if(n==='advance_quest')   return `advance_quest: ${op.quest_id||'?'} -> step ${op.step||'?'}`;
+    if(n==='complete_quest')  return `complete_quest: ${op.quest_id||'?'}`;
+    if(n==='adjust_item_stat')return `adjust_item_stat: ${op.slot||op.item_id||'?'}.${op.stat||'?'} ${op.amount>=0?'+':''}${op.amount??'?'}`;
+    if(n==='set_item_stat')   return `set_item_stat: ${op.slot||op.item_id||'?'}.${op.stat||'?'} = ${op.value??'?'}`;
+    if(n==='adjust_attr')     return `adjust_attr: ${op.name||'?'} ${op.amount>=0?'+':''}${op.amount??'?'}`;
+    if(n==='set_attr')        return `set_attr: ${op.name||'?'} = ${op.value??'?'}`;
     return n;
   };
   const _fmtCond = c => {
@@ -7923,8 +7941,16 @@ function exportDialogueDot() {
     if(c.item)          p.push(`has_item: ${c.item}`);
     if(c.quest)         p.push(`quest ${c.quest} step ${c.step||'?'}`);
     if(c.quest_complete)p.push(`quest_done: ${c.quest_complete}`);
+    if(c.not_quest)     p.push(`not_quest: ${c.not_quest}`);
     if(c.gold)          p.push(`gold>=${c.gold}`);
+    if(c.gold_max)      p.push(`gold<=${c.gold_max}`);
     if(c.skill)         p.push(`skill ${c.skill}>=${c.min||'?'}`);
+    if(c.level_gte)     p.push(`level>=${c.level_gte}`);
+    if(c.prestige_min)  p.push(`prestige>=${c.prestige_min}`);
+    if(c.prestige_max)  p.push(`prestige<=${c.prestige_max}`);
+    if(c.affinity)      p.push(`affinity: ${c.affinity}`);
+    if(c.no_affinity)   p.push(`no_affinity: ${c.no_affinity}`);
+    if(c.no_companion)  p.push(`no_companion`);
     return p.join(', ');
   };
 
@@ -8047,8 +8073,12 @@ function _dlgFmtOp(op) {
   if (n==='give_gold')      return `give_gold: ${op.amount||'?'}`;
   if (n==='give_xp')        return `give_xp: ${op.amount||'?'}`;
   if (n==='damage')         return `damage: ${op.amount||'?'}`;
-  if (n==='advance_quest')  return `advance_quest: ${op.quest_id||'?'} -> step ${op.step||'?'}`;
-  if (n==='complete_quest') return `complete_quest: ${op.quest_id||'?'}`;
+  if (n==='advance_quest')   return `advance_quest: ${op.quest_id||'?'} -> step ${op.step||'?'}`;
+  if (n==='complete_quest')  return `complete_quest: ${op.quest_id||'?'}`;
+  if (n==='adjust_item_stat')return `adjust_item_stat: ${op.slot||op.item_id||'?'}.${op.stat||'?'} ${op.amount>=0?'+':''}${op.amount??'?'}`;
+  if (n==='set_item_stat')   return `set_item_stat: ${op.slot||op.item_id||'?'}.${op.stat||'?'} = ${op.value??'?'}`;
+  if (n==='adjust_attr')     return `adjust_attr: ${op.name||'?'} ${op.amount>=0?'+':''}${op.amount??'?'}`;
+  if (n==='set_attr')        return `set_attr: ${op.name||'?'} = ${op.value??'?'}`;
   return n;
 }
 
@@ -8079,8 +8109,16 @@ function _dotFmtCondition(c) {
   if (c.item)           p.push(`has_item: ${c.item}`);
   if (c.quest)          p.push(`quest ${c.quest} step ${c.step||'?'}`);
   if (c.quest_complete) p.push(`quest_done: ${c.quest_complete}`);
+  if (c.not_quest)      p.push(`not_quest: ${c.not_quest}`);
   if (c.gold)           p.push(`gold>=${c.gold}`);
+  if (c.gold_max)       p.push(`gold<=${c.gold_max}`);
   if (c.skill)          p.push(`skill ${c.skill}>=${c.min||'?'}`);
+  if (c.level_gte)      p.push(`level>=${c.level_gte}`);
+  if (c.prestige_min)   p.push(`prestige>=${c.prestige_min}`);
+  if (c.prestige_max)   p.push(`prestige<=${c.prestige_max}`);
+  if (c.affinity)       p.push(`affinity: ${c.affinity}`);
+  if (c.no_affinity)    p.push(`no_affinity: ${c.no_affinity}`);
+  if (c.no_companion)   p.push(`no_companion`);
   return p.join(', ');
 }
 
@@ -8613,7 +8651,8 @@ function _showDlgGraph(main, d) {
 
     const shortId = nid.length > 22 ? nid.slice(0,21)+'…' : nid;
     const idTxt   = mkT(shortId, x + DG_NW/2, y + 15, 13, isOrphan ? '#555' : '#222', true, false, 'middle');
-    const line    = n.line || (Array.isArray(n.lines) ? n.lines[0] : '') || '';
+    const _lt = e => (typeof e === 'string' ? e : (e?.text ?? ''));
+    const line    = n.line || (Array.isArray(n.lines) ? _lt(n.lines[0]) : '') || '';
     const lineStr = line.length > 28 ? line.slice(0,27)+'…' : (line || '(no text)');
     const lineTxt = mkT(lineStr, x + 7, y + DG_HDR + 17, 12, isOrphan ? '#444' : '#cdd6e4', false, true, null);
     const ops = _dotFmtScriptOps(n.script || []);

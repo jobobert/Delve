@@ -1676,11 +1676,22 @@ class CommandProcessor:
         if not item:
             self._out(Tag.ERROR, f"You don't have '{args}'.")
             return
+        on_use_script = item.get("on_use", [])
         fx = item_on_use_effect(item)
-        if not fx:
+        if not fx and not on_use_script:
             self._out(Tag.ERROR, f"You can't use {item['name']} like that.")
             return
-        # Collect all effects for this item, not just first on_use
+
+        # Script-based on_use: run ops; only consume if not aborted by 'fail'.
+        if on_use_script:
+            from engine.script import ScriptRunner
+            completed = ScriptRunner(self._ctx).run(on_use_script)
+            if completed:
+                self.player.remove_item(item)
+                self._maybe_free_npc_attack("using an item")
+            return
+
+        # Effects-based on_use (legacy: heal, clear_status_*).
         all_fx = [f for f in item.get("effects", []) if f.get("type") == "on_use"]
         used = False
         messages = []

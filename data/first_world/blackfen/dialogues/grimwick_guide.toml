@@ -40,6 +40,7 @@ condition = { gold = 10 }
 node = "offer"
 text = "I don't have ten gold right now."
 next = "no_gold"
+condition = { gold_max = 9 }
 
 [[response]]
 node = "offer"

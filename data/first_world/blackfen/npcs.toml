@@ -262,5 +262,4 @@ xp_reward   = 60
 kill_script = [
   { op = "message", text = "The hunter goes down hard. The others back into the brush.", tag = "combat_death" },
   { op = "set_flag", flag = "redbelly_patrol_cleared" },
-  { op = "give_xp", amount = 60, silent = true },
 ]

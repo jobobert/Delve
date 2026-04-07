@@ -1,5 +1,5 @@
 """
-script.py — Lightweight script interpreter for Delve.  (46 ops)
+script.py — Lightweight script interpreter for Delve.  (48 ops)
 
 Scripts are arrays of operation tables in TOML data files.  They appear in:
   • NPC dialogue nodes and responses
@@ -119,6 +119,12 @@ Light mechanic:
   { op = "set_vision",     amount = N }                   — set player.vision_threshold
   { op = "adjust_vision",  amount = N }                   — adjust vision_threshold (darkvision etc.)
 
+Item stat modification:
+  { op = "adjust_item_stat", slot = "weapon", stat = "attack", amount = N }
+  { op = "set_item_stat",    slot = "weapon", stat = "attack", value = N }
+  — stat: "attack" | "defense" | "max_hp" | "carry_capacity"
+  — use slot = "..." to target equipped slot, or item_id = "..." to target by item ID
+
 Standalone script files:
   { op = "run_script_file", path = "scripts/event.toml" } — run ops from a world-relative TOML file
 
@@ -226,12 +232,14 @@ class ScriptRunner:
     def __init__(self, ctx: GameContext):
         self.ctx = ctx
 
-    def run(self, ops: list[dict]) -> None:
+    def run(self, ops: list[dict]) -> bool:
+        """Run all ops in order.  Returns True if completed, False if aborted by 'fail'."""
         try:
             for op in ops:
                 self._exec(op)
+            return True
         except _ScriptAbort:
-            pass  # 'fail' op fired — stop silently
+            return False  # 'fail' op fired — stop silently
 
     def _run_branch(self, condition: bool, op: dict) -> None:
         """Execute the 'then' or 'else' sub-list of a conditional op."""
@@ -833,6 +841,36 @@ class ScriptRunner:
             ctx.player.vision_threshold = max(
                 0, ctx.player.vision_threshold + int(op.get("amount", 0))
             )
+
+        # ── Item stat modification ────────────────────────────────────────────
+        elif name in ("adjust_item_stat", "set_item_stat"):
+            # { op = "adjust_item_stat", slot = "weapon", stat = "attack", amount = 1 }
+            # { op = "set_item_stat",    slot = "weapon", stat = "attack", value = 15 }
+            # Also supports item_id = "..." to target by inventory ID instead of slot.
+            stat    = op.get("stat", "")
+            slot    = op.get("slot", "")
+            item_id = op.get("item_id", "")
+            target  = None
+            if slot:
+                target = p.equipped.get(slot)
+            elif item_id:
+                target = next(
+                    (i for i in list(p.inventory) + [v for v in p.equipped.values() if v]
+                     if i and i.get("id") == item_id),
+                    None,
+                )
+            if target and stat:
+                effects = target.setdefault("effects", [])
+                entry   = next((e for e in effects
+                                if e.get("type") == "stat_bonus" and e.get("stat") == stat),
+                               None)
+                if entry is None:
+                    entry = {"type": "stat_bonus", "stat": stat, "amount": 0}
+                    effects.append(entry)
+                if name == "adjust_item_stat":
+                    entry["amount"] = int(entry.get("amount", 0)) + int(op.get("amount", 0))
+                else:
+                    entry["amount"] = int(op.get("value", 0))
 
         # ── Standalone script files ───────────────────────────────────────────
         elif name == "run_script_file":

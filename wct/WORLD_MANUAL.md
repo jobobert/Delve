@@ -583,6 +583,7 @@ Items are defined in `[[item]]` blocks in a zone's `items.toml`.
 | `effects` | list | No | Passive or triggered effects — see [Section 6.2](#62-item-effects) |
 | `on_get` | array | No | Script run when player picks up this item |
 | `on_drop` | array | No | Script run when player drops this item |
+| `on_use` | array | No | Script run when player types `use <item>` — preferred over `effects` `on_use` for consumables with complex logic |
 | `commands` | list | No | Custom verbs the player can type — see [Section 6.4](#64-item-commands) |
 
 ### 6.2 Item Effects
@@ -619,11 +620,37 @@ Active while the item is equipped. Amount can be negative (penalty items).
 | `chance` | 0.0 – 1.0 | Probability per hit |
 | `magnitude` | int | Stun: turns; Bleed: damage per tick |
 
-#### `on_use` — Consumable healing
+#### `on_use` — Consumable healing (legacy)
 
 ```toml
 { type = "on_use", heal = 30 }
 { type = "on_use", heal = 30, message = "The tonic floods your limbs with warmth." }
+```
+
+> **Prefer the `on_use` script array** for consumables with any conditional logic, flags, or item-stat
+> modification. The top-level `on_use = [...]` array (same format as `on_get`/`on_drop`) is evaluated
+> first and takes priority over this `effects` entry. Only use `effects` `on_use` for simple
+> heal-only consumables.
+
+#### `on_use` script array — Full scripting on consume
+
+The `on_use` field at the item's top level is a script array (same format as `on_get`/`on_drop`).
+It fires when the player types `use <item>`. If a `fail` op runs, the item is **not** consumed.
+
+```toml
+[[item]]
+id    = "buff_tonic"
+name  = "Buff Tonic"
+on_use = [
+  { op = "if_not_flag", flag = "tonic_used", then = [
+    { op = "adjust_item_stat", slot = "weapon", stat = "attack", amount = 2 },
+    { op = "set_flag",  flag = "tonic_used" },
+    { op = "message",   tag = "system", text = "The tonic sharpens your blade." },
+  ], else = [
+    { op = "message", tag = "system", text = "It has already been used." },
+    { op = "fail" },
+  ] },
+]
 ```
 
 ### 6.3 Item Examples
@@ -796,6 +823,7 @@ kill_script = [
 | NPC | `round_script` | After each combat round (both alive) |
 | Item | `on_get` | Player picks up item |
 | Item | `on_drop` | Player drops item |
+| Item | `on_use` | Player types `use <item>` |
 | Item | `commands[].ops` | Player types the item's custom verb |
 | Room | `on_enter` | Player enters the room |
 | Room | `on_exit` | Player leaves the room — fires before movement |
@@ -1700,6 +1728,7 @@ Conditions control whether a node or response is visible.
 | `level_gte` | int | player.level ≥ N |
 | `skill` | string + `min` | player.skills[skill] ≥ min |
 | `gold` | int | player has ≥ N gold |
+| `gold_max` | int | player has ≤ N gold |
 | `prestige_min` | int | prestige ≥ N (alias: `min_prestige`) |
 | `prestige_max` | int | prestige ≤ N (alias: `max_prestige`) |
 | `affinity` | string | player has this prestige affinity |
@@ -2659,7 +2688,7 @@ passives = [
 | `armor_bonus` | Max defense % bonus from matching armor at prof 100 |
 | `learned_from` | NPC `id` who teaches this style, or `""` for self-taught/innate |
 | `learned_at` | Minimum player level required to learn |
-| `passives` | Array of passive ability definitions (see H.5) |
+| `passives` | Array of passive ability definitions (see §13.4.5) |
 
 ---
 
@@ -3051,7 +3080,7 @@ qualities = [
 | `xp_reward` | No | XP awarded when the player collects |
 | `weight` | No | Item weight of the finished item |
 | `on_complete` | No | Script ops run automatically when the item is collected |
-| `qualities` | Yes | List of quality tier dicts (see G.5) |
+| `qualities` | Yes | List of quality tier dicts (see §14.5.5) |
 
 ---
 
@@ -3860,6 +3889,49 @@ within `[min, max]` inclusive.
 
 ---
 
+## 18.4 Item Stat Modification Ops
+
+These ops modify the `stat_bonus` entries on an equipped (or carried) item at runtime.
+Use them for buff consumables and one-time upgrade items.
+
+```toml
+# Increase the attack bonus on the currently equipped weapon by 1
+{ op = "adjust_item_stat", slot = "weapon", stat = "attack", amount = 1 }
+
+# Set the defense bonus on the equipped chest piece to exactly 10
+{ op = "set_item_stat", slot = "chest", stat = "defense", value = 10 }
+
+# Target a specific item by ID instead of by slot
+{ op = "adjust_item_stat", item_id = "thornbury_sword", stat = "attack", amount = 2 }
+```
+
+| Attribute | Type | Required (one of) | Description |
+|-----------|------|:-----------------:|-------------|
+| `slot` | string | `slot` or `item_id` | Equipment slot to target (e.g. `"weapon"`, `"chest"`) |
+| `item_id` | string | `slot` or `item_id` | Specific item ID to target (searches inventory + equipped) |
+| `stat` | string | Yes | Which stat to modify (`attack`, `defense`, `max_hp`, `carry_capacity`, …) |
+| `amount` | int | `adjust_item_stat` | Amount to add (positive or negative) |
+| `value` | int | `set_item_stat` | New absolute value for the stat |
+
+If the item has no existing `stat_bonus` entry for the given stat, `adjust_item_stat` creates one.
+These ops **do not** alter the template — changes apply only to this player's copy of the item.
+
+> **Pattern — one-time weapon buff:**
+> ```toml
+> on_use = [
+>   { op = "if_not_flag", flag = "polish_used", then = [
+>     { op = "adjust_item_stat", slot = "weapon", stat = "attack", amount = 1 },
+>     { op = "set_flag", flag = "polish_used" },
+>     { op = "message", tag = "system", text = "Your blade bites sharper." },
+>   ], else = [
+>     { op = "message", tag = "system", text = "Already used." },
+>     { op = "fail" },
+>   ] },
+> ]
+> ```
+
+---
+
 ## 19. Standalone Script Files
 
 Script ops can live in separate `.toml` files and be invoked by name. This
@@ -4399,6 +4471,13 @@ Unknown op names are **silently ignored** — forward-compatible with new engine
 | `set_attr` | `name`, `value` | Set attribute to value (clamped to min/max) |
 | `adjust_attr` | `name`, `amount` | Add/subtract from attribute (clamped) |
 | `if_attr` | `name`, `min`, `max`, `then`, `else` | Branch when attribute is in range |
+
+**Item stat modification (see §18.4)**
+
+| Op | Key attributes | Description |
+|----|---------------|-------------|
+| `adjust_item_stat` | `slot` or `item_id`, `stat`, `amount` | Add/subtract from a stat_bonus on an item |
+| `set_item_stat` | `slot` or `item_id`, `stat`, `value` | Set a stat_bonus on an item to an exact value |
 
 **Light mechanic (see §17)**
 

@@ -245,9 +245,16 @@ blade vanish within a minute of application, leaving the metal mirror-bright
 and faintly warm to the touch.
 """
 weight = 0
-effects = [
-  { type = "on_use",   heal = 0, special = "enchant_weapon_plus1" },
-  { type = "on_equip", message = "You smear the polish over your blade. It shines like new and feels somehow more solid." },
+on_use = [
+  { op = "if_not_flag", flag = "blade_polish_used", then = [
+    { op = "adjust_item_stat", slot = "weapon", stat = "attack", amount = 1 },
+    { op = "set_flag", flag = "blade_polish_used" },
+    { op = "message", tag = "system",
+      text = "You smear the polish over your blade. It shines like new and feels somehow more solid. The edge bites a little sharper." },
+  ], else = [
+    { op = "message", tag = "system", text = "The polish has already been used." },
+    { op = "fail" },
+  ] },
 ]
 
 [[item]]

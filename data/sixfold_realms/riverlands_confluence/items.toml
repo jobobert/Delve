@@ -320,4 +320,4 @@ desc_short = "A well-used, but functional key"
 desc_long = "A key to a room at the Confluence Inn"
 tags = ["rl_aldrics_key"]
 consumable_key = false
-consumable_key_msg = "You give the key to Aldric who accepts with a touch of embarrassment"
+

@@ -34,7 +34,7 @@ condition = { flag = "emerald_recovered" }
 
 [[response]]
 node = "root"
-condition = { flag = "emerald_recovered", not_flag = "aonn_debt_settled" }
+condition = { flag = "aonn_joined_party", not_flag = "aonn_debt_settled" }
 text = "We made it back."
 next = "debt_settled"
 
@@ -182,8 +182,8 @@ line = "Let's not make it sentimental. The mire is south. You know the way."
 
 script = [
   { op = "give_companion", companion_id = "aonn_tesk" },
-  { op = "advance_quest",  quest_id = "an_old_debt", step = 2 },
-  { op = "advance_quest",  quest_id = "an_old_debt", step = 3 }
+  { op = "advance_quest",  quest_id = "an_old_debt", step = 3 },
+  { op = "set_flag",       flag = "aonn_joined_party" },
 ]
 
 [[response]]
@@ -199,7 +199,7 @@ script = [
   { op = "complete_quest", quest_id = "an_old_debt" },
   { op = "set_flag",       flag = "aonn_debt_settled" },
   { op = "give_xp",        amount = 200 },
-  { op = "prestige",       delta = 3, reason = "completed Aonn's old debt" },
+  { op = "prestige",       amount = 3, reason = "completed Aonn's old debt" },
 ]
 
 [[response]]

@@ -1,833 +1,835 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Delve</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a1a1a'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23F29E00'>&#x2694;</text></svg>">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a1a1a'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23F29E00'>&#x2694;</text></svg>">
-<link rel="stylesheet" href="/game.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delve</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a1a1a'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23F29E00'>&#x2694;</text></svg>">
+  <link rel="stylesheet" href="/game.css">
 </head>
+
 <body>
-<!-- ── Login panel ──────────────────────────────────────────────────────────── -->
-<div id="login-panel">
-  <pre class="banner"> ____       _
+  <!-- ── Login panel ──────────────────────────────────────────────────────────── -->
+  <div id="login-panel">
+    <pre class="banner"> ____       _
 |  _ \  ___| |_   _____
 | | | |/ _ \ \ \ / / _ \
 | |_| |  __/ |\ V /  __/
 |____/ \___|_| \_/ \___|</pre>
-  <p class="subtitle">a Python MUD engine</p>
+    <p class="subtitle">a Python MUD engine</p>
 
-  <div class="form">
-    <label>World
-      <select id="world-select"></select>
-    </label>
-    <label>Character
-      <input id="player-name" type="text" list="player-suggestions"
-             placeholder="Enter name..." autocomplete="off" spellcheck="false">
-      <datalist id="player-suggestions"></datalist>
-    </label>
-    <div id="char-info"></div>
-    <button id="connect-btn">Enter World</button>
-    <div id="login-error"></div>
-  </div>
-</div>
-
-<!-- ── Game panel ───────────────────────────────────────────────────────────── -->
-<div id="game-panel" hidden>
-  <div id="status-bar">
-    <button id="char-toggle" title="Toggle character panel">&gt;&gt;</button>
-    <span id="s-player"></span>
-    <span id="s-hp"></span>
-    <span id="s-sep">|</span>
-    <span id="s-room"></span>
-    <button id="sidebar-toggle" title="Toggle map sidebar">&lt;&lt;</button>
-    <button id="stop-btn" title="Stop the web server and end your session">Stop Server</button>
-  </div>
-  <div id="main-area">
-    <div id="char-panel" class="collapsed">
-      <div class="sidebar-section">
-        <div class="sidebar-label">Equipped</div>
-        <div id="equip-content"></div>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Inventory</div>
-        <div id="inv-content"></div>
-      </div>
-      <div class="sidebar-section" id="status-section">
-        <div class="sidebar-label">Status</div>
-        <div id="status-content"></div>
-      </div>
-      <div class="sidebar-section" id="attrs-section">
-        <div class="sidebar-label">Attributes</div>
-        <div id="attrs-content"></div>
-      </div>
+    <div class="form">
+      <label>World
+        <select id="world-select"></select>
+      </label>
+      <label>Character
+        <input id="player-name" type="text" list="player-suggestions"
+               placeholder="Enter name..." autocomplete="off" spellcheck="false">
+        <datalist id="player-suggestions"></datalist>
+      </label>
+      <div id="char-info"></div>
+      <button id="connect-btn">Enter World</button>
+      <div id="login-error"></div>
     </div>
-    <div id="output"></div>
-    <div id="sidebar-resizer"></div>
-    <div id="sidebar">
-      <div id="map-area">
-        <div class="sidebar-section" id="map-section">
-          <div class="sidebar-label">Map</div>
-          <pre id="map-display"></pre>
+  </div>
+
+  <!-- ── Game panel ───────────────────────────────────────────────────────────── -->
+  <div id="game-panel" hidden>
+    <div id="status-bar">
+      <button id="char-toggle" title="Toggle character panel">&gt;&gt;</button>
+      <span id="s-player"></span>
+      <span id="s-hp"></span>
+      <span id="s-sep">|</span>
+      <span id="s-room"></span>
+      <button id="sidebar-toggle" title="Toggle map sidebar">&lt;&lt;</button>
+      <button id="stop-btn" title="Stop the web server and end your session">Stop Server</button>
+    </div>
+    <div id="main-area">
+      <div id="char-panel" class="collapsed">
+        <div class="sidebar-section">
+          <div class="sidebar-label">Equipped</div>
+          <div id="equip-content"></div>
         </div>
         <div class="sidebar-section">
-          <div class="sidebar-label">Exits</div>
-          <div id="exits-btns"></div>
+          <div class="sidebar-label">Inventory</div>
+          <div id="inv-content"></div>
+        </div>
+        <div class="sidebar-section" id="status-section">
+          <div class="sidebar-label">Status</div>
+          <div id="status-content"></div>
+        </div>
+        <div class="sidebar-section" id="attrs-section">
+          <div class="sidebar-label">Attributes</div>
+          <div id="attrs-content"></div>
         </div>
       </div>
-      <div id="here-resizer"></div>
-      <div id="here-section">
-        <div class="sidebar-label">Here</div>
-        <div id="here-content"></div>
+      <div id="output"></div>
+      <div id="sidebar-resizer"></div>
+      <div id="sidebar">
+        <div id="map-area">
+          <div class="sidebar-section" id="map-section">
+            <div class="sidebar-label">Map</div>
+            <pre id="map-display"></pre>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-label">Exits</div>
+            <div id="exits-btns"></div>
+          </div>
+        </div>
+        <div id="here-resizer"></div>
+        <div id="here-section">
+          <div class="sidebar-label">Here</div>
+          <div id="here-content"></div>
+        </div>
       </div>
     </div>
+    <div id="input-bar">
+      <span class="prompt">&gt;</span>
+      <input id="cmd-input" type="text" placeholder="Enter command..."
+             autocomplete="off" spellcheck="false">
+      <button id="send-btn">Send</button>
+    </div>
   </div>
-  <div id="input-bar">
-    <span class="prompt">&gt;</span>
-    <input id="cmd-input" type="text" placeholder="Enter command..."
-           autocomplete="off" spellcheck="false">
-    <button id="send-btn">Send</button>
+
+  <div id="item-menu" hidden>
+    <button class="item-menu-btn" id="im-equip">Equip</button>
+    <button class="item-menu-btn" id="im-use">Use</button>
+    <button class="item-menu-btn" id="im-drop">Drop</button>
+    <button class="item-menu-btn" id="im-examine">Examine</button>
   </div>
-</div>
 
-<div id="item-menu" hidden>
-  <button class="item-menu-btn" id="im-equip">Equip</button>
-  <button class="item-menu-btn" id="im-use">Use</button>
-  <button class="item-menu-btn" id="im-drop">Drop</button>
-  <button class="item-menu-btn" id="im-examine">Examine</button>
-</div>
+  <div id="here-menu" hidden>
+    <button class="item-menu-btn" id="hm-primary"></button>
+    <button class="item-menu-btn" id="hm-examine">Examine</button>
+    <button class="item-menu-btn" id="hm-npc-extra" hidden></button>
+  </div>
 
-<div id="here-menu" hidden>
-  <button class="item-menu-btn" id="hm-primary"></button>
-  <button class="item-menu-btn" id="hm-examine">Examine</button>
-  <button class="item-menu-btn" id="hm-npc-extra" hidden></button>
-</div>
+  <script>
+    "use strict";
 
-<script>
-"use strict";
+    // ── DOM references ────────────────────────────────────────────────────────────
 
-// ── DOM references ────────────────────────────────────────────────────────────
+    const $ = (id) => document.getElementById(id);
+    const loginPanel = $('login-panel');
+    const gamePanel = $('game-panel');
+    const worldSel = $('world-select');
+    const playerIn = $('player-name');
+    const charInfo = $('char-info');
+    const connectBtn = $('connect-btn');
+    const loginErr = $('login-error');
+    const outputEl = $('output');
+    const cmdIn = $('cmd-input');
+    const sendBtn = $('send-btn');
+    const stopBtn = $('stop-btn');
+    const sPlayer = $('s-player');
+    const sHp = $('s-hp');
+    const sRoom = $('s-room');
+    const sidebarEl = $('sidebar');
+    const sidebarToggle = $('sidebar-toggle');
+    const sidebarResizer = $('sidebar-resizer');
+    const mapArea = $('map-area');
+    const hereResizer = $('here-resizer');
+    const mapDisplay = $('map-display');
+    const exitsBtns = $('exits-btns');
+    const hereContent = $('here-content');
+    const charPanel = $('char-panel');
+    const charToggle = $('char-toggle');
+    const equipContent = $('equip-content');
+    const invContent = $('inv-content');
+    const statusSection = $('status-section');
+    const statusContent = $('status-content');
+    const attrsSection = $('attrs-section');
+    const attrsContent = $('attrs-content');
+    const itemMenu = $('item-menu');
+    const imEquip = $('im-equip');
+    const imUse = $('im-use');
+    const imDrop = $('im-drop');
+    const imExamine = $('im-examine');
+    const hereMenu = $('here-menu');
+    const hmPrimary = $('hm-primary');
+    const hmExamine = $('hm-examine');
+    const hmNpcExtra = $('hm-npc-extra');
 
-const $ = (id) => document.getElementById(id);
-const loginPanel    = $('login-panel');
-const gamePanel     = $('game-panel');
-const worldSel      = $('world-select');
-const playerIn      = $('player-name');
-const charInfo      = $('char-info');
-const connectBtn    = $('connect-btn');
-const loginErr      = $('login-error');
-const outputEl      = $('output');
-const cmdIn         = $('cmd-input');
-const sendBtn       = $('send-btn');
-const stopBtn       = $('stop-btn');
-const sPlayer       = $('s-player');
-const sHp           = $('s-hp');
-const sRoom         = $('s-room');
-const sidebarEl      = $('sidebar');
-const sidebarToggle  = $('sidebar-toggle');
-const sidebarResizer = $('sidebar-resizer');
-const mapArea        = $('map-area');
-const hereResizer    = $('here-resizer');
-const mapDisplay     = $('map-display');
-const exitsBtns      = $('exits-btns');
-const hereContent    = $('here-content');
-const charPanel     = $('char-panel');
-const charToggle    = $('char-toggle');
-const equipContent  = $('equip-content');
-const invContent    = $('inv-content');
-const statusSection = $('status-section');
-const statusContent = $('status-content');
-const attrsSection  = $('attrs-section');
-const attrsContent  = $('attrs-content');
-const itemMenu      = $('item-menu');
-const imEquip       = $('im-equip');
-const imUse         = $('im-use');
-const imDrop        = $('im-drop');
-const imExamine     = $('im-examine');
-const hereMenu      = $('here-menu');
-const hmPrimary     = $('hm-primary');
-const hmExamine     = $('hm-examine');
-const hmNpcExtra    = $('hm-npc-extra');
+    // ── State ─────────────────────────────────────────────────────────────────────
 
-// ── State ─────────────────────────────────────────────────────────────────────
+    let players = [];
+    let sidebarMapBuf = [];     // accumulates Tag.MAP lines destined for sidebar
+    let mapFlushTimer = null;
+    let history = [];
+    let histIdx = -1;
+    let sse = null;
+    let atBottom = true;
 
-let players         = [];
-let sidebarMapBuf   = [];     // accumulates Tag.MAP lines destined for sidebar
-let mapFlushTimer   = null;
-let history         = [];
-let histIdx         = -1;
-let sse             = null;
-let atBottom        = true;
+    // ── Direction patterns for clickable exit words ───────────────────────────────
 
-// ── Direction patterns for clickable exit words ───────────────────────────────
+    const DIR_RE = /\b(north|south|east|west|northeast|northwest|southeast|southwest|up|down)\b/gi;
 
-const DIR_RE = /\b(north|south|east|west|northeast|northwest|southeast|southwest|up|down)\b/gi;
+    // ── Dialogue option pattern:  "  [1] Some response text" ─────────────────────
 
-// ── Dialogue option pattern:  "  [1] Some response text" ─────────────────────
+    const DLGOPT_RE = /^\s*\[(\d+)\]\s/;
 
-const DLGOPT_RE = /^\s*\[(\d+)\]\s/;
+    // ── Inventory context menu ────────────────────────────────────────────────────
 
-// ── Inventory context menu ────────────────────────────────────────────────────
+    function showItemMenu(e, item) {
+      e.preventDefault();
+      e.stopPropagation();
+      imEquip.hidden = !item.equip_slot;
+      // wire up fresh handlers each time
+      imEquip.onclick = () => { hideItemMenu(); sendCmd(`equip ${item.name}`); };
+      imUse.onclick = () => { hideItemMenu(); sendCmd(`use ${item.name}`); };
+      imDrop.onclick = () => { hideItemMenu(); sendCmd(`drop ${item.name}`); };
+      imExamine.onclick = () => { hideItemMenu(); sendCmd(`examine ${item.name}`); };
 
-function showItemMenu(e, item) {
-  e.preventDefault();
-  e.stopPropagation();
-  imEquip.hidden = !item.equip_slot;
-  // wire up fresh handlers each time
-  imEquip.onclick  = () => { hideItemMenu(); sendCmd(`equip ${item.name}`); };
-  imUse.onclick    = () => { hideItemMenu(); sendCmd(`use ${item.name}`); };
-  imDrop.onclick   = () => { hideItemMenu(); sendCmd(`drop ${item.name}`); };
-  imExamine.onclick = () => { hideItemMenu(); sendCmd(`examine ${item.name}`); };
-
-  itemMenu.removeAttribute('hidden');
-  // position near the cursor, clamped inside the viewport
-  const mw = itemMenu.offsetWidth  || 120;
-  const mh = itemMenu.offsetHeight || 110;
-  itemMenu.style.left = Math.min(e.clientX, window.innerWidth  - mw - 8) + 'px';
-  itemMenu.style.top  = Math.min(e.clientY, window.innerHeight - mh - 8) + 'px';
-}
-
-function hideItemMenu() { itemMenu.setAttribute('hidden', ''); }
-
-document.addEventListener('click',       () => { hideItemMenu(); hideHereMenu(); });
-document.addEventListener('contextmenu', e => {
-  if (e.target.closest('#item-menu') === null) hideItemMenu();
-  if (e.target.closest('#here-menu') === null) hideHereMenu();
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { hideItemMenu(); hideHereMenu(); }
-});
-
-function showHereMenu(e, type, entity) {
-  e.preventDefault();
-  e.stopPropagation();
-  if (type === 'npc') {
-    hmPrimary.textContent  = entity.hostile ? 'Attack' : 'Talk';
-    hmPrimary.onclick      = () => { hideHereMenu(); sendCmd((entity.hostile ? 'attack ' : 'talk ') + entity.name); };
-    hmExamine.onclick      = () => { hideHereMenu(); sendCmd(`examine ${entity.name}`); };
-    hmNpcExtra.hidden      = entity.hostile;   // friendly NPCs get "Attack" as secondary
-    if (!entity.hostile) {
-      hmNpcExtra.textContent = 'Attack';
-      hmNpcExtra.onclick     = () => { hideHereMenu(); sendCmd(`attack ${entity.name}`); };
+      itemMenu.removeAttribute('hidden');
+      // position near the cursor, clamped inside the viewport
+      const mw = itemMenu.offsetWidth || 120;
+      const mh = itemMenu.offsetHeight || 110;
+      itemMenu.style.left = Math.min(e.clientX, window.innerWidth - mw - 8) + 'px';
+      itemMenu.style.top = Math.min(e.clientY, window.innerHeight - mh - 8) + 'px';
     }
-  } else {
-    hmPrimary.textContent  = 'Get';
-    hmPrimary.onclick      = () => { hideHereMenu(); sendCmd(`get ${entity.name}`); };
-    hmExamine.onclick      = () => { hideHereMenu(); sendCmd(`examine ${entity.name}`); };
-    hmNpcExtra.hidden      = true;
-  }
 
-  hereMenu.removeAttribute('hidden');
-  const mw = hereMenu.offsetWidth  || 120;
-  const mh = hereMenu.offsetHeight || 90;
-  hereMenu.style.left = Math.min(e.clientX, window.innerWidth  - mw - 8) + 'px';
-  hereMenu.style.top  = Math.min(e.clientY, window.innerHeight - mh - 8) + 'px';
-}
+    function hideItemMenu() { itemMenu.setAttribute('hidden', ''); }
 
-function hideHereMenu() { hereMenu.setAttribute('hidden', ''); }
-
-// ── Sidebar + map resize ──────────────────────────────────────────────────────
-
-let sidebarW = parseInt(localStorage.getItem('delve_sidebar_width') || '220', 10);
-let mapH     = parseInt(localStorage.getItem('delve_map_height')    || '260', 10);
-
-function applySidebarWidth(w) {
-  w = Math.max(120, Math.min(600, w));
-  sidebarW = w;
-  if (!sidebarEl.classList.contains('collapsed')) {
-    sidebarEl.style.width    = w + 'px';
-    sidebarEl.style.minWidth = w + 'px';
-  }
-}
-
-function applyMapHeight(h) {
-  h = Math.max(60, Math.min(700, h));
-  mapH = h;
-  mapArea.style.height = h + 'px';
-}
-
-function initSidebar() {
-  const open = localStorage.getItem('delve_sidebar_open') !== 'false';
-  if (!open) {
-    sidebarEl.classList.add('collapsed');
-    sidebarToggle.textContent = '>>';
-  } else {
-    applySidebarWidth(sidebarW);
-  }
-  applyMapHeight(mapH);
-}
-
-sidebarToggle.addEventListener('click', () => {
-  const isNowCollapsed = sidebarEl.classList.toggle('collapsed');
-  sidebarToggle.textContent = isNowCollapsed ? '>>' : '<<';
-  if (!isNowCollapsed) applySidebarWidth(sidebarW);
-  localStorage.setItem('delve_sidebar_open', String(!isNowCollapsed));
-});
-
-sidebarResizer.addEventListener('mousedown', e => {
-  e.preventDefault();
-  sidebarResizer.classList.add('dragging');
-  const startX = e.clientX;
-  const startW = sidebarEl.offsetWidth;
-  function onMove(e) { applySidebarWidth(startW + (startX - e.clientX)); }
-  function onUp() {
-    sidebarResizer.classList.remove('dragging');
-    localStorage.setItem('delve_sidebar_width', String(sidebarW));
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-  }
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
-});
-
-hereResizer.addEventListener('mousedown', e => {
-  e.preventDefault();
-  hereResizer.classList.add('dragging');
-  const startY = e.clientY;
-  const startH = mapArea.offsetHeight;
-  function onMove(e) { applyMapHeight(startH + (e.clientY - startY)); }
-  function onUp() {
-    hereResizer.classList.remove('dragging');
-    localStorage.setItem('delve_map_height', String(mapH));
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-  }
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
-});
-
-// ── Character panel (left) ────────────────────────────────────────────────────
-
-function initCharPanel() {
-  const open = localStorage.getItem('delve_charpanel_open') === 'true';
-  if (open) {
-    charPanel.classList.remove('collapsed');
-    charToggle.textContent = '<<';
-  }
-}
-
-charToggle.addEventListener('click', () => {
-  const isNowCollapsed = charPanel.classList.toggle('collapsed');
-  charToggle.textContent = isNowCollapsed ? '>>' : '<<';
-  localStorage.setItem('delve_charpanel_open', String(!isNowCollapsed));
-});
-
-function _emptySpan(text) {
-  const el = document.createElement('span');
-  el.className   = 'here-empty';
-  el.textContent = text;
-  return el;
-}
-
-function updateCharPanel(snap) {
-  const key = JSON.stringify(snap);
-  if (updateCharPanel._last === key) return;
-  updateCharPanel._last = key;
-
-  const equipped = snap.equipped  || [];
-  const inv      = snap.inventory || [];
-  const effects  = snap.status_effects || [];
-  const attrs    = snap.world_attrs    || [];
-
-  // ── Equipped ──────────────────────────────────────────────────────────────
-  equipContent.innerHTML = '';
-  if (equipped.length === 0) {
-    equipContent.appendChild(_emptySpan('nothing'));
-  } else {
-    equipped.forEach(e => {
-      const btn = document.createElement('button');
-      btn.className   = 'cp-btn equip-btn';
-      btn.textContent = `[${e.slot}] ${e.name}`;
-      btn.title       = `unequip ${e.slot}`;
-      btn.addEventListener('click', () => sendCmd(`unequip ${e.slot}`));
-      equipContent.appendChild(btn);
+    document.addEventListener('click', () => { hideItemMenu(); hideHereMenu(); });
+    document.addEventListener('contextmenu', e => {
+      if (e.target.closest('#item-menu') === null) hideItemMenu();
+      if (e.target.closest('#here-menu') === null) hideHereMenu();
     });
-  }
-
-  // ── Inventory ─────────────────────────────────────────────────────────────
-  invContent.innerHTML = '';
-  if (inv.length === 0) {
-    invContent.appendChild(_emptySpan('empty'));
-  } else {
-    inv.forEach(item => {
-      const btn = document.createElement('button');
-      btn.className   = 'cp-btn inv-btn';
-      btn.textContent = item.name;
-      btn.title       = item.equip_slot
-        ? `use ${item.name}  |  right-click for more options`
-        : `use ${item.name}  |  right-click for more options`;
-      btn.addEventListener('click', () => sendCmd(`use ${item.name}`));
-      btn.addEventListener('contextmenu', e => showItemMenu(e, item));
-      invContent.appendChild(btn);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { hideItemMenu(); hideHereMenu(); }
     });
-  }
 
-  // ── Status effects ────────────────────────────────────────────────────────
-  statusContent.innerHTML = '';
-  if (effects.length === 0) {
-    statusSection.style.display = 'none';
-  } else {
-    statusSection.style.display = '';
-    effects.forEach(ef => {
-      const el = document.createElement('div');
-      el.className   = 'status-chip';
-      el.textContent = `${ef.name} (${ef.turns_left})`;
-      statusContent.appendChild(el);
-    });
-  }
-
-  // ── World attributes ──────────────────────────────────────────────────────
-  attrsContent.innerHTML = '';
-  if (attrs.length === 0) {
-    attrsSection.style.display = 'none';
-  } else {
-    attrsSection.style.display = '';
-    attrs.forEach(a => {
-      const row = document.createElement('div');
-      row.className = 'attr-row';
-      if (a.display === 'bar') {
-        const range = a.max - a.min || 1;
-        const pct   = Math.max(0, Math.min(100, (a.value - a.min) / range * 100));
-        row.innerHTML =
-          `<div class="attr-name">${a.name}</div>` +
-          `<div class="attr-bar-wrap"><div class="attr-bar" style="width:${pct.toFixed(1)}%"></div></div>` +
-          `<div class="attr-val">${a.value} / ${a.max}</div>`;
-      } else {
-        row.innerHTML =
-          `<div class="attr-name">${a.name}</div>` +
-          `<div class="attr-val">${a.value}</div>`;
-      }
-      attrsContent.appendChild(row);
-    });
-  }
-}
-
-// ── Sidebar update (from room_snapshot events) ────────────────────────────────
-
-function updateSidebar(snap) {
-  // Exits
-  exitsBtns.innerHTML = '';
-  const exits = snap.exits || [];
-  if (exits.length === 0) {
-    exitsBtns.appendChild(_emptySpan('none'));
-  }
-  exits.forEach(e => {
-    const btn = document.createElement('button');
-    btn.className = 'exit-btn' + (e.locked ? ' locked' : '');
-    btn.textContent = e.dir.charAt(0).toUpperCase() + e.dir.slice(1);
-    btn.title = e.locked ? `${e.dir} (locked — try: unlock ${e.dir})` : `go ${e.dir}`;
-    btn.addEventListener('click', () => sendCmd(e.locked ? `unlock ${e.dir}` : `go ${e.dir}`));
-    exitsBtns.appendChild(btn);
-  });
-
-  // Here (NPCs + items)
-  hereContent.innerHTML = '';
-  const npcs  = snap.npcs  || [];
-  const items = snap.items || [];
-  if (npcs.length === 0 && items.length === 0) {
-    hereContent.appendChild(_emptySpan('nothing of note'));
-  }
-  npcs.forEach(npc => {
-    const btn = document.createElement('button');
-    btn.className = 'npc-btn' + (npc.hostile ? ' hostile' : '');
-    btn.textContent = (npc.hostile ? '[!] ' : '') + npc.name;
-    btn.title = npc.hostile
-      ? `attack ${npc.name}  |  right-click for more options`
-      : `talk ${npc.name}  |  right-click for more options`;
-    btn.addEventListener('click', () => sendCmd(npc.hostile ? `attack ${npc.name}` : `talk ${npc.name}`));
-    btn.addEventListener('contextmenu', e => showHereMenu(e, 'npc', npc));
-    hereContent.appendChild(btn);
-  });
-  items.forEach(item => {
-    const btn = document.createElement('button');
-    btn.className = 'item-btn';
-    btn.textContent = item.name;
-    btn.title = `get ${item.name}  |  right-click for more options`;
-    btn.addEventListener('click', () => sendCmd(`get ${item.name}`));
-    btn.addEventListener('contextmenu', e => showHereMenu(e, 'item', item));
-    hereContent.appendChild(btn);
-  });
-}
-
-// ── Map display (sidebar) ─────────────────────────────────────────────────────
-
-function flushSidebarMap() {
-  if (mapFlushTimer) { clearTimeout(mapFlushTimer); mapFlushTimer = null; }
-  if (!sidebarMapBuf.length) return;
-  mapDisplay.textContent = sidebarMapBuf.join('\n');
-  sidebarMapBuf = [];
-}
-
-// ── Output helpers ────────────────────────────────────────────────────────────
-
-outputEl.addEventListener('scroll', () => {
-  const slack = outputEl.scrollHeight - outputEl.scrollTop - outputEl.clientHeight;
-  atBottom = slack < 8;
-});
-
-function scrollDown() {
-  if (atBottom) outputEl.scrollTop = outputEl.scrollHeight;
-}
-
-/** Render a Tag.EXIT line with clickable direction words. */
-function renderExitLine(text) {
-  const el = document.createElement('div');
-  el.className = 'line tag-exit';
-  DIR_RE.lastIndex = 0;
-  let last = 0, match;
-  while ((match = DIR_RE.exec(text)) !== null) {
-    if (match.index > last) {
-      el.appendChild(document.createTextNode(text.slice(last, match.index)));
-    }
-    const span = document.createElement('span');
-    span.className = 'exit-link';
-    span.textContent = match[0];
-    const dir = match[0].toLowerCase();
-    span.addEventListener('click', () => sendCmd('go ' + dir));
-    el.appendChild(span);
-    last = match.index + match[0].length;
-  }
-  if (last < text.length) {
-    el.appendChild(document.createTextNode(text.slice(last)));
-  }
-  outputEl.appendChild(el);
-  scrollDown();
-}
-
-/** Add one tagged engine line to the output area (or sidebar for map). */
-function addLine(tag, text) {
-  // Map lines accumulate in the sidebar, not the main output
-  if (tag === 'map') {
-    sidebarMapBuf.push(text);
-    if (mapFlushTimer) clearTimeout(mapFlushTimer);
-    mapFlushTimer = setTimeout(flushSidebarMap, 80);
-    return;
-  }
-  flushSidebarMap();
-
-  if (tag === 'blank') {
-    const el = document.createElement('div');
-    el.className = 'line blank';
-    outputEl.appendChild(el);
-    scrollDown();
-    return;
-  }
-
-  if (tag === 'exit') {
-    renderExitLine(text);
-    return;
-  }
-
-  // Dialogue numbered options become clickable buttons
-  if (tag === 'dialogue') {
-    const m = DLGOPT_RE.exec(text);
-    if (m) {
-      const num = m[1];
-      const btn = document.createElement('button');
-      btn.className   = 'dlg-option';
-      btn.textContent = text;
-      btn.title       = `Select option ${num}`;
-      btn.addEventListener('click', () => sendCmd(num));
-      outputEl.appendChild(btn);
-      scrollDown();
-      return;
-    }
-  }
-
-  const el = document.createElement('div');
-  el.className   = `line tag-${tag}`;
-  el.textContent = text;
-  outputEl.appendChild(el);
-  scrollDown();
-}
-
-/** Echo the player's own command back dimmed. */
-function addEcho(text) {
-  flushSidebarMap();
-  const el = document.createElement('div');
-  el.className   = 'line echo';
-  el.textContent = '> ' + text;
-  outputEl.appendChild(el);
-  scrollDown();
-}
-
-// ── SSE connection ────────────────────────────────────────────────────────────
-
-function startSSE() {
-  if (sse) { sse.close(); sse = null; }
-
-  sse = new EventSource('/stream');
-
-  sse.onmessage = (e) => {
-    let ev;
-    try { ev = JSON.parse(e.data); } catch (_) { return; }
-
-    switch (ev.type) {
-      case 'msg':
-        addLine(ev.tag, ev.text);
-        // When entering a new room, refresh the sidebar map silently
-        if (ev.tag === 'room_name') {
-          mapDisplay.textContent = '';
-          sidebarMapBuf = [];
-          sendSilent('map');
+    function showHereMenu(e, type, entity) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (type === 'npc') {
+        hmPrimary.textContent = entity.hostile ? 'Attack' : 'Talk';
+        hmPrimary.onclick = () => { hideHereMenu(); sendCmd((entity.hostile ? 'attack ' : 'talk ') + entity.name); };
+        hmExamine.onclick = () => { hideHereMenu(); sendCmd(`examine ${entity.name}`); };
+        hmNpcExtra.hidden = entity.hostile;   // friendly NPCs get "Attack" as secondary
+        if (!entity.hostile) {
+          hmNpcExtra.textContent = 'Attack';
+          hmNpcExtra.onclick = () => { hideHereMenu(); sendCmd(`attack ${entity.name}`); };
         }
-        break;
-      case 'room_snapshot':
-        updateSidebar(ev);
-        break;
-      case 'char_snapshot':
-        updateCharPanel(ev);
-        break;
-      case 'prompt':
-        flushSidebarMap();
-        addLine('system', ev.text);
-        break;
-      case 'player_died':
-        flushSidebarMap();
-        addLine('combat_death', '*** YOU HAVE BEEN SLAIN ***');
-        updateStatus();
-        break;
-      case 'quit':
-        flushSidebarMap();
-        addLine('system', '[Session ended — refresh the page to start a new session.]');
-        sse.close(); sse = null;
-        break;
-      case 'error':
-        flushSidebarMap();
-        addLine('error', ev.text);
-        break;
-      case 'no_session':
-        break;
-    }
-  };
+      } else {
+        hmPrimary.textContent = 'Get';
+        hmPrimary.onclick = () => { hideHereMenu(); sendCmd(`get ${entity.name}`); };
+        hmExamine.onclick = () => { hideHereMenu(); sendCmd(`examine ${entity.name}`); };
+        hmNpcExtra.hidden = true;
+      }
 
-  sse.onerror = () => {
-    if (!document.hidden) {
+      hereMenu.removeAttribute('hidden');
+      const mw = hereMenu.offsetWidth || 120;
+      const mh = hereMenu.offsetHeight || 90;
+      hereMenu.style.left = Math.min(e.clientX, window.innerWidth - mw - 8) + 'px';
+      hereMenu.style.top = Math.min(e.clientY, window.innerHeight - mh - 8) + 'px';
+    }
+
+    function hideHereMenu() { hereMenu.setAttribute('hidden', ''); }
+
+    // ── Sidebar + map resize ──────────────────────────────────────────────────────
+
+    let sidebarW = parseInt(localStorage.getItem('delve_sidebar_width') || '220', 10);
+    let mapH = parseInt(localStorage.getItem('delve_map_height') || '260', 10);
+
+    function applySidebarWidth(w) {
+      w = Math.max(120, Math.min(600, w));
+      sidebarW = w;
+      if (!sidebarEl.classList.contains('collapsed')) {
+        sidebarEl.style.width = w + 'px';
+        sidebarEl.style.minWidth = w + 'px';
+      }
+    }
+
+    function applyMapHeight(h) {
+      h = Math.max(60, Math.min(700, h));
+      mapH = h;
+      mapArea.style.height = h + 'px';
+    }
+
+    function initSidebar() {
+      const open = localStorage.getItem('delve_sidebar_open') !== 'false';
+      if (!open) {
+        sidebarEl.classList.add('collapsed');
+        sidebarToggle.textContent = '>>';
+      } else {
+        applySidebarWidth(sidebarW);
+      }
+      applyMapHeight(mapH);
+    }
+
+    sidebarToggle.addEventListener('click', () => {
+      const isNowCollapsed = sidebarEl.classList.toggle('collapsed');
+      sidebarToggle.textContent = isNowCollapsed ? '>>' : '<<';
+      if (!isNowCollapsed) applySidebarWidth(sidebarW);
+      localStorage.setItem('delve_sidebar_open', String(!isNowCollapsed));
+    });
+
+    sidebarResizer.addEventListener('mousedown', e => {
+      e.preventDefault();
+      sidebarResizer.classList.add('dragging');
+      const startX = e.clientX;
+      const startW = sidebarEl.offsetWidth;
+      function onMove(e) { applySidebarWidth(startW + (startX - e.clientX)); }
+      function onUp() {
+        sidebarResizer.classList.remove('dragging');
+        localStorage.setItem('delve_sidebar_width', String(sidebarW));
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    hereResizer.addEventListener('mousedown', e => {
+      e.preventDefault();
+      hereResizer.classList.add('dragging');
+      const startY = e.clientY;
+      const startH = mapArea.offsetHeight;
+      function onMove(e) { applyMapHeight(startH + (e.clientY - startY)); }
+      function onUp() {
+        hereResizer.classList.remove('dragging');
+        localStorage.setItem('delve_map_height', String(mapH));
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    // ── Character panel (left) ────────────────────────────────────────────────────
+
+    function initCharPanel() {
+      const open = localStorage.getItem('delve_charpanel_open') === 'true';
+      if (open) {
+        charPanel.classList.remove('collapsed');
+        charToggle.textContent = '<<';
+      }
+    }
+
+    charToggle.addEventListener('click', () => {
+      const isNowCollapsed = charPanel.classList.toggle('collapsed');
+      charToggle.textContent = isNowCollapsed ? '>>' : '<<';
+      localStorage.setItem('delve_charpanel_open', String(!isNowCollapsed));
+    });
+
+    function _emptySpan(text) {
+      const el = document.createElement('span');
+      el.className = 'here-empty';
+      el.textContent = text;
+      return el;
+    }
+
+    function updateCharPanel(snap) {
+      const key = JSON.stringify(snap);
+      if (updateCharPanel._last === key) return;
+      updateCharPanel._last = key;
+
+      const equipped = snap.equipped || [];
+      const inv = snap.inventory || [];
+      const effects = snap.status_effects || [];
+      const attrs = snap.world_attrs || [];
+
+      // ── Equipped ──────────────────────────────────────────────────────────────
+      equipContent.innerHTML = '';
+      if (equipped.length === 0) {
+        equipContent.appendChild(_emptySpan('nothing'));
+      } else {
+        equipped.forEach(e => {
+          const btn = document.createElement('button');
+          btn.className = 'cp-btn equip-btn';
+          btn.textContent = `[${e.slot}] ${e.name}`;
+          btn.title = `unequip ${e.slot}`;
+          btn.addEventListener('click', () => sendCmd(`unequip ${e.slot}`));
+          equipContent.appendChild(btn);
+        });
+      }
+
+      // ── Inventory ─────────────────────────────────────────────────────────────
+      invContent.innerHTML = '';
+      if (inv.length === 0) {
+        invContent.appendChild(_emptySpan('empty'));
+      } else {
+        inv.forEach(item => {
+          const btn = document.createElement('button');
+          btn.className = 'cp-btn inv-btn';
+          btn.textContent = item.name;
+          btn.title = item.equip_slot
+            ? `use ${item.name}  |  right-click for more options`
+            : `use ${item.name}  |  right-click for more options`;
+          btn.addEventListener('click', () => sendCmd(`use ${item.name}`));
+          btn.addEventListener('contextmenu', e => showItemMenu(e, item));
+          invContent.appendChild(btn);
+        });
+      }
+
+      // ── Status effects ────────────────────────────────────────────────────────
+      statusContent.innerHTML = '';
+      if (effects.length === 0) {
+        statusSection.style.display = 'none';
+      } else {
+        statusSection.style.display = '';
+        effects.forEach(ef => {
+          const el = document.createElement('div');
+          el.className = 'status-chip';
+          el.textContent = `${ef.name} (${ef.turns_left})`;
+          statusContent.appendChild(el);
+        });
+      }
+
+      // ── World attributes ──────────────────────────────────────────────────────
+      attrsContent.innerHTML = '';
+      if (attrs.length === 0) {
+        attrsSection.style.display = 'none';
+      } else {
+        attrsSection.style.display = '';
+        attrs.forEach(a => {
+          const row = document.createElement('div');
+          row.className = 'attr-row';
+          if (a.display === 'bar') {
+            const range = a.max - a.min || 1;
+            const pct = Math.max(0, Math.min(100, (a.value - a.min) / range * 100));
+            row.innerHTML =
+              `<div class="attr-name">${a.name}</div>` +
+              `<div class="attr-bar-wrap"><div class="attr-bar" style="width:${pct.toFixed(1)}%"></div></div>` +
+              `<div class="attr-val">${a.value} / ${a.max}</div>`;
+          } else {
+            row.innerHTML =
+              `<div class="attr-name">${a.name}</div>` +
+              `<div class="attr-val">${a.value}</div>`;
+          }
+          attrsContent.appendChild(row);
+        });
+      }
+    }
+
+    // ── Sidebar update (from room_snapshot events) ────────────────────────────────
+
+    function updateSidebar(snap) {
+      // Exits
+      exitsBtns.innerHTML = '';
+      const exits = snap.exits || [];
+      if (exits.length === 0) {
+        exitsBtns.appendChild(_emptySpan('none'));
+      }
+      exits.forEach(e => {
+        const btn = document.createElement('button');
+        btn.className = 'exit-btn' + (e.locked ? ' locked' : '');
+        btn.textContent = e.dir.charAt(0).toUpperCase() + e.dir.slice(1);
+        btn.title = e.locked ? `${e.dir} (locked — try: unlock ${e.dir})` : `go ${e.dir}`;
+        btn.addEventListener('click', () => sendCmd(e.locked ? `unlock ${e.dir}` : `go ${e.dir}`));
+        exitsBtns.appendChild(btn);
+      });
+
+      // Here (NPCs + items)
+      hereContent.innerHTML = '';
+      const npcs = snap.npcs || [];
+      const items = snap.items || [];
+      if (npcs.length === 0 && items.length === 0) {
+        hereContent.appendChild(_emptySpan('nothing of note'));
+      }
+      npcs.forEach(npc => {
+        const btn = document.createElement('button');
+        btn.className = 'npc-btn' + (npc.hostile ? ' hostile' : '');
+        btn.textContent = (npc.hostile ? '[!] ' : '') + npc.name;
+        btn.title = npc.hostile
+          ? `attack ${npc.name}  |  right-click for more options`
+          : `talk ${npc.name}  |  right-click for more options`;
+        btn.addEventListener('click', () => sendCmd(npc.hostile ? `attack ${npc.name}` : `talk ${npc.name}`));
+        btn.addEventListener('contextmenu', e => showHereMenu(e, 'npc', npc));
+        hereContent.appendChild(btn);
+      });
+      items.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'item-btn';
+        btn.textContent = item.name;
+        btn.title = `get ${item.name}  |  right-click for more options`;
+        btn.addEventListener('click', () => sendCmd(`get ${item.name}`));
+        btn.addEventListener('contextmenu', e => showHereMenu(e, 'item', item));
+        hereContent.appendChild(btn);
+      });
+    }
+
+    // ── Map display (sidebar) ─────────────────────────────────────────────────────
+
+    function flushSidebarMap() {
+      if (mapFlushTimer) { clearTimeout(mapFlushTimer); mapFlushTimer = null; }
+      if (!sidebarMapBuf.length) return;
+      mapDisplay.textContent = sidebarMapBuf.join('\n');
+      sidebarMapBuf = [];
+    }
+
+    // ── Output helpers ────────────────────────────────────────────────────────────
+
+    outputEl.addEventListener('scroll', () => {
+      const slack = outputEl.scrollHeight - outputEl.scrollTop - outputEl.clientHeight;
+      atBottom = slack < 8;
+    });
+
+    function scrollDown() {
+      if (atBottom) outputEl.scrollTop = outputEl.scrollHeight;
+    }
+
+    /** Render a Tag.EXIT line with clickable direction words. */
+    function renderExitLine(text) {
+      const el = document.createElement('div');
+      el.className = 'line tag-exit';
+      DIR_RE.lastIndex = 0;
+      let last = 0, match;
+      while ((match = DIR_RE.exec(text)) !== null) {
+        if (match.index > last) {
+          el.appendChild(document.createTextNode(text.slice(last, match.index)));
+        }
+        const span = document.createElement('span');
+        span.className = 'exit-link';
+        span.textContent = match[0];
+        const dir = match[0].toLowerCase();
+        span.addEventListener('click', () => sendCmd('go ' + dir));
+        el.appendChild(span);
+        last = match.index + match[0].length;
+      }
+      if (last < text.length) {
+        el.appendChild(document.createTextNode(text.slice(last)));
+      }
+      outputEl.appendChild(el);
+      scrollDown();
+    }
+
+    /** Add one tagged engine line to the output area (or sidebar for map). */
+    function addLine(tag, text) {
+      // Map lines accumulate in the sidebar, not the main output
+      if (tag === 'map') {
+        sidebarMapBuf.push(text);
+        if (mapFlushTimer) clearTimeout(mapFlushTimer);
+        mapFlushTimer = setTimeout(flushSidebarMap, 80);
+        return;
+      }
       flushSidebarMap();
-      addLine('system', '[Connection lost — reconnecting in 3 s...]');
+
+      if (tag === 'blank') {
+        const el = document.createElement('div');
+        el.className = 'line blank';
+        outputEl.appendChild(el);
+        scrollDown();
+        return;
+      }
+
+      if (tag === 'exit') {
+        renderExitLine(text);
+        return;
+      }
+
+      // Dialogue numbered options become clickable buttons
+      if (tag === 'dialogue') {
+        const m = DLGOPT_RE.exec(text);
+        if (m) {
+          const num = m[1];
+          const btn = document.createElement('button');
+          btn.className = 'dlg-option';
+          btn.textContent = text;
+          btn.title = `Select option ${num}`;
+          btn.addEventListener('click', () => sendCmd(num));
+          outputEl.appendChild(btn);
+          scrollDown();
+          return;
+        }
+      }
+
+      const el = document.createElement('div');
+      el.className = `line tag-${tag}`;
+      el.textContent = text;
+      outputEl.appendChild(el);
+      scrollDown();
     }
-    sse.close();
-    sse = null;
-    setTimeout(startSSE, 3000);
-  };
-}
 
-// ── Commands ──────────────────────────────────────────────────────────────────
+    /** Echo the player's own command back dimmed. */
+    function addEcho(text) {
+      flushSidebarMap();
+      const el = document.createElement('div');
+      el.className = 'line echo';
+      el.textContent = '> ' + text;
+      outputEl.appendChild(el);
+      scrollDown();
+    }
 
-async function sendCmd(cmd) {
-  cmd = cmd.trim();
-  if (!cmd) return;
+    // ── SSE connection ────────────────────────────────────────────────────────────
 
-  addEcho(cmd);
-  history.unshift(cmd);
-  if (history.length > 100) history.pop();
-  histIdx = -1;
+    function startSSE() {
+      if (sse) { sse.close(); sse = null; }
 
-  try {
-    await fetch('/command', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cmd }),
+      sse = new EventSource('/stream');
+
+      sse.onmessage = (e) => {
+        let ev;
+        try { ev = JSON.parse(e.data); } catch (_) { return; }
+
+        switch (ev.type) {
+          case 'msg':
+            addLine(ev.tag, ev.text);
+            // When entering a new room, refresh the sidebar map silently
+            if (ev.tag === 'room_name') {
+              mapDisplay.textContent = '';
+              sidebarMapBuf = [];
+              sendSilent('map');
+            }
+            break;
+          case 'room_snapshot':
+            updateSidebar(ev);
+            break;
+          case 'char_snapshot':
+            updateCharPanel(ev);
+            break;
+          case 'prompt':
+            flushSidebarMap();
+            addLine('system', ev.text);
+            break;
+          case 'player_died':
+            flushSidebarMap();
+            addLine('combat_death', '*** YOU HAVE BEEN SLAIN ***');
+            updateStatus();
+            break;
+          case 'quit':
+            flushSidebarMap();
+            addLine('system', '[Session ended — refresh the page to start a new session.]');
+            sse.close(); sse = null;
+            break;
+          case 'error':
+            flushSidebarMap();
+            addLine('error', ev.text);
+            break;
+          case 'no_session':
+            break;
+        }
+      };
+
+      sse.onerror = () => {
+        if (!document.hidden) {
+          flushSidebarMap();
+          addLine('system', '[Connection lost — reconnecting in 3 s...]');
+        }
+        sse.close();
+        sse = null;
+        setTimeout(startSSE, 3000);
+      };
+    }
+
+    // ── Commands ──────────────────────────────────────────────────────────────────
+
+    async function sendCmd(cmd) {
+      cmd = cmd.trim();
+      if (!cmd) return;
+
+      addEcho(cmd);
+      history.unshift(cmd);
+      if (history.length > 100) history.pop();
+      histIdx = -1;
+
+      try {
+        await fetch('/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cmd }),
+        });
+      } catch (_) {
+        addLine('error', '[Failed to send command — is the server running?]');
+      }
+    }
+
+    /** Send a command silently (no echo, no history entry). Used for auto-map. */
+    function sendSilent(cmd) {
+      fetch('/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd }),
+      }).catch(() => { });
+    }
+
+    // ── Status bar ────────────────────────────────────────────────────────────────
+
+    async function updateStatus() {
+      try {
+        const res = await fetch('/status');
+        const data = await res.json();
+        if (!data.session) return;
+
+        sPlayer.textContent = data.player;
+
+        const pct = data.max_hp > 0 ? data.hp / data.max_hp : 0;
+        sHp.textContent = `HP ${data.hp}/${data.max_hp}`;
+        sHp.style.color = pct > 0.5 ? '#50dc78' : pct > 0.25 ? '#ffa028' : '#f05050';
+
+        sRoom.textContent = data.room.replace(/_/g, ' ');
+      } catch (_) { /* server busy, skip */ }
+    }
+
+    // ── Login ─────────────────────────────────────────────────────────────────────
+
+    async function doLogin() {
+      const worldId = worldSel.value;
+      const playerName = playerIn.value.trim();
+
+      if (!worldId) {
+        loginErr.textContent = 'No worlds found — is the server running correctly?';
+        return;
+      }
+      if (!playerName) {
+        loginErr.textContent = 'Enter a character name.';
+        playerIn.focus();
+        return;
+      }
+
+      loginErr.textContent = '';
+      connectBtn.disabled = true;
+      connectBtn.textContent = 'Connecting\u2026';
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ world_id: worldId, player_name: playerName }),
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+          loginErr.textContent = data.error;
+          connectBtn.disabled = false;
+          connectBtn.textContent = 'Enter World';
+          return;
+        }
+
+        showGame();
+      } catch (_) {
+        loginErr.textContent = 'Server error — is web_server.py running?';
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Enter World';
+      }
+    }
+
+    function showGame(resuming = false) {
+      loginPanel.style.display = 'none';
+      gamePanel.removeAttribute('hidden');
+      initSidebar();
+      initCharPanel();
+      cmdIn.focus();
+      startSSE();
+      updateStatus();
+      setInterval(updateStatus, 4000);
+      if (resuming) {
+        // Re-populate panes — the initial look/snapshots ran before we connected
+        setTimeout(() => {
+          fetch('/char_snapshot').then(r => r.json()).then(d => {
+            if (d.session) updateCharPanel(d);
+          }).catch(() => { });
+          sendSilent('look');
+        }, 200);
+      }
+    }
+
+    // ── Quit / Stop server ────────────────────────────────────────────────────────
+
+    stopBtn.addEventListener('click', async () => {
+      if (!confirm('Stop the web server? This will end any active session and close the tool.')) return;
+      try { await fetch('/quit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (_) { }
+      try { await fetch('/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (_) { }
+      document.body.innerHTML = '<div style="font-family:monospace;color:#c8c8c8;background:#141414;height:100vh;display:flex;align-items:center;justify-content:center;font-size:1.1em">Web server stopped. You may close this tab.</div>';
     });
-  } catch (_) {
-    addLine('error', '[Failed to send command — is the server running?]');
-  }
-}
 
-/** Send a command silently (no echo, no history entry). Used for auto-map. */
-function sendSilent(cmd) {
-  fetch('/command', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cmd }),
-  }).catch(() => {});
-}
+    // ── Initialise ────────────────────────────────────────────────────────────────
 
-// ── Status bar ────────────────────────────────────────────────────────────────
+    async function init() {
+      loginPanel.style.display = 'none';   // hide until we know which screen to show
 
-async function updateStatus() {
-  try {
-    const res  = await fetch('/status');
-    const data = await res.json();
-    if (!data.session) return;
+      // Load world list
+      try {
+        const res = await fetch('/worlds');
+        const data = await res.json();
+        if (data.worlds.length === 0) {
+          loginErr.textContent = 'No worlds found in data/. Create a world config.py to get started.';
+        }
+        data.worlds.forEach(w => {
+          const opt = document.createElement('option');
+          opt.value = w.id;
+          opt.textContent = w.name;
+          worldSel.appendChild(opt);
+        });
+      } catch (_) {
+        loginErr.textContent = 'Could not reach server — is web_server.py running?';
+      }
 
-    sPlayer.textContent = data.player;
+      // Load player list for autocomplete + world pre-selection
+      try {
+        const res = await fetch('/players');
+        const data = await res.json();
+        players = data.players;
+        const dl = $('player-suggestions');
+        players.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.name;
+          dl.appendChild(opt);
+        });
+      } catch (_) { /* non-fatal */ }
 
-    const pct = data.max_hp > 0 ? data.hp / data.max_hp : 0;
-    sHp.textContent = `HP ${data.hp}/${data.max_hp}`;
-    sHp.style.color = pct > 0.5 ? '#50dc78' : pct > 0.25 ? '#ffa028' : '#f05050';
+      playerIn.addEventListener('input', () => {
+        const name = playerIn.value.trim().toLowerCase();
+        const match = players.find(p => p.name.toLowerCase() === name);
+        if (match) {
+          if (match.world_id) worldSel.value = match.world_id;
+          charInfo.textContent = `Returning — HP ${match.hp}/${match.max_hp}`;
+        } else {
+          charInfo.textContent = name ? 'New character' : '';
+        }
+      });
 
-    sRoom.textContent = data.room.replace(/_/g, ' ');
-  } catch (_) { /* server busy, skip */ }
-}
+      // Skip login if a session is already active
+      try {
+        const res = await fetch('/status');
+        const data = await res.json();
+        if (data.session) {
+          showGame(true);   // resuming — re-request state
+          return;
+        }
+      } catch (_) { /* ignore */ }
 
-// ── Login ─────────────────────────────────────────────────────────────────────
-
-async function doLogin() {
-  const worldId    = worldSel.value;
-  const playerName = playerIn.value.trim();
-
-  if (!worldId) {
-    loginErr.textContent = 'No worlds found — is the server running correctly?';
-    return;
-  }
-  if (!playerName) {
-    loginErr.textContent = 'Enter a character name.';
-    playerIn.focus();
-    return;
-  }
-
-  loginErr.textContent   = '';
-  connectBtn.disabled    = true;
-  connectBtn.textContent = 'Connecting\u2026';
-
-  try {
-    const res  = await fetch('/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ world_id: worldId, player_name: playerName }),
-    });
-    const data = await res.json();
-
-    if (!data.ok) {
-      loginErr.textContent   = data.error;
-      connectBtn.disabled    = false;
-      connectBtn.textContent = 'Enter World';
-      return;
+      loginPanel.style.display = '';   // no active session — show login
     }
 
-    showGame();
-  } catch (_) {
-    loginErr.textContent   = 'Server error — is web_server.py running?';
-    connectBtn.disabled    = false;
-    connectBtn.textContent = 'Enter World';
-  }
-}
+    // ── Event listeners ───────────────────────────────────────────────────────────
 
-function showGame(resuming = false) {
-  loginPanel.style.display = 'none';
-  gamePanel.removeAttribute('hidden');
-  initSidebar();
-  initCharPanel();
-  cmdIn.focus();
-  startSSE();
-  updateStatus();
-  setInterval(updateStatus, 4000);
-  if (resuming) {
-    // Re-populate panes — the initial look/snapshots ran before we connected
-    setTimeout(() => {
-      fetch('/char_snapshot').then(r => r.json()).then(d => {
-        if (d.session) updateCharPanel(d);
-      }).catch(() => {});
-      sendSilent('look');
-    }, 200);
-  }
-}
+    connectBtn.addEventListener('click', doLogin);
+    playerIn.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
-// ── Quit / Stop server ────────────────────────────────────────────────────────
-
-stopBtn.addEventListener('click', async () => {
-  if (!confirm('Stop the web server? This will end any active session and close the tool.')) return;
-  try { await fetch('/quit',     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (_) {}
-  try { await fetch('/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (_) {}
-  document.body.innerHTML = '<div style="font-family:monospace;color:#c8c8c8;background:#141414;height:100vh;display:flex;align-items:center;justify-content:center;font-size:1.1em">Web server stopped. You may close this tab.</div>';
-});
-
-// ── Initialise ────────────────────────────────────────────────────────────────
-
-async function init() {
-  loginPanel.style.display = 'none';   // hide until we know which screen to show
-
-  // Load world list
-  try {
-    const res  = await fetch('/worlds');
-    const data = await res.json();
-    if (data.worlds.length === 0) {
-      loginErr.textContent = 'No worlds found in data/. Create a world config.py to get started.';
-    }
-    data.worlds.forEach(w => {
-      const opt = document.createElement('option');
-      opt.value       = w.id;
-      opt.textContent = w.name;
-      worldSel.appendChild(opt);
-    });
-  } catch (_) {
-    loginErr.textContent = 'Could not reach server — is web_server.py running?';
-  }
-
-  // Load player list for autocomplete + world pre-selection
-  try {
-    const res  = await fetch('/players');
-    const data = await res.json();
-    players    = data.players;
-    const dl   = $('player-suggestions');
-    players.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.name;
-      dl.appendChild(opt);
-    });
-  } catch (_) { /* non-fatal */ }
-
-  playerIn.addEventListener('input', () => {
-    const name  = playerIn.value.trim().toLowerCase();
-    const match = players.find(p => p.name.toLowerCase() === name);
-    if (match) {
-      if (match.world_id) worldSel.value = match.world_id;
-      charInfo.textContent = `Returning — HP ${match.hp}/${match.max_hp}`;
-    } else {
-      charInfo.textContent = name ? 'New character' : '';
-    }
-  });
-
-  // Skip login if a session is already active
-  try {
-    const res  = await fetch('/status');
-    const data = await res.json();
-    if (data.session) {
-      showGame(true);   // resuming — re-request state
-      return;
-    }
-  } catch (_) { /* ignore */ }
-
-  loginPanel.style.display = '';   // no active session — show login
-}
-
-// ── Event listeners ───────────────────────────────────────────────────────────
-
-connectBtn.addEventListener('click', doLogin);
-playerIn.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-
-sendBtn.addEventListener('click', () => {
-  sendCmd(cmdIn.value);
-  cmdIn.value = '';
-});
-
-cmdIn.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    sendCmd(cmdIn.value);
-    cmdIn.value = '';
-    histIdx = -1;
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    if (histIdx < history.length - 1) {
-      histIdx++;
-      cmdIn.value = history[histIdx];
-    }
-  } else if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    if (histIdx > 0) {
-      histIdx--;
-      cmdIn.value = history[histIdx];
-    } else {
-      histIdx     = -1;
+    sendBtn.addEventListener('click', () => {
+      sendCmd(cmdIn.value);
       cmdIn.value = '';
-    }
-  }
-});
+    });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-init();
-</script>
+    cmdIn.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        sendCmd(cmdIn.value);
+        cmdIn.value = '';
+        histIdx = -1;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (histIdx < history.length - 1) {
+          histIdx++;
+          cmdIn.value = history[histIdx];
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (histIdx > 0) {
+          histIdx--;
+          cmdIn.value = history[histIdx];
+        } else {
+          histIdx = -1;
+          cmdIn.value = '';
+        }
+      }
+    });
+
+    // ── Start ─────────────────────────────────────────────────────────────────────
+    init();
+  </script>
 </body>
+
 </html>

@@ -256,6 +256,38 @@ def validate_items(items):
             if not cmd.get("verb"):
                 warn(f"Item '{iid}' has a [[commands]] entry with no verb — "
                      f"it will never be triggered")
+        # ── Effect / on_use pattern checks ────────────────────────────────────
+        effects = item.get("effects", [])
+        has_slot = bool(item.get("slot", ""))
+        _VALID_EFFECT_TYPES = {"stat_bonus", "on_use", "on_equip", "on_hit"}
+        _VALID_STATS        = {"attack", "defense", "max_hp", "carry_capacity"}
+        _KNOWN_SPECIALS     = set()  # only clear_status_<X> is valid; others are bugs
+        for eidx, fx in enumerate(effects):
+            ftype = fx.get("type", "")
+            if ftype not in _VALID_EFFECT_TYPES:
+                warn(f"Item '{iid}' effect[{eidx}] has unknown type '{ftype}' — "
+                     f"valid types: {sorted(_VALID_EFFECT_TYPES)}")
+            if ftype == "stat_bonus":
+                stat = fx.get("stat", "")
+                if stat not in _VALID_STATS:
+                    warn(f"Item '{iid}' stat_bonus has unknown stat '{stat}' — "
+                         f"valid: {sorted(_VALID_STATS)}")
+            if ftype == "on_equip" and not has_slot:
+                warn(f"Item '{iid}' has an on_equip effect but no slot — "
+                     f"the item can never be equipped; on_equip will never fire")
+            if ftype == "on_use":
+                heal    = fx.get("heal", 0)
+                special = fx.get("special", "")
+                if heal == 0 and not special:
+                    warn(f"Item '{iid}' on_use effect has heal=0 and no special — "
+                         f"using this item will do nothing")
+                if special and not special.startswith("clear_status_"):
+                    warn(f"Item '{iid}' on_use has unrecognized special='{special}' — "
+                         f"only 'clear_status_<effect>' is handled; this will be silently ignored")
+        # on_use script + effects.on_use both present is confusing (script wins)
+        if item.get("on_use") and any(fx.get("type") == "on_use" for fx in effects):
+            warn(f"Item '{iid}' has both an on_use script array AND an effects on_use — "
+                 f"the script array takes priority; effects on_use will be ignored")
 
 
 _NPC_REQUIRED = ("id", "name", "hp", "max_hp", "attack", "defense",
@@ -562,7 +594,10 @@ def validate_duplicate_keys() -> None:
     for path in sorted(all_paths):
         try:
             lines = path.read_text(encoding="utf-8").splitlines()
-        except Exception:
+        except UnicodeDecodeError:
+            continue
+        except Exception as e:
+            warn(f"{path}: could not read — {e}")
             continue
         rel = path.relative_to(DATA_DIR.parent)
 

@@ -151,12 +151,12 @@ class WorldModel:
 
     def _scan_zone_states(self, zone_state_dir: Path) -> None:
         """Read canonical zone_state JSON files to find NPC rooms missing from TOML spawns."""
-        import json
         for json_path in sorted(zone_state_dir.glob("*.json")):
             try:
                 with open(json_path) as f:
                     data = json.load(f)
-            except Exception:
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"[bot] warning: skipping {json_path.name}: {e}", file=sys.stderr)
                 continue
             for room_id, room_data in data.items():
                 for npc in room_data.get("npcs", []):

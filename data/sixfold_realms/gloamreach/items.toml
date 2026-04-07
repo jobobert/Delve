@@ -87,8 +87,11 @@ on_use      = [
   { op = "if_not_flag", flag = "gr_echo_disrupted", then = [
     { op = "set_flag",      flag = "gr_echo_disrupted" },
     { op = "advance_quest", quest_id = "gr_shadow_fragment", step = 1 },
+    { op = "message", tag = "system", text = "The tuning fork hums, disrupting the echo around you." },
+  ], else = [
+    { op = "message", tag = "system", text = "The echo here is already disrupted. The fork falls silent." },
+    { op = "fail" },
   ] },
-  { op = "message", tag = "system", text = "The tuning fork hums, disrupting the echo around you." },
 ]
 
 [[item]]

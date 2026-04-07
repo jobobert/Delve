@@ -192,12 +192,15 @@ def _format_prompt(player: "Player") -> str:
         quest_title = all_q[first_qid].get("title", first_qid) if first_qid and first_qid in all_q else ""
     else:
         quest_title = ""
-    text = fmt.format(
-        hp=player.hp,
-        max_hp=player.max_hp,
-        level=player.level,
-        quest=quest_title,
-    )
+    try:
+        text = fmt.format(
+            hp=player.hp,
+            max_hp=player.max_hp,
+            level=player.level,
+            quest=quest_title,
+        )
+    except (KeyError, ValueError):
+        text = "> "
     return _PROMPT_BASE + "\n" + text + RESET
 
 

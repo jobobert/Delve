@@ -350,20 +350,10 @@ class Player:
                           if slot in all_slots}
         for slot in all_slots:
             p.equipped.setdefault(slot, None)
-        # Re-link equipped item dicts to their inventory counterparts.
-        # On save, equipped items are serialized independently from inventory,
-        # so after load they are separate objects — id() comparisons break.
-        inv_by_id: dict[str, list[dict]] = {}
-        for it in p.inventory:
-            inv_by_id.setdefault(it.get("id", ""), []).append(it)
-        _used_inv: set[int] = set()
-        for slot, eq in list(p.equipped.items()):
-            if eq:
-                candidates = [x for x in inv_by_id.get(eq.get("id", ""), [])
-                              if id(x) not in _used_inv]
-                if candidates:
-                    p.equipped[slot] = candidates[0]
-                    _used_inv.add(id(candidates[0]))
+        # Equipped items are stored as slim dicts separate from inventory at
+        # this point.  Re-linking (so that equipped slots share the same dict
+        # objects as inventory) is done in _resolve_items(), which runs after
+        # world templates are available.
         p.world_id      = data.get("world_id", "")
         p.active_style  = data.get("active_style", wc.DEFAULT_STYLE)
         p.known_styles  = data.get("known_styles", [wc.DEFAULT_STYLE])
@@ -488,14 +478,43 @@ class Player:
 
         Called by world.attach_player() once both player and world are ready.
         Stores the template dict so save() can slim items back down.
+        After resolution, re-links equipped slots to the same dict objects
+        that are in inventory, so id() comparisons work correctly.
         """
         self._item_templates = templates
         self.inventory = [_resolve_item(i, templates) for i in self.inventory]
-        self.equipped  = {
+        self.bank      = [_resolve_item(i, templates) for i in self.bank]
+
+        # Resolve equipped items from their saved slim dicts, then immediately
+        # re-link each slot to the matching inventory object so that equipped
+        # and inventory share the same dict identity.
+        resolved_equipped: dict[str, dict] = {
             slot: (_resolve_item(item, templates) if item else None)
             for slot, item in self.equipped.items()
         }
-        self.bank = [_resolve_item(i, templates) for i in self.bank]
+        inv_by_id: dict[str, list[dict]] = {}
+        for it in self.inventory:
+            inv_by_id.setdefault(it.get("id", ""), []).append(it)
+        used: set[int] = set()
+        for slot, eq in resolved_equipped.items():
+            if not eq:
+                self.equipped[slot] = None
+                continue
+            eq_id = eq.get("id", "")
+            available = [x for x in inv_by_id.get(eq_id, []) if id(x) not in used]
+            if not available:
+                # Item not in inventory — keep the resolved standalone copy.
+                self.equipped[slot] = eq
+                continue
+            # Prefer the candidate whose override fields match eq exactly.
+            eq_overrides = {k: v for k, v in eq.items() if k != "id"}
+            match = next(
+                (x for x in available
+                 if all(x.get(k) == v for k, v in eq_overrides.items())),
+                available[0],
+            )
+            self.equipped[slot] = match
+            used.add(id(match))
 
     def find_item(self, name: str) -> dict | None:
         name_l = name.lower()
