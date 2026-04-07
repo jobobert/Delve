@@ -21,7 +21,54 @@ next = "mire_info"
 
 [[response]]
 node = "root"
+condition = { flag = "guardian_defeated", not_flag = "eitd_quest_complete" }
+text = "I've recovered the Celestial Emerald from the vault."
+next = "emerald_returned"
+
+[[response]]
+node = "root"
 text = "Nothing. Just passing through."
+next = ""
+
+[[node]]
+id   = "emerald_returned"
+line = "You— actually did it. She takes the Emerald, turns it in her hands, holds it up to the light. Something in her expression goes very still. 'I owe my patrol a report and you a reward. Both of which I intend to deliver.' She passes you a heavy coin purse and the Fenwatch crest — a copper badge that opens more doors in the mire than gold."
+script = [
+  { op = "advance_quest",  quest_id = "the_emerald_in_the_dark", step = 6 },
+  { op = "complete_quest", quest_id = "the_emerald_in_the_dark" },
+  { op = "set_flag",       flag = "eitd_quest_complete" },
+  { op = "give_gold",      amount = 200 },
+  { op = "give_xp",        amount = 500 },
+  { op = "prestige",       delta = 5, reason = "recovered the Celestial Emerald from the Aldenmoor vault" },
+  { op = "message",        tag = "reward_gold", text = "Warden Holt pays you 200g as promised." },
+]
+
+[[response]]
+node = "emerald_returned"
+text = "It wasn't easy."
+next = "emerald_returned_2"
+
+[[response]]
+node = "emerald_returned"
+text = "What will you do with it?"
+next = "emerald_future"
+
+[[node]]
+id   = "emerald_returned_2"
+line = "I can see that. Whatever went in there with Aldenmoor's body, you put it down. The patrol — I'll have an answer for their families. That's worth more than the gold."
+
+[[response]]
+node = "emerald_returned_2"
+text = "I'm glad I could help."
+next = ""
+
+[[node]]
+id   = "emerald_future"
+line = "Not my decision. The Aldenmoor family has been trying to reclaim that gem for forty years. Now that the vault's cleared they might actually get to make that choice. Or the academy will hear about it and send someone. We'll see."
+
+[[response]]
+node = "emerald_future"
+text = "Good luck with that."
 next = ""
 
 [[node]]

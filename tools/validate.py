@@ -416,8 +416,188 @@ def _collect_all_quest_ops() -> dict[str, set]:
     return triggered
 
 
+def validate_orphaned_tables() -> None:
+    """
+    Detect top-level array-table entries that are syntactically valid TOML but are
+    NEVER read by the engine because they appear as free-floating top-level arrays
+    instead of inline fields on their parent record.
+
+    Common mistakes and the correct inline form:
+
+      Zone / NPC files:
+        [[kill_script]]  →  kill_script  = [{op = "...", ...}]  on the [[npc]]
+        [[round_script]] →  round_script = [{...}]              on the [[npc]]
+        [[script]]       →  script       = [{...}]              on the [[npc]]
+        [[give_accepts]] →  give_accepts = [{item_id = "..."}]  on the [[npc]]
+
+      Zone / Room files:
+        [[on_enter]]     →  on_enter = [{op = "...", ...}]      on the [[room]]
+        [[on_exit]]      →  on_exit  = [{...}]                  on the [[room]]
+        [[on_sleep]]     →  on_sleep = [{...}]                  on the [[room]]
+        [[on_wake]]      →  on_wake  = [{...}]                  on the [[room]]
+
+      Item files:
+        [[effects]]      →  effects  = [{type = "...", ...}]    on the [[item]]
+        [[on_get]]       →  on_get   = [{op = "...", ...}]      on the [[item]]
+        [[on_drop]]      →  on_drop  = [{...}]                  on the [[item]]
+
+      Dialogue files:
+        [[script]]       →  script = [{...}]                    on the [[node]]
+
+      Crafting files:
+        [[quality]]      →  quality = [{...}]                   on the [[commission]]
+
+    The engine loads records by iterating data.get("npc", []) etc., so any
+    keys at the top-level dict are completely ignored at runtime.
+    """
+    for zone_folder in zone_dirs():
+        # ── Zone files (npcs, items, rooms) ──────────────────────────────────
+        for path in sorted(zone_folder.glob("*.toml")):
+            data = load_safe(path)
+            if not data:
+                continue
+            rel = path.relative_to(DATA_DIR.parent)
+            # NPC-related orphans (script hooks that belong inline on [[npc]])
+            for bad_key in ("kill_script", "round_script", "script", "give_accepts"):
+                if bad_key in data and isinstance(data[bad_key], list):
+                    err(
+                        f"{rel}: top-level [[{bad_key}]] entries found "
+                        f"({len(data[bad_key])} entry(s)). These are NEVER used by the engine. "
+                        f"Move them inline onto the preceding [[npc]] as "
+                        f"{bad_key} = [{{op = \"...\", ...}}]"
+                    )
+            # Room hook orphans (belong inline on [[room]])
+            for bad_key in ("on_enter", "on_exit", "on_sleep", "on_wake"):
+                if bad_key in data and isinstance(data[bad_key], list):
+                    err(
+                        f"{rel}: top-level [[{bad_key}]] entries found "
+                        f"({len(data[bad_key])} entry(s)). These are NEVER run by the engine. "
+                        f"Move them inline onto the preceding [[room]] as "
+                        f"{bad_key} = [{{op = \"...\", ...}}]"
+                    )
+            # Item hook / effect orphans (belong inline on [[item]])
+            for bad_key in ("effects", "on_get", "on_drop"):
+                if bad_key in data and isinstance(data[bad_key], list):
+                    parent = "[[item]]"
+                    hint = (
+                        f"effects = [{{type = \"...\", ...}}]" if bad_key == "effects"
+                        else f"{bad_key} = [{{op = \"...\", ...}}]"
+                    )
+                    err(
+                        f"{rel}: top-level [[{bad_key}]] entries found "
+                        f"({len(data[bad_key])} entry(s)). These are NEVER applied by the engine. "
+                        f"Move them inline onto the preceding {parent} as {hint}"
+                    )
+
+        # ── Dialogue files ────────────────────────────────────────────────────
+        dlg_dir = zone_folder / "dialogues"
+        if dlg_dir.exists():
+            for path in sorted(dlg_dir.glob("*.toml")):
+                data = load_safe(path)
+                if not data:
+                    continue
+                rel = path.relative_to(DATA_DIR.parent)
+                if "script" in data and isinstance(data["script"], list):
+                    err(
+                        f"{rel}: top-level [[script]] entries found "
+                        f"({len(data['script'])} entry(s)). These are NEVER executed by the engine. "
+                        f"Move them inline onto the [[node]] as "
+                        f"script = [{{op = \"...\", ...}}]"
+                    )
+
+        # ── Crafting files ────────────────────────────────────────────────────
+        crafting_dir = zone_folder / "crafting"
+        if crafting_dir.exists():
+            for path in sorted(crafting_dir.glob("*.toml")):
+                data = load_safe(path)
+                if not data:
+                    continue
+                rel = path.relative_to(DATA_DIR.parent)
+                if "quality" in data and isinstance(data["quality"], list):
+                    err(
+                        f"{rel}: top-level [[quality]] entries found "
+                        f"({len(data['quality'])} entry(s)). These are NEVER read by the engine. "
+                        f"Move them inline onto the [[commission]] as "
+                        f"quality = [{{label = \"...\", ...}}]"
+                    )
+
+
+def validate_duplicate_keys() -> None:
+    """
+    Detect duplicate keys within the same [[record]] block. The custom TOML
+    parser silently overwrites the earlier value (last write wins), so both
+    definitions appear syntactically valid but only the second takes effect.
+
+    Example (rooms.toml):
+        [[room]]
+        id       = "my_room"
+        on_enter = [{ op = "set_flag", flag = "visited" }]   ← silently discarded
+        on_enter = [{ op = "advance_quest", quest_id = "q" }] ← this one wins
+
+    This scanner works on raw text. Only lines with no leading whitespace are
+    considered direct record fields — nested content inside inline arrays or
+    tables is always indented, so it is never incorrectly flagged.
+    """
+    import re
+
+    # Matches the start of an array-of-tables or plain-table header (any indent).
+    HDR   = re.compile(r'^\s*\[\[?')
+    # Matches a key = value at column 0 (no leading whitespace).
+    # Direct fields of [[record]] blocks are always unindented in our files.
+    KEYLN = re.compile(r'^(\w[\w_]*)\s*=')
+
+    all_paths: list[Path] = []
+    for zone_folder in zone_dirs():
+        all_paths += list(zone_folder.glob("*.toml"))
+        dlg = zone_folder / "dialogues"
+        if dlg.exists():
+            all_paths += list(dlg.glob("*.toml"))
+        craft = zone_folder / "crafting"
+        if craft.exists():
+            all_paths += list(craft.glob("*.toml"))
+        quests_dir = zone_folder / "quests"
+        if quests_dir.exists():
+            all_paths += list(quests_dir.glob("*.toml"))
+
+    for path in sorted(all_paths):
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except Exception:
+            continue
+        rel = path.relative_to(DATA_DIR.parent)
+
+        seen: dict[str, int] = {}   # key → line number of first occurrence
+
+        for lineno, raw in enumerate(lines, 1):
+            # Skip blank lines and full-line comments
+            stripped = raw.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+
+            # A [[...]] or [...] header starts a new record context
+            if HDR.match(raw):
+                seen = {}
+                continue
+
+            # Only consider lines starting at column 0 (direct record fields).
+            # Nested content inside inline arrays/tables is always indented.
+            m = KEYLN.match(raw)
+            if not m:
+                continue
+            key = m.group(1)
+
+            if key in seen:
+                err(
+                    f"{rel}:{lineno}: duplicate key '{key}' in same record block "
+                    f"(first at line {seen[key]}). The parser uses the LAST value — "
+                    f"the earlier definition is silently discarded."
+                )
+            else:
+                seen[key] = lineno
+
+
 def validate_quest_triggers(quests: dict) -> None:
-    """Warn if any quest step or completion has no advance_quest / complete_quest trigger found."""
+    """Error if any quest step or completion has no advance_quest / complete_quest trigger found."""
     triggered = _collect_all_quest_ops()
     for qid, quest in quests.items():
         steps = quest.get("step", [])
@@ -428,12 +608,12 @@ def validate_quest_triggers(quests: dict) -> None:
                 continue
             step_triggers = triggered.get(qid, set())
             if step_num not in step_triggers:
-                warn(f"Quest '{qid}' step {step_num} has no advance_quest trigger "
-                     f"found in any script, kill_script, on_get, or on_enter")
+                err(f"Quest '{qid}' step {step_num} has no advance_quest trigger "
+                    f"found in any script, kill_script, on_get, or on_enter")
         # Check complete_quest exists
         if steps:
             if None not in triggered.get(qid, set()):
-                warn(f"Quest '{qid}' has no complete_quest trigger found anywhere")
+                err(f"Quest '{qid}' has no complete_quest trigger found anywhere")
 
 
 def validate_companions() -> None:
@@ -927,6 +1107,8 @@ def _validate_world(world_path: Path) -> None:
         else:
             warn(issue["msg"])
 
+    validate_orphaned_tables()
+    validate_duplicate_keys()
     validate_quest_triggers(quests)
 
     # Collect zone ids that actually have rooms

@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Delve — World Creation Tool</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a1a1a'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23F29E00'>&#x2694;</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a1a1a'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23F29E00'>&#x2694;</text></svg>">
 <link rel="stylesheet" href="/css/wct_common.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23111118'/><text x='16' y='23' font-size='20' text-anchor='middle' font-family='monospace' font-weight='bold' fill='%23F29E00'>D</text></svg>">
 </head>
@@ -2899,7 +2901,7 @@ function _renderStepTriggers(sec, questData, stepKey) {
       <span class="tc-entity" title="${escHtml(t.npc_id)} · ${escHtml(_typeLabel(t))} [${escHtml(t.zone_id)}]">
         ${escHtml(t.npc_id)} · ${escHtml(_typeLabel(t))}
       </span>
-      <span class="tc-nav" title="Navigate to entity">&#8594;</span>`;
+      <span class="tc-nav" title="Navigate to source entity to edit or remove this trigger">&#9998;</span>`;
     chip.querySelector('.tc-nav').addEventListener('click', () => {
       _navigateToTrigger(t);
     });
@@ -2978,7 +2980,7 @@ function _navigateToTrigger(t) {
   }
 }
 
-function renderQuestEditor(main) {
+function renderQuestEditor_v1(main) {
   const d = SELECTED.data;
   main.appendChild(editorHeader('quest', 'badge-quest', d.title || d._id || d.id));
   const questDotBtn = document.createElement('button');
@@ -3009,10 +3011,10 @@ function renderQuestEditor(main) {
     null, 'Optional. Line shown in the quest banner when the quest is completed.\nDefault: "Well done, adventurer."'));
 
   main.appendChild(sectionTitle('Steps', 'Each step is a numbered objective. Steps advance via script ops:\n  { op = "advance_quest", quest_id = "id", step = N }\nThe completion_flag is SET by you in the script that drives advancement.\nIt is checked by dialogue condition: { quest = "id", step = N }'));
-  renderQuestSteps(main, d);
+  renderQuestSteps_v1(main, d);
 
   main.appendChild(sectionTitle('Rewards', 'Awarded automatically when the quest is completed via:\n  { op = "complete_quest", quest_id = "id" }\nTypes: gold (direct payment), xp (experience), item (give to player).'));
-  renderQuestRewards(main, d);
+  renderQuestRewards_v1(main, d);
 
   // ── Completion trigger viewer ──────────────────────────────────
   const compTrigSec = document.createElement('div');
@@ -3027,39 +3029,40 @@ function renderQuestEditor(main) {
     null, 'Developer note. Ignored by the engine at runtime.'));
 }
 
-function renderQuestSteps(main, d) {
+function renderQuestSteps_v1(main, d) {
   d.step = d.step || [];
   const container = document.createElement('div');
-  let _dragSrcIdx = null;
 
   const rebuild = () => {
     container.innerHTML = '';
     d.step.forEach((step, i) => {
       const card = document.createElement('div'); card.className = 'step-card';
-      card.draggable = true;
-      card.style.cursor = 'grab';
-
-      card.addEventListener('dragstart', e => {
-        _dragSrcIdx = i; card.style.opacity = '0.4';
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(i));
-      });
-      card.addEventListener('dragend', () => { card.style.opacity = ''; _dragSrcIdx = null; });
-      card.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; card.style.outline = '2px solid var(--amber)'; });
-      card.addEventListener('dragleave', () => { card.style.outline = ''; });
-      card.addEventListener('drop', e => {
-        e.preventDefault(); card.style.outline = '';
-        if (_dragSrcIdx === null || _dragSrcIdx === i) return;
-        const moved = d.step.splice(_dragSrcIdx, 1)[0];
-        d.step.splice(i, 0, moved);
-        rebuild(); markDirty();
-      });
 
       const hdr = document.createElement('div'); hdr.className = 'step-card-header';
-      hdr.innerHTML = `<span>Step ${i+1} <span style="color:var(--text-dim);font-size:11px">drag to reorder</span></span>`;
+
+      // Left side: label + move buttons grouped together
+      const hdrLeft = document.createElement('div');
+      hdrLeft.style.cssText = 'display:flex;align-items:center;gap:4px;';
+      const stepLabel = document.createElement('span'); stepLabel.textContent = `Step ${i+1}`;
+      const upBtn = document.createElement('button'); upBtn.className = 'hbtn'; upBtn.textContent = '▲';
+      upBtn.style.cssText = 'padding:2px 6px;font-size:11px;';
+      upBtn.title = 'Move step up'; upBtn.disabled = i === 0;
+      upBtn.addEventListener('click', () => {
+        d.step.splice(i - 1, 0, d.step.splice(i, 1)[0]);
+        rebuild(); markDirty();
+      });
+      const dnBtn = document.createElement('button'); dnBtn.className = 'hbtn'; dnBtn.textContent = '▼';
+      dnBtn.style.cssText = 'padding:2px 6px;font-size:11px;';
+      dnBtn.title = 'Move step down'; dnBtn.disabled = i === d.step.length - 1;
+      dnBtn.addEventListener('click', () => {
+        d.step.splice(i + 1, 0, d.step.splice(i, 1)[0]);
+        rebuild(); markDirty();
+      });
+      hdrLeft.appendChild(stepLabel); hdrLeft.appendChild(upBtn); hdrLeft.appendChild(dnBtn);
+
       const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='Remove';
-      rmBtn.addEventListener('click', () => { d.step.splice(i,1); rebuild(); markDirty(); });
-      hdr.appendChild(rmBtn); card.appendChild(hdr);
+      hdr.appendChild(hdrLeft); hdr.appendChild(rmBtn);
+      card.appendChild(hdr);
       card.appendChild(fieldRow('Objective',       textareaInput(step.objective,       v => { d.step[i].objective       = v; markDirty(); }),
         null, 'What the player needs to do. Shown in the journal.'));
       card.appendChild(fieldRow('Completion Flag', textInput    (step.completion_flag, v => { d.step[i].completion_flag = v; markDirty(); }),
@@ -3086,7 +3089,7 @@ function renderQuestSteps(main, d) {
   main.appendChild(container);
 }
 
-function renderQuestRewards(main, d) {
+function renderQuestRewards_v1(main, d) {
   d.reward = d.reward || [];
   const container = document.createElement('div');
   const rebuild = () => {
@@ -3127,6 +3130,228 @@ function renderQuestRewards(main, d) {
   };
   rebuild();
   main.appendChild(container);
+}
+
+// ── Quest editor (narrative layout) ──────────────────────────────────
+
+function renderQuestEditor(main) {
+  const d = SELECTED.data;
+  main.appendChild(editorHeader('quest', 'badge-quest', d.title || d._id || d.id));
+  const questDotBtn = document.createElement('button');
+  questDotBtn.className = 'hbtn'; questDotBtn.textContent = 'Export DOT';
+  questDotBtn.title = 'Download quest flow as Graphviz .dot file';
+  questDotBtn.addEventListener('click', exportQuestDot);
+  main.querySelector('.editor-actions')?.appendChild(questDotBtn);
+  const questGrfBtn = document.createElement('button');
+  questGrfBtn.className = 'hbtn'; questGrfBtn.textContent = 'Graph';
+  questGrfBtn.setAttribute('data-role', 'quest-graph-btn');
+  questGrfBtn.title = 'Toggle interactive quest step flow graph';
+  questGrfBtn.addEventListener('click', () => {
+    const showing = !!main.querySelector('.dlg-graph-wrap');
+    questGrfBtn.classList.toggle('primary', !showing);
+    _showQuestGraph(main, d);
+  });
+  main.querySelector('.editor-actions')?.appendChild(questGrfBtn);
+  appendIdRow(main, d, 'quest', SELECTED.zone_id, {idField: '_id', nameField: 'title'});
+  main.appendChild(fieldRow('Title', textInput(d.title, v => { d.title = v; markDirty(); }),
+    null, 'Quest name shown in the player\'s journal.'));
+  main.appendChild(fieldRow('Giver NPC', refInput(d.giver, 'dl-npcs', v => { d.giver = v; markDirty(); }, 'npc'),
+    null, 'NPC who gives this quest. Informational only — not enforced by the engine.'));
+  main.appendChild(fieldRow('Summary', textareaInput(d.summary, v => { d.summary = v; markDirty(); }),
+    null, 'Full description shown in the player\'s journal when the quest is active.'));
+
+  main.appendChild(sectionTitle('Steps', 'Each step is a numbered objective. Steps advance via:\n  { op = "advance_quest", quest_id = "id", step = N }'));
+  renderQuestSteps(main, d);
+
+  // ── Completion section (triggers + message + rewards) ──────────────
+  // Build and attach to main eagerly so the header is visible even if body
+  // construction encounters a runtime error further down.
+  const compSec = document.createElement('div');
+  compSec.className = 'qs-completion';
+  const compHdr = document.createElement('div');
+  compHdr.className = 'qs-completion-hdr';
+  compHdr.textContent = 'Quest Completion';
+  compSec.appendChild(compHdr);
+  main.appendChild(compSec);   // ← attach to main before building body
+
+  const compBody = document.createElement('div');
+  compBody.className = 'qs-completion-body';
+  compSec.appendChild(compBody);  // ← attach body immediately too
+
+  // Triggers block
+  const trigBlock = document.createElement('div'); trigBlock.className = 'qs-prose-block';
+  const trigLbl = document.createElement('p'); trigLbl.className = 'qs-prose';
+  trigLbl.textContent = 'Finally, this quest is completed when:';
+  trigBlock.appendChild(trigLbl);
+  const compTrigSec = document.createElement('div');
+  compTrigSec.className = 'trigger-section';
+  compTrigSec.dataset.trigStep = 'complete';
+  trigBlock.appendChild(compTrigSec);
+  compBody.appendChild(trigBlock);
+  _renderStepTriggers(compTrigSec, d, 'complete');  // populate after attach
+
+  // Complete message block
+  const msgBlock = document.createElement('div'); msgBlock.className = 'qs-prose-block';
+  const msgLbl = document.createElement('p'); msgLbl.className = 'qs-prose';
+  msgLbl.textContent = 'This message is presented to the player:';
+  msgBlock.appendChild(msgLbl);
+  const msgInp = textInput(d.complete_message, v => { d.complete_message = v || undefined; markDirty(); });
+  msgInp.placeholder = 'Default: "Well done, adventurer."';
+  msgBlock.appendChild(msgInp);
+  compBody.appendChild(msgBlock);
+
+  // Rewards block
+  const rewBlock = document.createElement('div'); rewBlock.className = 'qs-prose-block';
+  const rewLbl = document.createElement('p'); rewLbl.className = 'qs-prose';
+  rewLbl.textContent = 'And these rewards are given:';
+  rewBlock.appendChild(rewLbl);
+  rewBlock.appendChild(renderQuestRewards(d));
+  compBody.appendChild(rewBlock);
+
+  main.appendChild(sectionTitle('Notes'));
+  main.appendChild(fieldRow('Admin Comment', textareaInput(d.admin_comment, v => { d.admin_comment = v; markDirty(); }),
+    null, 'Developer note. Ignored by the engine at runtime.'));
+}
+
+function renderQuestSteps(main, d) {
+  d.step = d.step || [];
+  const container = document.createElement('div');
+
+  const rebuild = () => {
+    container.innerHTML = '';
+    d.step.forEach((step, i) => {
+      const card = document.createElement('div'); card.className = 'qs-step';
+
+      // Header
+      const hdr = document.createElement('div'); hdr.className = 'qs-step-hdr';
+      const hdrLeft = document.createElement('div'); hdrLeft.className = 'qs-step-hdr-left';
+      const stepNum = document.createElement('span'); stepNum.className = 'qs-step-num';
+      stepNum.textContent = `Step ${i + 1}`;
+      const upBtn = document.createElement('button'); upBtn.className = 'hbtn'; upBtn.textContent = '▲';
+      upBtn.style.cssText = 'padding:2px 6px;font-size:11px;';
+      upBtn.title = 'Move step up'; upBtn.disabled = i === 0;
+      upBtn.addEventListener('click', () => { d.step.splice(i - 1, 0, d.step.splice(i, 1)[0]); rebuild(); markDirty(); });
+      const dnBtn = document.createElement('button'); dnBtn.className = 'hbtn'; dnBtn.textContent = '▼';
+      dnBtn.style.cssText = 'padding:2px 6px;font-size:11px;';
+      dnBtn.title = 'Move step down'; dnBtn.disabled = i === d.step.length - 1;
+      dnBtn.addEventListener('click', () => { d.step.splice(i + 1, 0, d.step.splice(i, 1)[0]); rebuild(); markDirty(); });
+      hdrLeft.appendChild(stepNum); hdrLeft.appendChild(upBtn); hdrLeft.appendChild(dnBtn);
+      const rmBtn = document.createElement('button'); rmBtn.className = 'hbtn danger'; rmBtn.textContent = 'Remove';
+      rmBtn.addEventListener('click', () => { d.step.splice(i, 1); rebuild(); markDirty(); });
+      hdr.appendChild(hdrLeft); hdr.appendChild(rmBtn);
+      card.appendChild(hdr);
+
+      const body = document.createElement('div'); body.className = 'qs-step-body';
+
+      // Prose block: triggers
+      const trigBlock = document.createElement('div'); trigBlock.className = 'qs-prose-block';
+      const trigLbl = document.createElement('p'); trigLbl.className = 'qs-prose';
+      trigLbl.textContent = i === 0 ? 'Quest starts when player:' : 'This step starts when player:';
+      trigBlock.appendChild(trigLbl);
+      const stepIndex = step.index ?? (i + 1);
+      const trigSec = document.createElement('div');
+      trigSec.className = 'trigger-section';
+      trigSec.dataset.trigStep = String(stepIndex);
+      trigBlock.appendChild(trigSec);
+      _renderStepTriggers(trigSec, d, stepIndex);
+      body.appendChild(trigBlock);
+
+      // Prose block: completion flag
+      const flagBlock = document.createElement('div'); flagBlock.className = 'qs-prose-block';
+      const flagLbl = document.createElement('p'); flagLbl.className = 'qs-prose';
+      flagLbl.textContent = 'And this flag is set for the player:';
+      flagBlock.appendChild(flagLbl);
+      const flagInp = textInput(step.completion_flag, v => { d.step[i].completion_flag = v; markDirty(); });
+      flagBlock.appendChild(flagInp);
+      const flagHint = document.createElement('span'); flagHint.className = 'qs-hint';
+      flagHint.textContent = 'Useful for dialogue show_if conditions.';
+      flagBlock.appendChild(flagHint);
+      body.appendChild(flagBlock);
+
+      // Step 1 only: start message
+      if (i === 0) {
+        const msgBlock = document.createElement('div'); msgBlock.className = 'qs-prose-block';
+        const msgLbl = document.createElement('p'); msgLbl.className = 'qs-prose';
+        msgLbl.textContent = 'And this message is presented to the player:';
+        msgBlock.appendChild(msgLbl);
+        const msgInp = textInput(d.start_message, v => { d.start_message = v || undefined; markDirty(); });
+        msgInp.placeholder = 'Shown in the quest banner when the quest first starts. Optional.';
+        msgBlock.appendChild(msgInp);
+        body.appendChild(msgBlock);
+      }
+
+      // Prose block: objective
+      const objBlock = document.createElement('div'); objBlock.className = 'qs-prose-block';
+      const objLbl = document.createElement('p'); objLbl.className = 'qs-prose';
+      objLbl.textContent = 'The objective (shown in the journal) is:';
+      objBlock.appendChild(objLbl);
+      objBlock.appendChild(textareaInput(step.objective, v => { d.step[i].objective = v; markDirty(); }));
+      body.appendChild(objBlock);
+
+      // Prose block: hint
+      const hintBlock = document.createElement('div'); hintBlock.className = 'qs-prose-block';
+      const hintLbl = document.createElement('p'); hintLbl.className = 'qs-prose';
+      hintLbl.textContent = 'A hint for the player:';
+      hintBlock.appendChild(hintLbl);
+      hintBlock.appendChild(textInput(step.hint, v => { d.step[i].hint = v; markDirty(); }));
+      body.appendChild(hintBlock);
+
+      // Prose block: on_advance
+      const advBlock = document.createElement('div'); advBlock.className = 'qs-prose-block';
+      const advLbl = document.createElement('p'); advLbl.className = 'qs-prose';
+      advLbl.textContent = 'And, finally, these ops run when this step is reached:';
+      advBlock.appendChild(advLbl);
+      advBlock.appendChild(scriptButton('on_advance', step.on_advance, ops => { d.step[i].on_advance = ops; markDirty(); }));
+      body.appendChild(advBlock);
+
+      card.appendChild(body);
+      container.appendChild(card);
+    });
+
+    const addBtn = document.createElement('button'); addBtn.className = 'hbtn'; addBtn.textContent = '+ Add step';
+    addBtn.addEventListener('click', () => { d.step.push({ objective: '', completion_flag: '', hint: '', on_advance: [] }); rebuild(); markDirty(); });
+    container.appendChild(addBtn);
+  };
+  rebuild();
+  main.appendChild(container);
+}
+
+// Returns a rewards container (no side-effects). Called by renderQuestEditor.
+function renderQuestRewards(d) {
+  d.reward = d.reward || [];
+  const container = document.createElement('div');
+  const rebuild = () => {
+    container.innerHTML = '';
+    d.reward.forEach((rew, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;';
+      const sel = document.createElement('select'); sel.className = 'field-select'; sel.style.width = '90px';
+      ['gold','xp','item'].forEach(t => {
+        const opt = document.createElement('option'); opt.value = t; opt.textContent = t;
+        if (rew.type === t) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => { d.reward[i].type = sel.value; rebuild(); markDirty(); });
+      const amtInp = document.createElement('input'); amtInp.type = 'number'; amtInp.className = 'field-input'; amtInp.style.width = '80px';
+      amtInp.value = rew.amount ?? ''; amtInp.placeholder = 'amount';
+      amtInp.addEventListener('input', () => { d.reward[i].amount = amtInp.value; markDirty(); });
+      const rmBtn = document.createElement('button'); rmBtn.className = 'hbtn danger'; rmBtn.textContent = '×';
+      rmBtn.addEventListener('click', () => { d.reward.splice(i, 1); rebuild(); markDirty(); });
+      row.appendChild(sel); row.appendChild(amtInp);
+      if (rew.type === 'item') {
+        const itemInp = refInput(rew.item_id, 'dl-items', v => { d.reward[i].item_id = v; markDirty(); }, 'item');
+        itemInp.style.flex = '1';
+        row.appendChild(itemInp);
+      }
+      row.appendChild(rmBtn);
+      container.appendChild(row);
+    });
+    const addBtn = document.createElement('button'); addBtn.className = 'hbtn'; addBtn.textContent = '+ Add reward';
+    addBtn.addEventListener('click', () => { d.reward.push({ type: 'gold', amount: 0 }); rebuild(); markDirty(); });
+    container.appendChild(addBtn);
+  };
+  rebuild();
+  return container;
 }
 
 // ── Style editor ──────────────────────────────────────────────────────
@@ -3952,22 +4177,70 @@ function buildDlgNodeCard(node, ni, dlg, rebuild) {
   // ── Node body ──────────────────────────────────────────────────────
   const body = document.createElement('div'); body.className = 'dlg-node-body';
 
-  // Lines (NPC text, randomly chosen)
+  // Lines (NPC text, randomly chosen or cycled)
+  // Each entry is a plain string OR {text, show_if} for a conditional line.
   const linesDiv = document.createElement('div'); linesDiv.className = 'dlg-lines';
+  const _lineText = e => (typeof e === 'string' ? e : (e?.text ?? ''));
+  const _lineCond = e => (typeof e === 'object' && e !== null ? (e.show_if || null) : null);
+  const _setLineText = (li, v) => {
+    const e = node.lines[li];
+    if (typeof e === 'object' && e !== null) e.text = v;
+    else node.lines[li] = v;
+  };
   const rebuildLines = () => {
     linesDiv.innerHTML = '';
-    (node.lines || ['']).forEach((line, li) => {
+    (node.lines || ['']).forEach((entry, li) => {
+      const lineWrap = document.createElement('div'); lineWrap.style.marginBottom = '4px';
       const row = document.createElement('div'); row.className = 'dlg-line-row';
       const ta = document.createElement('textarea'); ta.className = 'dlg-line-ta';
-      ta.value = line; ta.rows = 2;
+      ta.value = _lineText(entry); ta.rows = 2;
       ta.placeholder = li === 0 ? 'NPC says...' : 'Alternative line (chosen randomly)';
-      ta.addEventListener('input', () => { node.lines[li] = ta.value; markDirty(); });
+      ta.addEventListener('input', () => { _setLineText(li, ta.value); markDirty(); });
+
+      // Condition badge for this line
+      const lineCond = _lineCond(entry);
+      const lineCondBtn = document.createElement('span'); lineCondBtn.className = 'dlg-cond-badge';
+      lineCondBtn.style.cssText = 'font-size:10px;cursor:pointer;';
+      const _updateLineCondBtn = () => {
+        const s = summariseCond(_lineCond(node.lines[li]));
+        lineCondBtn.textContent = s || '+ cond';
+        lineCondBtn.style.opacity = s ? '1' : '.4';
+      };
+      _updateLineCondBtn();
+      let _lineCondOpen = false;
+      const lineCondEditorWrap = document.createElement('div'); lineCondEditorWrap.style.display = 'none';
+      // Proxy so buildCondEditor writes to the line object's show_if
+      const lineCondProxy = {};
+      Object.defineProperty(lineCondProxy, 'condition', {
+        get: () => _lineCond(node.lines[li]),
+        set: v => {
+          const cur = node.lines[li];
+          if (v) {
+            // Promote to object if needed
+            if (typeof cur === 'string') node.lines[li] = {text: cur, show_if: v};
+            else cur.show_if = v;
+          } else {
+            // Demote back to string if no condition
+            if (typeof cur === 'object' && cur !== null) node.lines[li] = cur.text ?? '';
+          }
+          _updateLineCondBtn(); markDirty();
+        },
+        configurable: true,
+      });
+      lineCondBtn.addEventListener('click', () => {
+        _lineCondOpen = !_lineCondOpen;
+        lineCondEditorWrap.style.display = _lineCondOpen ? '' : 'none';
+        if (_lineCondOpen && !lineCondEditorWrap.children.length)
+          lineCondEditorWrap.appendChild(buildCondEditor(lineCondProxy, lineCondBtn));
+      });
+
       const rmLine = document.createElement('button'); rmLine.className = 'dlg-icon-btn';
       rmLine.textContent = '×'; rmLine.title = 'Remove line';
       rmLine.style.display = node.lines.length > 1 ? '' : 'none';
       rmLine.addEventListener('click', () => { node.lines.splice(li, 1); rebuildLines(); markDirty(); });
-      row.appendChild(ta); row.appendChild(rmLine);
-      linesDiv.appendChild(row);
+      row.appendChild(ta); row.appendChild(lineCondBtn); row.appendChild(rmLine);
+      lineWrap.appendChild(row); lineWrap.appendChild(lineCondEditorWrap);
+      linesDiv.appendChild(lineWrap);
     });
     const addLineBtn = document.createElement('button'); addLineBtn.className = 'chip-add';
     addLineBtn.textContent = '+ alt line'; addLineBtn.title = 'Add alternative line (random pick)';
@@ -3982,7 +4255,7 @@ function buildDlgNodeCard(node, ni, dlg, rebuild) {
     cycleBtn.addEventListener('click', () => {
       node.cycle = !node.cycle; cycleBtn.classList.toggle('active', node.cycle); markDirty();
     });
-    linesDiv.appendChild(cycleBtn);
+    linesDiv.appendChild(addLineBtn); linesDiv.appendChild(cycleBtn);
   };
   rebuildLines();
   body.appendChild(linesDiv);
@@ -4023,36 +4296,44 @@ function buildDlgNodeCard(node, ni, dlg, rebuild) {
   respSection.appendChild(respLabel);
 
   const respList = document.createElement('div');
-  let _respDragSrc = null;
   const rebuildResps = () => {
     respList.innerHTML = '';
     const myResps = dlg.response.filter(r => r.node === node.id);
     myResps.forEach((resp, ri) => {
       const wrap = buildRespRow(resp, dlg, rebuildResps);
-      wrap.draggable = true; wrap.style.cursor = 'grab';
-      wrap.addEventListener('dragstart', e => {
-        _respDragSrc = ri; wrap.style.opacity = '0.4';
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(ri));
-      });
-      wrap.addEventListener('dragend', () => { wrap.style.opacity = ''; _respDragSrc = null; });
-      wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.style.outline = '2px solid var(--amber)'; });
-      wrap.addEventListener('dragleave', () => { wrap.style.outline = ''; });
-      wrap.addEventListener('drop', e => {
-        e.preventDefault(); wrap.style.outline = '';
-        if (_respDragSrc === null || _respDragSrc === ri) return;
-        // Move within dlg.response, restricted to myResps indices
-        const srcResp = myResps[_respDragSrc];
-        const dstResp = myResps[ri];
-        const srcIdx = dlg.response.indexOf(srcResp);
-        const dstIdx = dlg.response.indexOf(dstResp);
-        if (srcIdx !== -1 && dstIdx !== -1) {
+
+      // Up / down buttons — injected as a small column at the start of the resp row
+      const orderCol = document.createElement('div');
+      orderCol.style.cssText = 'display:flex;flex-direction:column;gap:1px;flex-shrink:0;margin-right:2px;';
+      const upBtn = document.createElement('button'); upBtn.className = 'dlg-icon-btn'; upBtn.textContent = '▲';
+      upBtn.style.cssText = 'font-size:9px;padding:1px 4px;line-height:1;';
+      upBtn.title = 'Move response up'; upBtn.disabled = ri === 0;
+      upBtn.addEventListener('click', () => {
+        const srcIdx = dlg.response.indexOf(resp);
+        const prevResp = myResps[ri - 1];
+        if (srcIdx !== -1 && prevResp) {
           dlg.response.splice(srcIdx, 1);
-          const newDst = dlg.response.indexOf(dstResp);
-          dlg.response.splice(newDst, 0, srcResp);
+          dlg.response.splice(dlg.response.indexOf(prevResp), 0, resp);
           rebuildResps(); markDirty();
         }
       });
+      const dnBtn = document.createElement('button'); dnBtn.className = 'dlg-icon-btn'; dnBtn.textContent = '▼';
+      dnBtn.style.cssText = 'font-size:9px;padding:1px 4px;line-height:1;';
+      dnBtn.title = 'Move response down'; dnBtn.disabled = ri === myResps.length - 1;
+      dnBtn.addEventListener('click', () => {
+        const srcIdx = dlg.response.indexOf(resp);
+        const nextResp = myResps[ri + 1];
+        if (srcIdx !== -1 && nextResp) {
+          dlg.response.splice(srcIdx, 1);
+          const newNext = dlg.response.indexOf(nextResp);
+          dlg.response.splice(newNext + 1, 0, resp);
+          rebuildResps(); markDirty();
+        }
+      });
+      orderCol.appendChild(upBtn); orderCol.appendChild(dnBtn);
+      // Insert at the start of the first child (the dlg-resp-row div)
+      const respRow = wrap.querySelector('.dlg-resp-row');
+      if (respRow) respRow.insertBefore(orderCol, respRow.firstChild);
       respList.appendChild(wrap);
     });
     const addRespBtn = document.createElement('button'); addRespBtn.className = 'hbtn';
@@ -4577,14 +4858,26 @@ function buildFileData(type, file, changedRecord) {
 
 function serialiseDlg(data) {
   // Convert internal representation back to TOML-friendly structure.
-  // - nodes with a single line use `line` (string), multiple use `lines` (array)
+  // - nodes with a single unconditional line use `line` (string)
+  // - multiple lines, or any line with show_if, use `lines` (array)
+  //   each entry is either a plain string or {text, show_if} inline-table
   // - remove empty scripts and undefined conditions
+  const _normLine = e => {
+    if (typeof e === 'string') return e || undefined;
+    if (typeof e === 'object' && e !== null) {
+      const text = e.text ?? '';
+      const cond = e.show_if && Object.keys(e.show_if).length ? e.show_if : null;
+      return cond ? {text, show_if: cond} : (text || undefined);
+    }
+    return undefined;
+  };
   const out = {};
   out.node = (data.node || []).map(n => {
     const nn = { id: n.id };
-    const lines = (n.lines || []).filter(l => l !== undefined);
-    if (lines.length === 1) nn.line = lines[0];
-    else if (lines.length > 1) nn.lines = lines;
+    const lines = (n.lines || []).map(_normLine).filter(l => l !== undefined);
+    const hasConditional = lines.some(l => typeof l === 'object');
+    if (!hasConditional && lines.length === 1) nn.line = lines[0];
+    else if (lines.length > 1 || hasConditional) nn.lines = lines;
     else nn.line = '';
     if (n.condition && Object.keys(n.condition).length) nn.condition = n.condition;
     if (n.cycle) nn.cycle = n.cycle;
@@ -6256,7 +6549,9 @@ function buildXRef() {
     // Dialogues — scan all nodes recursively
     (zone.dialogues || []).forEach(dlg => {
       const did = dlg._npc_id || dlg.npc_id || '';
-      scanObj(dlg, 'dialogue', zid, did, did, 'dialogue');
+      const npc = (zone.npcs || []).find(n => n.id === did);
+      const npcName = npc?.name || did;
+      scanObj(dlg, 'dialogue', zid, did, npcName, 'dialogue');
     });
   }
 }
@@ -7639,9 +7934,11 @@ function exportDialogueDot() {
     const rows=[];
     if(cond) rows.push(`<TR><TD BGCOLOR="${C_COND}" ALIGN="LEFT"><FONT COLOR="#1565C0" POINT-SIZE="9">entry if: ${_h(_fmtCond(cond))}</FONT></TD></TR>`);
     rows.push(`<TR><TD BGCOLOR="${hc}"><FONT COLOR="${reach?'black':'#999999'}"><B>${_h(nid)}</B></FONT></TD></TR>`);
+    const _ltext=l=>(typeof l==='object'&&l!==null?l.text??'':l);
+    const _lcond=l=>(typeof l==='object'&&l!==null&&l.show_if?` <FONT COLOR="#1565C0" POINT-SIZE="8">[if: ${_h(_fmtCond(l.show_if))}]</FONT>`:'');
     const lns=(node.lines?.length?node.lines:(node.line?[node.line]:[]));
     if(lns.length){
-      lns.forEach(l=>rows.push(`<TR><TD ALIGN="LEFT" BALIGN="LEFT"><I>${_wrap(l)}</I></TD></TR>`));
+      lns.forEach(l=>rows.push(`<TR><TD ALIGN="LEFT" BALIGN="LEFT"><I>${_wrap(_ltext(l))}</I>${_lcond(l)}</TD></TR>`));
       if(node.lines?.length>1) rows.push(`<TR><TD ALIGN="LEFT"><FONT COLOR="#999999" POINT-SIZE="8">${node.cycle?'[cycle]':'[random pick]'}</FONT></TD></TR>`);
     } else rows.push('<TR><TD ALIGN="LEFT"><FONT COLOR="#AAAAAA"><I>(no text)</I></FONT></TD></TR>');
     const ops=sc.filter(o=>typeof o==='object').map(_fmtOp).filter(Boolean);
@@ -8093,7 +8390,10 @@ function _dlgGraphNodeClick(nid, node, detailEl) {
   };
   if (node.condition) addSec('Entry condition', _dotFmtCondition(node.condition), 'var(--purple)');
   const lines = Array.isArray(node.lines) ? node.lines : (node.line ? [node.line] : []);
-  addSec('Dialogue', lines.join('\n---\n') || '(no text)', 'var(--text)');
+  const _lstr = l => typeof l === 'object' && l !== null
+    ? `${l.text ?? ''}${l.show_if ? ` [if: ${summariseCond(l.show_if)}]` : ''}`
+    : (l || '');
+  addSec('Dialogue', lines.map(_lstr).join('\n---\n') || '(no text)', 'var(--text)');
   const ops = _dotFmtScriptOps(node.script || []);
   if (ops.length) addSec('Script', ops.map(o => '▸ '+o).join('\n'), 'var(--accent)');
   const resps = (node.response || []);

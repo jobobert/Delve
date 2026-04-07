@@ -61,11 +61,12 @@ give_accepts = [
   { item_id  = "millbrook_amulet",
     message  = "Aldric goes very still when you put the amulet in his hand. He turns it over, reads the name on the back. 'Edda Aldric. That's my mother.' He closes his fingers around it. It takes him a moment before he can speak. 'I didn't think I'd see this again. Thank you.' He presses a coin purse into your hand.",
     script   = [
-      { op = "advance_quest", quest_id = "lost_amulet",    step = 3 },
-      { op = "give_gold",     amount = 40 },
-      { op = "give_xp",       amount = 120 },
-      { op = "prestige",      delta = 2, reason = "returned a family heirloom" },
-      { op = "set_flag",      flag = "amulet_returned" },
+      { op = "advance_quest",  quest_id = "lost_amulet", step = 3 },
+      { op = "complete_quest", quest_id = "lost_amulet" },
+      { op = "give_gold",      amount = 40 },
+      { op = "give_xp",        amount = 120 },
+      { op = "prestige",       delta = 2, reason = "returned a family heirloom" },
+      { op = "set_flag",       flag = "amulet_returned" },
     ]
   },
 ]

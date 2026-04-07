@@ -155,6 +155,7 @@ script = [
             then = [
               { op = "set_flag",      flag = "finns_quest_complete" },
               { op = "advance_quest", quest_id = "finns_reckoning", step = 2 },
+              { op = "complete_quest", quest_id = "finns_reckoning" },
               { op = "give_xp",       amount = 60 },
               { op = "prestige",      amount = 2, reason = "earned Finn's grudging respect" },
               { op = "give_item",     item_id = "ruffian_peace_token" },
@@ -202,6 +203,7 @@ script = [
   { op = "set_flag",      flag = "ruffians_helped_mine" },
   { op = "set_flag",      flag = "finns_quest_complete" },
   { op = "advance_quest", quest_id = "finns_reckoning", step = 2 },
+  { op = "complete_quest", quest_id = "finns_reckoning" },
   { op = "give_xp",       amount = 90 },
   { op = "prestige",      amount = 4, reason = "guided Finn's crew to something worth doing" },
   { op = "give_item",     item_id = "ruffian_peace_token" },

@@ -64,6 +64,16 @@ Rolling / cycling dialogue:
   lines = ["a", "b", "c"]        — random pick every time
   lines = [...], cycle = true    — advance sequentially (tracked per NPC+node
                                    in player.npc_dialogue_index)
+
+Per-line conditions:
+  lines = [
+    "Generic greeting",
+    { text = "Quest available!", show_if = { not_flag = "quest_started" } },
+    { text = "Quest in progress.", show_if = { flag = "quest_started" } },
+  ]
+  Lines whose show_if condition is not met are excluded from the random/cycle
+  pool. Plain strings (no show_if) are always included. Supports all standard
+  condition keys (flag, not_flag, quest, item, skill, etc.).
 """
 
 from __future__ import annotations
@@ -218,7 +228,7 @@ def _check_condition(cond: dict | None, player, quests) -> bool:
             return False
     if "not_quest" in cond:
         # { not_quest = "quest_id" } — only show if quest is NOT active at any step
-        if quests.at_step(cond["not_quest"], 0) or quests.is_complete(cond["not_quest"]):
+        if quests.is_active(cond["not_quest"]) or quests.is_complete(cond["not_quest"]):
             return False
     if "quest" in cond:
         step = int(cond.get("step", 0))
@@ -302,10 +312,31 @@ class DialogueSession:
         self._enter_node("root")
 
     def _get_line(self, node: dict) -> str:
-        """Pick a line from the node, respecting random/cycle, then apply substitutions."""
-        lines = node.get("lines", [])
+        """Pick a line from the node, respecting random/cycle, then apply substitutions.
+
+        Each entry in ``lines`` may be a plain string or a dict of the form::
+
+            {text = "...", show_if = {flag = "quest_started"}}
+
+        Lines whose ``show_if`` condition is not met are excluded from the pool.
+        If all conditional lines are excluded the node falls back to ``"..."``
+        rather than showing nothing.
+        """
+        all_lines = node.get("lines", [])
+        # Resolve each entry to a plain string, filtering out those whose
+        # show_if condition is not met.
+        lines: list[str] = []
+        for entry in all_lines:
+            if isinstance(entry, dict):
+                cond = entry.get("show_if")
+                if not _check_condition(cond, self.player, self.quests):
+                    continue
+                lines.append(entry.get("text", "..."))
+            else:
+                lines.append(entry)
+
         if lines:
-            npc_id = self.npc.get("id","")
+            npc_id = self.npc.get("id", "")
             if node.get("cycle", False):
                 idx_key = f"{npc_id}:{node['id']}"
                 idx = self.player.npc_dialogue_index.get(idx_key, 0)

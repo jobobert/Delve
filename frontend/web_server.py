@@ -210,12 +210,18 @@ class GameSession:
     def _emit_room_snapshot(self, world, player) -> None:
         """Push a room_snapshot event so the browser can update the sidebar."""
         try:
+            from engine.script import eval_exit_condition, GameContext
             room = world.prepare_room(player.room_id, player)
             if not room:
                 return
+            # Build a minimal context so eval_exit_condition can check player flags/items/skills.
+            ctx = GameContext(player=player, world=world, bus=None, quests=None)
             exits = []
             for direction, v in room.get("exits", {}).items():
                 if isinstance(v, dict):
+                    cond = v.get("show_if")
+                    if cond and not eval_exit_condition(cond, ctx):
+                        continue
                     exits.append({
                         "dir":    direction,
                         "target": v.get("to", ""),

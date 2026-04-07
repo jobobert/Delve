@@ -24,6 +24,7 @@ give_accepts = [
     script   = [
       { op = "set_flag",      flag = "groundhog_quest_complete" },
       { op = "advance_quest", quest_id = "the_groundhog_king", step = 3 },
+      { op = "complete_quest", quest_id = "the_groundhog_king" },
       { op = "give_gold",     amount = 80 },
       { op = "give_xp",       amount = 120 },
       { op = "prestige",      amount = 3, reason = "cleared Greenhollow infestation — Elder Torva's thanks" },
@@ -118,6 +119,7 @@ give_accepts = [
     script   = [
       { op = "set_flag",      flag = "osric_pick_returned" },
       { op = "advance_quest", quest_id = "osrics_pick", step = 3 },
+      { op = "complete_quest", quest_id = "osrics_pick" },
       { op = "give_gold",     amount = 30 },
       { op = "give_xp",       amount = 40 },
       { op = "prestige",      amount = 1, reason = "returned Osric's pickaxe" },

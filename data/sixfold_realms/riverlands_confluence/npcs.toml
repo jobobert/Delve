@@ -201,7 +201,7 @@ xp_reward = 0
 gold_reward = 0
 hostile = false
 dialogue = "I left a lot behind when the floodwaters came. Most of it didn't matter. One thing did."
-give_accepts = [{item_id = "rl_locket", message = "Aldric takes the locket in both hands and holds it without speaking. When he looks up, his eyes are wet. 'I didn't think I'd ever see it again. Here.' He presses the vest into your arms.", script = [{op = "advance_quest", quest_id = "rl_locket_return", step = 2}, {op = "complete_quest", quest_id = "rl_locket_return"}, {op = "give_item", item_id = "rl_river_scale_vest"}, {op = "prestige", amount = 2, reason = "returned Aldric's locket"}]}]
+give_accepts = [{item_id = "rl_locket", message = "Aldric takes the locket in both hands and holds it without speaking. When he looks up, his eyes are wet. 'I didn't think I'd ever see it again. Here.' He presses the vest into your arms.", script = [{op = "complete_quest", quest_id = "rl_locket_return"}, {op = "give_item", item_id = "rl_river_scale_vest"}, {op = "prestige", amount = 2, reason = "returned Aldric's locket"}]}, {item_id = "rl_aldric_room_key", script = [{op = "unlock_exit", room_id = "rl_inn_rooms", direction = "west"}, {op = "advance_quest", quest_id = "rl_locket_return", step = 2}], message = "'You found it. Thank you.' He takes the key with a relieved exhale. 'There's something else I've been thinking about, now that I can get back in my room. My locket — had it in the old shack by the piers. The floods took it, I suppose. Probably still there, if it hasn't washed away.'"}]
 
 [[npc]]
 id = "rl_blacksmith_orin"

@@ -119,7 +119,7 @@ name = "Flooded Shack"
 description = "A sagging one-room shack lodged between the riverbank and a crumbling retaining wall."
 desc_long = "Watermarks stripe the walls at varying heights \\u2014 a record of past floods, each one higher than the last. A rusted stove sits cold in the corner, and personal effects have been left behind as though the owner stepped out and never came back. A loose board in the floor has shifted."
 exits = {north = "rl_unstable_current"}
-on_enter = [{op = "if_quest", then = [{op = "spawn_item", item_id = "rl_locket"}], else = [], quest_id = "rl_locket_return", admin_comment = "Only show the locket if the script is active. Hmmm... this might create 2 lockets..."}]
+on_enter = [{op = "if_quest", quest_id = "rl_locket_return", step = 2, then = [{op = "if_not_flag", flag = "rl_locket_spawned", then = [{op = "spawn_item", item_id = "rl_locket"}, {op = "set_flag", flag = "rl_locket_spawned"}]}], else = []}]
 
 [[room]]
 id = "rl_guest_room"
@@ -209,9 +209,9 @@ desc_short = "Rocky outcroppings lead to shallow pools as the river turns. You c
 [[room]]
 id = "rl_camp_site"
 name = "Camp Site"
-description = "Just past the bank, under a clump of trees you notice a small camp site"
+description = "Just past the bank, under a clump of trees you notice a small camp site."
 exits = {west = "rl_river_bank_2"}
-desc_short = "Just past the bank, under a clump of trees you notice a small camp site"
+desc_short = "Just past the bank, under a clump of trees you notice a small camp site."
 desc_long = "The site is not much more than a small group of rocks appropriate for sitting surrounding a well-used fire pit."
 spawns = [{id = "rl_echo_wraith", hostile = true, spawn_chance = 0.4}]
 items = ["rl_aldric_room_key"]

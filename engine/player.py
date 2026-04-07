@@ -350,6 +350,20 @@ class Player:
                           if slot in all_slots}
         for slot in all_slots:
             p.equipped.setdefault(slot, None)
+        # Re-link equipped item dicts to their inventory counterparts.
+        # On save, equipped items are serialized independently from inventory,
+        # so after load they are separate objects — id() comparisons break.
+        inv_by_id: dict[str, list[dict]] = {}
+        for it in p.inventory:
+            inv_by_id.setdefault(it.get("id", ""), []).append(it)
+        _used_inv: set[int] = set()
+        for slot, eq in list(p.equipped.items()):
+            if eq:
+                candidates = [x for x in inv_by_id.get(eq.get("id", ""), [])
+                              if id(x) not in _used_inv]
+                if candidates:
+                    p.equipped[slot] = candidates[0]
+                    _used_inv.add(id(candidates[0]))
         p.world_id      = data.get("world_id", "")
         p.active_style  = data.get("active_style", wc.DEFAULT_STYLE)
         p.known_styles  = data.get("known_styles", [wc.DEFAULT_STYLE])

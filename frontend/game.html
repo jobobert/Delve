@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Delve</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a1a1a'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23F29E00'>&#x2694;</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a1a1a'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23F29E00'>&#x2694;</text></svg>">
 <link rel="stylesheet" href="/game.css">
 </head>
 <body>
@@ -170,6 +172,7 @@ const DLGOPT_RE = /^\s*\[(\d+)\]\s/;
 
 function showItemMenu(e, item) {
   e.preventDefault();
+  e.stopPropagation();
   imEquip.hidden = !item.equip_slot;
   // wire up fresh handlers each time
   imEquip.onclick  = () => { hideItemMenu(); sendCmd(`equip ${item.name}`); };
@@ -198,6 +201,7 @@ document.addEventListener('keydown', e => {
 
 function showHereMenu(e, type, entity) {
   e.preventDefault();
+  e.stopPropagation();
   if (type === 'npc') {
     hmPrimary.textContent  = entity.hostile ? 'Attack' : 'Talk';
     hmPrimary.onclick      = () => { hideHereMenu(); sendCmd((entity.hostile ? 'attack ' : 'talk ') + entity.name); };

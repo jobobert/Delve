@@ -34,6 +34,12 @@ condition = { flag = "emerald_recovered" }
 
 [[response]]
 node = "root"
+condition = { flag = "emerald_recovered", not_flag = "aonn_debt_settled" }
+text = "We made it back."
+next = "debt_settled"
+
+[[response]]
+node = "root"
 text = "Would you come with me? Into the mire?"
 next = "companion_offer"
 condition = { quest = "grandfathers_emerald", step = 2 }
@@ -41,11 +47,10 @@ condition = { quest = "grandfathers_emerald", step = 2 }
 [[node]]
 id   = "the_story"
 line = "We found it in a sunken temple — the Celestial Emerald. I thought it held secrets. Your grandfather thought it held a fortune. We never decided what to do with it. We sealed it in a spherical stone safe and celebrated too long. That night, a black serpent dragon came out of the mire. It melted my arm. It swallowed your grandfather whole. I could hear him screaming as I ran. I wish I could tell you I didn't run."
-
-[[script]]
-op        = "advance_quest"
-quest_id  = "grandfathers_emerald"
-step      = 1
+script = [
+  { op = "advance_quest", quest_id = "grandfathers_emerald", step = 1 },
+  { op = "advance_quest", quest_id = "an_old_debt",          step = 1 },
+]
 
 [[response]]
 node = "the_story"
@@ -78,15 +83,10 @@ next = "map_handoff"
 [[node]]
 id   = "map_handoff"
 line = "I know. That's why I've been sitting in this inn for three weeks. Take this map. It's rough — I drew it from memory with one hand — but the Blackfen Mire hasn't moved. The bone-littered trail leads to the clearing. And talk to the warden at the Fengate, or hire Grimwick if he's there. Don't go in alone."
-
-[[script]]
-op        = "give_item"
-item_id   = "aonn_tesk_map"
-
-[[script]]
-op        = "advance_quest"
-quest_id  = "grandfathers_emerald"
-step      = 2
+script = [
+  { op = "give_item",    item_id  = "aonn_tesk_map" },
+  { op = "advance_quest", quest_id = "grandfathers_emerald", step = 2 },
+]
 
 [[response]]
 node = "map_handoff"
@@ -137,15 +137,11 @@ next = "farewell"
 [[node]]
 id   = "quest_complete"
 line = '''You found it." The old elf stands. His remaining hand closes around your wrist. "Let me see it." He holds the emerald for a long moment, turning it in the light. Then he presses it back into your hands. "He'd be proud. He'd pretend he always knew you could do it, and you'd know he was lying, and you'd both be fine with that."'''
-
-[[script]]
-op        = "complete_quest"
-quest_id  = "grandfathers_emerald"
-
-[[script]]
-op   = "message"
-text = "Aonn raises his glass to the ceiling — to your grandfather. You do the same."
-tag  = "system"
+script = [
+  { op = "advance_quest",  quest_id = "grandfathers_emerald", step = 5 },
+  { op = "complete_quest", quest_id = "grandfathers_emerald" },
+  { op = "message",        text = "Aonn raises his glass to the ceiling — to your grandfather. You do the same.", tag = "system" },
+]
 
 [[response]]
 node = "quest_complete"
@@ -193,4 +189,20 @@ script = [
 [[response]]
 node = "companion_joins"
 text = "Ready when you are."
+next = ""
+
+[[node]]
+id   = "debt_settled"
+line = '''We did." He sits down. Takes his time with it. "I wasn't sure I would. Thank you for letting me be there." A long pause. "He would have liked you, your grandfather. He liked people with a particular kind of stubbornness. You have it.'''
+script = [
+  { op = "advance_quest",  quest_id = "an_old_debt", step = 4 },
+  { op = "complete_quest", quest_id = "an_old_debt" },
+  { op = "set_flag",       flag = "aonn_debt_settled" },
+  { op = "give_xp",        amount = 200 },
+  { op = "prestige",       delta = 3, reason = "completed Aonn's old debt" },
+]
+
+[[response]]
+node = "debt_settled"
+text = "He'd be glad to hear it."
 next = ""

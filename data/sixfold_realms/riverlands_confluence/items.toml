@@ -216,7 +216,7 @@ desc_long = "The clasp is stiff with age. Inside, a faded portrait of a young wo
 weight = 0
 respawn = false
 tags = ["quest_item"]
-on_get = [{op = "advance_quest", quest_id = "rl_locket_return", step = 1}, {op = "message", tag = "item", text = "Inside the locket: a portrait, and a name scratched on the back. Someone at the inn may know who Aldric is."}]
+on_get = [{op = "message", tag = "item", text = "Inside the locket: a portrait, and a name scratched on the back. Someone at the inn may know who Aldric is."}, {op = "if_not_flag", flag = "rl_locket_return_step3", then = [{op = "set_flag", flag = "rl_locket_return_step3"}, {op = "advance_quest", quest_id = "rl_locket_return", step = 3}]}]
 
 [[item]]
 id = "rl_stable_coinpurse"
@@ -319,5 +319,5 @@ description = "A well-used, but functional key"
 desc_short = "A well-used, but functional key"
 desc_long = "A key to a room at the Confluence Inn"
 tags = ["rl_aldrics_key"]
-consumable_key = true
+consumable_key = false
 consumable_key_msg = "You give the key to Aldric who accepts with a touch of embarrassment"

@@ -98,10 +98,11 @@ next = ""
 id   = "thorngrubs_done"
 line = "You— actually did it. I wasn't sure you would. The village owes you. Here — twenty-five from the common fund, and I'll put the word out that you're someone people can trust."
 script = [
-  { op = "advance_quest", quest_id = "thorngrub_queen", step = 4 },
-  { op = "give_gold",     amount = 25 },
-  { op = "give_xp",       amount = 100 },
-  { op = "prestige",      delta = 2, reason = "cleared the Thorngrub infestation" },
+  { op = "advance_quest",  quest_id = "thorngrub_queen", step = 4 },
+  { op = "complete_quest", quest_id = "thorngrub_queen" },
+  { op = "give_gold",      amount = 25 },
+  { op = "give_xp",        amount = 100 },
+  { op = "prestige",       delta = 2, reason = "cleared the Thorngrub infestation" },
 ]
 
 [[response]]

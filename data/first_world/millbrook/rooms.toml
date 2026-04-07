@@ -134,6 +134,12 @@ admin_comment = "Iron vein only mineable (respawning on_get node). copper_trace 
 [[room]]
 id          = "millbrook_thorngrub_nest"
 name        = "The Thorngrub Nest"
+on_enter    = [
+  { op = "if_not_flag", flag = "thorngrub_nest_found", then = [
+    { op = "advance_quest", quest_id = "thorngrub_queen", step = 2 },
+    { op = "set_flag",      flag = "thorngrub_nest_found" },
+  ]},
+]
 description = "The passage widens suddenly into a rough oval chamber. The floor is covered in a dense mat of compressed organic matter — chewed root, bark, and something less identifiable. The smell here is intense: sweet decay and the particular musk of a large insect colony. At the far end, something large moves. Much larger than the workers you've seen. She sits at the centre of a ring of eggs and regards you with a stillness that isn't calm — it's decision."
 desc_long   = "The Thorngrub Queen is perhaps five feet long, segmented like her workers but thicker, her mandibles the size of daggers. The eggs around her are pale grey ovals embedded in the floor-mat, dozens of them. She moves with surprising deliberateness for something that large. The chamber has no other exit. Whatever you came here for, this is where it ends — one way or another. Through the far wall, half-buried in the organic floor, you can see the glint of something metallic. Scavenged from the village, probably."
 flags       = []

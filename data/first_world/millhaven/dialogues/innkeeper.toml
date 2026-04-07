@@ -74,6 +74,9 @@ next = ""
 [[node]]
 id   = "stable"
 line = "Old girl named Dust. Grey mule, bad temper, incredible back. She can carry more than you'd think and she's steady on bad ground. If you're heading into the mire with the intention of coming out heavy, fifty gold and she's yours for the run. She knows the way back."
+script = [
+  { op = "advance_quest", quest_id = "a_good_mule", step = 1 },
+]
 
 [[response]]
 node = "stable"
@@ -95,6 +98,7 @@ script = [
   { op = "take_gold",      amount = 50 },
   { op = "give_companion", companion_id = "dust" },
   { op = "advance_quest",  quest_id = "a_good_mule", step = 2 },
+  { op = "complete_quest", quest_id = "a_good_mule" },
   { op = "message", text  = "Bron leads you out back and hands you Dust's lead rope. The mule regards you with magnificent indifference.", tag = "system" }
 ]
 

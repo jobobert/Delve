@@ -75,33 +75,14 @@ hp       = 90
 max_hp   = 90
 gold_reward = 45
 xp_reward   = 180
-
-[[kill_script]]
-op   = "message"
-text = "Durath topples like a felled oak. The Redbelly crew takes one look and backs away."
-tag  = "combat_death"
-
-[[kill_script]]
-op      = "give_item"
-item_id = "durath_key"
-
-[[kill_script]]
-op   = "set_flag"
-flag = "durath_defeated"
-
-[[kill_script]]
-op   = "set_flag"
-flag = "dragon_downed"
-
-[[kill_script]]
-op   = "message"
-text = "The Redbellies, leaderless, have already begun cutting the dead serpent from the canopy. A few minutes later the carcass crashes to the clearing floor."
-tag  = "system"
-
-[[kill_script]]
-op        = "advance_quest"
-quest_id  = "the_emerald_in_the_dark"
-step      = 4
+kill_script = [
+  { op = "message", text = "Durath topples like a felled oak. The Redbelly crew takes one look and backs away.", tag = "combat_death" },
+  { op = "give_item", item_id = "durath_key" },
+  { op = "set_flag", flag = "durath_defeated" },
+  { op = "set_flag", flag = "dragon_downed" },
+  { op = "message", text = "The Redbellies, leaderless, have already begun cutting the dead serpent from the canopy. A few minutes later the carcass crashes to the clearing floor.", tag = "system" },
+  { op = "advance_quest", quest_id = "the_emerald_in_the_dark", step = 4 },
+]
 
 [[npc]]
 id       = "redbelly_brute"
@@ -134,15 +115,10 @@ hp       = 50
 max_hp   = 50
 gold_reward = 0
 xp_reward   = 90
-
-[[kill_script]]
-op   = "message"
-text = "The swamp lion collapses into the reeds, its growl becoming a long exhale."
-tag  = "combat_death"
-
-[[kill_script]]
-op   = "set_flag"
-flag = "swamp_lion_slain"
+kill_script = [
+  { op = "message", text = "The swamp lion collapses into the reeds, its growl becoming a long exhale.", tag = "combat_death" },
+  { op = "set_flag", flag = "swamp_lion_slain" },
+]
 
 [[npc]]
 id       = "blacklake_serpent"
@@ -159,15 +135,10 @@ hp       = 70
 max_hp   = 70
 gold_reward = 0
 xp_reward   = 110
-
-[[kill_script]]
-op   = "message"
-text = "The serpent rolls on its side, fouling the water with dark ichor."
-tag  = "combat_death"
-
-[[kill_script]]
-op   = "set_flag"
-flag = "serpent_slain"
+kill_script = [
+  { op = "message", text = "The serpent rolls on its side, fouling the water with dark ichor.", tag = "combat_death" },
+  { op = "set_flag", flag = "serpent_slain" },
+]
 
 [[npc]]
 id       = "anurus_the_returned"
@@ -184,32 +155,18 @@ hp       = 65
 max_hp   = 65
 gold_reward = 20
 xp_reward   = 200
-
-[[round_script]]
-op  = "if_combat_round"
-min = 2
-then = [
-  {op = "message", text = "Anurus speaks a forbidden word — a curse settles into your bones.", tag = "combat"},
-  {op = "apply_status", effect = "cursed", duration = 6},
+round_script = [
+  { op = "if_combat_round", min = 2, then = [
+    { op = "message", text = "Anurus speaks a forbidden word — a curse settles into your bones.", tag = "combat" },
+    { op = "apply_status", effect = "cursed", duration = 6 },
+  ]},
 ]
-
-[[kill_script]]
-op   = "message"
-text = "The skeleton collapses, robes settling over a pile of old bones. The staff remains upright for a moment, then falls."
-tag  = "combat_death"
-
-[[kill_script]]
-op      = "give_item"
-item_id = "anurus_staff"
-
-[[kill_script]]
-op   = "set_flag"
-flag = "anurus_defeated"
-
-[[kill_script]]
-op        = "advance_quest"
-quest_id  = "the_emerald_in_the_dark"
-step      = 3
+kill_script = [
+  { op = "message", text = "The skeleton collapses, robes settling over a pile of old bones. The staff remains upright for a moment, then falls.", tag = "combat_death" },
+  { op = "give_item", item_id = "anurus_staff" },
+  { op = "set_flag", flag = "anurus_defeated" },
+  { op = "advance_quest", quest_id = "the_emerald_in_the_dark", step = 3 },
+]
 
 [[npc]]
 id       = "vault_guardian"
@@ -226,28 +183,13 @@ hp       = 11
 max_hp   = 110
 gold_reward = 0
 xp_reward   = 350
-
-[[kill_script]]
-op   = "message"
-text = "The Guardian convulses, the alien control releasing it. The body collapses. Something small and luminous falls from its chest — rolling to a stop against the sarcophagus base."
-tag  = "combat_death"
-
-[[kill_script]]
-op      = "give_item"
-item_id = "celestial_emerald"
-
-[[kill_script]]
-op      = "give_item"
-item_id = "aldenmoor_signet"
-
-[[kill_script]]
-op   = "set_flag"
-flag = "guardian_defeated"
-
-[[kill_script]]
-op        = "advance_quest"
-quest_id  = "the_emerald_in_the_dark"
-step      = 5
+kill_script = [
+  { op = "message", text = "The Guardian convulses, the alien control releasing it. The body collapses. Something small and luminous falls from its chest — rolling to a stop against the sarcophagus base.", tag = "combat_death" },
+  { op = "give_item", item_id = "celestial_emerald" },
+  { op = "give_item", item_id = "aldenmoor_signet" },
+  { op = "set_flag", flag = "guardian_defeated" },
+  { op = "advance_quest", quest_id = "the_emerald_in_the_dark", step = 5 },
+]
 
 [[npc]]
 id          = "sarcophagus_scenery"
@@ -317,17 +259,8 @@ hp       = 40
 max_hp   = 40
 gold_reward = 5
 xp_reward   = 60
-
-[[kill_script]]
-op   = "message"
-text = "The hunter goes down hard. The others back into the brush."
-tag  = "combat_death"
-
-[[kill_script]]
-op   = "set_flag"
-flag = "redbelly_patrol_cleared"
-
-[[kill_script]]
-op   = "give_xp"
-amount = 60
-silent = true
+kill_script = [
+  { op = "message", text = "The hunter goes down hard. The others back into the brush.", tag = "combat_death" },
+  { op = "set_flag", flag = "redbelly_patrol_cleared" },
+  { op = "give_xp", amount = 60, silent = true },
+]

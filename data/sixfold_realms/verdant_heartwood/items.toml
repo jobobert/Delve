@@ -13,8 +13,12 @@ scenery     = true
 respawn     = true
 on_get      = [
   { op = "message", tag = "dialogue", text = "A whisper brushes your mind: 'The true path bends east...'" },
-  { op = "set_flag", flag = "vh_true_path" },
-  { op = "advance_quest", quest_id = "vh_growth_regulator", step = 1 },
+  { op = "if_not_flag", flag = "vh_true_path", then = [
+    { op = "set_flag", flag = "vh_true_path" },
+    { op = "advance_quest", quest_id = "vh_growth_regulator", step = 1 },
+  ], else = [
+    { op = "set_flag", flag = "vh_true_path" },
+  ] },
 ]
 
 [[item]]
@@ -72,7 +76,10 @@ on_get      = [
       { op = "give_item",  item_id = "vh_heartwood_bark" },
       { op = "skill_grow", skill = "survival", amount = 2 },
       { op = "message", tag = "system", text = "You peel a strip of living bark cleanly from the tree." },
-      { op = "advance_quest", quest_id = "vh_carapace", step = 1 },
+      { op = "if_not_flag", flag = "vh_carapace_started", then = [
+        { op = "set_flag", flag = "vh_carapace_started" },
+        { op = "advance_quest", quest_id = "vh_carapace", step = 1 },
+      ] },
     ],
     on_fail = [
       { op = "give_item",  item_id = "vh_heartwood_bark" },

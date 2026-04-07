@@ -137,7 +137,10 @@ on_get      = [
       { op = "give_item", item_id = "drakebone_fragment" },
       { op = "skill_grow", skill = "crafting", amount = 4 },
       { op = "message", tag = "item", text = "You free a resonant fragment of drakebone." },
-      { op = "advance_quest", quest_id = "forge_sky_piercer", step = 1 },
+      { op = "if_not_flag", flag = "dp_drakebone_found", then = [
+        { op = "set_flag", flag = "dp_drakebone_found" },
+        { op = "advance_quest", quest_id = "forge_sky_piercer", step = 1 },
+      ] },
     ],
     on_fail = [
       { op = "message", tag = "system", text = "The bone crumbles under your tools." },

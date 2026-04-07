@@ -204,6 +204,9 @@ class CommandProcessor:
             # Resource collection
             "mine":          self._cmd_mine,
             "chop":          self._cmd_chop,
+            # Retry skill checks
+            "attempt":       self._cmd_attempt,
+            "try":           self._cmd_attempt,
         }
         for d in DIRECTIONS:
             self._commands[d] = self._cmd_direction
@@ -798,6 +801,26 @@ class CommandProcessor:
                 npc["hostile"] = True
                 self._out(Tag.COMBAT_RECV,
                           f"{npc['name']} eyes you with recognition — and draws a weapon.")
+
+    def _cmd_attempt(self, verb: str, args: str) -> None:
+        """attempt / try  — Re-run the current room's on_enter script.
+
+        Useful for retrying failed skill checks (perception, athletics, stealth,
+        etc.) without leaving and re-entering the room.  The script runs in full
+        — any one-time if_not_flag guards still prevent already-completed events
+        from triggering again; only checks whose flag was NOT set (i.e. ones
+        that failed or haven't been attempted yet) will fire.
+        """
+        room = self.world.prepare_room(self.player.room_id, self.player)
+        if not room:
+            self._out(Tag.ERROR, "You can't attempt anything here.")
+            return
+        on_enter = room.get("on_enter", [])
+        if not on_enter:
+            self._out(Tag.SYSTEM, "There is nothing obvious to attempt here.")
+            return
+        self._out(Tag.SYSTEM, "You try again.")
+        self._run_room_on_enter(room)
 
     def _tick_status_effects(self) -> None:
         """Decrement turn-based status effects; remove expired ones.
@@ -1424,6 +1447,7 @@ class CommandProcessor:
                 "── World & Quests ─────────────────────────────────────",
                 "  journal / quests / j    — Quest log, commissions, companion",
                 "  talk <npc>              — Talk to an NPC",
+                "  attempt / try           — Retry a skill check in this room",
                 "  loot                    — Recover items from your corpse",
             ],
             "companion": [

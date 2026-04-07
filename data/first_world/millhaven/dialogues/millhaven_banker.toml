@@ -114,9 +114,10 @@ next = ""
 id   = "ledger_done"
 line = "Ah — yes, this is it. The Riversturm charter ledger, recovered. I'll process your expanded vault access immediately. Twenty slots, no charge. And thank you — this document has been a headache for three years."
 script = [
-  { op = "set_flag",   flag = "ledger_returned" },
-  { op = "advance_quest", quest_id = "the_lost_ledger", step = 3 },
-  { op = "bank_expand", tier = 20 },
+  { op = "set_flag",       flag = "ledger_returned" },
+  { op = "advance_quest",  quest_id = "the_lost_ledger", step = 3 },
+  { op = "complete_quest", quest_id = "the_lost_ledger" },
+  { op = "bank_expand",    tier = 20 },
 ]
 
 [[response]]

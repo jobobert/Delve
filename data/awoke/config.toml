@@ -1,5 +1,64 @@
+# data/awoke/config.toml — World configuration for Awoke.
+#
+# Edit this file to customise your world. It is read by the engine at startup
+# and overrides all engine defaults. This file is version-controlled and belongs
+# with your world data.
+#
+# See wct/WORLD_MANUAL.md for the full field reference.
+
+# ── World identity ─────────────────────────────────────────────────────────────
 world_name      = "Awoke"
-currency_name   = "Energy"
-default_style   = "brawling"
-new_char_hp     = 100
-vision_threshold = 3
+currency_name   = "Credits"
+currency_abbrev = "cr"
+
+# ── Starting character ─────────────────────────────────────────────────────────
+new_char_hp      = 100
+default_style    = "brawl"
+vision_threshold = 5
+
+# ── Equipment slots ────────────────────────────────────────────────────────────
+equipment_slots = ["weapon", "shield", "chest", "legs", "arms", "head", "pack", "belt"]
+
+# ── Skills ─────────────────────────────────────────────────────────────────────
+[skills]
+perception   = "Perception"
+stealth      = "Stealth"
+survival     = "Survival"
+athletics    = "Athletics"
+alienbiology = "Alien Biology"
+
+# ── World-defined player attributes ───────────────────────────────────────────
+# ship_power: tracks overall ship systems integrity (0 = dark/dead, 100 = fully operational).
+# Rises as the player completes repair quests. Affects room lighting levels and unlocks
+# options throughout the world.
+[[player_attrs]]
+id      = "ship_power"
+min     = 0
+max     = 100
+default = 1
+display = "bar"
+
+# ── Status effects ─────────────────────────────────────────────────────────────
+
+[[status_effect]]
+id          = "poisoned"
+label       = "Poisoned"
+apply_msg   = "Alien venom burns through your veins."
+expiry_msg  = "The poison works its way out of your system."
+damage_per_move = 3
+
+[[status_effect]]
+id         = "disoriented"
+label      = "Disoriented"
+apply_msg  = "Your head swims — pheromones or blunt trauma, you can't tell which."
+expiry_msg = "Your head clears and your focus returns."
+combat_atk = -4
+combat_def = -4
+
+[[status_effect]]
+id          = "swarmed"
+label       = "Swarmed"
+apply_msg   = "Drones pour over you, clinging and biting from every angle."
+expiry_msg  = "You shake the last of the drones loose."
+damage_per_move = 2
+combat_def  = -3

@@ -37,6 +37,7 @@ try:
     AUTO_ATTACK_STOP_HP_PCT  = int(getattr(_cfg, "AUTO_ATTACK_STOP_HP_PCT", 15))
     COLOR_OVERRIDES          = dict(getattr(_cfg, "COLOR_OVERRIDES", {}))
     STARTUP_ALIASES          = dict(getattr(_cfg, "STARTUP_ALIASES", {}))
+    PROMPT_FORMAT            = str(getattr(_cfg, "PROMPT_FORMAT", "> "))
     LOG_ENABLED              = bool(getattr(_cfg, "LOG_ENABLED", False))
     LOG_FILE                 = str(getattr(_cfg, "LOG_FILE", "delve.log"))
     LOG_LEVEL                = str(getattr(_cfg, "LOG_LEVEL", "DEBUG"))
@@ -47,6 +48,7 @@ except ImportError:
     AUTO_ATTACK_STOP_HP_PCT  = 15
     COLOR_OVERRIDES          = {}
     STARTUP_ALIASES          = {}
+    PROMPT_FORMAT            = "> "
     LOG_ENABLED              = False
     LOG_FILE                 = "delve.log"
     LOG_LEVEL                = "DEBUG"
@@ -177,7 +179,26 @@ BANNER = (
     RESET
 )
 
-PROMPT = _fg(80, 160, 255) + BOLD + "\n> " + RESET
+_PROMPT_BASE = _fg(80, 160, 255) + BOLD
+
+
+def _format_prompt(player: "Player") -> str:
+    """Build the input prompt, substituting PROMPT_FORMAT tokens."""
+    fmt = PROMPT_FORMAT
+    if "{quest}" in fmt:
+        from engine.quests import load_all as _load_all_quests
+        all_q = _load_all_quests()
+        first_qid = next(iter(player.active_quests), None)
+        quest_title = all_q[first_qid].get("title", first_qid) if first_qid and first_qid in all_q else ""
+    else:
+        quest_title = ""
+    text = fmt.format(
+        hp=player.hp,
+        max_hp=player.max_hp,
+        level=player.level,
+        quest=quest_title,
+    )
+    return _PROMPT_BASE + "\n" + text + RESET
 
 
 # ── Frontend class ────────────────────────────────────────────────────────────
@@ -706,7 +727,7 @@ class CLIFrontend:
 
         while not self.processor.quit_requested:
             try:
-                raw = input(PROMPT).strip()
+                raw = input(_format_prompt(self.player)).strip()
             except (EOFError, KeyboardInterrupt):
                 print()
                 self.processor.process("quit")

@@ -21,7 +21,7 @@ name          = "Nessa's Trading Route"
 interval      = 8
 autostart     = false
 admin_comment = "Activated on rivers_remember completion. Nessa cycles through all six realms."
-route_npc     = "nessa_realm_walker"
+route_npc     = "rl_nessa_realm_walker"
 route_loop    = "cycle"
 route = [
   { room_id = "rl_market_row",       ticks = 3 },

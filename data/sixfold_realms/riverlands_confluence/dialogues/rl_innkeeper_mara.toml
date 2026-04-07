@@ -1,8 +1,30 @@
 [[node]]
-id    = "root"
-lines = [
-  "Mara wipes down the bar without looking up. 'Room or a meal? Either way, you've come to the right place.'"
-]
+id = "root"
+line = "Mara wipes down the bar without looking up. 'Room or a meal? Either way, you've come to the right place.'"
+
+[[node]]
+id = "room_info"
+line = "'Rooms are upstairs. Go up and use 'sleep' to rest — costs five marks, heals you proper. Leave when you're ready.'"
+
+[[node]]
+id = "gossip"
+lines = ["'Three things on everyone's lips: the ferries stopped running proper, the currents are doing something strange near the lower piers, and someone found an old stair under the mural promenade that no one remembers building.'", {text = "'Old Aldric lost his room key again. I refuse to make him a new one. If you run across it he'd appreciate you bringing it to him upstairs.'", show_if = {not_quest = "rl_locket_return"}}, "'I don't ask too many questions. People drink more when they're unsettled.'"]
+
+[[node]]
+id = "gossip_stair"
+line = "'If you go down there, be careful. Kale says the resonance in the bedrock isn't natural. I don't know what that means, but he says it quiet and serious, so I believe him.'"
+
+[[node]]
+id = "about_inn"
+lines = ["'Been here thirty years. Survived two floods, one river rerouting, and whatever this current business is.'", "'As long as the confluence draws travellers, I'll have something to offer them.'"]
+
+[[node]]
+id = "about_mara"
+line = "She smiles — just barely. 'I've had practice.'"
+
+[[node]]
+id = "aldric_intro"
+line = "'Old Aldric lost his room key again. I refuse to make him a new one. If you run across it he'd appreciate you bringing it to him upstairs.'"
 
 [[response]]
 node = "root"
@@ -16,6 +38,12 @@ next = "gossip"
 
 [[response]]
 node = "root"
+text = "What's this I hear about Old Aldric?"
+next = "aldric_intro"
+condition = {not_quest = "rl_locket_return"}
+
+[[response]]
+node = "root"
 text = "Tell me about the inn."
 next = "about_inn"
 
@@ -24,25 +52,10 @@ node = "root"
 text = "Nothing today."
 next = ""
 
-
-# --- Room Info ---
-[[node]]
-id   = "room_info"
-line = "'Rooms are upstairs. Go up and use 'sleep' to rest — costs five marks, heals you proper. Leave when you're ready.'"
-
 [[response]]
 node = "room_info"
 text = "Thanks. I'll head up."
 next = ""
-
-
-# --- Gossip ---
-[[node]]
-id   = "gossip"
-lines = [
-  "'Three things on everyone's lips: the ferries stopped running proper, the currents are doing something strange near the lower piers, and someone found an old stair under the mural promenade that no one remembers building.'",
-  "'I don't ask too many questions. People drink more when they're unsettled.'"
-]
 
 [[response]]
 node = "gossip"
@@ -54,24 +67,10 @@ node = "gossip"
 text = "Good philosophy."
 next = ""
 
-
-[[node]]
-id   = "gossip_stair"
-line = "'If you go down there, be careful. Kale says the resonance in the bedrock isn't natural. I don't know what that means, but he says it quiet and serious, so I believe him.'"
-
 [[response]]
 node = "gossip_stair"
 text = "I'll keep that in mind."
 next = ""
-
-
-# --- About the Inn ---
-[[node]]
-id   = "about_inn"
-lines = [
-  "'Been here thirty years. Survived two floods, one river rerouting, and whatever this current business is.'",
-  "'As long as the confluence draws travellers, I'll have something to offer them.'"
-]
 
 [[response]]
 node = "about_inn"
@@ -83,12 +82,18 @@ node = "about_inn"
 text = "Good to know the inn will be here."
 next = ""
 
-
-[[node]]
-id   = "about_mara"
-line = "She smiles — just barely. 'I've had practice.'"
-
 [[response]]
 node = "about_mara"
 text = "Fair enough."
+next = ""
+
+[[response]]
+node = "aldric_intro"
+text = "I'll find it for him."
+next = ""
+script = [{op = "advance_quest", quest_id = "rl_locket_return", step = 1}]
+
+[[response]]
+node = "aldric_intro"
+text = "I try not to help those who refuse to help themselves."
 next = ""

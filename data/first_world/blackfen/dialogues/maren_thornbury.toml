@@ -1,8 +1,6 @@
 # data/blackfen/dialogues/maren_thornbury.toml
 # Maren Thornbury — the swamp witch at the lakeside cottage.
 # Adaptation of the adventure's unnamed witch.
-# She can be won over (social check or lucky choice), give the green-bladed
-# sword, and allow a long rest. She can also throw you in the lake.
 
 [[node]]
 id    = "root"
@@ -35,17 +33,7 @@ next = "leaving"
 [[node]]
 id   = "apologise"
 line = "A dead dragon. You mean the serpent Riversturm killed. I watched him do it, as it happens — I was fishing from the dock. Magnificent. Waste of a perfectly good dragon, but magnificent. Sit down. I'll put something on."
-
-[[script]]
-op      = "skill_check"
-skill   = "social"
-dc      = 13
-silent  = true
-on_pass = [
-  { op = "set_flag", flag = "thornbury_friendly" },
-  { op = "message",  text = "Something in your manner puts the old woman at ease. She lowers the spear.", tag = "system" }
-]
-on_fail = []
+script = [{ op = "skill_check", skill = "social", dc = 13, silent = true, on_pass = [{op = "set_flag", flag = "thornbury_friendly"}, {op = "message", text = "Something in your manner puts the old woman at ease. She lowers the spear.", tag = "system"}], on_fail = [] }]
 
 [[response]]
 node = "apologise"
@@ -60,19 +48,7 @@ next = "gift"
 [[node]]
 id   = "charm"
 line = "Ha. Cold. Yes. The mire has a way of getting into your bones that fire can't quite fix. I know something that can."
-
-[[script]]
-op      = "skill_check"
-skill   = "social"
-dc      = 11
-silent  = false
-on_pass = [
-  { op = "set_flag", flag = "thornbury_friendly" },
-  { op = "message",  text = "Thornbury laughs — a real laugh, startled out of her — and waves you in properly.", tag = "system" }
-]
-on_fail = [
-  { op = "message", text = "The old woman's eyes narrow. She doesn't quite believe you.", tag = "system" }
-]
+script = [{ op = "skill_check", skill = "social", dc = 11, silent = false, on_pass = [{op = "set_flag", flag = "thornbury_friendly"}, {op = "message", text = "Thornbury laughs — a real laugh, startled out of her — and waves you in properly.", tag = "system"}], on_fail = [{op = "message", text = "The old woman's eyes narrow. She doesn't quite believe you.", tag = "system"}] }]
 
 [[response]]
 node = "charm"
@@ -96,20 +72,7 @@ next = "apologise"
 [[node]]
 id   = "emerald_knowledge"
 line = "The Emerald. Gregor Aldenmoor's stone. I knew Gregor — not well, but I knew of him. If the gem is in that dragon, you'll need something sharper than what you're carrying to get it out. Dragon belly is thick."
-
-[[script]]
-op      = "skill_check"
-skill   = "social"
-dc      = 10
-silent  = true
-on_pass = [
-  { op = "set_flag",   flag = "thornbury_friendly" },
-  { op = "give_item",  item_id = "thornbury_sword" },
-  { op = "message",    text = "She reaches through the cottage wall — which is apparently illusory — and produces a green-bladed shortsword. 'Take it. I have no use for it anymore.'", tag = "system" }
-]
-on_fail = [
-  { op = "message", text = "She nods slowly but doesn't offer anything further.", tag = "system" }
-]
+script = [{ op = "skill_check", skill = "social", dc = 10, silent = true, on_pass = [{op = "set_flag", flag = "thornbury_friendly"}, {op = "give_item", item_id = "thornbury_sword"}, {op = "message", text = "She reaches through the cottage wall — which is apparently illusory — and produces a green-bladed shortsword. 'Take it. I have no use for it anymore.'", tag = "system"}], on_fail = [{op = "message", text = "She nods slowly but doesn't offer anything further.", tag = "system"}] }]
 
 [[response]]
 node = "emerald_knowledge"
@@ -133,16 +96,7 @@ next = "rest_offer"
 [[node]]
 id   = "gift"
 line = "You look like you've been through something. Here. Take this. It's sharper than it looks — I had it from a student who owed me a favour years ago. Emerald in the hilt. Go on, take it."
-
-[[script]]
-op        = "if_not_flag"
-flag      = "received_thornbury_sword"
-then = [
-  { op = "give_item", item_id = "thornbury_sword" },
-  { op = "set_flag",  flag = "received_thornbury_sword" },
-  { op = "set_flag",  flag = "thornbury_friendly" }
-]
-else = []
+script = [{ op = "if_not_flag", flag = "received_thornbury_sword", then = [{op = "give_item", item_id = "thornbury_sword"}, {op = "set_flag", flag = "received_thornbury_sword"}, {op = "set_flag", flag = "thornbury_friendly"}] }]
 
 [[response]]
 node = "gift"
@@ -157,10 +111,7 @@ next = "rest_offer"
 [[node]]
 id   = "rest_offer"
 line = "The cot is against the wall. The blanket's clean — cleaner than you, I'd wager. Sleep if you need it. I'll be fishing. Don't touch anything on the shelves."
-
-[[script]]
-op   = "set_flag"
-flag = "thornbury_rest_offered"
+script = [{ op = "set_flag", flag = "thornbury_rest_offered" }]
 
 [[response]]
 node = "rest_offer"

@@ -187,20 +187,20 @@ The most notable combat encounter will be with the `queen`, but one or more addi
 
 # PART IV
 
-# World Processes (optional)
+## World Processes (optional)
 
 Multiple guard patrols need to be set up
 Some type of system process should also be occuring. Maybe certain quests can only be completed when, maybe, the engines cycle 
 
-## 4.6 Journal Entries and Lore Discoveries
+## Journal Entries and Lore Discoveries
 
 Maybe the aliens were a known entity and the player could learn more about that as the story progresses?
 
-## 4.7 Banking and Economy Notes (optional)
+## Banking and Economy Notes (optional)
 
 I don't think banking makes sense
 
-## 4.8 Light and Dark Design (optional)
+## Light and Dark Design (optional)
 
 Lighting should be used extensively. Less power = less light, certain areas would be priortized (bridge, medical bay) and others deprioritized (maintenance corridors)
 
@@ -212,6 +212,7 @@ Lighting should be used extensively. Less power = less light, certain areas woul
 - At least one npc needs rescuing
 - A few other crew members should be working on systems
 - The aliens have already been discussed
+- The ships computer (gets "smarter" as repairs are made) - uses a common dialog file for multiple "terminals" across the ship
 
 ### Item and Tag Notes
 

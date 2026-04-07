@@ -47,15 +47,10 @@ a small vial of something that smells intensely antiseptic.
 """
 weight = 2
 slot   = "pack"
-
-[[effects]]
-type             = "stat_bonus"
-stat             = "carry_capacity"
-amount           = 3
-
-[[effects]]
-type             = "on_equip"
-message          = "The satchel sits close to your back and keeps your hands free."
+effects = [
+  { type = "stat_bonus", stat = "carry_capacity", amount = 3 },
+  { type = "on_equip",   message = "The satchel sits close to your back and keeps your hands free." },
+]
 
 [[item]]
 id         = "blacklake_punt"
@@ -129,15 +124,10 @@ important things.
 """
 weight = 0
 slot   = "ring"
-
-[[effects]]
-type   = "stat_bonus"
-stat   = "defense"
-amount = 1
-
-[[effects]]
-type    = "on_equip"
-message = "The ring settles on your finger with an almost audible click of recognition."
+effects = [
+  { type = "stat_bonus", stat = "defense", amount = 1 },
+  { type = "on_equip",   message = "The ring settles on your finger with an almost audible click of recognition." },
+]
 
 [[item]]
 id         = "vault_key_shard"
@@ -156,14 +146,10 @@ coating) reads: BLACKFEN ANTITOXIN — DOSE FOR STANDARD FEN AILMENTS.
 GRIMWICK'S REMEDY. NO SUBSTITUTE.
 """
 weight = 0
-
-[[effects]]
-type  = "on_use"
-heal  = 15
-
-[[effects]]
-type    = "on_use"
-special = "clear_status_poisoned"
+effects = [
+  { type = "on_use", heal = 15 },
+  { type = "on_use", special = "clear_status_poisoned" },
+]
 
 [[item]]
 id         = "durath_key"
@@ -189,17 +175,10 @@ that have held it.
 """
 weight = 1
 slot   = "weapon"
-
-[[effects]]
-type   = "stat_bonus"
-stat   = "attack"
-amount = 3
-
-[[effects]]
-type    = "on_hit"
-ability = "bleed"
-chance  = 0.2
-magnitude = 2
+effects = [
+  { type = "stat_bonus", stat = "attack",  amount = 3 },
+  { type = "on_hit",     ability = "bleed", chance = 0.2, magnitude = 2 },
+]
 
 [[item]]
 id         = "swamp_stalker_cloak"
@@ -214,15 +193,10 @@ Wearing it makes you feel less visible — and in the swamp, that matters.
 """
 weight = 2
 slot   = "cape"
-
-[[effects]]
-type   = "stat_bonus"
-stat   = "defense"
-amount = 2
-
-[[effects]]
-type    = "on_equip"
-message = "The cloak settles over your shoulders. The mire colours make you feel harder to spot."
+effects = [
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+  { type = "on_equip",   message = "The cloak settles over your shoulders. The mire colours make you feel harder to spot." },
+]
 
 [[item]]
 id         = "anurus_staff"
@@ -236,20 +210,11 @@ magic — a ward built into the wood itself.
 """
 weight = 3
 slot   = "weapon"
-
-[[effects]]
-type   = "stat_bonus"
-stat   = "attack"
-amount = 5
-
-[[effects]]
-type   = "stat_bonus"
-stat   = "defense"
-amount = 2
-
-[[effects]]
-type    = "on_equip"
-message = "The staff hums in your grip. Something in it recognises a strong will."
+effects = [
+  { type = "stat_bonus", stat = "attack",  amount = 5 },
+  { type = "stat_bonus", stat = "defense", amount = 2 },
+  { type = "on_equip",   message = "The staff hums in your grip. Something in it recognises a strong will." },
+]
 
 [[item]]
 id         = "blackfen_idol"
@@ -280,15 +245,10 @@ blade vanish within a minute of application, leaving the metal mirror-bright
 and faintly warm to the touch.
 """
 weight = 0
-
-[[effects]]
-type    = "on_use"
-heal    = 0
-special = "enchant_weapon_plus1"
-
-[[effects]]
-type    = "on_equip"
-message = "You smear the polish over your blade. It shines like new and feels somehow more solid."
+effects = [
+  { type = "on_use",   heal = 0, special = "enchant_weapon_plus1" },
+  { type = "on_equip", message = "You smear the polish over your blade. It shines like new and feels somehow more solid." },
+]
 
 [[item]]
 id         = "ghost_willow_bark"
@@ -300,10 +260,9 @@ it closes wounds and reduces fever. The taste is bitter and earthy. Three
 doses in the pouch.
 """
 weight = 0
-
-[[effects]]
-type = "on_use"
-heal = 12
+effects = [
+  { type = "on_use", heal = 12 },
+]
 
 [[item]]
 id         = "redvange_arrowheads"
@@ -342,15 +301,10 @@ able to say more.
 """
 weight = 1
 slot   = "weapon"
-
-[[effects]]
-type   = "stat_bonus"
-stat   = "attack"
-amount = 3
-
-[[effects]]
-type    = "on_equip"
-message = "The rod hums faintly in your grip. Something inside it is paying attention."
+effects = [
+  { type = "stat_bonus", stat = "attack", amount = 3 },
+  { type = "on_equip",   message = "The rod hums faintly in your grip. Something inside it is paying attention." },
+]
 
 [[item]]
 id         = "sacrificial_knife"
@@ -364,17 +318,10 @@ Someone made this blade with serious intent.
 """
 weight = 1
 slot   = "weapon"
-
-[[effects]]
-type   = "stat_bonus"
-stat   = "attack"
-amount = 4
-
-[[effects]]
-type    = "on_hit"
-ability = "bleed"
-chance  = 0.25
-magnitude = 3
+effects = [
+  { type = "stat_bonus", stat = "attack",   amount = 4 },
+  { type = "on_hit",     ability = "bleed", chance = 0.25, magnitude = 3 },
+]
 
 [[item]]
 id         = "swamp_lion_hide"
@@ -410,21 +357,11 @@ things that live in places like the Murk Fens.
 """
 weight = 2
 slot   = "weapon"
-
-[[effects]]
-type   = "stat_bonus"
-stat   = "attack"
-amount = 6
-
-[[effects]]
-type    = "on_equip"
-message = "The blade is lighter than it looks. It wants to be used."
-
-[[effects]]
-type      = "on_hit"
-ability   = "bleed"
-chance    = 0.15
-magnitude = 4
+effects = [
+  { type = "stat_bonus", stat = "attack",   amount = 6 },
+  { type = "on_equip",   message = "The blade is lighter than it looks. It wants to be used." },
+  { type = "on_hit",     ability = "bleed", chance = 0.15, magnitude = 4 },
+]
 
 # ── Blackfen armor (high-tier, swamp-adapted) ─────────────────────────────────
 

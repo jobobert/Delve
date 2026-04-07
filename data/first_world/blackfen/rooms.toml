@@ -416,8 +416,11 @@ exits  = {
 }
 items  = []
 spawns = []
-
 on_enter = [
+  { op = "if_not_flag", flag = "eitd_tomb_path_found", then = [
+    { op = "advance_quest", quest_id = "the_emerald_in_the_dark", step = 2 },
+    { op = "set_flag",      flag = "eitd_tomb_path_found" },
+  ]},
   { op = "if", flag = "bone_trail_searched",
     then = [],
     else = [

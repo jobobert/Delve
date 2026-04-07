@@ -1258,7 +1258,7 @@ def _quest_title(quest_id: str) -> str:
 def _discover_worlds() -> list[Path]:
     return sorted(
         p for p in DATA_DIR.iterdir()
-        if p.is_dir() and (p / "config.py").exists()
+        if p.is_dir() and ((p / "config.toml").exists() or (p / "config.py").exists())
     )
 
 
@@ -1313,6 +1313,7 @@ def main() -> None:
 
     # ── Engine setup ──────────────────────────────────────────────────────────
     _wc.init(world_path)
+    world = World(world_path)
     if Player.exists(args.name):
         player = Player.load(args.name)
         if player.world_id != world_path.name:
@@ -1324,11 +1325,8 @@ def main() -> None:
         player = Player.create_new(args.name)
         player.world_id = world_path.name
         player.room_id  = world.start_room
-    
+
     player.save()
-
-    world.attach_player(player)
-
     world.attach_player(player)
     bus       = EventBus()
     capture   = OutputCapture(bus)

@@ -32,10 +32,10 @@
 23. [Appendix B — Equipment Slots](#appendix-b--equipment-slots)
 24. [Appendix C — All Script Ops (Quick Reference)](#appendix-c--all-script-ops-quick-reference)
 25. [Appendix D — Player Fields for Substitution](#appendix-d--player-fields-for-substitution)
-26. [Appendix E — Quest Design Walkthrough](#appendix-e--quest-design-walkthrough)
-27. [Appendix F — Companion Design Walkthrough](#appendix-f--companion-design-walkthrough)
-28. [Appendix G — Crafting & Commission Design Walkthrough](#appendix-g--crafting--commission-design-walkthrough)
-29. [Appendix H — Fighting Style Design Walkthrough](#appendix-h--fighting-style-design-walkthrough)
+26. [9.6 Quest Design Walkthrough](#96-quest-design-walkthrough)
+27. [15.5 Companion Design Walkthrough](#155-companion-design-walkthrough)
+28. [14.5 Crafting & Commission Design Walkthrough](#145-crafting--commission-design-walkthrough)
+29. [13.4 Fighting Style Design Walkthrough](#134-fighting-style-design-walkthrough)
 
 ---
 
@@ -1166,6 +1166,29 @@ Displays the companion's `join_message`. Replaces any existing companion.
 
 The roll is `d20 + (skill_value // 10)`. Skill bonus ranges 0–10.
 
+
+**Retrying failed checks with `attempt`**
+
+When a `skill_check` in a room's `on_enter` fails, the player can type `attempt` (or `try`) to re-run the room's `on_enter` script in place — no need to leave and re-enter. This only re-fires checks whose guard flag was **not** set (i.e. checks that failed or haven't been attempted yet). Already-completed one-time events (wrapped in `if_not_flag`) are safely skipped.
+
+Design pattern for a retryable check:
+
+```toml
+on_enter = [
+  # Guard with the SUCCESS flag — on fail, flag is not set so attempt re-fires the check
+  {op = "if_not_flag", flag = "hatch_found", then = [
+    {op = "skill_check", skill = "perception", dc = 12,
+      on_pass = [
+        {op = "message", tag = "system", text = "You spot the hidden hatch."},
+        {op = "set_flag", flag = "hatch_found"}   # <- only set on success
+      ],
+      on_fail = [
+        {op = "message", tag = "system", text = "You don't see anything. (try 'attempt' to try again)"}
+      ]
+    }
+  ]}
+]
+```
 ---
 
 **`if_skill`** — Branch on whether skill value meets a minimum (no roll, no growth)
@@ -1612,6 +1635,26 @@ script    = [{ op = "set_flag", flag = "..." }]  # Optional: run on node entry
 | `condition` | dict | If condition fails, this node is skipped and fallback dialogue shows |
 | `script` | array | Script ops executed when this node is entered |
 
+#### Per-line conditions
+
+Individual entries in `lines` can carry their own `show_if` condition. Lines whose
+condition is not met are excluded from the random/cycle pool for that visit. Plain
+strings (no condition) are always included.
+
+```toml
+[[node]]
+id = "root"
+lines = [
+  "Generic greeting.",
+  { text = "A quest awaits you!", show_if = { not_flag = "quest_started" } },
+  { text = "How goes the work?",  show_if = { flag = "quest_started" } },
+]
+```
+
+`show_if` accepts the same condition keys as node `condition` and response `condition`
+(`flag`, `not_flag`, `quest`, `skill`, etc.). In the WCT, a **+ cond** badge appears
+next to each line textarea; click it to add or remove a condition.
+
 ### 8.3 Response Structure
 
 Responses are options the player chooses from. They can be defined inline under
@@ -1854,6 +1897,364 @@ condition = { quest_complete = "ashwood_contract" }
 # Show only if quest is NOT active
 condition = { not_quest = "ashwood_contract" }
 ```
+
+---
+
+
+---
+
+### 9.6 Quest Design Walkthrough
+
+This appendix bridges the gap between **story design** and **technical implementation**.
+Rather than listing fields again (see §9), it walks through the thought process of
+turning a quest idea into working TOML — with concrete examples from the existing worlds.
+
+---
+
+#### 9.6.1 The Core Idea: Quests Are Just Flags + Steps
+
+The engine has no magic quest logic. A quest is nothing more than:
+
+1. A **TOML file** that declares objectives and rewards.
+2. **Script ops** scattered throughout your world (`advance_quest`, `complete_quest`) that
+   move the player's progress counter forward.
+3. **Dialogue conditions** (`quest`, `not_quest`, `quest_complete`) that change what NPCs
+   say based on where the player is in the quest.
+
+The player never "clicks accept" on a quest panel. They talk to an NPC, the dialogue runs
+a script, and `advance_quest` sets step = 1. That's the entire handshake.
+
+---
+
+#### 9.6.2 Design First: The Player's Journey
+
+Before touching any TOML, write out the quest as the player will experience it. Don't
+think about files or ops yet — just answer:
+
+> *What does the player do? In what order? What happens when they finish?*
+
+**Example — "The Ashwood Contract":**
+
+```
+1. Player talks to Elder Mira. She explains the corruption and offers gold.
+2. Player visits Sergeant Vorn to get briefed on the forest.
+3. Player travels into the Ashwood.
+4. Player finds the Shrine and solves an ancient riddle.
+5. Player descends to the Drake's Lair and kills the Drake.
+6. Player returns to Mira with proof of the kill.
+```
+
+That's your step list. Write it down, then assign each moment an index number. Gaps are
+fine — indices don't need to be consecutive. Use round numbers (1, 2, 3…) or leave room
+for future steps (1, 3, 5, 10…).
+
+---
+
+#### 9.6.3 Create the Quest File
+
+Make one `.toml` file in `data/<world>/<zone>/quests/<quest_id>.toml`. The zone doesn't
+have to match the zone where the quest starts — pick the zone that "owns" the quest
+thematically (usually where the climax is).
+
+```toml
+# data/ashwood/quests/ashwood_contract.toml
+
+id      = "ashwood_contract"
+title   = "The Ashwood Contract"
+giver   = "elder_mira"
+summary = "Investigate the corruption in the Ashwood Forest and slay the Ashwood Drake."
+
+[[step]]
+index     = 1
+objective = "Speak with Sergeant Vorn in the Millhaven Barracks."
+hint      = "Go up from the Town Square to reach the Barracks."
+
+[[step]]
+index     = 5
+objective = "Descend to the Drake's Lair and slay the Ashwood Drake."
+hint      = "Bring the best weapons you can find."
+
+[[step]]
+index     = 6
+objective = "Return to Elder Mira with the Drake's fang as proof."
+hint      = "Go back to town and speak with Elder Mira in the Council Hall."
+
+[[reward]]
+type   = "gold"
+amount = 150
+
+[[reward]]
+type   = "xp"
+amount = 400
+```
+
+The `giver` field is informational only — the engine doesn't enforce it. It's a note to
+yourself and to the WCT quest graph.
+
+---
+
+#### 9.6.4 Wire Up the Triggers
+
+Now go to every place in the world where a step should advance, and add an `advance_quest`
+or `complete_quest` script op. There are four places this happens:
+
+#### Trigger 1 — NPC Dialogue (most common)
+
+The NPC's dialogue `[[node]]` carries a `script` array that fires when the node is
+displayed. This is how quests start and how they end with a hand-in.
+
+```toml
+# elder_mira.toml — quest offer node
+[[node]]
+id     = "offer_quest"
+line   = "The contract pays well. Find Sergeant Vorn in the barracks first."
+script = [
+  { op = "set_flag",      flag = "ashwood_quest_offered" },
+  { op = "advance_quest", quest_id = "ashwood_contract", step = 1 },
+]
+```
+
+```toml
+# elder_mira.toml — hand-in node (player presents the fang)
+[[node]]
+id     = "victory"
+line   = "By the old stones. Let me see the fang. You actually did it."
+script = [{ op = "complete_quest", quest_id = "ashwood_contract" }]
+```
+
+Guard the offer node with a response condition so it only appears when appropriate:
+
+```toml
+[[response]]
+node      = "root"
+condition = { not_flag = "ashwood_quest_offered" }
+text      = "Who are you? What's happening in the Ashwood?"
+next      = "intro"
+```
+
+And guard the hand-in node so it only appears once the kill step is reached:
+
+```toml
+[[response]]
+node      = "root"
+condition = { flag = "ashwood_drake_slain" }
+text      = "I have defeated the Ashwood Drake. Here is proof."
+next      = "victory"
+```
+
+#### Trigger 2 — NPC Kill (`kill_script`)
+
+When a combat NPC dies, its `kill_script` runs automatically. This is the cleanest way
+to advance a kill-type objective — no room scripts needed.
+
+```toml
+# ashwood/npcs.toml
+[[npc]]
+id          = "ashwood_drake"
+name        = "Ashwood Drake"
+kill_script = [
+  { op = "set_flag",      flag = "ashwood_drake_slain" },
+  { op = "give_item",     item_id = "drakes_fang" },
+  { op = "message",       text = "The Drake collapses. You pry a fang from its jaw.", tag = "combat_kill" },
+  { op = "advance_quest", quest_id = "ashwood_contract", step = 6 },
+]
+```
+
+Note that step 6 here is "Return to Elder Mira" — the kill *advances* the quest to the
+return step, it doesn't complete it. Completion happens when the player talks to Mira.
+
+#### Trigger 3 — Room Entry (`on_enter`)
+
+Place an `on_enter` script on a room to advance the quest when the player first arrives
+at a location. Use `if_not_flag` to make it fire only once.
+
+```toml
+# blackfen/rooms.toml
+[[room]]
+id       = "dragons_clearing"
+on_enter = [
+  { op = "if_not_flag", flag = "seen_dragons_clearing",
+    then = [
+      { op = "set_flag",      flag = "seen_dragons_clearing" },
+      { op = "advance_quest", quest_id = "grandfathers_emerald", step = 3 },
+      { op = "message",       text = "The clearing opens before you. The dead serpent hangs in the canopy above.", tag = "system" },
+    ]
+  },
+]
+```
+
+Without the `if_not_flag` guard, the script would fire every time the player enters the
+room — advancing the step counter over and over.
+
+#### Trigger 4 — Item Pickup or Use (`on_get` / `on_use`)
+
+For fetch quests, advance the step when the player picks up the key item. Use `on_get`
+for floor items (the player `take`s them), or `on_use` for items in inventory.
+
+```toml
+# blackfen/items.toml
+[[item]]
+id     = "lost_ledger"
+name   = "Lost Ledger"
+on_get = [
+  { op = "advance_quest", quest_id = "the_lost_ledger", step = 2 },
+  { op = "message",       text = "The pages are water-damaged but readable.", tag = "system" },
+]
+```
+
+---
+
+#### 9.6.5 Gate NPC Dialogue on Quest State
+
+Once the quest is running, NPCs should react differently depending on where the player
+is. Use response `condition` fields to branch:
+
+```toml
+# Show only when quest is at exactly step 2
+[[response]]
+condition = { quest = "ashwood_contract", step = 2 }
+text      = "Vorn briefed me. I'm heading to the Ashwood now."
+next      = "after_vorn"
+
+# Show only after quest is fully complete
+[[response]]
+condition = { quest_complete = "ashwood_contract" }
+text      = "The contract is fulfilled."
+next      = "complete"
+
+# Show only if this quest is NOT active at all (offer it)
+[[response]]
+condition = { not_quest = "ashwood_contract" }
+text      = "Tell me about the Ashwood contract."
+next      = "intro"
+```
+
+The `quest` condition matches *any* step ≥ the given step unless a specific `step =` is
+provided. Check §9.5 for all condition forms.
+
+---
+
+#### 9.6.6 Optional Paths with Flags
+
+Flags let you track side decisions without needing extra quest steps. Define them in a
+comment at the top of your quest file so you remember them:
+
+```toml
+# Optional flags:
+#   has_grimwick      — hired Grimwick as guide (bonus XP, easier checks)
+#   thornbury_friendly — befriended Maren Thornbury (can rest at cottage)
+#   emerald_recovered — the emerald is in inventory
+```
+
+At completion time, check these flags in dialogue to give bonus rewards:
+
+```toml
+[[node]]
+id     = "reward_with_bonus"
+line   = "Not only that — Grimwick made it out. You kept my old friend alive."
+script = [
+  { op = "complete_quest", quest_id = "grandfathers_emerald" },
+  { op = "if_flag", flag = "saved_grimwick",
+    then = [{ op = "give_xp", amount = 200 }]
+  },
+]
+```
+
+---
+
+#### 9.6.7 Automatic Step Notifications (`on_advance`)
+
+Each step can carry an `on_advance` array that fires the moment `advance_quest` sets
+that step. Use it to deliver items, send messages, or update the world — immediately,
+wherever the trigger came from.
+
+```toml
+[[step]]
+index      = 3
+objective  = "Retrieve the hermit's map."
+on_advance = [
+  { op = "message",   text = "The hermit's directions flash through your memory.", tag = "quest" },
+  { op = "give_item", item_id = "hermit_map" },
+]
+```
+
+This is preferable to putting `give_item` on the trigger side when you want the effect to
+happen consistently no matter which trigger (dialogue, room, item) advanced the step.
+
+---
+
+#### 9.6.8 Rewards
+
+Rewards are given automatically when `complete_quest` runs. No additional script ops are
+needed for gold, XP, and item rewards declared in the `[[reward]]` table.
+
+```toml
+[[reward]]
+type   = "gold"
+amount = 150
+
+[[reward]]
+type   = "xp"
+amount = 400
+
+[[reward]]
+type    = "item"
+item_id = "millhaven_commendation"
+
+[[reward]]
+type = "message"
+text = "Aonn raises his glass to your grandfather. You do the same."
+```
+
+Conditional rewards (based on flags) must be handled manually via `if_flag` ops in the
+completion script, before or after the `complete_quest` op.
+
+---
+
+#### 9.6.9 Checklist: Quest Is Ready When...
+
+Before running `validate.py`, verify:
+
+- [ ] Quest `.toml` file exists with `id`, `title`, `summary`, and at least one `[[step]]`
+- [ ] Step 1 is advanced somewhere — a dialogue node, a room `on_enter`, or an item `on_get`
+- [ ] Every intermediate step is advanced by exactly one trigger
+- [ ] `complete_quest` fires in exactly one place (usually a dialogue hand-in node)
+- [ ] Dialogue responses that offer the quest are guarded by `not_quest` (won't re-offer)
+- [ ] Dialogue responses that reference quest progress use `quest`, `not_quest`, or `quest_complete`
+- [ ] Any "fire once" `on_enter` scripts use an `if_not_flag` + `set_flag` guard
+- [ ] Flags used in optional branches are documented in a comment at the top of the quest file
+- [ ] `validate.py` reports no errors
+
+---
+
+#### 9.6.10 Common Mistakes
+
+**Forgetting the `not_flag` guard on `on_enter`**
+Without it, stepping into the room a second time re-fires the script. The quest step
+counter will jump past its expected value and dialogue conditions break.
+
+**Putting `complete_quest` on the wrong trigger**
+If you put `complete_quest` on the kill NPC script instead of the return-to-NPC dialogue,
+the quest completes with no fanfare — the player never hands anything in. Reserve
+`complete_quest` for the final hand-in moment.
+
+**Using `step =` conditions that are too strict**
+`condition = { quest = "my_quest", step = 3 }` will only match when the player is at
+*exactly* step 3. If the quest has advanced to step 4, the response disappears. Often
+you want a flag check instead: `condition = { flag = "some_milestone" }`.
+
+**Overlapping `advance_quest` triggers**
+If two different triggers both advance the same step, the step counter skips ahead or
+jumps out of order. Use flag guards to ensure only one trigger fires per step.
+
+**Rewards that don't get given**
+`[[reward]]` entries are only given when `complete_quest` runs via the quest engine. If
+you call a custom script to give gold directly (e.g., `give_gold`) instead of using
+`complete_quest`, the declared `[[reward]]` entries are skipped entirely. Use one or the
+other, not both.
+
+---
+
 
 ---
 
@@ -2159,6 +2560,317 @@ The `heal_self` op heals for a fraction of the counter damage `redirect` dealt.
 
 ---
 
+
+---
+
+### 13.4 Fighting Style Design Walkthrough
+
+This appendix covers the thought process behind designing a fighting style — from its
+identity and matchup profile to passive abilities and how players learn it.
+
+---
+
+#### 13.4.1 The Core Idea: Styles Are Identity + Matchups + Passives
+
+A fighting style does three things:
+
+1. **Identity** — a combat philosophy the player or NPC embodies.
+2. **Matchups** — `strong_vs` and `weak_vs` tag lists determine when the style excels
+   or struggles. This is the main balance lever.
+3. **Passives** — abilities that unlock at proficiency thresholds and fire during combat
+   rounds, adding tactical depth as the player improves.
+
+Design the identity first, then let the mechanics follow from it.
+
+---
+
+#### 13.4.2 Design First: What Is This Style's Philosophy?
+
+> *What is this fighter doing that is different? What opponents does that work against — and why?*
+
+| Style identity | Strong against | Weak against |
+|---------------|---------------|-------------|
+| Street brawling — aggression, no technique | Slow, unprepared humanoids | Armored, fast |
+| Classical swordplay — blade angles, leverage | Armored humanoids | Fast animals, undead |
+| Evasion — don't be where the strike lands | Fast, accurate strikers | Numbers, brute force |
+| Flowing Water — redirect the opponent's force | Fast, aggressive | Slow, patient, armored |
+| Sky-Piercer — elevation, plunging strikes | Large, slow beasts | Small, fast, armored |
+
+The identity should make the matchup feel logical. A player should read `strong_vs` and
+understand immediately why that makes sense from the style description.
+
+---
+
+#### 13.4.3 Create the Style File
+
+All styles live in `data/<world_id>/<zone>/styles/styles.toml`. The engine scans all
+zones and merges found styles. Grouping a world's styles in the training or hub zone is
+conventional.
+
+```toml
+[[style]]
+id                = "serpent_strike"
+name              = "Serpent Strike"
+desc_short        = "Fast precise attacks on weak points. Excels against agile beasts."
+desc_long         = "Built on patience and precision — wait for the gap, strike the exact point. Developed to counter fast-moving animals where brute force achieves nothing. Against slow or armored foes the light hits barely register."
+strong_vs         = ["fast", "beast", "small"]
+weak_vs           = ["armored", "large", "undead"]
+strong_multiplier = 1.5
+weak_multiplier   = 0.65
+attack_bonus      = 1
+defense_bonus     = 1
+difficulty        = 2.0
+preferred_weapon_tags = ["blade", "light", "one_handed"]
+preferred_armor_tags  = ["light"]
+weapon_bonus      = 0.30
+armor_bonus       = 0.10
+learned_from      = ""
+learned_at        = 5
+passives = [
+  { ability = "bleed",        threshold = 50, trigger = "attack",
+    message = "You find a gap — the wound will bleed!",
+    on_activate = [{op = "apply_combat_bleed"}] },
+  { ability = "vital_strike", threshold = 75, trigger = "attack",
+    message = "You strike a vital point!",
+    on_activate = [{op = "multiply_damage", multiplier = 2.0}] },
+]
+```
+
+---
+
+#### 13.4.4 Style Fields
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier used in scripts and NPC `style` fields |
+| `name` | Display name shown in combat log and skill screen |
+| `desc_short` | One-line description shown in menus |
+| `desc_long` | Full lore description shown in the skills screen |
+| `strong_vs` | NPC tags that this style excels against |
+| `weak_vs` | NPC tags that this style struggles against |
+| `strong_multiplier` | Damage multiplier when fighting strong targets (e.g. `1.5`) |
+| `weak_multiplier` | Damage multiplier when fighting weak targets (e.g. `0.65`) |
+| `attack_bonus` | Flat attack bonus applied to the fighter at all times |
+| `defense_bonus` | Flat defense bonus applied at all times (can be negative) |
+| `difficulty` | Proficiency gain divisor: `1.0` = normal, `2.0` = twice as slow to improve |
+| `preferred_weapon_tags` | Weapon tags that gain `weapon_bonus` at full proficiency |
+| `preferred_armor_tags` | Armor tags that gain `armor_bonus` at full proficiency |
+| `weapon_bonus` | Max attack % bonus from matching weapon at prof 100 (0.25 = 25%) |
+| `armor_bonus` | Max defense % bonus from matching armor at prof 100 |
+| `learned_from` | NPC `id` who teaches this style, or `""` for self-taught/innate |
+| `learned_at` | Minimum player level required to learn |
+| `passives` | Array of passive ability definitions (see H.5) |
+
+---
+
+#### 13.4.5 Passive Abilities
+
+Each passive unlocks at a proficiency `threshold`, fires on a `trigger`, and runs an
+`on_activate` script array when it does.
+
+```toml
+passives = [
+  # Unlocks at 40 — fires on defend — blocks damage and counters
+  { ability = "redirect",  threshold = 40, trigger = "defend",
+    message = "You redirect the attack using their force against them!",
+    on_activate = [{op = "counter_damage", multiplier = 0.7}, {op = "block_damage"}] },
+
+  # Unlocks at 75 — only fires if "redirect" also fired this round
+  { ability = "absorb",    threshold = 75, trigger = "defend", requires = "redirect",
+    message = "You absorb the impact, recovering HP!",
+    on_activate = [{op = "heal_self", multiplier = 0.33}] },
+]
+```
+
+**Passive fields:**
+
+| Field | Description |
+|-------|-------------|
+| `ability` | Any unique name string; used only for chaining via `requires` — no engine registration needed |
+| `threshold` | Proficiency 0-100 required to unlock this passive |
+| `trigger` | `"attack"` fires on offense; `"defend"` fires on defense; `"always"` = permanent stat effect |
+| `chance` | Base probability the passive fires per eligible round (0.0–1.0). Default: `0.15` |
+| `chance_scaling` | Additional probability added per 100 proficiency. Default: `0.0` |
+| `defense_bonus_base` | Flat defense added when `trigger = "always"`. Default: `0` |
+| `defense_bonus_scale` | Defense added per 100 proficiency when `trigger = "always"`. Default: `0` |
+| `requires` | Another ability that must have fired this round for this one to trigger |
+| `message` | Text emitted when passive fires. Use `{npc}` as a placeholder for NPC name. |
+| `on_activate` | Array of combat-only script ops (see section 13.3 for full op list) |
+
+`always` passives do not use `chance`/`chance_scaling` — they apply unconditionally when the threshold is met.
+Their bonus is `defense_bonus_base + defense_bonus_scale * (prof / 100)`.
+
+---
+
+#### 13.4.6 Ability Names and Probability
+
+The `ability` field is a plain string used only to support passive chaining via `requires`.
+Any name is valid — there is no registration required in Python. Choose a descriptive
+name unique within the style.
+
+**Probability fields (`attack` and `defend` passives only):**
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `chance` | `0.15` | Base probability (0.0–1.0) the passive fires when eligible |
+| `chance_scaling` | `0.0` | Additional probability per 100 proficiency |
+
+The final roll is: `random() < chance + chance_scaling * (prof / 100)`
+
+**Examples:**
+
+```toml
+# 8% base + up to 12% more at prof 100 — range 8%-20%
+{ ability = "stun", threshold = 50, trigger = "defend", chance = 0.08, chance_scaling = 0.12, ... }
+
+# Flat 25% at all proficiency levels
+{ ability = "bleed", threshold = 50, trigger = "attack", chance = 0.25, ... }
+
+# 100% — fires every eligible round (e.g. cleave)
+{ ability = "cleave", threshold = 50, trigger = "attack", chance = 1.0, ... }
+```
+
+**Always-on passives (`trigger = "always"`):**
+
+```toml
+# Adds 2 + (prof/100)*4 defense when prof >= 75
+{ ability = "iron_skin", threshold = 75, trigger = "always", defense_bonus_base = 2, defense_bonus_scale = 4, message = "" }
+```
+
+No Python changes are needed to add new passive abilities — just add them to the TOML.
+
+---
+
+#### 13.4.7 Matchup Design: Tags and Multipliers
+
+`strong_vs` and `weak_vs` reference tags on NPCs in `npcs.toml`. The engine checks for
+overlap and applies the corresponding multiplier:
+
+```toml
+# npcs.toml — wolf has fast + beast + small tags
+[[npc]]
+id   = "forest_wolf"
+tags = ["beast", "fast", "small"]
+
+# serpent_strike has strong_vs = ["fast", "beast", "small"] — match -> strong_multiplier
+```
+
+Keep `strong_vs` and `weak_vs` mutually exclusive to avoid ambiguity.
+
+**Multiplier guidelines:**
+
+| Multiplier | Typical value | Feel |
+|------------|--------------|------|
+| `strong_multiplier` | 1.3 to 1.6 | Clear advantage, not trivial |
+| `weak_multiplier` | 0.6 to 0.75 | Meaningful disadvantage |
+
+Avoid values above 1.8 strong or below 0.5 weak unless the style is intentionally
+hyper-specialised with a narrow niche.
+
+---
+
+#### 13.4.8 Proficiency Gear Bonuses
+
+`weapon_bonus` and `armor_bonus` scale linearly from 0 to max as proficiency rises:
+
+```
+weapon_bonus = 0.30  at prof 100  ->  +30% attack from a preferred weapon
+weapon_bonus = 0.30  at prof 50   ->  +15% attack from a preferred weapon
+```
+
+Use higher values (0.25-0.35) for styles that are strongly equipment-dependent. Use
+lower values (0.10-0.20) for styles that rely more on technique than tools.
+
+---
+
+#### 13.4.9 Teaching Styles to the Player
+
+Players learn styles via `teach_style` in a dialogue node script:
+
+```toml
+[[node]]
+id   = "teach_flowing_water"
+line = "Watch. Not the strike — the space after it. That is where you move."
+script = [
+  { op = "teach_style", style_id = "flowing_water" },
+  { op = "set_flag",    flag = "learned_flowing_water" },
+]
+```
+
+Guard the offer with a flag so the NPC does not re-offer:
+
+```toml
+[[response]]
+node      = "root"
+condition = { not_flag = "learned_flowing_water" }
+text      = "Would you teach me Flowing Water?"
+next      = "teach_flowing_water"
+```
+
+If `learned_from` is set to an NPC id, the engine enforces that only that NPC can teach
+it. If `learned_from = ""`, any `teach_style` op for that style will work.
+
+---
+
+#### 13.4.10 Assigning Styles to NPCs
+
+NPCs use a style via `style` and `style_prof` in `npcs.toml`:
+
+```toml
+[[npc]]
+id         = "forest_wolf"
+style      = "serpent_strike"
+style_prof = 30.0
+```
+
+`style_prof` controls both passive unlock and damage output. Use 60-90 for bosses and
+elites; 10-35 for common enemies. If you want an NPC to have no meaningful style, use
+`"brawling"` with low proficiency — it is the universal fallback and every world must
+define it.
+
+---
+
+#### 13.4.11 Checklist: Style Is Ready When...
+
+- [ ] `id`, `name`, `desc_short`, `desc_long` all written
+- [ ] `strong_vs` and `weak_vs` tags match tags present on the target NPCs
+- [ ] `strong_multiplier` and `weak_multiplier` are within sensible ranges
+- [ ] Every `attack`/`defend` passive has a `chance` field (default 0.15 applies if omitted, but explicit is clearer)
+- [ ] `learned_from` set to an NPC id, or `""` if self-taught
+- [ ] If `learned_from` is set, that NPC's dialogue has a `teach_style` node
+- [ ] All NPCs in the zone that use this style have `style` and `style_prof` set
+- [ ] `validate.py` reports no errors
+
+---
+
+#### 13.4.12 Common Mistakes
+
+**Missing `chance` on an attack/defend passive**
+If `chance` is omitted the passive defaults to 15% — it will still fire, but without
+an intentional value. Always set `chance` explicitly so the behaviour is clear.
+
+**Strong and weak tags that overlap on the same NPC**
+If an NPC has tags in both `strong_vs` and `weak_vs` for the same style, behaviour is
+undefined. Keep the two lists mutually exclusive per style.
+
+**`on_activate` ops on an "always" passive**
+`trigger = "always"` passives are permanent stat effects handled directly by combat.py.
+The `on_activate` array does not run for them. Use `trigger = "always"` only for flat
+bonuses and express those in `attack_bonus`/`defense_bonus` at the style level.
+
+**Forgetting `requires` on chained passives**
+Without `requires`, both passives in a chain can fire independently. The `requires`
+field ensures the second passive only triggers on rounds where the first also fired.
+
+**NPC `style_prof` too high on common enemies**
+A street thug with `style_prof = 90` will parry almost every round. Save high
+proficiency for bosses. Common enemies in the 10-35 range keep combat readable.
+
+---
+
+
+---
+
 ## 14. Crafting & Commissions
 
 Crafting lets NPCs produce custom gear when given materials.
@@ -2240,6 +2952,270 @@ name_prefix  = "Masterwork "
 
 ---
 
+
+---
+
+### 14.5 Crafting & Commission Design Walkthrough
+
+This appendix covers the thought process behind designing a crafter NPC and their
+commissions — from deciding what they make to wiring quality tiers, material sourcing,
+and quest integration.
+
+---
+
+#### 14.5.1 The Core Idea: Commissions Are Time-Gated Crafting
+
+A commission is a three-phase player interaction:
+
+1. **Place** — player visits the crafter, picks a commission from the menu, and hands
+   over materials (and an optional gold deposit).
+2. **Wait** — the crafter works for `turns_required` game moves.
+3. **Collect** — player returns, types `collect`, and receives the finished item at a
+   randomly rolled quality tier.
+
+The engine handles all of this automatically once the TOML is in place.
+
+**Player commands:**
+
+| Command | What it does |
+|---------|-------------|
+| `commission` | Open the crafter's menu (or check an in-progress commission's status) |
+| `give <item> to <npc>` | Hand over a required material |
+| `commissions` | List all active commissions across all crafters |
+| `collect` | Pick up a finished item |
+
+---
+
+#### 14.5.2 Design First: What Does This Crafter Make?
+
+Before writing TOML, answer:
+
+> *Who is this crafter? What is their craft identity? What materials make sense for their location?*
+
+| Crafter identity | Makes | Materials found nearby |
+|-----------------|-------|----------------------|
+| Town blacksmith | Weapons, heavy armor | Iron ingots, coal (sold at local market) |
+| Leatherworker | Light armor, packs | Tanned hides, leather strips, cloth |
+| Deep-zone smith | Exotic alloys, legendary gear | Zone-specific drops and quest materials |
+| Specialist (tuner, weaver) | Functional items for specific quests | Quest-gated materials |
+
+Also decide upfront: is this crafter making **gear for combat**, **utility items** (carry
+capacity), or **quest-specific outputs** (an item the player must have to progress)?
+
+---
+
+#### 14.5.3 Create the Crafting File
+
+Place the file at `data/<world>/<zone>/crafting/<npc_id>.toml`. The filename **must
+exactly match** the crafter NPC's `id`.
+
+```toml
+[[commission]]
+id             = "hunting_knife"
+npc_id         = "blacksmith_npc"
+label          = "Hunting Knife"
+desc           = "A short, curved blade built for fieldwork."
+slot           = "weapon"
+weapon_tags    = ["blade", "light", "one_handed"]
+materials      = ["iron_ingot", "leather_strip"]
+turns_required = 20
+gold_cost      = 5
+xp_reward      = 30
+weight         = 1
+qualities = [
+  { tier = "poor",        weight = 20, attack_bonus = 3, equip_msg = "The edge is a bit rough, but serviceable." },
+  { tier = "standard",    weight = 55, attack_bonus = 5, equip_msg = "A clean blade. A steady hand." },
+  { tier = "exceptional", weight = 20, attack_bonus = 7, special = "sharp",
+    name_prefix = "Fine ", equip_msg = "The edge is razor-keen." },
+  { tier = "masterwork",  weight = 5,  attack_bonus = 9, special = "sharp",
+    name_prefix = "Masterwork ", equip_msg = "Balanced perfectly. This weapon wants to be used.",
+    craft_message = "Not a mark on it. That's as good as iron gets." },
+]
+```
+
+---
+
+#### 14.5.4 Commission Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | Yes | Unique commission identifier |
+| `npc_id` | Yes | Must match the crafter NPC's `id` exactly |
+| `label` | Yes | Base item name (quality `name_prefix` prepends to this) |
+| `desc` | Yes | One-line description shown in the commission menu |
+| `slot` | Yes | Equipment slot for the finished item; `""` for non-equippable outputs |
+| `weapon_tags` / `armor_tags` | Yes | Tags on finished item (use `[]` if not applicable) |
+| `materials` | Yes | List of item IDs the player must provide (repeats allowed) |
+| `turns_required` | Yes | Game moves before the commission is ready |
+| `gold_cost` | Yes | Upfront gold deposit (0 = free) |
+| `xp_reward` | No | XP awarded when the player collects |
+| `weight` | No | Item weight of the finished item |
+| `on_complete` | No | Script ops run automatically when the item is collected |
+| `qualities` | Yes | List of quality tier dicts (see G.5) |
+
+---
+
+#### 14.5.5 Quality Tiers
+
+The engine rolls against the `weight` values to pick a tier, then applies that tier's
+bonuses to the finished item.
+
+| Field | Description |
+|-------|-------------|
+| `tier` | `"poor"`, `"standard"`, `"exceptional"`, `"masterwork"` |
+| `weight` | Probability weight relative to all tiers. Higher = more common. |
+| `attack_bonus` | Attack stat added to finished item |
+| `defense_bonus` | Defense stat added to finished item |
+| `max_hp_bonus` | Max HP added to finished item |
+| `carry_bonus` | Carry capacity added (pack/utility items) |
+| `special` | Extra tag appended to `weapon_tags`/`armor_tags` on finished item |
+| `name_prefix` | Prepended to `label` — `"Fine "` produces `"Fine Hunting Knife"` |
+| `equip_msg` | Message shown when the player equips the item |
+| `craft_message` | Optional flavour line spoken by the crafter at collection |
+
+**Typical weight distribution:** 20 / 55 / 20 / 5 makes masterwork rare and poor
+uncommon. Adjust per commission — a specialist commission might use 10 / 45 / 35 / 10.
+
+---
+
+#### 14.5.6 Material Sourcing: Close the Loop
+
+Trace where every material comes from before finalising your commission list:
+
+- **Shop-sold** — available at a merchant in the same zone. Good for reliable basics.
+- **Loot drops** — found on enemy corpses or room floor items. Good for engagement.
+- **Quest-gated** — only available after completing a step. Good for earned commissions.
+- **Cross-zone** — produced by a commission in another zone. Good for late-game chains.
+
+**Two-step crafting chain example:**
+
+```toml
+# Step 1 — produces a material (slot="" = non-equippable output)
+[[commission]]
+id        = "dp_resonant_ingot"
+materials = ["drake_scale", "dp_raw_ore"]
+slot      = ""
+weapon_tags = []
+turns_required = 12
+gold_cost = 0
+on_complete = [
+  { op = "give_item", item_id = "resonant_alloy_ingot" },
+]
+qualities = [
+  { tier = "standard", weight = 100, craft_message = "The ingot cools, humming with resonance." },
+]
+
+# Step 2 — uses that material in the final weapon
+[[commission]]
+id        = "forge_sky_piercer_commission"
+materials = ["resonant_alloy_ingot", "drakebone_fragment", "volcanic_glass_shard"]
+```
+
+The player forges the ingot first, then uses it as input for the final weapon — a
+natural two-step chain that is satisfying without requiring complex scripting.
+
+---
+
+#### 14.5.7 Non-Equipment Commissions (Functional Outputs)
+
+For quest items, cross-zone materials, or consumables, set `slot = ""` and use
+`on_complete` to give the item directly. The `qualities` list here only affects
+`craft_message` flavour — no stat bonuses apply.
+
+```toml
+[[commission]]
+id             = "mf_tune_echo_compass"
+slot           = ""
+weapon_tags    = []
+materials      = ["echo_compass", "bog_quartz", "pressure_hollowed_stone"]
+turns_required = 10
+gold_cost      = 0
+on_complete = [
+  { op = "message",   tag = "crafting", text = "Sera hums softly as the needle settles." },
+  { op = "give_item", item_id = "echo_compass_tuned" },
+  { op = "set_flag",  flag = "mf_echo_gate_unlocked" },
+]
+qualities = [
+  { tier = "poor",        weight = 25, craft_message = "It will hold — probably." },
+  { tier = "standard",    weight = 50, craft_message = "Standard tuning. It will do the job." },
+  { tier = "exceptional", weight = 25, craft_message = "Perfect alignment." },
+]
+```
+
+---
+
+#### 14.5.8 Quest-Integrated Commissions
+
+`on_complete` fires when the player types `collect`, regardless of quality tier. Use it
+to advance or complete a quest when the commission is the quest's climax:
+
+```toml
+on_complete = [
+  { op = "message",        tag = "crafting", text = "Orun hands you the Sky-Piercer." },
+  { op = "advance_quest",  quest_id = "forge_sky_piercer", step = 3 },
+  { op = "complete_quest", quest_id = "forge_sky_piercer" },
+  { op = "prestige",       amount = 5, reason = "forged the Sky-Piercer with Orun" },
+]
+```
+
+---
+
+#### 14.5.9 Setting Up the Crafter NPC
+
+The crafter NPC is a standard `[[npc]]` entry in `npcs.toml`. No special fields are
+required — the engine detects crafter status by checking whether
+`crafting/<npc_id>.toml` exists. A crafter can also run a `shop` alongside commissions.
+Combining shop + commissions in one NPC is a good pattern: buy materials and place the
+commission in the same visit.
+
+---
+
+#### 14.5.10 Checklist: Crafter Is Ready When...
+
+- [ ] `crafting/<npc_id>.toml` filename exactly matches the NPC's `id`
+- [ ] Every `[[commission]]` has all required fields
+- [ ] `weapon_tags` or `armor_tags` present on every commission (even if `[]`)
+- [ ] Quality `weight` values form a sensible distribution
+- [ ] Every material is obtainable in-world (shop, loot, or quest)
+- [ ] Non-equipment commissions use `slot = ""` and deliver via `on_complete` + `give_item`
+- [ ] `craft_message` written for masterwork tier
+- [ ] `validate.py` reports no errors
+
+---
+
+#### 14.5.11 Common Mistakes
+
+**Filename does not match NPC id**
+`crafting/blacksmith.toml` will not be found for an NPC with `id = "blacksmith_npc"`.
+The filename must exactly match the NPC's `id`.
+
+**Materials with no acquisition path**
+If the player cannot find a material, they cannot complete the commission. Either sell
+materials at a nearby shop, drop them as loot, or add NPC dialogue pointing the way.
+
+**Forgetting `slot = ""` on non-equipment commissions**
+If `slot` is omitted on a functional-output commission, the engine will try to create
+equippable gear. Always set `slot = ""` and use `on_complete` with `give_item`.
+
+**All qualities having the same stats**
+If poor and masterwork produce the same item, the quality roll is meaningless. Make the
+spread wide enough that quality matters.
+
+**Quest ops inside a quality tier instead of at commission level**
+`on_complete` at the commission level always runs. Quest-advancing ops inside a quality
+tier entry only fire for that specific tier. Put all quest/flag/prestige ops in the
+commission-level `on_complete`.
+
+**Commission material is also a unique quest item**
+If the required material only exists once and is needed for a quest too, the player must
+choose. This is only intentional if the commission is the quest resolution — otherwise
+make the material obtainable in multiples.
+
+---
+
+
+---
+
 ## 15. Companions
 
 Companions travel with the player and optionally assist in combat.
@@ -2291,6 +3267,348 @@ downed_message  = "Mira is too injured to continue. She will recover with rest."
 # Dismiss companion
 { op = "dismiss_companion", message = "She nods once and walks away." }
 ```
+
+---
+
+
+---
+
+### 15.5 Companion Design Walkthrough
+
+This appendix covers the thought process behind designing a companion — from the story
+role they fill to the TOML fields that make it work — with examples from existing worlds.
+
+---
+
+#### 15.5.1 The Core Idea: Companions Are Travelling State
+
+A companion is a persistent piece of world state that travels with the player. Unlike
+NPCs (which belong to a room), a companion belongs to the player for as long as they are
+together. The engine tracks one active companion at a time on `player.companion`.
+
+Mechanically, companions do three things:
+
+1. **Narrative** — say flavourful things and react to the world (all tiers).
+2. **Carry** — grant extra inventory capacity (`utility`, `combat`).
+3. **Fight** — take a swing at enemies each combat round (`combat` only).
+
+The tier you choose shapes everything else: what stats matter, which rooms block them,
+and what the player will feel when they are downed or blocked.
+
+---
+
+#### 15.5.2 Design First: What Role Does This Companion Play?
+
+Answer these questions before writing any TOML:
+
+> *Why does this companion exist in the story? What do they add to play?*
+
+| Design goal | Best tier | Example |
+|-------------|-----------|---------|
+| Story weight — a character the player bonds with | `combat` or `narrative` | Aonn Tesk (veteran, quest companion) |
+| Practical help carrying loot | `utility` | Dust the mule |
+| Extra muscle in a dangerous zone | `combat` | Drake Hatchling |
+| Flavour NPC with restricted movement | `narrative` | A ghost, a spirit guide |
+
+For `combat` companions, also decide: how tough should they be relative to the zone's
+enemies? A companion who trivialises every fight is not interesting. A companion who gets
+downed in the first encounter is frustrating. Aim for "helpful but mortal."
+
+---
+
+#### 15.5.3 Create the Companion File
+
+Place the file at `data/<world>/<zone>/companions/<companion_id>.toml`. The zone folder
+is just storage — the engine finds companions by scanning all zones.
+
+**Minimal combat companion:**
+
+```toml
+# data/millhaven/companions/aonn_tesk.toml
+
+id           = "aonn_tesk"
+name         = "Aonn Tesk"
+type         = "combat"
+desc_short   = "A lean elf veteran with one arm, hand never far from his sword."
+attack       = 8
+defense      = 4
+hp           = 45
+max_hp       = 45
+carry_bonus  = 0
+style        = "swordplay"
+style_prof   = 35.0
+restrictions = []
+
+join_message   = "Aonn rises, buckles his sword belt one-handed, and falls into step at your left."
+wait_message   = "Aonn studies the opening. 'I won't fit through that. Go. I'll hold here.'"
+rejoin_message = "Aonn straightens and rejoins you, giving you a small nod."
+downed_message = "Aonn goes down hard. 'Don't stop,' he says. 'I'll be fine. Go.'"
+```
+
+**Utility companion (no combat stats needed):**
+
+```toml
+# data/millhaven/companions/dust.toml
+
+id           = "dust"
+name         = "Dust"
+type         = "utility"
+desc_short   = "A grey pack mule with a patient expression and an impressive carry frame."
+attack       = 0
+defense      = 0
+hp           = 0
+max_hp       = 0
+carry_bonus  = 15
+style        = "brawling"
+style_prof   = 0.0
+restrictions = ["no_large_companion"]
+
+join_message   = "Dust ambles alongside you, loaded packs creaking."
+wait_message   = "Dust plants her hooves and refuses to squeeze any further."
+rejoin_message = "Dust has not moved an inch. She accepts your return with stoic dignity."
+downed_message = ""
+```
+
+A utility companion with `hp = 0` and `max_hp = 0` cannot be downed. Leave
+`downed_message` empty if it never applies.
+
+---
+
+#### 15.5.4 Fields Reference
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | Yes | Unique identifier (filename without `.toml`) |
+| `name` | Yes | Display name |
+| `type` | Yes | `narrative`, `utility`, or `combat` |
+| `desc_short` | Yes | One-line description shown in `look` and `stats` |
+| `attack` | Yes | Base attack stat (0 for non-combat) |
+| `defense` | Yes | Base defense stat (0 for non-combat) |
+| `hp` | Yes | Current HP (set equal to `max_hp` at creation) |
+| `max_hp` | Yes | Maximum HP (0 = cannot be downed) |
+| `carry_bonus` | Yes | Extra carry slots granted (0 = none) |
+| `style` | Yes | Fighting style ID used in combat |
+| `style_prof` | Yes | Style proficiency 0.0–100.0 |
+| `restrictions` | Yes | Room flags that block entry (empty list = unrestricted) |
+| `join_message` | Yes | Text shown when companion joins |
+| `wait_message` | Yes | Text shown when companion is blocked at a room |
+| `rejoin_message` | Yes | Text shown when companion re-enters from waiting |
+| `downed_message` | Yes | Text shown when companion is downed in combat |
+
+---
+
+#### 15.5.5 Giving the Companion to the Player
+
+Companions are delivered via `give_companion` in a dialogue node script. The cleanest
+pattern is a two-node sequence: one node where the NPC agrees to come, and a second
+where the handshake actually happens.
+
+```toml
+# aonn_tesk.toml dialogue
+
+[[node]]
+id   = "companion_offer"
+line = "Yes. I'll come. Give me a moment to find my belt."
+script = [
+  { op = "set_flag",      flag = "aonn_offered_to_join" },
+  { op = "advance_quest", quest_id = "an_old_debt", step = 2 },
+]
+
+[[response]]
+node = "companion_offer"
+text = "Thank you. I'm glad you're coming."
+next = "companion_joins"
+
+[[node]]
+id   = "companion_joins"
+line = "Let's not make it sentimental. The mire is south."
+script = [
+  { op = "give_companion", companion_id = "aonn_tesk" },
+]
+
+[[response]]
+node = "companion_joins"
+text = "Ready when you are."
+next = ""
+```
+
+Guard the offer node with a condition so it only appears once:
+
+```toml
+[[response]]
+node      = "root"
+condition = { not_flag = "aonn_offered_to_join" }
+text      = "Would you come with me to the Blackfen?"
+next      = "companion_offer"
+```
+
+You can also give a companion from a room `on_enter` script or an item `on_use` — any
+script context works. Dialogue is just the most common case.
+
+---
+
+#### 15.5.6 Room Restrictions — When Does the Companion Wait?
+
+A companion's `restrictions` list is checked against each room's `flags` list. If any
+restriction matches a room flag, the companion waits at the entrance instead of following
+the player in.
+
+**Companion side (`companions/<id>.toml`):**
+```toml
+restrictions = ["no_large_companion"]
+```
+
+**Room side (`rooms.toml`):**
+```toml
+[[room]]
+id    = "narrow_cave_passage"
+name  = "Narrow Passage"
+flags = ["no_large_companion"]
+```
+
+When blocked, the engine emits `wait_message` and marks the companion as `waiting`.
+When the player returns to a room where the companion can follow, it rejoins automatically
+and emits `rejoin_message`.
+
+**Which rooms should be restricted?** Tight cave passages, crawl spaces, cliff
+traversals, small boats, or any space that would not physically accommodate a large
+companion. Narrative companions are never blocked — they exist outside physics.
+
+---
+
+#### 15.5.7 The Companion Lifecycle
+
+| Status | What is happening | How it transitions |
+|--------|-------------------|--------------------|
+| `active` | Travelling, fighting, carrying | Normal state after `give_companion` |
+| `waiting` | Blocked by a room restriction | Returns automatically when restriction clears |
+| `downed` | HP reached 0 in combat | Restored when player rests at an inn |
+| dismissed | Removed from player | `dismiss_companion` script op |
+
+**Downed companions** do not fight and carry nothing until the player rests at an inn.
+Plan for this: if a quest requires the companion to survive to the end, the player needs
+a route back to an inn or a way to avoid getting the companion downed.
+
+**Only one companion at a time.** Calling `give_companion` when a companion is already
+active silently replaces them. If the story allows the player to swap companions, use
+`dismiss_companion` first and give the player a clear dialogue moment for it.
+
+---
+
+#### 15.5.8 Dismissing a Companion
+
+Use `dismiss_companion` anywhere you want to remove the companion — dialogue, room
+script, or item. Always include a `message` to give the moment narrative weight.
+
+```toml
+{ op = "dismiss_companion", message = "Aonn raises his glass. 'Go on. You don't need me anymore.'" }
+```
+
+If the dismissal is part of quest completion, run it in the same dialogue node as
+`complete_quest`:
+
+```toml
+[[node]]
+id   = "quest_end"
+line = "You've done more than I could have asked."
+script = [
+  { op = "complete_quest",    quest_id = "an_old_debt" },
+  { op = "dismiss_companion", message  = "Aonn nods once, and steps back. His chapter here is done." },
+]
+```
+
+---
+
+#### 15.5.9 Companions as Quest Glue
+
+Companions integrate naturally with the quest system. Common patterns:
+
+**Companion join = quest advance:**
+```toml
+script = [
+  { op = "give_companion", companion_id = "aonn_tesk" },
+  { op = "advance_quest",  quest_id = "grandfathers_emerald", step = 2 },
+]
+```
+
+**Bonus reward if the companion survived:**
+Track survival with a flag set when the companion successfully completes a key moment,
+then check it at the hand-in:
+
+```toml
+# Set at a pivotal room or event while the companion is active
+{ op = "set_flag", flag = "aonn_survived_blackfen" }
+
+# In the hand-in dialogue node
+{ op = "if_flag", flag = "aonn_survived_blackfen",
+  then = [{ op = "give_xp", amount = 200 }]
+}
+```
+
+**Track companion presence via a flag:**
+Since scripts cannot directly read `player.companion` state, set a flag when the
+companion joins and clear it when they are dismissed:
+
+```toml
+# On join
+{ op = "give_companion", companion_id = "aonn_tesk" },
+{ op = "set_flag",       flag = "has_aonn" },
+
+# On dismiss
+{ op = "dismiss_companion", message = "..." },
+{ op = "clear_flag",        flag = "has_aonn" },
+```
+
+This lets you gate dialogue, `on_enter` scripts, or exits on whether the companion
+is present.
+
+---
+
+#### 15.5.10 Checklist: Companion Is Ready When...
+
+- [ ] Companion `.toml` exists with all required fields
+- [ ] `type` chosen deliberately — fight, carry, or just travel?
+- [ ] Stats tuned for the zone (not trivial, not first-encounter lethal)
+- [ ] `restrictions` list is correct — empty for narrative companions
+- [ ] Any room that should block the companion has the matching flag in `flags`
+- [ ] `give_companion` fires from a dialogue node guarded by a `not_flag` condition
+- [ ] All four message fields are written as in-character reactions
+- [ ] If dismissal is part of a quest, `dismiss_companion` is in the completion node
+- [ ] `validate.py` reports no errors
+
+---
+
+#### 15.5.11 Common Mistakes
+
+**Giving a companion with no guard condition**
+Without a `not_flag` guard, re-talking to the NPC gives the companion again. If the
+player already has them, the companion silently resets — losing HP progress and waiting
+state. Always gate the offer node with a flag check.
+
+**Forgetting `wait_message` and `rejoin_message` for restricted companions**
+These fields fire automatically when the companion waits or rejoins. If they are empty
+the player gets no feedback and will not understand why their companion disappeared.
+Write them as in-character reactions to being blocked, not mechanical notices.
+
+**Stats too high or too low**
+A combat companion with `attack = 25` in a zone where enemies have `hp = 30` will kill
+everything before the player acts. A companion with `hp = 10` in a mid-level zone will
+be permanently downed after the first fight. Tune `hp` to roughly 1–2 enemy hits in the
+target zone.
+
+**Using `narrative` when you mean `combat`**
+Narrative companions never fight and are never blocked by room flags. If you want the
+companion to participate in combat even a little, use `combat`. The tier is not just
+flavour — it changes engine behaviour.
+
+**Assuming the companion will always be active**
+Players rest at inns, companions get downed, room restrictions trigger waits. Design
+quest steps that involve the companion around the possibility that they might not be
+`active` at the critical moment. Use flags set at join time rather than trying to infer
+companion state in scripts.
+
+---
+
 
 ---
 
@@ -3156,1257 +4474,6 @@ via script conditionals.
 
 **Shorthand tokens** for dialogue `{token}`:
 `{player}`, `{gold}`, `{hp}`, `{level}`, `{zone}`, `{npc}`, `{entity_id.field}`
-
----
-
-## Appendix E — Quest Design Walkthrough
-
-This appendix bridges the gap between **story design** and **technical implementation**.
-Rather than listing fields again (see §9), it walks through the thought process of
-turning a quest idea into working TOML — with concrete examples from the existing worlds.
-
----
-
-### E.1 The Core Idea: Quests Are Just Flags + Steps
-
-The engine has no magic quest logic. A quest is nothing more than:
-
-1. A **TOML file** that declares objectives and rewards.
-2. **Script ops** scattered throughout your world (`advance_quest`, `complete_quest`) that
-   move the player's progress counter forward.
-3. **Dialogue conditions** (`quest`, `not_quest`, `quest_complete`) that change what NPCs
-   say based on where the player is in the quest.
-
-The player never "clicks accept" on a quest panel. They talk to an NPC, the dialogue runs
-a script, and `advance_quest` sets step = 1. That's the entire handshake.
-
----
-
-### E.2 Design First: The Player's Journey
-
-Before touching any TOML, write out the quest as the player will experience it. Don't
-think about files or ops yet — just answer:
-
-> *What does the player do? In what order? What happens when they finish?*
-
-**Example — "The Ashwood Contract":**
-
-```
-1. Player talks to Elder Mira. She explains the corruption and offers gold.
-2. Player visits Sergeant Vorn to get briefed on the forest.
-3. Player travels into the Ashwood.
-4. Player finds the Shrine and solves an ancient riddle.
-5. Player descends to the Drake's Lair and kills the Drake.
-6. Player returns to Mira with proof of the kill.
-```
-
-That's your step list. Write it down, then assign each moment an index number. Gaps are
-fine — indices don't need to be consecutive. Use round numbers (1, 2, 3…) or leave room
-for future steps (1, 3, 5, 10…).
-
----
-
-### E.3 Create the Quest File
-
-Make one `.toml` file in `data/<world>/<zone>/quests/<quest_id>.toml`. The zone doesn't
-have to match the zone where the quest starts — pick the zone that "owns" the quest
-thematically (usually where the climax is).
-
-```toml
-# data/ashwood/quests/ashwood_contract.toml
-
-id      = "ashwood_contract"
-title   = "The Ashwood Contract"
-giver   = "elder_mira"
-summary = "Investigate the corruption in the Ashwood Forest and slay the Ashwood Drake."
-
-[[step]]
-index     = 1
-objective = "Speak with Sergeant Vorn in the Millhaven Barracks."
-hint      = "Go up from the Town Square to reach the Barracks."
-
-[[step]]
-index     = 5
-objective = "Descend to the Drake's Lair and slay the Ashwood Drake."
-hint      = "Bring the best weapons you can find."
-
-[[step]]
-index     = 6
-objective = "Return to Elder Mira with the Drake's fang as proof."
-hint      = "Go back to town and speak with Elder Mira in the Council Hall."
-
-[[reward]]
-type   = "gold"
-amount = 150
-
-[[reward]]
-type   = "xp"
-amount = 400
-```
-
-The `giver` field is informational only — the engine doesn't enforce it. It's a note to
-yourself and to the WCT quest graph.
-
----
-
-### E.4 Wire Up the Triggers
-
-Now go to every place in the world where a step should advance, and add an `advance_quest`
-or `complete_quest` script op. There are four places this happens:
-
-#### Trigger 1 — NPC Dialogue (most common)
-
-The NPC's dialogue `[[node]]` carries a `script` array that fires when the node is
-displayed. This is how quests start and how they end with a hand-in.
-
-```toml
-# elder_mira.toml — quest offer node
-[[node]]
-id     = "offer_quest"
-line   = "The contract pays well. Find Sergeant Vorn in the barracks first."
-script = [
-  { op = "set_flag",      flag = "ashwood_quest_offered" },
-  { op = "advance_quest", quest_id = "ashwood_contract", step = 1 },
-]
-```
-
-```toml
-# elder_mira.toml — hand-in node (player presents the fang)
-[[node]]
-id     = "victory"
-line   = "By the old stones. Let me see the fang. You actually did it."
-script = [{ op = "complete_quest", quest_id = "ashwood_contract" }]
-```
-
-Guard the offer node with a response condition so it only appears when appropriate:
-
-```toml
-[[response]]
-node      = "root"
-condition = { not_flag = "ashwood_quest_offered" }
-text      = "Who are you? What's happening in the Ashwood?"
-next      = "intro"
-```
-
-And guard the hand-in node so it only appears once the kill step is reached:
-
-```toml
-[[response]]
-node      = "root"
-condition = { flag = "ashwood_drake_slain" }
-text      = "I have defeated the Ashwood Drake. Here is proof."
-next      = "victory"
-```
-
-#### Trigger 2 — NPC Kill (`kill_script`)
-
-When a combat NPC dies, its `kill_script` runs automatically. This is the cleanest way
-to advance a kill-type objective — no room scripts needed.
-
-```toml
-# ashwood/npcs.toml
-[[npc]]
-id          = "ashwood_drake"
-name        = "Ashwood Drake"
-kill_script = [
-  { op = "set_flag",      flag = "ashwood_drake_slain" },
-  { op = "give_item",     item_id = "drakes_fang" },
-  { op = "message",       text = "The Drake collapses. You pry a fang from its jaw.", tag = "combat_kill" },
-  { op = "advance_quest", quest_id = "ashwood_contract", step = 6 },
-]
-```
-
-Note that step 6 here is "Return to Elder Mira" — the kill *advances* the quest to the
-return step, it doesn't complete it. Completion happens when the player talks to Mira.
-
-#### Trigger 3 — Room Entry (`on_enter`)
-
-Place an `on_enter` script on a room to advance the quest when the player first arrives
-at a location. Use `if_not_flag` to make it fire only once.
-
-```toml
-# blackfen/rooms.toml
-[[room]]
-id       = "dragons_clearing"
-on_enter = [
-  { op = "if_not_flag", flag = "seen_dragons_clearing",
-    then = [
-      { op = "set_flag",      flag = "seen_dragons_clearing" },
-      { op = "advance_quest", quest_id = "grandfathers_emerald", step = 3 },
-      { op = "message",       text = "The clearing opens before you. The dead serpent hangs in the canopy above.", tag = "system" },
-    ]
-  },
-]
-```
-
-Without the `if_not_flag` guard, the script would fire every time the player enters the
-room — advancing the step counter over and over.
-
-#### Trigger 4 — Item Pickup or Use (`on_get` / `on_use`)
-
-For fetch quests, advance the step when the player picks up the key item. Use `on_get`
-for floor items (the player `take`s them), or `on_use` for items in inventory.
-
-```toml
-# blackfen/items.toml
-[[item]]
-id     = "lost_ledger"
-name   = "Lost Ledger"
-on_get = [
-  { op = "advance_quest", quest_id = "the_lost_ledger", step = 2 },
-  { op = "message",       text = "The pages are water-damaged but readable.", tag = "system" },
-]
-```
-
----
-
-### E.5 Gate NPC Dialogue on Quest State
-
-Once the quest is running, NPCs should react differently depending on where the player
-is. Use response `condition` fields to branch:
-
-```toml
-# Show only when quest is at exactly step 2
-[[response]]
-condition = { quest = "ashwood_contract", step = 2 }
-text      = "Vorn briefed me. I'm heading to the Ashwood now."
-next      = "after_vorn"
-
-# Show only after quest is fully complete
-[[response]]
-condition = { quest_complete = "ashwood_contract" }
-text      = "The contract is fulfilled."
-next      = "complete"
-
-# Show only if this quest is NOT active at all (offer it)
-[[response]]
-condition = { not_quest = "ashwood_contract" }
-text      = "Tell me about the Ashwood contract."
-next      = "intro"
-```
-
-The `quest` condition matches *any* step ≥ the given step unless a specific `step =` is
-provided. Check §9.5 for all condition forms.
-
----
-
-### E.6 Optional Paths with Flags
-
-Flags let you track side decisions without needing extra quest steps. Define them in a
-comment at the top of your quest file so you remember them:
-
-```toml
-# Optional flags:
-#   has_grimwick      — hired Grimwick as guide (bonus XP, easier checks)
-#   thornbury_friendly — befriended Maren Thornbury (can rest at cottage)
-#   emerald_recovered — the emerald is in inventory
-```
-
-At completion time, check these flags in dialogue to give bonus rewards:
-
-```toml
-[[node]]
-id     = "reward_with_bonus"
-line   = "Not only that — Grimwick made it out. You kept my old friend alive."
-script = [
-  { op = "complete_quest", quest_id = "grandfathers_emerald" },
-  { op = "if_flag", flag = "saved_grimwick",
-    then = [{ op = "give_xp", amount = 200 }]
-  },
-]
-```
-
----
-
-### E.7 Automatic Step Notifications (`on_advance`)
-
-Each step can carry an `on_advance` array that fires the moment `advance_quest` sets
-that step. Use it to deliver items, send messages, or update the world — immediately,
-wherever the trigger came from.
-
-```toml
-[[step]]
-index      = 3
-objective  = "Retrieve the hermit's map."
-on_advance = [
-  { op = "message",   text = "The hermit's directions flash through your memory.", tag = "quest" },
-  { op = "give_item", item_id = "hermit_map" },
-]
-```
-
-This is preferable to putting `give_item` on the trigger side when you want the effect to
-happen consistently no matter which trigger (dialogue, room, item) advanced the step.
-
----
-
-### E.8 Rewards
-
-Rewards are given automatically when `complete_quest` runs. No additional script ops are
-needed for gold, XP, and item rewards declared in the `[[reward]]` table.
-
-```toml
-[[reward]]
-type   = "gold"
-amount = 150
-
-[[reward]]
-type   = "xp"
-amount = 400
-
-[[reward]]
-type    = "item"
-item_id = "millhaven_commendation"
-
-[[reward]]
-type = "message"
-text = "Aonn raises his glass to your grandfather. You do the same."
-```
-
-Conditional rewards (based on flags) must be handled manually via `if_flag` ops in the
-completion script, before or after the `complete_quest` op.
-
----
-
-### E.9 Checklist: Quest Is Ready When...
-
-Before running `validate.py`, verify:
-
-- [ ] Quest `.toml` file exists with `id`, `title`, `summary`, and at least one `[[step]]`
-- [ ] Step 1 is advanced somewhere — a dialogue node, a room `on_enter`, or an item `on_get`
-- [ ] Every intermediate step is advanced by exactly one trigger
-- [ ] `complete_quest` fires in exactly one place (usually a dialogue hand-in node)
-- [ ] Dialogue responses that offer the quest are guarded by `not_quest` (won't re-offer)
-- [ ] Dialogue responses that reference quest progress use `quest`, `not_quest`, or `quest_complete`
-- [ ] Any "fire once" `on_enter` scripts use an `if_not_flag` + `set_flag` guard
-- [ ] Flags used in optional branches are documented in a comment at the top of the quest file
-- [ ] `validate.py` reports no errors
-
----
-
-### E.10 Common Mistakes
-
-**Forgetting the `not_flag` guard on `on_enter`**
-Without it, stepping into the room a second time re-fires the script. The quest step
-counter will jump past its expected value and dialogue conditions break.
-
-**Putting `complete_quest` on the wrong trigger**
-If you put `complete_quest` on the kill NPC script instead of the return-to-NPC dialogue,
-the quest completes with no fanfare — the player never hands anything in. Reserve
-`complete_quest` for the final hand-in moment.
-
-**Using `step =` conditions that are too strict**
-`condition = { quest = "my_quest", step = 3 }` will only match when the player is at
-*exactly* step 3. If the quest has advanced to step 4, the response disappears. Often
-you want a flag check instead: `condition = { flag = "some_milestone" }`.
-
-**Overlapping `advance_quest` triggers**
-If two different triggers both advance the same step, the step counter skips ahead or
-jumps out of order. Use flag guards to ensure only one trigger fires per step.
-
-**Rewards that don't get given**
-`[[reward]]` entries are only given when `complete_quest` runs via the quest engine. If
-you call a custom script to give gold directly (e.g., `give_gold`) instead of using
-`complete_quest`, the declared `[[reward]]` entries are skipped entirely. Use one or the
-other, not both.
-
----
-
-## Appendix F — Companion Design Walkthrough
-
-This appendix covers the thought process behind designing a companion — from the story
-role they fill to the TOML fields that make it work — with examples from existing worlds.
-
----
-
-### F.1 The Core Idea: Companions Are Travelling State
-
-A companion is a persistent piece of world state that travels with the player. Unlike
-NPCs (which belong to a room), a companion belongs to the player for as long as they are
-together. The engine tracks one active companion at a time on `player.companion`.
-
-Mechanically, companions do three things:
-
-1. **Narrative** — say flavourful things and react to the world (all tiers).
-2. **Carry** — grant extra inventory capacity (`utility`, `combat`).
-3. **Fight** — take a swing at enemies each combat round (`combat` only).
-
-The tier you choose shapes everything else: what stats matter, which rooms block them,
-and what the player will feel when they are downed or blocked.
-
----
-
-### F.2 Design First: What Role Does This Companion Play?
-
-Answer these questions before writing any TOML:
-
-> *Why does this companion exist in the story? What do they add to play?*
-
-| Design goal | Best tier | Example |
-|-------------|-----------|---------|
-| Story weight — a character the player bonds with | `combat` or `narrative` | Aonn Tesk (veteran, quest companion) |
-| Practical help carrying loot | `utility` | Dust the mule |
-| Extra muscle in a dangerous zone | `combat` | Drake Hatchling |
-| Flavour NPC with restricted movement | `narrative` | A ghost, a spirit guide |
-
-For `combat` companions, also decide: how tough should they be relative to the zone's
-enemies? A companion who trivialises every fight is not interesting. A companion who gets
-downed in the first encounter is frustrating. Aim for "helpful but mortal."
-
----
-
-### F.3 Create the Companion File
-
-Place the file at `data/<world>/<zone>/companions/<companion_id>.toml`. The zone folder
-is just storage — the engine finds companions by scanning all zones.
-
-**Minimal combat companion:**
-
-```toml
-# data/millhaven/companions/aonn_tesk.toml
-
-id           = "aonn_tesk"
-name         = "Aonn Tesk"
-type         = "combat"
-desc_short   = "A lean elf veteran with one arm, hand never far from his sword."
-attack       = 8
-defense      = 4
-hp           = 45
-max_hp       = 45
-carry_bonus  = 0
-style        = "swordplay"
-style_prof   = 35.0
-restrictions = []
-
-join_message   = "Aonn rises, buckles his sword belt one-handed, and falls into step at your left."
-wait_message   = "Aonn studies the opening. 'I won't fit through that. Go. I'll hold here.'"
-rejoin_message = "Aonn straightens and rejoins you, giving you a small nod."
-downed_message = "Aonn goes down hard. 'Don't stop,' he says. 'I'll be fine. Go.'"
-```
-
-**Utility companion (no combat stats needed):**
-
-```toml
-# data/millhaven/companions/dust.toml
-
-id           = "dust"
-name         = "Dust"
-type         = "utility"
-desc_short   = "A grey pack mule with a patient expression and an impressive carry frame."
-attack       = 0
-defense      = 0
-hp           = 0
-max_hp       = 0
-carry_bonus  = 15
-style        = "brawling"
-style_prof   = 0.0
-restrictions = ["no_large_companion"]
-
-join_message   = "Dust ambles alongside you, loaded packs creaking."
-wait_message   = "Dust plants her hooves and refuses to squeeze any further."
-rejoin_message = "Dust has not moved an inch. She accepts your return with stoic dignity."
-downed_message = ""
-```
-
-A utility companion with `hp = 0` and `max_hp = 0` cannot be downed. Leave
-`downed_message` empty if it never applies.
-
----
-
-### F.4 Fields Reference
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | Yes | Unique identifier (filename without `.toml`) |
-| `name` | Yes | Display name |
-| `type` | Yes | `narrative`, `utility`, or `combat` |
-| `desc_short` | Yes | One-line description shown in `look` and `stats` |
-| `attack` | Yes | Base attack stat (0 for non-combat) |
-| `defense` | Yes | Base defense stat (0 for non-combat) |
-| `hp` | Yes | Current HP (set equal to `max_hp` at creation) |
-| `max_hp` | Yes | Maximum HP (0 = cannot be downed) |
-| `carry_bonus` | Yes | Extra carry slots granted (0 = none) |
-| `style` | Yes | Fighting style ID used in combat |
-| `style_prof` | Yes | Style proficiency 0.0–100.0 |
-| `restrictions` | Yes | Room flags that block entry (empty list = unrestricted) |
-| `join_message` | Yes | Text shown when companion joins |
-| `wait_message` | Yes | Text shown when companion is blocked at a room |
-| `rejoin_message` | Yes | Text shown when companion re-enters from waiting |
-| `downed_message` | Yes | Text shown when companion is downed in combat |
-
----
-
-### F.5 Giving the Companion to the Player
-
-Companions are delivered via `give_companion` in a dialogue node script. The cleanest
-pattern is a two-node sequence: one node where the NPC agrees to come, and a second
-where the handshake actually happens.
-
-```toml
-# aonn_tesk.toml dialogue
-
-[[node]]
-id   = "companion_offer"
-line = "Yes. I'll come. Give me a moment to find my belt."
-script = [
-  { op = "set_flag",      flag = "aonn_offered_to_join" },
-  { op = "advance_quest", quest_id = "an_old_debt", step = 2 },
-]
-
-[[response]]
-node = "companion_offer"
-text = "Thank you. I'm glad you're coming."
-next = "companion_joins"
-
-[[node]]
-id   = "companion_joins"
-line = "Let's not make it sentimental. The mire is south."
-script = [
-  { op = "give_companion", companion_id = "aonn_tesk" },
-]
-
-[[response]]
-node = "companion_joins"
-text = "Ready when you are."
-next = ""
-```
-
-Guard the offer node with a condition so it only appears once:
-
-```toml
-[[response]]
-node      = "root"
-condition = { not_flag = "aonn_offered_to_join" }
-text      = "Would you come with me to the Blackfen?"
-next      = "companion_offer"
-```
-
-You can also give a companion from a room `on_enter` script or an item `on_use` — any
-script context works. Dialogue is just the most common case.
-
----
-
-### F.6 Room Restrictions — When Does the Companion Wait?
-
-A companion's `restrictions` list is checked against each room's `flags` list. If any
-restriction matches a room flag, the companion waits at the entrance instead of following
-the player in.
-
-**Companion side (`companions/<id>.toml`):**
-```toml
-restrictions = ["no_large_companion"]
-```
-
-**Room side (`rooms.toml`):**
-```toml
-[[room]]
-id    = "narrow_cave_passage"
-name  = "Narrow Passage"
-flags = ["no_large_companion"]
-```
-
-When blocked, the engine emits `wait_message` and marks the companion as `waiting`.
-When the player returns to a room where the companion can follow, it rejoins automatically
-and emits `rejoin_message`.
-
-**Which rooms should be restricted?** Tight cave passages, crawl spaces, cliff
-traversals, small boats, or any space that would not physically accommodate a large
-companion. Narrative companions are never blocked — they exist outside physics.
-
----
-
-### F.7 The Companion Lifecycle
-
-| Status | What is happening | How it transitions |
-|--------|-------------------|--------------------|
-| `active` | Travelling, fighting, carrying | Normal state after `give_companion` |
-| `waiting` | Blocked by a room restriction | Returns automatically when restriction clears |
-| `downed` | HP reached 0 in combat | Restored when player rests at an inn |
-| dismissed | Removed from player | `dismiss_companion` script op |
-
-**Downed companions** do not fight and carry nothing until the player rests at an inn.
-Plan for this: if a quest requires the companion to survive to the end, the player needs
-a route back to an inn or a way to avoid getting the companion downed.
-
-**Only one companion at a time.** Calling `give_companion` when a companion is already
-active silently replaces them. If the story allows the player to swap companions, use
-`dismiss_companion` first and give the player a clear dialogue moment for it.
-
----
-
-### F.8 Dismissing a Companion
-
-Use `dismiss_companion` anywhere you want to remove the companion — dialogue, room
-script, or item. Always include a `message` to give the moment narrative weight.
-
-```toml
-{ op = "dismiss_companion", message = "Aonn raises his glass. 'Go on. You don't need me anymore.'" }
-```
-
-If the dismissal is part of quest completion, run it in the same dialogue node as
-`complete_quest`:
-
-```toml
-[[node]]
-id   = "quest_end"
-line = "You've done more than I could have asked."
-script = [
-  { op = "complete_quest",    quest_id = "an_old_debt" },
-  { op = "dismiss_companion", message  = "Aonn nods once, and steps back. His chapter here is done." },
-]
-```
-
----
-
-### F.9 Companions as Quest Glue
-
-Companions integrate naturally with the quest system. Common patterns:
-
-**Companion join = quest advance:**
-```toml
-script = [
-  { op = "give_companion", companion_id = "aonn_tesk" },
-  { op = "advance_quest",  quest_id = "grandfathers_emerald", step = 2 },
-]
-```
-
-**Bonus reward if the companion survived:**
-Track survival with a flag set when the companion successfully completes a key moment,
-then check it at the hand-in:
-
-```toml
-# Set at a pivotal room or event while the companion is active
-{ op = "set_flag", flag = "aonn_survived_blackfen" }
-
-# In the hand-in dialogue node
-{ op = "if_flag", flag = "aonn_survived_blackfen",
-  then = [{ op = "give_xp", amount = 200 }]
-}
-```
-
-**Track companion presence via a flag:**
-Since scripts cannot directly read `player.companion` state, set a flag when the
-companion joins and clear it when they are dismissed:
-
-```toml
-# On join
-{ op = "give_companion", companion_id = "aonn_tesk" },
-{ op = "set_flag",       flag = "has_aonn" },
-
-# On dismiss
-{ op = "dismiss_companion", message = "..." },
-{ op = "clear_flag",        flag = "has_aonn" },
-```
-
-This lets you gate dialogue, `on_enter` scripts, or exits on whether the companion
-is present.
-
----
-
-### F.10 Checklist: Companion Is Ready When...
-
-- [ ] Companion `.toml` exists with all required fields
-- [ ] `type` chosen deliberately — fight, carry, or just travel?
-- [ ] Stats tuned for the zone (not trivial, not first-encounter lethal)
-- [ ] `restrictions` list is correct — empty for narrative companions
-- [ ] Any room that should block the companion has the matching flag in `flags`
-- [ ] `give_companion` fires from a dialogue node guarded by a `not_flag` condition
-- [ ] All four message fields are written as in-character reactions
-- [ ] If dismissal is part of a quest, `dismiss_companion` is in the completion node
-- [ ] `validate.py` reports no errors
-
----
-
-### F.11 Common Mistakes
-
-**Giving a companion with no guard condition**
-Without a `not_flag` guard, re-talking to the NPC gives the companion again. If the
-player already has them, the companion silently resets — losing HP progress and waiting
-state. Always gate the offer node with a flag check.
-
-**Forgetting `wait_message` and `rejoin_message` for restricted companions**
-These fields fire automatically when the companion waits or rejoins. If they are empty
-the player gets no feedback and will not understand why their companion disappeared.
-Write them as in-character reactions to being blocked, not mechanical notices.
-
-**Stats too high or too low**
-A combat companion with `attack = 25` in a zone where enemies have `hp = 30` will kill
-everything before the player acts. A companion with `hp = 10` in a mid-level zone will
-be permanently downed after the first fight. Tune `hp` to roughly 1–2 enemy hits in the
-target zone.
-
-**Using `narrative` when you mean `combat`**
-Narrative companions never fight and are never blocked by room flags. If you want the
-companion to participate in combat even a little, use `combat`. The tier is not just
-flavour — it changes engine behaviour.
-
-**Assuming the companion will always be active**
-Players rest at inns, companions get downed, room restrictions trigger waits. Design
-quest steps that involve the companion around the possibility that they might not be
-`active` at the critical moment. Use flags set at join time rather than trying to infer
-companion state in scripts.
-
----
-
-## Appendix G — Crafting & Commission Design Walkthrough
-
-This appendix covers the thought process behind designing a crafter NPC and their
-commissions — from deciding what they make to wiring quality tiers, material sourcing,
-and quest integration.
-
----
-
-### G.1 The Core Idea: Commissions Are Time-Gated Crafting
-
-A commission is a three-phase player interaction:
-
-1. **Place** — player visits the crafter, picks a commission from the menu, and hands
-   over materials (and an optional gold deposit).
-2. **Wait** — the crafter works for `turns_required` game moves.
-3. **Collect** — player returns, types `collect`, and receives the finished item at a
-   randomly rolled quality tier.
-
-The engine handles all of this automatically once the TOML is in place.
-
-**Player commands:**
-
-| Command | What it does |
-|---------|-------------|
-| `commission` | Open the crafter's menu (or check an in-progress commission's status) |
-| `give <item> to <npc>` | Hand over a required material |
-| `commissions` | List all active commissions across all crafters |
-| `collect` | Pick up a finished item |
-
----
-
-### G.2 Design First: What Does This Crafter Make?
-
-Before writing TOML, answer:
-
-> *Who is this crafter? What is their craft identity? What materials make sense for their location?*
-
-| Crafter identity | Makes | Materials found nearby |
-|-----------------|-------|----------------------|
-| Town blacksmith | Weapons, heavy armor | Iron ingots, coal (sold at local market) |
-| Leatherworker | Light armor, packs | Tanned hides, leather strips, cloth |
-| Deep-zone smith | Exotic alloys, legendary gear | Zone-specific drops and quest materials |
-| Specialist (tuner, weaver) | Functional items for specific quests | Quest-gated materials |
-
-Also decide upfront: is this crafter making **gear for combat**, **utility items** (carry
-capacity), or **quest-specific outputs** (an item the player must have to progress)?
-
----
-
-### G.3 Create the Crafting File
-
-Place the file at `data/<world>/<zone>/crafting/<npc_id>.toml`. The filename **must
-exactly match** the crafter NPC's `id`.
-
-```toml
-[[commission]]
-id             = "hunting_knife"
-npc_id         = "blacksmith_npc"
-label          = "Hunting Knife"
-desc           = "A short, curved blade built for fieldwork."
-slot           = "weapon"
-weapon_tags    = ["blade", "light", "one_handed"]
-materials      = ["iron_ingot", "leather_strip"]
-turns_required = 20
-gold_cost      = 5
-xp_reward      = 30
-weight         = 1
-qualities = [
-  { tier = "poor",        weight = 20, attack_bonus = 3, equip_msg = "The edge is a bit rough, but serviceable." },
-  { tier = "standard",    weight = 55, attack_bonus = 5, equip_msg = "A clean blade. A steady hand." },
-  { tier = "exceptional", weight = 20, attack_bonus = 7, special = "sharp",
-    name_prefix = "Fine ", equip_msg = "The edge is razor-keen." },
-  { tier = "masterwork",  weight = 5,  attack_bonus = 9, special = "sharp",
-    name_prefix = "Masterwork ", equip_msg = "Balanced perfectly. This weapon wants to be used.",
-    craft_message = "Not a mark on it. That's as good as iron gets." },
-]
-```
-
----
-
-### G.4 Commission Fields
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | Yes | Unique commission identifier |
-| `npc_id` | Yes | Must match the crafter NPC's `id` exactly |
-| `label` | Yes | Base item name (quality `name_prefix` prepends to this) |
-| `desc` | Yes | One-line description shown in the commission menu |
-| `slot` | Yes | Equipment slot for the finished item; `""` for non-equippable outputs |
-| `weapon_tags` / `armor_tags` | Yes | Tags on finished item (use `[]` if not applicable) |
-| `materials` | Yes | List of item IDs the player must provide (repeats allowed) |
-| `turns_required` | Yes | Game moves before the commission is ready |
-| `gold_cost` | Yes | Upfront gold deposit (0 = free) |
-| `xp_reward` | No | XP awarded when the player collects |
-| `weight` | No | Item weight of the finished item |
-| `on_complete` | No | Script ops run automatically when the item is collected |
-| `qualities` | Yes | List of quality tier dicts (see G.5) |
-
----
-
-### G.5 Quality Tiers
-
-The engine rolls against the `weight` values to pick a tier, then applies that tier's
-bonuses to the finished item.
-
-| Field | Description |
-|-------|-------------|
-| `tier` | `"poor"`, `"standard"`, `"exceptional"`, `"masterwork"` |
-| `weight` | Probability weight relative to all tiers. Higher = more common. |
-| `attack_bonus` | Attack stat added to finished item |
-| `defense_bonus` | Defense stat added to finished item |
-| `max_hp_bonus` | Max HP added to finished item |
-| `carry_bonus` | Carry capacity added (pack/utility items) |
-| `special` | Extra tag appended to `weapon_tags`/`armor_tags` on finished item |
-| `name_prefix` | Prepended to `label` — `"Fine "` produces `"Fine Hunting Knife"` |
-| `equip_msg` | Message shown when the player equips the item |
-| `craft_message` | Optional flavour line spoken by the crafter at collection |
-
-**Typical weight distribution:** 20 / 55 / 20 / 5 makes masterwork rare and poor
-uncommon. Adjust per commission — a specialist commission might use 10 / 45 / 35 / 10.
-
----
-
-### G.6 Material Sourcing: Close the Loop
-
-Trace where every material comes from before finalising your commission list:
-
-- **Shop-sold** — available at a merchant in the same zone. Good for reliable basics.
-- **Loot drops** — found on enemy corpses or room floor items. Good for engagement.
-- **Quest-gated** — only available after completing a step. Good for earned commissions.
-- **Cross-zone** — produced by a commission in another zone. Good for late-game chains.
-
-**Two-step crafting chain example:**
-
-```toml
-# Step 1 — produces a material (slot="" = non-equippable output)
-[[commission]]
-id        = "dp_resonant_ingot"
-materials = ["drake_scale", "dp_raw_ore"]
-slot      = ""
-weapon_tags = []
-turns_required = 12
-gold_cost = 0
-on_complete = [
-  { op = "give_item", item_id = "resonant_alloy_ingot" },
-]
-qualities = [
-  { tier = "standard", weight = 100, craft_message = "The ingot cools, humming with resonance." },
-]
-
-# Step 2 — uses that material in the final weapon
-[[commission]]
-id        = "forge_sky_piercer_commission"
-materials = ["resonant_alloy_ingot", "drakebone_fragment", "volcanic_glass_shard"]
-```
-
-The player forges the ingot first, then uses it as input for the final weapon — a
-natural two-step chain that is satisfying without requiring complex scripting.
-
----
-
-### G.7 Non-Equipment Commissions (Functional Outputs)
-
-For quest items, cross-zone materials, or consumables, set `slot = ""` and use
-`on_complete` to give the item directly. The `qualities` list here only affects
-`craft_message` flavour — no stat bonuses apply.
-
-```toml
-[[commission]]
-id             = "mf_tune_echo_compass"
-slot           = ""
-weapon_tags    = []
-materials      = ["echo_compass", "bog_quartz", "pressure_hollowed_stone"]
-turns_required = 10
-gold_cost      = 0
-on_complete = [
-  { op = "message",   tag = "crafting", text = "Sera hums softly as the needle settles." },
-  { op = "give_item", item_id = "echo_compass_tuned" },
-  { op = "set_flag",  flag = "mf_echo_gate_unlocked" },
-]
-qualities = [
-  { tier = "poor",        weight = 25, craft_message = "It will hold — probably." },
-  { tier = "standard",    weight = 50, craft_message = "Standard tuning. It will do the job." },
-  { tier = "exceptional", weight = 25, craft_message = "Perfect alignment." },
-]
-```
-
----
-
-### G.8 Quest-Integrated Commissions
-
-`on_complete` fires when the player types `collect`, regardless of quality tier. Use it
-to advance or complete a quest when the commission is the quest's climax:
-
-```toml
-on_complete = [
-  { op = "message",        tag = "crafting", text = "Orun hands you the Sky-Piercer." },
-  { op = "advance_quest",  quest_id = "forge_sky_piercer", step = 3 },
-  { op = "complete_quest", quest_id = "forge_sky_piercer" },
-  { op = "prestige",       amount = 5, reason = "forged the Sky-Piercer with Orun" },
-]
-```
-
----
-
-### G.9 Setting Up the Crafter NPC
-
-The crafter NPC is a standard `[[npc]]` entry in `npcs.toml`. No special fields are
-required — the engine detects crafter status by checking whether
-`crafting/<npc_id>.toml` exists. A crafter can also run a `shop` alongside commissions.
-Combining shop + commissions in one NPC is a good pattern: buy materials and place the
-commission in the same visit.
-
----
-
-### G.10 Checklist: Crafter Is Ready When...
-
-- [ ] `crafting/<npc_id>.toml` filename exactly matches the NPC's `id`
-- [ ] Every `[[commission]]` has all required fields
-- [ ] `weapon_tags` or `armor_tags` present on every commission (even if `[]`)
-- [ ] Quality `weight` values form a sensible distribution
-- [ ] Every material is obtainable in-world (shop, loot, or quest)
-- [ ] Non-equipment commissions use `slot = ""` and deliver via `on_complete` + `give_item`
-- [ ] `craft_message` written for masterwork tier
-- [ ] `validate.py` reports no errors
-
----
-
-### G.11 Common Mistakes
-
-**Filename does not match NPC id**
-`crafting/blacksmith.toml` will not be found for an NPC with `id = "blacksmith_npc"`.
-The filename must exactly match the NPC's `id`.
-
-**Materials with no acquisition path**
-If the player cannot find a material, they cannot complete the commission. Either sell
-materials at a nearby shop, drop them as loot, or add NPC dialogue pointing the way.
-
-**Forgetting `slot = ""` on non-equipment commissions**
-If `slot` is omitted on a functional-output commission, the engine will try to create
-equippable gear. Always set `slot = ""` and use `on_complete` with `give_item`.
-
-**All qualities having the same stats**
-If poor and masterwork produce the same item, the quality roll is meaningless. Make the
-spread wide enough that quality matters.
-
-**Quest ops inside a quality tier instead of at commission level**
-`on_complete` at the commission level always runs. Quest-advancing ops inside a quality
-tier entry only fire for that specific tier. Put all quest/flag/prestige ops in the
-commission-level `on_complete`.
-
-**Commission material is also a unique quest item**
-If the required material only exists once and is needed for a quest too, the player must
-choose. This is only intentional if the commission is the quest resolution — otherwise
-make the material obtainable in multiples.
-
----
-
-## Appendix H — Fighting Style Design Walkthrough
-
-This appendix covers the thought process behind designing a fighting style — from its
-identity and matchup profile to passive abilities and how players learn it.
-
----
-
-### H.1 The Core Idea: Styles Are Identity + Matchups + Passives
-
-A fighting style does three things:
-
-1. **Identity** — a combat philosophy the player or NPC embodies.
-2. **Matchups** — `strong_vs` and `weak_vs` tag lists determine when the style excels
-   or struggles. This is the main balance lever.
-3. **Passives** — abilities that unlock at proficiency thresholds and fire during combat
-   rounds, adding tactical depth as the player improves.
-
-Design the identity first, then let the mechanics follow from it.
-
----
-
-### H.2 Design First: What Is This Style's Philosophy?
-
-> *What is this fighter doing that is different? What opponents does that work against — and why?*
-
-| Style identity | Strong against | Weak against |
-|---------------|---------------|-------------|
-| Street brawling — aggression, no technique | Slow, unprepared humanoids | Armored, fast |
-| Classical swordplay — blade angles, leverage | Armored humanoids | Fast animals, undead |
-| Evasion — don't be where the strike lands | Fast, accurate strikers | Numbers, brute force |
-| Flowing Water — redirect the opponent's force | Fast, aggressive | Slow, patient, armored |
-| Sky-Piercer — elevation, plunging strikes | Large, slow beasts | Small, fast, armored |
-
-The identity should make the matchup feel logical. A player should read `strong_vs` and
-understand immediately why that makes sense from the style description.
-
----
-
-### H.3 Create the Style File
-
-All styles live in `data/<world_id>/<zone>/styles/styles.toml`. The engine scans all
-zones and merges found styles. Grouping a world's styles in the training or hub zone is
-conventional.
-
-```toml
-[[style]]
-id                = "serpent_strike"
-name              = "Serpent Strike"
-desc_short        = "Fast precise attacks on weak points. Excels against agile beasts."
-desc_long         = "Built on patience and precision — wait for the gap, strike the exact point. Developed to counter fast-moving animals where brute force achieves nothing. Against slow or armored foes the light hits barely register."
-strong_vs         = ["fast", "beast", "small"]
-weak_vs           = ["armored", "large", "undead"]
-strong_multiplier = 1.5
-weak_multiplier   = 0.65
-attack_bonus      = 1
-defense_bonus     = 1
-difficulty        = 2.0
-preferred_weapon_tags = ["blade", "light", "one_handed"]
-preferred_armor_tags  = ["light"]
-weapon_bonus      = 0.30
-armor_bonus       = 0.10
-learned_from      = ""
-learned_at        = 5
-passives = [
-  { ability = "bleed",        threshold = 50, trigger = "attack",
-    message = "You find a gap — the wound will bleed!",
-    on_activate = [{op = "apply_combat_bleed"}] },
-  { ability = "vital_strike", threshold = 75, trigger = "attack",
-    message = "You strike a vital point!",
-    on_activate = [{op = "multiply_damage", multiplier = 2.0}] },
-]
-```
-
----
-
-### H.4 Style Fields
-
-| Field | Description |
-|-------|-------------|
-| `id` | Unique identifier used in scripts and NPC `style` fields |
-| `name` | Display name shown in combat log and skill screen |
-| `desc_short` | One-line description shown in menus |
-| `desc_long` | Full lore description shown in the skills screen |
-| `strong_vs` | NPC tags that this style excels against |
-| `weak_vs` | NPC tags that this style struggles against |
-| `strong_multiplier` | Damage multiplier when fighting strong targets (e.g. `1.5`) |
-| `weak_multiplier` | Damage multiplier when fighting weak targets (e.g. `0.65`) |
-| `attack_bonus` | Flat attack bonus applied to the fighter at all times |
-| `defense_bonus` | Flat defense bonus applied at all times (can be negative) |
-| `difficulty` | Proficiency gain divisor: `1.0` = normal, `2.0` = twice as slow to improve |
-| `preferred_weapon_tags` | Weapon tags that gain `weapon_bonus` at full proficiency |
-| `preferred_armor_tags` | Armor tags that gain `armor_bonus` at full proficiency |
-| `weapon_bonus` | Max attack % bonus from matching weapon at prof 100 (0.25 = 25%) |
-| `armor_bonus` | Max defense % bonus from matching armor at prof 100 |
-| `learned_from` | NPC `id` who teaches this style, or `""` for self-taught/innate |
-| `learned_at` | Minimum player level required to learn |
-| `passives` | Array of passive ability definitions (see H.5) |
-
----
-
-### H.5 Passive Abilities
-
-Each passive unlocks at a proficiency `threshold`, fires on a `trigger`, and runs an
-`on_activate` script array when it does.
-
-```toml
-passives = [
-  # Unlocks at 40 — fires on defend — blocks damage and counters
-  { ability = "redirect",  threshold = 40, trigger = "defend",
-    message = "You redirect the attack using their force against them!",
-    on_activate = [{op = "counter_damage", multiplier = 0.7}, {op = "block_damage"}] },
-
-  # Unlocks at 75 — only fires if "redirect" also fired this round
-  { ability = "absorb",    threshold = 75, trigger = "defend", requires = "redirect",
-    message = "You absorb the impact, recovering HP!",
-    on_activate = [{op = "heal_self", multiplier = 0.33}] },
-]
-```
-
-**Passive fields:**
-
-| Field | Description |
-|-------|-------------|
-| `ability` | Any unique name string; used only for chaining via `requires` — no engine registration needed |
-| `threshold` | Proficiency 0-100 required to unlock this passive |
-| `trigger` | `"attack"` fires on offense; `"defend"` fires on defense; `"always"` = permanent stat effect |
-| `chance` | Base probability the passive fires per eligible round (0.0–1.0). Default: `0.15` |
-| `chance_scaling` | Additional probability added per 100 proficiency. Default: `0.0` |
-| `defense_bonus_base` | Flat defense added when `trigger = "always"`. Default: `0` |
-| `defense_bonus_scale` | Defense added per 100 proficiency when `trigger = "always"`. Default: `0` |
-| `requires` | Another ability that must have fired this round for this one to trigger |
-| `message` | Text emitted when passive fires. Use `{npc}` as a placeholder for NPC name. |
-| `on_activate` | Array of combat-only script ops (see section 13.3 for full op list) |
-
-`always` passives do not use `chance`/`chance_scaling` — they apply unconditionally when the threshold is met.
-Their bonus is `defense_bonus_base + defense_bonus_scale * (prof / 100)`.
-
----
-
-### H.6 Ability Names and Probability
-
-The `ability` field is a plain string used only to support passive chaining via `requires`.
-Any name is valid — there is no registration required in Python. Choose a descriptive
-name unique within the style.
-
-**Probability fields (`attack` and `defend` passives only):**
-
-| Field | Default | Description |
-|-------|---------|-------------|
-| `chance` | `0.15` | Base probability (0.0–1.0) the passive fires when eligible |
-| `chance_scaling` | `0.0` | Additional probability per 100 proficiency |
-
-The final roll is: `random() < chance + chance_scaling * (prof / 100)`
-
-**Examples:**
-
-```toml
-# 8% base + up to 12% more at prof 100 — range 8%-20%
-{ ability = "stun", threshold = 50, trigger = "defend", chance = 0.08, chance_scaling = 0.12, ... }
-
-# Flat 25% at all proficiency levels
-{ ability = "bleed", threshold = 50, trigger = "attack", chance = 0.25, ... }
-
-# 100% — fires every eligible round (e.g. cleave)
-{ ability = "cleave", threshold = 50, trigger = "attack", chance = 1.0, ... }
-```
-
-**Always-on passives (`trigger = "always"`):**
-
-```toml
-# Adds 2 + (prof/100)*4 defense when prof >= 75
-{ ability = "iron_skin", threshold = 75, trigger = "always", defense_bonus_base = 2, defense_bonus_scale = 4, message = "" }
-```
-
-No Python changes are needed to add new passive abilities — just add them to the TOML.
-
----
-
-### H.7 Matchup Design: Tags and Multipliers
-
-`strong_vs` and `weak_vs` reference tags on NPCs in `npcs.toml`. The engine checks for
-overlap and applies the corresponding multiplier:
-
-```toml
-# npcs.toml — wolf has fast + beast + small tags
-[[npc]]
-id   = "forest_wolf"
-tags = ["beast", "fast", "small"]
-
-# serpent_strike has strong_vs = ["fast", "beast", "small"] — match -> strong_multiplier
-```
-
-Keep `strong_vs` and `weak_vs` mutually exclusive to avoid ambiguity.
-
-**Multiplier guidelines:**
-
-| Multiplier | Typical value | Feel |
-|------------|--------------|------|
-| `strong_multiplier` | 1.3 to 1.6 | Clear advantage, not trivial |
-| `weak_multiplier` | 0.6 to 0.75 | Meaningful disadvantage |
-
-Avoid values above 1.8 strong or below 0.5 weak unless the style is intentionally
-hyper-specialised with a narrow niche.
-
----
-
-### H.8 Proficiency Gear Bonuses
-
-`weapon_bonus` and `armor_bonus` scale linearly from 0 to max as proficiency rises:
-
-```
-weapon_bonus = 0.30  at prof 100  ->  +30% attack from a preferred weapon
-weapon_bonus = 0.30  at prof 50   ->  +15% attack from a preferred weapon
-```
-
-Use higher values (0.25-0.35) for styles that are strongly equipment-dependent. Use
-lower values (0.10-0.20) for styles that rely more on technique than tools.
-
----
-
-### H.9 Teaching Styles to the Player
-
-Players learn styles via `teach_style` in a dialogue node script:
-
-```toml
-[[node]]
-id   = "teach_flowing_water"
-line = "Watch. Not the strike — the space after it. That is where you move."
-script = [
-  { op = "teach_style", style_id = "flowing_water" },
-  { op = "set_flag",    flag = "learned_flowing_water" },
-]
-```
-
-Guard the offer with a flag so the NPC does not re-offer:
-
-```toml
-[[response]]
-node      = "root"
-condition = { not_flag = "learned_flowing_water" }
-text      = "Would you teach me Flowing Water?"
-next      = "teach_flowing_water"
-```
-
-If `learned_from` is set to an NPC id, the engine enforces that only that NPC can teach
-it. If `learned_from = ""`, any `teach_style` op for that style will work.
-
----
-
-### H.10 Assigning Styles to NPCs
-
-NPCs use a style via `style` and `style_prof` in `npcs.toml`:
-
-```toml
-[[npc]]
-id         = "forest_wolf"
-style      = "serpent_strike"
-style_prof = 30.0
-```
-
-`style_prof` controls both passive unlock and damage output. Use 60-90 for bosses and
-elites; 10-35 for common enemies. If you want an NPC to have no meaningful style, use
-`"brawling"` with low proficiency — it is the universal fallback and every world must
-define it.
-
----
-
-### H.11 Checklist: Style Is Ready When...
-
-- [ ] `id`, `name`, `desc_short`, `desc_long` all written
-- [ ] `strong_vs` and `weak_vs` tags match tags present on the target NPCs
-- [ ] `strong_multiplier` and `weak_multiplier` are within sensible ranges
-- [ ] Every `attack`/`defend` passive has a `chance` field (default 0.15 applies if omitted, but explicit is clearer)
-- [ ] `learned_from` set to an NPC id, or `""` if self-taught
-- [ ] If `learned_from` is set, that NPC's dialogue has a `teach_style` node
-- [ ] All NPCs in the zone that use this style have `style` and `style_prof` set
-- [ ] `validate.py` reports no errors
-
----
-
-### H.12 Common Mistakes
-
-**Missing `chance` on an attack/defend passive**
-If `chance` is omitted the passive defaults to 15% — it will still fire, but without
-an intentional value. Always set `chance` explicitly so the behaviour is clear.
-
-**Strong and weak tags that overlap on the same NPC**
-If an NPC has tags in both `strong_vs` and `weak_vs` for the same style, behaviour is
-undefined. Keep the two lists mutually exclusive per style.
-
-**`on_activate` ops on an "always" passive**
-`trigger = "always"` passives are permanent stat effects handled directly by combat.py.
-The `on_activate` array does not run for them. Use `trigger = "always"` only for flat
-bonuses and express those in `attack_bonus`/`defense_bonus` at the style level.
-
-**Forgetting `requires` on chained passives**
-Without `requires`, both passives in a chain can fire independently. The `requires`
-field ensures the second passive only triggers on rounds where the first also fired.
-
-**NPC `style_prof` too high on common enemies**
-A street thug with `style_prof = 90` will parry almost every round. Save high
-proficiency for bosses. Common enemies in the 10-35 range keep combat readable.
 
 ---
 

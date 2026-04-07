@@ -30,6 +30,12 @@ next = "ruffians"
 
 [[response]]
 node = "root"
+condition = { flag = "ruffians_resolved", not_flag = "ruffians_tomlin_told" }
+text = "The ruffians have been dealt with."
+next = "ruffians_report"
+
+[[response]]
+node = "root"
 text = "Nothing for now."
 next = ""
 
@@ -169,6 +175,36 @@ line = "Yes. That's usually how it is with things that are true."
 [[response]]
 node = "profound_absurd"
 text = "..."
+next = ""
+
+[[node]]
+id   = "ruffians_report"
+line = "I know. I've been watching. Bram stood straighter this morning than I've seen him in two years. Whatever you did or said, it found the right thing in him. That's not a small thing."
+script = [
+  { op = "advance_quest",  quest_id = "village_ruffians", step = 4 },
+  { op = "complete_quest", quest_id = "village_ruffians" },
+  { op = "set_flag",       flag = "ruffians_tomlin_told" },
+  { op = "give_xp",        amount = 80 },
+  { op = "prestige",       delta = 2, reason = "Elder Tomlin acknowledged how the ruffians were handled" },
+]
+
+[[response]]
+node = "ruffians_report"
+text = "They did the work themselves."
+next = ""
+
+[[response]]
+node = "ruffians_report"
+text = "They just needed the right question asked."
+next = "ruffians_report_2"
+
+[[node]]
+id   = "ruffians_report_2"
+line = "Usually that's all it takes. The question, and someone willing to wait for the answer. You were that. I'm glad someone was."
+
+[[response]]
+node = "ruffians_report_2"
+text = "So am I."
 next = ""
 
 [[node]]

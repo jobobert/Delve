@@ -1,0 +1,159 @@
+[[node]]
+id = "root"
+lines = ["Aldric turns slowly from the window. 'Don't often get visitors.'", {text = "Aldric looks up with a tired expression. 'Been locked out of my room for two weeks. Mara won't cut a new key. Stubborn woman.' He eyes your pack. 'You haven't come across a room key near the river, have you?'", show_if = {quest = "rl_locket_return", step = 1}}, {text = "Aldric sits quietly for a moment. 'Good of you to bring that back. I'd almost forgotten how it feels to have my own space.' He pauses. 'Now I'm in here, I find something else is missing. My locket.'", show_if = {quest = "rl_locket_return", step = 2}}, {text = "'You've been to the old shack?' His eyes are sharp on yours. 'Did you find it?'", show_if = {quest = "rl_locket_return", step = 3}}]
+
+[[response]]
+node = "root"
+text = "You mentioned a room key?"
+next = "aldric_key"
+condition = {quest = "rl_locket_return", step = 1}
+
+[[response]]
+node = "root"
+text = "What locket?"
+next = "aldric_locket"
+condition = {quest = "rl_locket_return", step = 2}
+
+[[response]]
+node = "root"
+text = "I found it, actually."
+next = "aldric_locket_found"
+condition = {quest = "rl_locket_return", step = 3}
+
+[[response]]
+node = "root"
+text = "Tell me about yourself."
+next = "aldric_history"
+
+[[response]]
+node = "root"
+text = "Nothing today."
+next = ""
+
+
+[[node]]
+id = "aldric_key"
+line = "'Must have dropped it down at the campsite — was looking for firewood a few weeks back. If you have it, you can give it to me now. I won't ask how you got in.'"
+
+[[response]]
+node = "aldric_key"
+text = "I have it right here."
+next = ""
+
+[[response]]
+node = "aldric_key"
+text = "I'll look for it."
+next = ""
+
+
+[[node]]
+id = "aldric_locket"
+line = "'Had it thirty years. Portrait of my wife inside — she passed before we settled at the Confluence. When the last big flood came I had to leave the old shack in a hurry. Left the locket behind.' He nods toward the window. 'Past the unstable current near the lower piers. Sagging place. If the water hasn't taken it completely, it might still be there.'"
+
+[[response]]
+node = "aldric_locket"
+text = "I'll look for it."
+next = ""
+
+[[response]]
+node = "aldric_locket"
+text = "It's probably gone."
+next = "aldric_locket_doubt"
+
+
+[[node]]
+id = "aldric_locket_doubt"
+line = "He is quiet for a long moment. 'Probably. But I'd rather know than wonder.'"
+
+[[response]]
+node = "aldric_locket_doubt"
+text = "Fair enough. I'll check."
+next = ""
+
+[[response]]
+node = "aldric_locket_doubt"
+text = "Suit yourself."
+next = ""
+
+
+[[node]]
+id = "aldric_locket_found"
+line = "'You did?' His voice drops. He holds out both hands — steady now, for the first time. 'Give it here.'"
+
+[[response]]
+node = "aldric_locket_found"
+text = "Here."
+next = ""
+
+[[response]]
+node = "aldric_locket_found"
+text = "It's in bad shape."
+next = "aldric_locket_shape"
+
+
+[[node]]
+id = "aldric_locket_shape"
+line = "He shakes his head once. 'Doesn't matter. Just let me have it.'"
+
+[[response]]
+node = "aldric_locket_shape"
+text = "Here."
+next = ""
+
+
+[[node]]
+id = "aldric_history"
+lines = [
+  "'Ferryman for forty-two years. The Confluence changes — floods come, channels shift — but the water keeps moving. I've learned to move with it.'",
+  "'I knew every ferry captain on the river at one point. Half of them are gone now. The rest have moved inland. Just me left, watching from a window.'",
+]
+
+[[response]]
+node = "aldric_history"
+text = "Sounds like a hard life."
+next = "aldric_history_hard"
+
+[[response]]
+node = "aldric_history"
+text = "What keeps you here?"
+next = "aldric_history_why"
+
+[[response]]
+node = "aldric_history"
+text = "I see."
+next = ""
+
+
+[[node]]
+id = "aldric_history_hard"
+line = "He shrugs slowly. 'Hard, maybe. But mine. That counts for something.'"
+
+[[response]]
+node = "aldric_history_hard"
+text = "Fair enough."
+next = ""
+
+
+[[node]]
+id = "aldric_history_why"
+line = "'The water,' he says, as if that settles it."
+
+[[response]]
+node = "aldric_history_why"
+text = "Good reason."
+next = ""
+
+[[response]]
+node = "aldric_history_why"
+text = "That's all?"
+next = "aldric_history_why_2"
+
+
+[[node]]
+id = "aldric_history_why_2"
+line = "He turns back to the window. 'That's enough.'"
+
+[[response]]
+node = "aldric_history_why_2"
+text = "Fair enough."
+next = ""
