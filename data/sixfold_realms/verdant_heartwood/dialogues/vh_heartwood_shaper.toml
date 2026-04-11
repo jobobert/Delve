@@ -25,7 +25,7 @@ next = "fragment_path"
 id     = "carapace_intro"
 line   = "'The Carapace is not forged. It is grown. Bring me bark, resin, and a resonant heart.'"
 script = [
-  { op = "start_quest", quest_id = "vh_carapace" },
+  { op = "advance_quest", quest_id = "vh_carapace", step = 1 },
 ]
 
 [[response]]
@@ -48,6 +48,7 @@ script = [
       { op = "if_item", item_id = "mf_quartz_heart", then = [
         { op = "message", tag = "quest", text = "'Good. All three. Use the commission command here at the forge and I will grow it.'" },
         { op = "advance_quest", quest_id = "vh_carapace", step = 2 },
+        { op = "advance_quest", quest_id = "vh_carapace", step = 3 },
       ], else = [
         { op = "message", tag = "error", text = "'You lack the resonant heart. The Carapace will not grow without it.'" }
       ] },

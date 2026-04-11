@@ -25,7 +25,19 @@ line = "'Passage used to be simple. Now the currents twist. Until the echoes cal
 
 [[node]]
 id = "return_token"
-line = "'Bring me proof and we may be able to negotiate a crossing.'"
+lines = [
+  "'Bring me proof and we may be able to negotiate a crossing.'",
+  { text = "Kale examines the token. His expression shifts from skepticism to something quieter. 'You went down there. You heard what the river carries.' He tucks the token into his coat. 'I'll take you across when you are ready.'", show_if = {op = "has_flag", flag = "rl_has_resonant_token"} },
+]
+script = [
+  { op = "if_flag", flag = "rl_has_resonant_token", then = [
+    { op = "if_not_flag", flag = "rivers_remember_done", then = [
+      { op = "take_item", item_id = "resonant_token" },
+      { op = "set_flag", flag = "rivers_remember_done" },
+      { op = "complete_quest", quest_id = "rivers_remember" },
+    ] },
+  ] },
+]
 
 [[response]]
 node = "root"
@@ -52,6 +64,17 @@ node = "offer_help"
 text = "I'll look around the confluence."
 next = "return_token"
 script = [{op = "advance_quest", quest_id = "rivers_remember", step = 1}]
+
+[[response]]
+node = "return_token"
+text = "I'll get you that proof."
+next = ""
+
+[[response]]
+node = "return_token"
+text = "I found what you were looking for."
+next = ""
+show_if = {op = "has_flag", flag = "rl_has_resonant_token"}
 
 [[response]]
 node = "dismiss"

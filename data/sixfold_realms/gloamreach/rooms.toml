@@ -111,6 +111,12 @@ name        = "Echo Warrens — First Hollow"
 description = "A hollow chamber where your voice echoes before you speak."
 spawns      = ["gr_gloam_hound"]
 exits       = { up = "gr_approach7", east = "gr_warrens2" }
+on_enter    = [
+  { op = "if_not_flag", flag = "gr_entropy_edge_heard", then = [
+    { op = "advance_quest", quest_id = "gr_entropy_edge", step = 1 },
+    { op = "set_flag", flag = "gr_entropy_edge_heard" },
+  ] },
+]
 
 [[room]]
 id          = "gr_warrens2"
@@ -167,7 +173,7 @@ items       = ["gr_shadow_ore_vein"]
 exits       = { west = "gr_warrens5", east = "gr_warrens7" }
 on_enter    = [
   { op = "if_not_flag", flag = "gr_entropy_edge_started", then = [
-    { op = "advance_quest", quest_id = "gr_entropy_edge", step = 1 },
+    { op = "advance_quest", quest_id = "gr_entropy_edge", step = 2 },
     { op = "set_flag", flag = "gr_entropy_edge_started" },
   ] },
 ]

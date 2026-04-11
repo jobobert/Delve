@@ -15,7 +15,9 @@ on_get      = [
   { op = "message", tag = "dialogue", text = "A whisper brushes your mind: 'The true path bends east...'" },
   { op = "if_not_flag", flag = "vh_true_path", then = [
     { op = "set_flag", flag = "vh_true_path" },
-    { op = "advance_quest", quest_id = "vh_growth_regulator", step = 1 },
+    { op = "if_quest", quest_id = "vh_growth_regulator", step = 1, then = [
+      { op = "advance_quest", quest_id = "vh_growth_regulator", step = 2 },
+    ] },
   ] },]
 
 [[item]]
@@ -220,7 +222,6 @@ weight      = 0
 respawn     = false
 tags        = ["device_piece"]
 on_get      = [
-  { op = "advance_quest",  quest_id = "vh_growth_regulator", step = 3 },
   { op = "complete_quest", quest_id = "vh_growth_regulator" },
   { op = "prestige", amount = 3, reason = "recovered the Growth Regulator fragment" },
 ]

@@ -12,7 +12,6 @@ gold_cost       = 0
 weight          = 3
 on_complete = [
   { op = "message", tag = "crafting", text = "Orun hammers the final edge and hands you the Sky-Piercer." },
-  { op = "advance_quest", quest_id = "forge_sky_piercer", step = 3 },
   { op = "complete_quest", quest_id = "forge_sky_piercer" },
   { op = "prestige", amount = 5, reason = "forged the Sky-Piercer with Orun" },
 ]
@@ -60,7 +59,6 @@ gold_cost       = 0
 weight          = 2
 on_complete = [
   { op = "message", tag = "crafting", text = "Orun quenches the blade in drake blood. The edge hisses and goes still." },
-  { op = "advance_quest", quest_id = "dp_ashen_fang", step = 2 },
   { op = "advance_quest", quest_id = "dp_ashen_fang", step = 3 },
   { op = "complete_quest", quest_id = "dp_ashen_fang" },
   { op = "prestige", amount = 3, reason = "forged the Ashen Fang with Orun" },

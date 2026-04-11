@@ -158,7 +158,6 @@ weight      = 0
 respawn     = false
 tags        = ["device_piece"]
 on_get      = [
-  { op = "advance_quest", quest_id = "mf_pressure_below", step = 3 },
   { op = "complete_quest", quest_id = "mf_pressure_below" },
   { op = "prestige", amount = 3, reason = "recovered the Pressure Regulator fragment" },
 ]

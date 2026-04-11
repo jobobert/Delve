@@ -227,6 +227,12 @@ name        = "Heartwood Core — Threshold"
 description = "The roots part reluctantly. A deep pulse echoes through the chamber."
 spawns      = ["vh_bark_golem"]
 exits       = { down = "vh_warrens7", east = "vh_core1" }
+on_enter    = [
+  { op = "if_not_flag", flag = "vh_rootbound_heard", then = [
+    { op = "advance_quest", quest_id = "vh_rootbound_stave", step = 1 },
+    { op = "set_flag", flag = "vh_rootbound_heard" },
+  ] },
+]
 
 [[room]]
 id          = "vh_core1"
@@ -245,7 +251,7 @@ exits       = { west = "vh_core1", south = "vh_core3" }
 on_enter    = [
   { op = "message", tag = "system", text = "The forge pulses with slow, rhythmic light." },
   { op = "if_not_flag", flag = "vh_rootbound_stave_started", then = [
-    { op = "advance_quest", quest_id = "vh_rootbound_stave", step = 1 },
+    { op = "advance_quest", quest_id = "vh_rootbound_stave", step = 2 },
     { op = "set_flag", flag = "vh_rootbound_stave_started" },
   ] },
 ]

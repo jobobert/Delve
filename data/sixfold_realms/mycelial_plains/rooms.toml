@@ -145,6 +145,10 @@ on_enter    = [
   ], else = [
     { op = "adjust_attr", name = "spore_exposure", amount = 3 },
   ] },
+  { op = "if_not_flag", flag = "mp_memory_whip_heard", then = [
+    { op = "advance_quest", quest_id = "mp_memory_whip", step = 1 },
+    { op = "set_flag", flag = "mp_memory_whip_heard" },
+  ] },
 ]
 
 [[room]]
@@ -201,7 +205,7 @@ on_enter    = [
   { op = "set_flag",    flag = "mp_mind_clear" },
   { op = "message", tag = "system", text = "The Sporewarden's presence calms the ambient spore cloud." },
   { op = "if_not_flag", flag = "mp_memory_whip_started", then = [
-    { op = "advance_quest", quest_id = "mp_memory_whip", step = 1 },
+    { op = "advance_quest", quest_id = "mp_memory_whip", step = 2 },
     { op = "set_flag", flag = "mp_memory_whip_started" },
   ] },
 ]

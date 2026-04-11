@@ -66,7 +66,7 @@ next = ""
 id   = "fragment_hint"
 line = "’A ruin lies deeper in the fields. Folks say it holds old memories… and something important.’"
 script = [
-  { op = "start_quest", quest_id = "mp_fragment" },
+  { op = "advance_quest", quest_id = "mp_fragment", step = 1 },
 ]
 
 [[response]]
@@ -80,7 +80,7 @@ next = ""
 id   = "finale_start"
 line = "Dellen’s eyes clear for a moment — more lucid than you’ve seen him. ‘All five? Then the Core Chamber awaits you. Follow the resonance down. The Regulator can be saved — or ended. That choice belongs to whoever reaches it.’"
 script = [
-  { op = "start_quest", quest_id = "cc_finale" },
+  { op = "advance_quest", quest_id = "cc_finale", step = 1 },
 ]
 
 [[response]]

@@ -65,7 +65,7 @@ next = ""
 id     = "fragment_hint"
 line   = "'Deep in the Core lies a shard of the old Regulator. But the guardian will not yield it easily.'"
 script = [
-  { op = "start_quest", quest_id = "vh_growth_regulator" },
+  { op = "advance_quest", quest_id = "vh_growth_regulator", step = 1 },
 ]
 
 [[response]]

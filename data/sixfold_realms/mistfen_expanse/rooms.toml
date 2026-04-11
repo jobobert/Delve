@@ -6,6 +6,12 @@ name        = "Swamp's Edge"
 description = "The ground softens as the Riverlands gives way to the Mistfen. The air hums with pressure."
 spawns      = ["mf_mire_wolf", "mf_banker"]
 exits       = { east = "mf_mist_loop1", south = "mf_path_reader_camp" }
+on_enter    = [
+  { op = "if_not_flag", flag = "mf_pressure_chain_heard", then = [
+    { op = "advance_quest", quest_id = "mf_pressure_chain", step = 1 },
+    { op = "set_flag", flag = "mf_pressure_chain_heard" },
+  ] },
+]
 [[room]]
 id          = "mf_path_reader_camp"
 name        = "Path-Reader Encampment"
@@ -15,7 +21,7 @@ spawns      = ["mf_path_reader_sera"]
 exits       = { north = "mf_swamp_edge", east = "mf_anchor_field", south = "mf_smuggler_hide" }
 on_enter    = [
   { op = "if_not_flag", flag = "mf_pressure_chain_started", then = [
-    { op = "advance_quest", quest_id = "mf_pressure_chain", step = 1 },
+    { op = "advance_quest", quest_id = "mf_pressure_chain", step = 2 },
     { op = "set_flag", flag = "mf_pressure_chain_started" },
   ] },
 ]

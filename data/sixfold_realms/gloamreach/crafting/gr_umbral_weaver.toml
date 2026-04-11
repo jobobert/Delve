@@ -12,7 +12,6 @@ gold_cost      = 0
 weight         = 1
 on_complete = [
   { op = "message", tag = "crafting", text = "The Weaver draws the shadows tight, weaving them into a mantle that shifts with the light." },
-  { op = "advance_quest", quest_id = "gr_mantle", step = 2 },
   { op = "advance_quest", quest_id = "gr_mantle", step = 3 },
   { op = "complete_quest", quest_id = "gr_mantle" },
   { op = "prestige", amount = 2, reason = "mastered the caverns' instability" },
@@ -60,7 +59,6 @@ gold_cost      = 0
 weight         = 2
 on_complete = [
   { op = "message", tag = "crafting", text = "The Weaver runs a fingertip along the finished edge. A thin line of shadow follows it. 'It will hold,' she says." },
-  { op = "advance_quest", quest_id = "gr_entropy_edge", step = 2 },
   { op = "advance_quest", quest_id = "gr_entropy_edge", step = 3 },
   { op = "complete_quest", quest_id = "gr_entropy_edge" },
   { op = "prestige", amount = 3, reason = "shaped the Entropy Edge with the Umbral Weaver" },

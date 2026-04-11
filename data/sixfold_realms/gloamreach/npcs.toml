@@ -245,7 +245,7 @@ dialogue    = "gr_entropy_guardian"
 
 kill_script = [
   { op = "set_flag",      flag = "gr_entropy_guardian_slain" },
-  { op = "advance_quest", quest_id = "gr_shadow_fragment", step = 2 },
+  { op = "advance_quest", quest_id = "gr_shadow_fragment", step = 3 },
   { op = "message", tag = "combat_kill", text = "The guardian collapses into drifting shards of shadow-crystal." },
 ]
 

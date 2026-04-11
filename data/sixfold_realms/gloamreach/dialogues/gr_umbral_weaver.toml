@@ -25,7 +25,7 @@ next = "explain"
 id     = "materials"
 line   = "'Shadow-Ore and Entropy Residue. Bring them, and I will weave the mantle.'"
 script = [
-  { op = "start_quest", quest_id = "gr_mantle" },
+  { op = "advance_quest", quest_id = "gr_mantle", step = 1 },
 ]
 
 [[response]]
@@ -45,7 +45,9 @@ script = [
       { op = "take_item", item_id = "gr_entropy_residue" },
       { op = "give_item", item_id = "umbral_mantle" },
       { op = "message", tag = "crafting", text = "The Weaver shapes the shadows into a mantle that settles around your shoulders." },
-      { op = "advance_quest", quest_id = "gr_mantle", step = 2 }
+      { op = "advance_quest", quest_id = "gr_mantle", step = 2 },
+      { op = "advance_quest", quest_id = "gr_mantle", step = 3 },
+      { op = "complete_quest", quest_id = "gr_mantle" }
     ], else = [
       { op = "message", tag = "error", text = "'You lack the residue. The mantle will not hold without it.'" }
     ] }

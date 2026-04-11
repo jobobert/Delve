@@ -54,6 +54,7 @@ name = "Highspire Gate"
 description = "A carved arch marks the entrance to Highspire Hold. The banners of the Drake Watch flap wildly in the mountain wind."
 exits = {west = "dp_approach_5", east = "dp_highspire_1"}
 flags = ["no_combat"]
+on_enter = [{op = "if_not_flag", flag = "dp_ashen_fang_announced", then = [{op = "advance_quest", quest_id = "dp_ashen_fang", step = 1}, {op = "set_flag", flag = "dp_ashen_fang_announced"}]}]
 
 [[room]]
 id = "dp_watch_post"
@@ -71,7 +72,7 @@ exits = {west = "dp_approach_6", north = "dp_highspire_2", east = "dp_highspire_
 spawns = ["smith_orun"]
 flags = ["town", "no_combat"]
 start = false
-on_enter = [{op = "if_not_flag", flag = "dp_highspire_intro", then = [{op = "message", tag = "system", text = "Highspire Hold — carved into the mountain's shoulder, holding its ground against the wind."}, {op = "set_flag", flag = "dp_highspire_intro"}, {op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 1}], else = []}, {op = "if_not_flag", flag = "dp_ashen_fang_started", then = [{op = "advance_quest", quest_id = "dp_ashen_fang", step = 1}, {op = "set_flag", flag = "dp_ashen_fang_started"}], else = []}]
+on_enter = [{op = "if_not_flag", flag = "dp_highspire_intro", then = [{op = "message", tag = "system", text = "Highspire Hold — carved into the mountain's shoulder, holding its ground against the wind."}, {op = "set_flag", flag = "dp_highspire_intro"}, {op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 1}], else = []}, {op = "if_not_flag", flag = "dp_ashen_fang_started", then = [{op = "advance_quest", quest_id = "dp_ashen_fang", step = 2}, {op = "set_flag", flag = "dp_ashen_fang_started"}], else = []}]
 
 [[room]]
 id = "dp_highspire_2"
@@ -174,7 +175,7 @@ description = "An ancient forge half-buried in ash; gears still hum faintly. The
 exits = {north = "dp_emberfall_4", south = "dp_emberfall_6"}
 items = ["resonance_forge_panel"]
 spawns = ["lava_sprite"]
-on_enter = [{op = "if_not_flag", flag = "dp_forge_intro", then = [{op = "message", tag = "system", text = "The forge hums quietly. The panel awaits alignment to stabilise the vents — and unlock the way forward."}, {op = "set_flag", flag = "dp_forge_intro"}]}]
+on_enter = [{op = "if_not_flag", flag = "dp_forge_intro", then = [{op = "message", tag = "system", text = "The forge hums quietly. The panel awaits alignment to stabilise the vents — and unlock the way forward."}, {op = "set_flag", flag = "dp_forge_intro"}, {op = "advance_quest", quest_id = "forge_sky_piercer", step = 2}]}]
 
 [[room]]
 id = "dp_emberfall_6"

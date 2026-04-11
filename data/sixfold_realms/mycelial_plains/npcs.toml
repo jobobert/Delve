@@ -214,7 +214,7 @@ dialogue    = "mp_core_guardian"
 
 kill_script = [
   { op = "set_flag",      flag = "mp_core_guardian_slain" },
-  { op = "advance_quest", quest_id = "mp_fragment", step = 2 },
+  { op = "advance_quest", quest_id = "mp_fragment", step = 3 },
   { op = "message", tag = "combat_kill", text = "The guardian collapses into drifting spores that fade into the air." },
 ]
 

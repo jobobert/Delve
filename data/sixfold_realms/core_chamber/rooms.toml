@@ -23,7 +23,7 @@ spawns      = ["cc_banker"]
 exits       = { down = "cc_descent1" }
 on_enter    = [
   { op = "set_attr",      name = "resonance", value = 100 },
-  { op = "advance_quest", quest_id = "cc_finale", step = 1 },
+  { op = "advance_quest", quest_id = "cc_finale", step = 2 },
   { op = "message", tag = "system", text = "Resonance stabilizes to full. The descent begins." },
 ]
 
@@ -219,7 +219,7 @@ on_enter    = [
     { op = "teleport_player", room_id = "cc_lattice1" },
   ] },
   { op = "set_flag",      flag = "cc_all_calibrated" },
-  { op = "advance_quest", quest_id = "cc_finale", step = 2 },
+  { op = "advance_quest", quest_id = "cc_finale", step = 3 },
   { op = "adjust_attr",   name = "resonance", amount = -3 },
   { op = "message", tag = "quest", text = "All five subsystems calibrated. The Overseer awaits." },
 ]

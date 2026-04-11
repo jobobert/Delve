@@ -46,7 +46,9 @@ respawn     = false
 gold_value  = 15
 on_use      = [
   { op = "set_flag",      flag = "mp_memory_stabilized" },
-  { op = "advance_quest", quest_id = "mp_fragment", step = 1 },
+  { op = "if_quest", quest_id = "mp_fragment", step = 1, then = [
+    { op = "advance_quest", quest_id = "mp_fragment", step = 2 },
+  ] },
   { op = "message", tag = "system", text = "The tuning fork hums, anchoring your thoughts." },
 ]
 
@@ -219,7 +221,6 @@ weight      = 0
 respawn     = false
 tags        = ["device_piece"]
 on_get      = [
-  { op = "advance_quest",  quest_id = "mp_fragment", step = 3 },
   { op = "complete_quest", quest_id = "mp_fragment" },
   { op = "prestige", amount = 3, reason = "recovered the Cognitive Regulator Fragment" },
 ]

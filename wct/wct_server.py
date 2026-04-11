@@ -1248,6 +1248,15 @@ class WCTHandler(BaseHTTPRequestHandler):
                     data["prefix"] = prefix
                 else:
                     data.pop("prefix", None)
+            name = body.get("name", None)
+            if name is not None:
+                data["name"] = name or zone_id
+            description = body.get("description", None)
+            if description is not None:
+                if description:
+                    data["description"] = description
+                else:
+                    data.pop("description", None)
             ok, err = _write_file(str(zone_toml.relative_to(ROOT)), data)
             self._send_json({"ok": ok, "error": err})
 

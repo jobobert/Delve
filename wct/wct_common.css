@@ -211,6 +211,7 @@ select.world-sel:focus { outline: none; border-color: var(--accent); }
 .badge-style  { background: #d45f6e; }
 .badge-proc   { background: #7c5cbf; }
 .badge-craft  { background: #b87333; }
+.badge-zone   { background: #4a6a8f; }
 .badge-skill  { background: #4a8f6e; }
 .badge-effect { background: #8f4a6e; }
 .badge-flag   { background: #5a7a9f; }

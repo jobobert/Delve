@@ -12,7 +12,6 @@ gold_cost      = 0
 weight         = 1
 on_complete = [
   { op = "message", tag = "crafting", text = "The Sporewarden weaves the mantle with slow, deliberate motions. The fibers hum with clarity." },
-  { op = "advance_quest", quest_id = "mp_mantle", step = 2 },
   { op = "advance_quest", quest_id = "mp_mantle", step = 3 },
   { op = "complete_quest", quest_id = "mp_mantle" },
   { op = "prestige", amount = 2, reason = "mastered the Plains' cognitive instability" },
@@ -61,7 +60,6 @@ gold_cost      = 0
 weight         = 2
 on_complete = [
   { op = "message", tag = "crafting", text = "The Sporewarden coils the finished whip with practiced care. 'Do not use it on yourself,' he says." },
-  { op = "advance_quest", quest_id = "mp_memory_whip", step = 2 },
   { op = "advance_quest", quest_id = "mp_memory_whip", step = 3 },
   { op = "complete_quest", quest_id = "mp_memory_whip" },
   { op = "prestige", amount = 3, reason = "wove the Memory Whip with the Sporewarden" },

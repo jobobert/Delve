@@ -43,7 +43,7 @@ dialogue    = "cc_overseer_final"
 
 kill_script = [
   { op = "set_flag",      flag = "cc_overseer_defeated" },
-  { op = "advance_quest", quest_id = "cc_finale", step = 3 },
+  { op = "advance_quest", quest_id = "cc_finale", step = 4 },
   { op = "give_item",     item_id = "cc_lattice_band" },
   { op = "message", tag = "combat_kill", text = "The Overseer dissolves into harmonic light, its directive finally silenced." },
 ]

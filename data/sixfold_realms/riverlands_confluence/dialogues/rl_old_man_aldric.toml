@@ -38,11 +38,16 @@ line = "'Must have dropped it down at the campsite — was looking for firewood 
 [[response]]
 node = "aldric_key"
 text = "I have it right here."
-next = ""
+next = "aldric_key_given"
+condition = {has_item = "rl_aldric_room_key"}
+script = [
+  { op = "take_item", item_id = "rl_aldric_room_key" },
+  { op = "advance_quest", quest_id = "rl_locket_return", step = 2 },
+]
 
 [[response]]
 node = "aldric_key"
-text = "I'll look for it."
+text = "I haven't found it yet."
 next = ""
 
 
@@ -83,7 +88,11 @@ line = "'You did?' His voice drops. He holds out both hands — steady now, for 
 [[response]]
 node = "aldric_locket_found"
 text = "Here."
-next = ""
+next = "aldric_locket_end"
+script = [
+  { op = "take_item", item_id = "rl_locket" },
+  { op = "complete_quest", quest_id = "rl_locket_return" },
+]
 
 [[response]]
 node = "aldric_locket_found"
@@ -92,12 +101,39 @@ next = "aldric_locket_shape"
 
 
 [[node]]
+id = "aldric_key_given"
+line = "He takes the key and sits a little straighter. 'Thank you. I was beginning to think I'd spend the rest of my days locked out.' A pause. 'Though now I'm back in my room... there's something else I've noticed is missing.'"
+
+[[node]]
 id = "aldric_locket_shape"
 line = "He shakes his head once. 'Doesn't matter. Just let me have it.'"
 
 [[response]]
 node = "aldric_locket_shape"
 text = "Here."
+next = "aldric_locket_end"
+script = [
+  { op = "take_item", item_id = "rl_locket" },
+  { op = "complete_quest", quest_id = "rl_locket_return" },
+]
+
+[[node]]
+id = "aldric_locket_end"
+line = "He opens the locket, looks inside for a long moment, then closes it again. 'She'd have liked the Confluence,' he says quietly. 'The way the rivers talk to each other.'"
+
+[[response]]
+node = "aldric_key_given"
+text = "What's missing?"
+next = "aldric_locket"
+
+[[response]]
+node = "aldric_key_given"
+text = "Glad I could help."
+next = ""
+
+[[response]]
+node = "aldric_locket_end"
+text = "I'm glad you have it back."
 next = ""
 
 

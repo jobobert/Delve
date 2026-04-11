@@ -58,7 +58,6 @@ gold_cost      = 0
 weight         = 3
 on_complete = [
   { op = "message", tag = "crafting", text = "Sera links the final segment. The chain vibrates once, sharply, then settles." },
-  { op = "advance_quest", quest_id = "mf_pressure_chain", step = 2 },
   { op = "advance_quest", quest_id = "mf_pressure_chain", step = 3 },
   { op = "complete_quest", quest_id = "mf_pressure_chain" },
   { op = "prestige", amount = 3, reason = "forged the Pressure Chain with Sera" },

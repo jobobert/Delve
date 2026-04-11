@@ -1084,14 +1084,15 @@ One item ID is chosen at random with equal probability each time the op fires. D
 
 #### QUESTS
 
-**`advance_quest`** — Move an active quest to the given step, or start it at step 1
+**`advance_quest`** — Show the player a new quest step objective
 
 ```toml
 { op = "advance_quest", quest_id = "the_dragon_hunt", step = 3 }
 ```
 
-If the quest is not yet active, it is started automatically at step 1 first.
-Displays the new objective text.
+Sets the quest to `step` and displays that step's objective text. If the quest is not yet active, it is started automatically first.
+
+**Convention:** fire `advance_quest step N` when the player *completes* step N−1's objective — not when they start it. The trigger and the objective must be different events. See §9.4 for a worked example.
 
 ---
 
@@ -1885,13 +1886,32 @@ item_id = "millhaven_commendation"
 
 ### 9.4 Script Integration
 
+**The step numbering convention — read this carefully:**
+
+`advance_quest step N` means *"the player just finished the previous objective — now show them step N's objective."* The trigger that fires `advance_quest step N` is the **completion of step N−1**, not the start of step N. In other words:
+
+- **Step 1** is shown to the player when they trigger `advance_quest step 1` (typically the quest-start event — entering a room, talking to an NPC, picking up an item).
+- **Step 2** is shown when they complete step 1's objective and trigger `advance_quest step 2`.
+- And so on.
+
+A common mistake is wiring the trigger for `advance_quest step N` to the *same event as the objective itself*, so the player is told "do X" at the same moment they've already done X. Always ask: *"is this trigger the completion of the previous objective, or the start of the current one?"*
+
+**Example — correct wiring:**
+
+```
+Enter cryo bay  →  advance_quest step 1  →  shows "Find something to wear"
+Pick up jumpsuit →  advance_quest step 2  →  shows "Reach the corridor"
+Enter corridor   →  advance_quest step 3  →  shows "Find food or water"
+Eat/drink        →  complete_quest
+```
+
 Start, advance, and complete quests from any script context:
 
 ```toml
-# NPC dialogue kicks off the quest (step 1)
+# NPC dialogue kicks off the quest (shows step 1 objective)
 script = [{ op = "advance_quest", quest_id = "ashwood_contract", step = 1 }]
 
-# Kill script advances on NPC death
+# Kill script completes step 5's objective and shows step 6
 kill_script = [{ op = "advance_quest", quest_id = "ashwood_contract", step = 6 }]
 
 # give_accepts completes the quest on item hand-in

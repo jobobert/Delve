@@ -102,6 +102,25 @@ Box-drawing chars (U+2500+), ✓/✗, ⚠ crash on cp1252 consoles. Use ASCII eq
 ### toml file updates
 - Always reference wct/WORLD_MANUAL.md when updating toml files to ensure compliance syntax is utilized.
 
+### Quest step wiring — CRITICAL RULE
+`advance_quest step N` fires when the player **completes step N-1's objective** — it then shows step N's objective text. The trigger event and the new objective must be different actions.
+
+**The anti-pattern to avoid:**
+```
+# WRONG — getting the pry bar IS "find something to open the bunk"
+step 2 objective = "Find something to open the bunk"
+pry_bar on_get → advance_quest step 2   ← player already has it when they read this
+```
+**Correct pattern:**
+```
+# RIGHT — getting the pry bar COMPLETES step 2 and shows step 3
+step 2 objective = "Find something to open the bunk"
+pry_bar on_get → advance_quest step 3   ← now shows "Use it to open the bunk"
+```
+**Corollary:** If the trigger that *starts* the quest also completes step 1's objective (e.g. entering a room hears the tapping = investigating it), then do not write step 1 as "investigate the tapping" — that's already done. Start at what the player must do *next*.
+
+Full worked example in wct/WORLD_MANUAL.md §9.4.
+
 ### After adding/updating/removing features
 - Update validate.py - if the change alters how TOML files are written and/or interact with the engine
 - Update the World Creation Tool (WCT) - if the change alters how TOML files are written, including scripting changes, new features, etc. 

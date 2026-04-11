@@ -372,7 +372,7 @@ def validate_npcs(npcs, items, styles):
 def validate_quests(quests, npcs):
     for qid, quest in quests.items():
         giver = quest.get("giver", "")
-        if giver and giver not in npcs:
+        if giver and not giver.startswith("_") and giver not in npcs:
             warn(f"Quest '{qid}' giver NPC '{giver}' not found")
 
 

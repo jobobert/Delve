@@ -12,8 +12,6 @@ gold_cost      = 0
 weight         = 3
 on_complete = [
   { op = "message", tag = "crafting", text = "The forge pulses, weaving bark and resin into a symbiotic armor. 'It is yours,' Thalen says. 'Let it learn you.'" },
-  { op = "advance_quest", quest_id = "vh_carapace", step = 2 },
-  { op = "advance_quest", quest_id = "vh_carapace", step = 3 },
   { op = "complete_quest", quest_id = "vh_carapace" },
   { op = "prestige", amount = 2, reason = "earned the Heartwood's trust" },
 ]
@@ -60,7 +58,6 @@ gold_cost      = 0
 weight         = 3
 on_complete = [
   { op = "message", tag = "crafting", text = "The forge pulses as Thalen removes the stave. It is still warm, still growing. 'Treat it well,' he says." },
-  { op = "advance_quest", quest_id = "vh_rootbound_stave", step = 2 },
   { op = "advance_quest", quest_id = "vh_rootbound_stave", step = 3 },
   { op = "complete_quest", quest_id = "vh_rootbound_stave" },
   { op = "prestige", amount = 3, reason = "shaped the Rootbound Stave with Thalen" },

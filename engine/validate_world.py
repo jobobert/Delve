@@ -224,7 +224,7 @@ def _check_quests(zone_id: str, quests: list, all_npc_ids: set[str]) -> list[dic
     for quest in quests:
         qid   = quest.get("_id") or quest.get("id") or "?"
         giver = quest.get("giver", "")
-        if giver and giver not in all_npc_ids:
+        if giver and not giver.startswith("_") and giver not in all_npc_ids:
             issues.append(_warn(
                 f"Quest '{qid}': giver '{giver}' not found",
                 f"Add NPC '{giver}' or fix the giver id", "quest", zone_id, qid,

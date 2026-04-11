@@ -74,7 +74,7 @@ next = "fragment_where"
 id     = "fragment_where"
 line   = "'Follow the entropy veins. They lead to the Core.'"
 script = [
-  { op = "start_quest", quest_id = "gr_shadow_fragment" },
+  { op = "advance_quest", quest_id = "gr_shadow_fragment", step = 1 },
 ]
 
 [[response]]

@@ -187,8 +187,8 @@ on_get      = [
       { op = "set_flag", flag = "dp_thermal_gate_unlocked" },
       { op = "unlock_exit", room_id = "dp_apex_approach_3", direction = "east" },
       { op = "message", tag = "system", text = "A deep rumble echoes through the mountain as the vents stabilise." },
-      { op = "advance_quest", quest_id = "forge_sky_piercer", step = 2 },
-      { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 3 },
+      { op = "advance_quest", quest_id = "forge_sky_piercer", step = 3 },
+      { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 4 },
     ], else = [
       { op = "skill_check", skill = "crafting", dc = 14,
         on_pass = [
@@ -196,7 +196,8 @@ on_get      = [
           { op = "set_flag", flag = "dp_forge_aligned" },
           { op = "set_flag", flag = "dp_thermal_gate_unlocked" },
           { op = "unlock_exit", room_id = "dp_apex_approach_3", direction = "east" },
-          { op = "advance_quest", quest_id = "forge_sky_piercer", step = 2 },
+          { op = "advance_quest", quest_id = "forge_sky_piercer", step = 3 },
+          { op = "advance_quest", quest_id = "hoard_of_the_apex_drake", step = 4 },
           { op = "message", tag = "system", text = "The gate's sigils glow and the lock releases with a sigh." },
         ],
         on_fail = [

@@ -213,7 +213,7 @@ dialogue    = "vh_core_guardian"
 
 kill_script = [
   { op = "set_flag",      flag = "vh_core_guardian_slain" },
-  { op = "advance_quest", quest_id = "vh_growth_regulator", step = 2 },
+  { op = "advance_quest", quest_id = "vh_growth_regulator", step = 3 },
   { op = "message", tag = "combat_kill", text = "The guardian collapses, roots withdrawing into the earth." },
 ]
 

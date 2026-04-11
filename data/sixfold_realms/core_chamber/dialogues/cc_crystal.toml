@@ -22,7 +22,6 @@ line = "'Directive accepted. Reboot sequence initializing. Resonance restored to
 script = [
   { op = "set_flag",       flag = "cc_reboot_restore" },
   { op = "set_flag",       flag = "cc_crystal_activated" },
-  { op = "advance_quest",  quest_id = "cc_finale", step = 4 },
   { op = "complete_quest", quest_id = "cc_finale" },
   { op = "prestige", amount = 5, reason = "restored balance to the Sixfold Realms" },
 ]
@@ -40,7 +39,6 @@ line = "'Directive accepted. Shutdown sequence initializing. Resonance dissipati
 script = [
   { op = "set_flag",       flag = "cc_reboot_disable" },
   { op = "set_flag",       flag = "cc_crystal_activated" },
-  { op = "advance_quest",  quest_id = "cc_finale", step = 4 },
   { op = "complete_quest", quest_id = "cc_finale" },
   { op = "prestige", amount = 5, reason = "chose the fate of the Sixfold Realms" },
 ]
