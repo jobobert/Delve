@@ -130,11 +130,12 @@
       <option value="">All zones</option>
     </select>
     <div id="map-legend"></div>
-    <span class="map-hint">scroll = pan &nbsp;|&nbsp; wheel = zoom &nbsp;|&nbsp; click room = details</span>
+    <span class="map-hint">drag room = move &nbsp;|&nbsp; drag canvas = pan &nbsp;|&nbsp; wheel = zoom &nbsp;|&nbsp; click room = details</span>
     <span class="map-hint">&#9476; border = auto-placed &nbsp; &#9548; line = locked exit</span>
     <button class="hbtn tag-btn" id="map-show-counts" onclick="this.classList.toggle('active');renderMap()">counts</button>
     <button class="hbtn tag-btn" id="map-show-dirs" onclick="this.classList.toggle('active');renderMap()">exit labels</button>
     <button class="hbtn" onclick="fitMapAll()" title="Zoom to fit all rooms in view">Fit All</button>
+    <button class="hbtn" id="map-save-btn" onclick="saveMapCoords()" title="Save dragged room positions to TOML coord fields">Save Map</button>
     <button class="hbtn" onclick="exportDot(_mapZoneFilter)" title="Download Graphviz .dot file">Export DOT</button>
   </div>
   <div id="map-body">
@@ -7367,6 +7368,11 @@ const MAP_REVERSE_DIR = {
 let _mapZoneFilter = '';
 let _mapScale = 1, _mapPanX = 0, _mapPanY = 0;
 let _mapDragging = false, _mapDragStart = null, _mapMoved = false;
+let _mapNodeDragging = false, _mapNodeDragData = null;
+let _mapLayoutParams  = null;   // {minX, maxY, CW, CH, GX, GY, M} from last renderMap
+let _mapLastLayout    = null;   // full room→_pos map from last _buildMapLayout call
+let _mapSessionLayout = null;   // positions frozen on first open; prevents BFS re-shuffle on drag
+let _mapDirtyFiles    = new Set(); // rooms.toml paths with unsaved coord changes
 
 function toggleMap() {
   const ws  = document.querySelector('.workspace');
@@ -7378,9 +7384,12 @@ function toggleMap() {
   btn.classList.toggle('active', open);
   if (open) {
     _mapScale = 1; _mapPanX = 0; _mapPanY = 0;
+    _mapSessionLayout = null;  // fresh layout on every open
     document.getElementById('map-info').classList.remove('visible');
     _mapSelectedRoom = null;
     renderMap(_mapZoneFilter);
+  } else {
+    _mapSessionLayout = null;  // release memory on close
   }
 }
 
@@ -7427,18 +7436,30 @@ function _buildMapLayout() {
 
   const place = (rid, p) => { posOf[rid] = p; grid[`${p[0]},${p[1]}`] = rid; };
 
-  // Phase 1: seed from explicit coords
+  // Phase 1: seed from explicit coords, then from session cache for auto-placed rooms.
+  // Session cache freezes auto-placed positions so a drag doesn't BFS-reshuffle everything.
   for (const [rid, room] of Object.entries(rooms)) {
     const c = room.coord;
     if (c && c.length >= 2) { place(rid, [Math.round(c[0]), Math.round(c[1])]); explicitIds.add(rid); }
+  }
+  if (_mapSessionLayout) {
+    for (const [rid, cached] of Object.entries(_mapSessionLayout)) {
+      if (posOf[rid] || !cached._pos) continue;  // already placed or no cached pos
+      const [cx, cy] = cached._pos;
+      const key = `${cx},${cy}`;
+      if (!grid[key]) place(rid, [cx, cy]);  // only if cell still free
+    }
   }
 
   const unplaced = new Set(Object.keys(rooms).filter(id => !posOf[id]));
   const inQueue  = new Set();
   const queue    = []; // [rid, [idealX, idealY], [dx, dy]]
 
+  const _isVertDir = dir => dir === 'up' || dir === 'down' || dir === 'u' || dir === 'd';
+
   const enqueueNeighbors = (rid, p) => {
     for (const [dir, ev] of Object.entries(rooms[rid].exits)) {
+      if (_isVertDir(dir)) continue;  // up/down handled as separate clusters in Phase 4
       const dest = typeof ev === 'string' ? ev : (ev?.to || '');
       if (dest && unplaced.has(dest) && !inQueue.has(dest)) {
         const d = MAP_DIR_DELTA[dir];
@@ -7584,6 +7605,8 @@ function renderMap(zoneFilter) {
   if (!canvas) return;
 
   const allRooms  = _buildMapLayout();
+  _mapLastLayout  = allRooms;
+  if (!_mapSessionLayout) _mapSessionLayout = allRooms; // freeze positions after first render
   const zoneIds   = [...new Set(Object.values(allRooms).map(r => r.zone_id))].sort();
   const zoneColor = {};
   zoneIds.forEach((z, i) => zoneColor[z] = ZONE_COLORS[i % ZONE_COLORS.length]);
@@ -7622,6 +7645,7 @@ function renderMap(zoneFilter) {
 
   const CW = 140, CH = 60, GX = 44, GY = 44, M = 60;
   const toSvg = (gx, gy) => [(gx-minX)*(CW+GX)+M, (maxY-gy)*(CH+GY)+M];
+  _mapLayoutParams = {minX, maxY, CW, CH, GX, GY, M};
 
   const NS  = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
@@ -7700,6 +7724,10 @@ function renderMap(zoneFilter) {
     g.setAttribute('transform', `translate(${x},${y})`);
     g.dataset.id   = rid;
     g.dataset.zone = room.zone_id;
+    g.dataset.gx   = room._pos[0];
+    g.dataset.gy   = room._pos[1];
+    g.dataset.svgx = x;
+    g.dataset.svgy = y;
     g.classList.add('map-room-node');
     if (isSel) g.classList.add('map-selected');
 
@@ -7795,17 +7823,55 @@ function _initMapCanvas(canvas) {
     _applyMapTransform();
   }, { passive: false });
 
-  // Pan
   canvas.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
+    const node = e.target.closest('.map-room-node');
+    if (node) {
+      // Node drag — move room on grid
+      _mapNodeDragging = true;
+      _mapMoved = false;
+      _mapNodeDragData = {
+        node,
+        rid:        node.dataset.id,
+        zoneId:     node.dataset.zone,
+        svgX:       parseFloat(node.dataset.svgx),
+        svgY:       parseFloat(node.dataset.svgy),
+        startMouseX: e.clientX,
+        startMouseY: e.clientY,
+      };
+      node.style.opacity = '0.6';
+      e.stopPropagation();
+      return;
+    }
+    // Canvas pan
     _mapDragging = true; _mapMoved = false;
     _mapDragStart = [e.clientX - _mapPanX, e.clientY - _mapPanY];
     canvas.classList.add('dragging');
   });
-  const endDrag = () => { _mapDragging = false; canvas.classList.remove('dragging'); };
+
+  const endDrag = (e) => {
+    if (_mapNodeDragging) {
+      if (_mapNodeDragData) {
+        if (_mapMoved) _snapNodeToGrid(e);
+        else if (_mapNodeDragData.node) _mapNodeDragData.node.style.opacity = '';
+      }
+      _mapNodeDragging = false; _mapNodeDragData = null;
+      return;
+    }
+    _mapDragging = false; canvas.classList.remove('dragging');
+  };
   canvas.addEventListener('mouseup',    endDrag);
   canvas.addEventListener('mouseleave', endDrag);
-  canvas.addEventListener('mousemove',  (e) => {
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (_mapNodeDragging && _mapNodeDragData) {
+      const dx = (e.clientX - _mapNodeDragData.startMouseX) / _mapScale;
+      const dy = (e.clientY - _mapNodeDragData.startMouseY) / _mapScale;
+      _mapNodeDragData.node.setAttribute('transform',
+        `translate(${_mapNodeDragData.svgX + dx},${_mapNodeDragData.svgY + dy})`);
+      _mapMoved = true;
+      return;
+    }
     if (!_mapDragging) return;
     _mapPanX = e.clientX - _mapDragStart[0];
     _mapPanY = e.clientY - _mapDragStart[1];
@@ -7813,13 +7879,87 @@ function _initMapCanvas(canvas) {
     _applyMapTransform();
   });
 
-  // Click — select room + show info panel
+  // Click — select room + show info panel (only fires when no movement happened)
   canvas.addEventListener('click', (e) => {
     if (_mapMoved) { _mapMoved = false; return; }
     const node = e.target.closest('.map-room-node');
     if (!node) return;
     showMapInfo(node.dataset.id, node.dataset.zone);
   });
+}
+
+function _snapNodeToGrid(e) {
+  if (!_mapNodeDragData || !_mapLayoutParams) return;
+  const {node, rid, zoneId, svgX, svgY, startMouseX, startMouseY} = _mapNodeDragData;
+  const {minX, maxY, CW, CH, GX, GY, M} = _mapLayoutParams;
+
+  // Convert final mouse pos → SVG-local coords → grid coords
+  const dx = (e.clientX - startMouseX) / _mapScale;
+  const dy = (e.clientY - startMouseY) / _mapScale;
+  const newGx = Math.round((svgX + dx - M) / (CW + GX)) + minX;
+  const newGy = maxY - Math.round((svgY + dy - M) / (CH + GY));
+
+  // Reject if target cell is occupied by a different room
+  if (_mapLastLayout) {
+    const occupied = Object.entries(_mapLastLayout).some(([id, r]) =>
+      id !== rid && r._pos && r._pos[0] === newGx && r._pos[1] === newGy);
+    if (occupied) {
+      node.setAttribute('transform', `translate(${svgX},${svgY})`);
+      node.style.opacity = '';
+      setStatus('Grid cell occupied — try another position', 'err');
+      return;
+    }
+  }
+
+  // Update in-memory room data
+  const zone = WORLD_DATA?.zones?.[zoneId];
+  const room = zone?.rooms?.find(r => r.id === rid);
+  if (!room) { node.style.opacity = ''; return; }
+
+  room.coord = [newGx, newGy];
+  if (room._file) {
+    _mapDirtyFiles.add(room._file);
+    const btn = document.getElementById('map-save-btn');
+    if (btn) { btn.textContent = 'Save Map \u25cf'; btn.classList.add('active'); }
+  }
+
+  // Full re-render (restores opacity, redraws edges)
+  renderMap();
+}
+
+async function saveMapCoords() {
+  const btn = document.getElementById('map-save-btn');
+  if (!_mapDirtyFiles.size) { setStatus('Nothing to save', 'ok'); return; }
+  if (btn) btn.disabled = true;
+
+  let allOk = true;
+  for (const file of _mapDirtyFiles) {
+    // Collect all rooms that belong to this file across all zones
+    const fileRooms = [];
+    for (const zone of Object.values(WORLD_DATA.zones || {}))
+      fileRooms.push(...(zone.rooms || []).filter(r => r._file === file));
+
+    const data = { room: fileRooms.map(r => {
+      const rec = stripPrivate(r);
+      if (rec.spawns) rec.spawns = cleanSpawns(rec.spawns);
+      return rec;
+    })};
+
+    const res = await fetch('/api/write_file', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({file, data}),
+    });
+    const j = await res.json();
+    if (!j.ok) { setStatus('Error saving: ' + (j.error || file), 'err'); allOk = false; break; }
+  }
+
+  if (allOk) {
+    _mapDirtyFiles.clear();
+    if (btn) { btn.textContent = 'Save Map'; btn.classList.remove('active'); btn.disabled = false; }
+    setStatus('Map coords saved', 'ok');
+  } else {
+    if (btn) btn.disabled = false;
+  }
 }
 
 let _mapSelectedRoom = null;
