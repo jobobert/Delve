@@ -8401,6 +8401,7 @@ function showMapEdgeInfo(rid, dir) {
     };
     const obj = typeof exitV === 'object' ? exitV : null;
     if (obj?.locked)    row('locked',   'yes');
+    if (obj?.desc)      row('desc',     obj.desc);
     if (obj?.lock_tag)  row('lock_tag', obj.lock_tag);
     if (obj?.key)       row('key',      obj.key);
     if (obj?.show_if)   row('show_if',  _fmtShowIf(obj.show_if));
@@ -8412,7 +8413,7 @@ function showMapEdgeInfo(rid, dir) {
       vsp.textContent = ops.map(o => `\u25b8 ${o}`).join('\n');
       d.appendChild(ksp); d.appendChild(vsp); wrap.appendChild(d);
     }
-    if (!obj?.locked && !obj?.lock_tag && !obj?.key && !obj?.show_if && !ops.length) {
+    if (!obj?.locked && !obj?.desc && !obj?.lock_tag && !obj?.key && !obj?.show_if && !ops.length) {
       const d = document.createElement('div'); d.className = 'map-edge-detail';
       d.innerHTML = `<span class="map-edge-key" style="color:var(--text-dim);font-style:italic">plain exit</span>`;
       wrap.appendChild(d);
