@@ -698,6 +698,15 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
 .map-room-node:hover rect { fill: rgba(255,255,255,0.09) !important; }
 .map-room-node.map-selected rect { stroke: #fff !important; stroke-width: 2.5 !important; }
 .map-room-node.map-connected rect { stroke: #FFD700 !important; stroke-width: 2px !important; fill: rgba(255,215,0,0.08) !important; }
+.map-room-node.map-multi-sel rect { stroke: #64a8ff !important; stroke-width: 2px !important; fill: rgba(100,168,255,0.10) !important; }
+.map-room-node.map-edge-hl rect { stroke: #4dc4c4 !important; stroke-width: 2px !important; fill: rgba(77,196,196,0.10) !important; }
+#map-lasso { fill: rgba(100,168,255,0.08); stroke: #64a8ff; stroke-width: 1; stroke-dasharray: 4,3; pointer-events: none; }
+.map-edge-hit { fill: none; stroke: transparent; stroke-width: 12; pointer-events: stroke; cursor: pointer; }
+.map-edge-hit.map-edge-sel { stroke: rgba(77,196,196,0.30); }
+.map-edge-detail { display: flex; align-items: baseline; gap: 6px; padding: 2px 0; font-size: 13px; }
+.map-edge-key { color: var(--text-dim); font-size: 12px; flex-shrink: 0; min-width: 58px; }
+.map-edge-val { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-edge-ops { color: var(--text-dim); font-size: 11px; font-family: Consolas, monospace; white-space: pre; }
 .map-hint { color: var(--text-dim); font-size: 13px; }
 
 /* ── Error panel ─────────────────────────────────────────────────────── */

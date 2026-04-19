@@ -4746,6 +4746,7 @@ Fields: ID (read-only), Name, Description, Flags, Light level, Start room (toggl
   - **on_exit / on_enter / on_look** — script buttons; click to open the inline script editor panel
   - **`[!]` mismatch indicator** — shown when the target room has no matching reverse exit; offers a **Define reverse** button to create it inline without leaving the editor
   - **`[if: ...]` indicator** — shown in the exit preview when a `show_if` condition is set
+  - **Renaming a direction** — if the target room has a matching reverse exit, a prompt appears inline: *"Update reverse in [room]: [old] → [new]?"*. Click **Update reverse** to rename the reverse exit (preserving all its locks, scripts, and conditions) on save, or **Skip** to leave it unchanged.
   - **× (delete)** — if the target room has a matching reverse exit, a prompt appears inline asking *"Also delete [reverse direction] from [target room]?"*; choose **Delete reverse** to remove both exits on save, or **Keep reverse** to remove only this exit
   - You can also drag a room from the sidebar onto the exit editor panel background to add a new exit row; a direction prompt appears
 - **Hazard Exempt Flag** — text field + `[...]` flag picker; supports drag-drop from the References panel
@@ -4839,14 +4840,47 @@ Sections:
 
 ### I.10 Map View
 
-Click **Map** to open the full-screen world map (all zones stitched together by room coordinates).
+Click **Map** to open the full-screen world map (all zones stitched together by room coordinates). Use the **zone filter** dropdown to focus on a single zone; leave blank for all zones.
 
-- Click a room to select it and highlight its connections
-- Connected rooms are highlighted gold; start room has a ★ icon; town rooms have a ⌂ icon
-- Cross-zone connections are shown as dashed lines
-- **Amber lines with a single arrowhead** indicate one-way exits (no matching reverse exit in the target room). The arrow points toward the destination. This is usually a missing reverse and worth fixing, though intentional one-way doors also appear this way. Custom/non-cardinal directions are not flagged.
-- **Gray lines with double arrowheads** (↔) indicate normal bidirectional exits.
-- **Red dashed lines** indicate locked exits
+**Navigation**
+
+| Action | Effect |
+|--------|--------|
+| Drag canvas | Pan the map |
+| Scroll wheel | Zoom in/out |
+| **Fit All** button | Zoom to fit all rooms in view |
+
+**Selecting rooms**
+
+- **Click a room** — selects it; highlights connected rooms gold; shows room details (spawns, items, exits) in the right panel with an **Edit Room** button that opens the room editor
+- **Shift/Ctrl+click a room** — toggles it in/out of a multi-selection (blue highlight); does not clear other selections
+- **Shift+drag on empty canvas** — rubber-band lasso; all rooms whose centres fall within the rectangle are added to the multi-selection
+
+**Selecting exits**
+
+- **Click an exit line** — selects the edge; highlights both endpoint rooms teal; shows exit details in the right panel — direction, locked/key/show_if/on_enter for both the forward and reverse exits, with **Edit** buttons for each room. A "no reverse exit" warning appears if the reverse is missing.
+
+**Moving rooms**
+
+- **Drag a room** — snaps it to the nearest free grid cell and saves the new `coord` to `WORLD_DATA` in memory
+- **Drag a multi-selected set** — all selected rooms move together, preserving their relative positions
+- **Save Map** — writes the updated `coord` fields back to the relevant `rooms.toml` files on disk. The button shows a dot (●) when there are unsaved moves. Always click **Save Map** before using the main **Save** button; otherwise a room save can overwrite dragged positions that haven't been persisted yet.
+
+**Exit line colours**
+
+| Style | Meaning |
+|-------|---------|
+| Gray ↔ double arrowhead | Normal bidirectional exit |
+| Amber → single arrowhead | One-way exit (no matching reverse in the target). Usually a missing reverse — worth checking. Intentional one-way doors also appear this way. Custom/non-cardinal directions are not flagged. |
+| Red dashed | Locked exit |
+
+`up`/`down` exit anchors are offset to the left of the `north`/`south` anchors so they don't overlap when a room has both.
+
+**Other controls**
+
+- **counts** toggle — overlays NPC and item counts on each room node
+- **exit labels** toggle — shows direction labels near each exit anchor
+- **Export DOT** — downloads a Graphviz `.dot` file of the current zone filter
 - The map updates automatically when you reload the world while it is open
 
 ---

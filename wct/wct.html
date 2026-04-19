@@ -130,7 +130,7 @@
       <option value="">All zones</option>
     </select>
     <div id="map-legend"></div>
-    <span class="map-hint">drag room = move &nbsp;|&nbsp; drag canvas = pan &nbsp;|&nbsp; wheel = zoom &nbsp;|&nbsp; click room = details</span>
+    <span class="map-hint">drag room = move &nbsp;|&nbsp; drag canvas = pan &nbsp;|&nbsp; wheel = zoom &nbsp;|&nbsp; click room = details &nbsp;|&nbsp; click edge = exit details &nbsp;|&nbsp; shift/ctrl+click = multi-select &nbsp;|&nbsp; shift+drag canvas = lasso select</span>
     <span class="map-hint">&#9476; border = auto-placed &nbsp; &#9548; line = locked exit &nbsp; <span style="color:#c07820">&#9472;</span> amber = one-way &nbsp; &#8596; = bidirectional &nbsp; &#8594; = one-way</span>
     <button class="hbtn tag-btn" id="map-show-counts" onclick="this.classList.toggle('active');renderMap()">counts</button>
     <button class="hbtn tag-btn" id="map-show-dirs" onclick="this.classList.toggle('active');renderMap()">exit labels</button>
@@ -148,6 +148,7 @@
       <div id="map-info-body"></div>
       <div id="map-info-edit">
         <button class="hbtn primary" id="map-info-edit-btn" onclick="mapInfoEditRoom()">Edit Room</button>
+        <button class="hbtn" id="map-info-edit-dest-btn" style="display:none;margin-top:4px;" onclick="mapInfoEditDest()">Edit Dest Room</button>
       </div>
     </div>
   </div>
@@ -1177,6 +1178,7 @@ function selectObject(type, zone_id, data) {
   DIRTY    = false; _setDirtyUI(false);
   _stagedReverseExits = [];
   _pendingReverseDeletes = [];
+  _pendingReverseRenames = [];
 
   // Cross-reference panel
   const xrefId = data.id || data._id || data._npc_id || '';
@@ -5599,6 +5601,7 @@ let _exitData = {};             // direction → {to, locked, lock_tag, desc, sh
 let _currentRoomId = '';        // room being edited in exit modal
 let _stagedReverseExits = [];    // [{file, room, targetId, writeKey, srcId}] — flushed by saveSelected() on success
 let _pendingReverseDeletes = []; // [{targetId, revDir}] — processed in saveExits() → _applyReverseDeletes()
+let _pendingReverseRenames = []; // [{targetId, oldRevDir, newRevDir}] — processed in saveExits() → _applyReverseRenames()
 
 // Parse any show_if value (string shorthand or dict) into {op, val1, val2}
 function _parseShowIf(sif) {
@@ -5674,6 +5677,7 @@ function openExitModal(roomData, callback) {
   _currentRoomId = roomData.id || '';
   _stagedReverseExits = [];
   _pendingReverseDeletes = [];
+  _pendingReverseRenames = [];
   // Convert exits to working copy
   _exitData = {};
   for (const [dir, v] of Object.entries(roomData.exits || {})) {
@@ -5734,6 +5738,15 @@ function buildExitRow(dir, v) {
   dirConflictWarn.className = 'exits-mismatch-warn';
   dirConflictWarn.style.cssText = 'display:none;color:var(--red)';
 
+  // Move-reverse prompt (shown after direction rename when a matching reverse exists)
+  const dirMoveWarn = document.createElement('div');
+  dirMoveWarn.className = 'exits-mismatch-warn';
+  dirMoveWarn.style.cssText = 'display:none;flex-direction:row;align-items:center;gap:8px;';
+  const dirMoveText = document.createElement('span');
+  const dirMoveYes  = document.createElement('button'); dirMoveYes.className = 'hbtn'; dirMoveYes.textContent = 'Update reverse'; dirMoveYes.style.cssText = 'font-size:11px;padding:1px 8px;flex-shrink:0;';
+  const dirMoveNo   = document.createElement('button'); dirMoveNo.className  = 'hbtn'; dirMoveNo.textContent  = 'Skip';            dirMoveNo.style.cssText  = 'font-size:11px;padding:1px 8px;flex-shrink:0;';
+  dirMoveWarn.appendChild(dirMoveText); dirMoveWarn.appendChild(dirMoveYes); dirMoveWarn.appendChild(dirMoveNo);
+
   // Delete-reverse prompt (shown inline when deleting an exit that has a reverse)
   const delRevWarn = document.createElement('div');
   delRevWarn.className = 'exits-mismatch-warn';
@@ -5745,6 +5758,7 @@ function buildExitRow(dir, v) {
   const dirInp = document.createElement('input'); dirInp.type='text'; dirInp.className='op-input';
   dirInp.style.width='90px'; dirInp.value = dir; dirInp.placeholder = 'direction';
   dirInp.addEventListener('change', () => {
+    dirMoveWarn.style.display = 'none';
     const norm = dirInp.value.trim().toLowerCase();
     if (!norm) { dirInp.value = dir; return; }
     if (norm === dir) {
@@ -5759,11 +5773,23 @@ function buildExitRow(dir, v) {
       dirConflictWarn.style.display = '';
       return;
     }
+    // Successful rename — commit key change
+    const prevDir = dir;
     delete v._pendingDir; dirInp.style.outline = ''; dirInp.style.color = ''; dirConflictWarn.style.display = 'none';
     dirInp.value = norm;
     _exitData[norm] = _exitData[dir];
     delete _exitData[dir];
     dir = norm;
+    // Offer to rename the reverse exit in the target room
+    const oldRevDir = MAP_REVERSE_DIR[_canonDir(prevDir)];
+    const newRevDir = MAP_REVERSE_DIR[_canonDir(norm)];
+    if (v.to && oldRevDir && newRevDir && oldRevDir !== newRevDir && _exitHasReverse(prevDir, v.to, _currentRoomId)) {
+      const snapTarget = v.to;
+      dirMoveText.textContent = `Update reverse in "${snapTarget}": ${oldRevDir} \u2192 ${newRevDir}?`;
+      dirMoveWarn.style.display = 'flex';
+      dirMoveYes.onclick = () => { _pendingReverseRenames.push({targetId: snapTarget, oldRevDir, newRevDir}); dirMoveWarn.style.display = 'none'; };
+      dirMoveNo.onclick  = () => { dirMoveWarn.style.display = 'none'; };
+    }
   });
   top.appendChild(dirInp);
   const dirPickBtn = document.createElement('button'); dirPickBtn.type='button';
@@ -5822,6 +5848,7 @@ function buildExitRow(dir, v) {
   top.appendChild(rmBtn);
   card.appendChild(top);
   card.appendChild(dirConflictWarn);
+  card.appendChild(dirMoveWarn);
   card.appendChild(delRevWarn);
 
   // Mismatch warning + Define reverse button
@@ -6109,6 +6136,7 @@ function saveExits() {
   if (_exitCallback) _exitCallback(exits);
   _applyDefinedReverses();
   _applyReverseDeletes();
+  _applyReverseRenames();
   renderEditor();
 }
 
@@ -6177,6 +6205,29 @@ function _applyReverseDeletes() {
     else setStatus(`No _file on ${targetId} — reverse delete staged in memory only`, 'err');
   }
   _pendingReverseDeletes = [];
+}
+
+// Rename reverse exits staged via the "Update reverse" prompt shown after direction renames.
+// Preserves all exit properties (locks, scripts, show_if, etc.) on the reverse exit.
+function _applyReverseRenames() {
+  for (const {targetId, oldRevDir, newRevDir} of _pendingReverseRenames) {
+    if (!targetId || targetId === _currentRoomId) continue;
+    const targetMeta = ALL_ROOMS[targetId];
+    if (!targetMeta) continue;
+    const zone = WORLD_DATA?.zones?.[targetMeta.zone_id];
+    if (!zone) continue;
+    const room = (zone.rooms || []).find(r => r.id === targetId);
+    if (!room || !room.exits) continue;
+    const {key: oldKey, val: oldVal} = _findRevExitEntry(room.exits, oldRevDir);
+    if (!oldKey) continue;
+    room.exits[newRevDir] = oldVal;   // move to new direction key, all properties intact
+    delete room.exits[oldKey];
+    ALL_ROOMS[targetId] = {...room, zone_id: targetMeta.zone_id};
+    const file = room._file;
+    if (file) _stagedReverseExits.push({file, room, targetId, writeKey: newRevDir, srcId: _currentRoomId});
+    else setStatus(`No _file on ${targetId} — reverse rename staged in memory only`, 'err');
+  }
+  _pendingReverseRenames = [];
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -7434,10 +7485,10 @@ const MAP_FACE_OFFSET = {
   east:      [ 1.0,  0.0], west:      [-1.0,  0.0],
   northeast: [ 1.0, -1.0], northwest: [-1.0, -1.0],
   southeast: [ 1.0,  1.0], southwest: [-1.0,  1.0],
-  up:        [ 0.0, -1.0], down:      [ 0.0,  1.0],
+  up:        [-0.5, -1.0], down:      [-0.5,  1.0],
   n:[ 0.0,-1.0], s:[ 0.0, 1.0], e:[ 1.0, 0.0], w:[-1.0, 0.0],
   ne:[1.0,-1.0], nw:[-1.0,-1.0], se:[1.0,1.0], sw:[-1.0,1.0],
-  u:[ 0.0,-1.0], d:[ 0.0, 1.0],
+  u:[-0.5,-1.0], d:[-0.5, 1.0],
 };
 
 const MAP_REVERSE_DIR = {
@@ -7454,6 +7505,8 @@ let _mapZoneFilter = '';
 let _mapScale = 1, _mapPanX = 0, _mapPanY = 0;
 let _mapDragging = false, _mapDragStart = null, _mapMoved = false;
 let _mapNodeDragging = false, _mapNodeDragData = null;
+let _mapMultiSel = new Set();  // room IDs currently in multi-selection
+let _mapLassoData = null;       // {startSvgX, startSvgY, lasso: SVGRectElement} during rubber-band
 let _mapLayoutParams  = null;   // {minX, maxY, CW, CH, GX, GY, M} from last renderMap
 let _mapLastLayout    = null;   // full room→_pos map from last _buildMapLayout call
 let _mapSessionLayout = null;   // positions frozen on first open; prevents BFS re-shuffle on drag
@@ -7472,6 +7525,7 @@ function toggleMap() {
     _mapSessionLayout = null;  // fresh layout on every open
     document.getElementById('map-info').classList.remove('visible');
     _mapSelectedRoom = null;
+    _mapSelectedEdge = null;
     renderMap(_mapZoneFilter);
   } else {
     _mapSessionLayout = null;  // release memory on close
@@ -7802,6 +7856,16 @@ function renderMap(zoneFilter) {
     if (locked) ln.setAttribute('stroke-dasharray', '5,4');
     ln.setAttribute('marker-end', `url(#map-arr-${markerName})`);
     if (hasReverse) ln.setAttribute('marker-start', `url(#map-arr-${markerName})`);
+    ln.setAttribute('pointer-events', 'none');
+
+    // Wide transparent hit line for edge click detection (appended first so nodes stay on top)
+    const hit = document.createElementNS(NS, 'line');
+    hit.setAttribute('x1', ax1); hit.setAttribute('y1', ay1);
+    hit.setAttribute('x2', ax2); hit.setAttribute('y2', ay2);
+    hit.classList.add('map-edge-hit');
+    hit.dataset.edgeRid = rid; hit.dataset.edgeDir = dir;
+    if (_mapSelectedEdge?.rid === rid && _mapSelectedEdge?.dir === dir) hit.classList.add('map-edge-sel');
+    svg.appendChild(hit);
     svg.appendChild(ln);
     if (showDirs) {
       // Place label at 15px from source face anchor (not a percentage), so it
@@ -7841,6 +7905,7 @@ function renderMap(zoneFilter) {
     g.dataset.svgy = y;
     g.classList.add('map-room-node');
     if (isSel) g.classList.add('map-selected');
+    if (_mapMultiSel.has(rid)) g.classList.add('map-multi-sel');
 
     const rect = document.createElementNS(NS, 'rect');
     rect.setAttribute('width', CW); rect.setAttribute('height', CH);
@@ -7937,24 +8002,53 @@ function _initMapCanvas(canvas) {
   canvas.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     const node = e.target.closest('.map-room-node');
+    const isMultiMod = e.shiftKey || e.ctrlKey || e.metaKey;
+
     if (node) {
-      // Node drag — move room on grid
-      _mapNodeDragging = true;
-      _mapMoved = false;
-      _mapNodeDragData = {
-        node,
-        rid:        node.dataset.id,
-        zoneId:     node.dataset.zone,
-        svgX:       parseFloat(node.dataset.svgx),
-        svgY:       parseFloat(node.dataset.svgy),
-        startMouseX: e.clientX,
-        startMouseY: e.clientY,
-      };
-      node.style.opacity = '0.6';
-      e.stopPropagation();
-      return;
+      const rid = node.dataset.id;
+      if (isMultiMod) {
+        // Shift/Ctrl+click — toggle node in multi-selection, no drag
+        if (_mapMultiSel.has(rid)) { _mapMultiSel.delete(rid); node.classList.remove('map-multi-sel'); }
+        else                       { _mapMultiSel.add(rid);    node.classList.add('map-multi-sel');    }
+        e.stopPropagation(); return;
+      }
+      // Drag: if clicked node is in multi-sel, drag all selected nodes together
+      const dragRids = (_mapMultiSel.size > 1 && _mapMultiSel.has(rid))
+        ? [..._mapMultiSel]
+        : [rid];
+      const dragNodes = dragRids.map(id => {
+        const n = document.querySelector(`.map-room-node[data-id="${CSS.escape(id)}"]`);
+        return n ? {node: n, rid: id, zoneId: n.dataset.zone, svgX: parseFloat(n.dataset.svgx), svgY: parseFloat(n.dataset.svgy)} : null;
+      }).filter(Boolean);
+      _mapNodeDragging = true; _mapMoved = false;
+      _mapNodeDragData = {nodes: dragNodes, startMouseX: e.clientX, startMouseY: e.clientY};
+      dragNodes.forEach(nd => nd.node.style.opacity = '0.6');
+      e.stopPropagation(); return;
     }
-    // Canvas pan
+
+    // Edge click
+    if (!isMultiMod && e.target.classList?.contains('map-edge-hit')) {
+      showMapEdgeInfo(e.target.dataset.edgeRid, e.target.dataset.edgeDir);
+      e.stopPropagation(); return;
+    }
+
+    if (isMultiMod) {
+      // Shift/Ctrl+drag on empty canvas — start rubber-band selection
+      const svgEl = document.getElementById('map-svg');
+      if (svgEl) {
+        const r = svgEl.getBoundingClientRect();
+        const sx = (e.clientX - r.left) / _mapScale;
+        const sy = (e.clientY - r.top)  / _mapScale;
+        const lasso = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        lasso.id = 'map-lasso';
+        lasso.setAttribute('x', sx); lasso.setAttribute('y', sy);
+        lasso.setAttribute('width', 0); lasso.setAttribute('height', 0);
+        svgEl.appendChild(lasso);
+        _mapLassoData = {startSvgX: sx, startSvgY: sy, lasso};
+        e.stopPropagation(); return;
+      }
+    }
+    // Plain canvas drag — pan
     _mapDragging = true; _mapMoved = false;
     _mapDragStart = [e.clientX - _mapPanX, e.clientY - _mapPanY];
     canvas.classList.add('dragging');
@@ -7964,12 +8058,28 @@ function _initMapCanvas(canvas) {
     if (_mapNodeDragging) {
       if (_mapNodeDragData) {
         if (_mapMoved) _snapNodeToGrid(e);
-        else if (_mapNodeDragData.node) _mapNodeDragData.node.style.opacity = '';
+        else _mapNodeDragData.nodes.forEach(nd => nd.node.style.opacity = '');
       }
-      _mapNodeDragging = false; _mapNodeDragData = null;
-      return;
+      _mapNodeDragging = false; _mapNodeDragData = null; return;
     }
-    _mapDragging = false; canvas.classList.remove('dragging');
+    if (_mapLassoData) {
+      const {lasso} = _mapLassoData;
+      const lx = parseFloat(lasso.getAttribute('x')), ly = parseFloat(lasso.getAttribute('y'));
+      const lw = parseFloat(lasso.getAttribute('width')), lh = parseFloat(lasso.getAttribute('height'));
+      if (lw > 4 && lh > 4) {
+        const {CW = 140, CH = 60} = _mapLayoutParams || {};
+        document.querySelectorAll('.map-room-node').forEach(n => {
+          const cx = parseFloat(n.dataset.svgx) + CW / 2;
+          const cy = parseFloat(n.dataset.svgy) + CH / 2;
+          if (cx >= lx && cx <= lx + lw && cy >= ly && cy <= ly + lh) {
+            _mapMultiSel.add(n.dataset.id);
+            n.classList.add('map-multi-sel');
+          }
+        });
+      }
+      lasso.remove(); _mapLassoData = null; _mapMoved = false; return;
+    }
+    _mapDragging = false; _mapMoved = false; canvas.classList.remove('dragging');
   };
   canvas.addEventListener('mouseup',    endDrag);
   canvas.addEventListener('mouseleave', endDrag);
@@ -7978,9 +8088,20 @@ function _initMapCanvas(canvas) {
     if (_mapNodeDragging && _mapNodeDragData) {
       const dx = (e.clientX - _mapNodeDragData.startMouseX) / _mapScale;
       const dy = (e.clientY - _mapNodeDragData.startMouseY) / _mapScale;
-      _mapNodeDragData.node.setAttribute('transform',
-        `translate(${_mapNodeDragData.svgX + dx},${_mapNodeDragData.svgY + dy})`);
-      _mapMoved = true;
+      _mapNodeDragData.nodes.forEach(nd =>
+        nd.node.setAttribute('transform', `translate(${nd.svgX + dx},${nd.svgY + dy})`));
+      _mapMoved = true; return;
+    }
+    if (_mapLassoData) {
+      const svgEl = document.getElementById('map-svg');
+      if (!svgEl) return;
+      const r = svgEl.getBoundingClientRect();
+      const cx = (e.clientX - r.left) / _mapScale;
+      const cy = (e.clientY - r.top)  / _mapScale;
+      const {lasso, startSvgX, startSvgY} = _mapLassoData;
+      lasso.setAttribute('x', Math.min(cx, startSvgX)); lasso.setAttribute('y', Math.min(cy, startSvgY));
+      lasso.setAttribute('width',  Math.abs(cx - startSvgX));
+      lasso.setAttribute('height', Math.abs(cy - startSvgY));
       return;
     }
     if (!_mapDragging) return;
@@ -7990,9 +8111,10 @@ function _initMapCanvas(canvas) {
     _applyMapTransform();
   });
 
-  // Click — select room + show info panel (only fires when no movement happened)
+  // Click — select room + show info (only fires when no movement happened)
   canvas.addEventListener('click', (e) => {
     if (_mapMoved) { _mapMoved = false; return; }
+    if (e.shiftKey || e.ctrlKey || e.metaKey) return; // handled in mousedown
     const node = e.target.closest('.map-room-node');
     if (!node) return;
     showMapInfo(node.dataset.id, node.dataset.zone);
@@ -8001,40 +8123,61 @@ function _initMapCanvas(canvas) {
 
 function _snapNodeToGrid(e) {
   if (!_mapNodeDragData || !_mapLayoutParams) return;
-  const {node, rid, zoneId, svgX, svgY, startMouseX, startMouseY} = _mapNodeDragData;
+  const {nodes, startMouseX, startMouseY} = _mapNodeDragData;
   const {minX, maxY, CW, CH, GX, GY, M} = _mapLayoutParams;
 
-  // Convert final mouse pos → SVG-local coords → grid coords
   const dx = (e.clientX - startMouseX) / _mapScale;
   const dy = (e.clientY - startMouseY) / _mapScale;
-  const newGx = Math.round((svgX + dx - M) / (CW + GX)) + minX;
-  const newGy = maxY - Math.round((svgY + dy - M) / (CH + GY));
 
-  // Reject if target cell is occupied by a different room
+  // Compute grid delta from the first node's displacement so all nodes move together
+  const first = nodes[0];
+  const oldGx0 = Math.round((first.svgX - M) / (CW + GX)) + minX;
+  const oldGy0 = maxY - Math.round((first.svgY - M) / (CH + GY));
+  const newGx0 = Math.round((first.svgX + dx - M) / (CW + GX)) + minX;
+  const newGy0 = maxY - Math.round((first.svgY + dy - M) / (CH + GY));
+  const dgx = newGx0 - oldGx0, dgy = newGy0 - oldGy0;
+
+  if (dgx === 0 && dgy === 0) {
+    nodes.forEach(nd => { nd.node.setAttribute('transform', `translate(${nd.svgX},${nd.svgY})`); nd.node.style.opacity = ''; });
+    return;
+  }
+
+  // Compute target grid position for every dragged node
+  const draggedIds = new Set(nodes.map(nd => nd.rid));
+  const targets = nodes.map(nd => {
+    const ogx = Math.round((nd.svgX - M) / (CW + GX)) + minX;
+    const ogy = maxY - Math.round((nd.svgY - M) / (CH + GY));
+    return {nd, newGx: ogx + dgx, newGy: ogy + dgy};
+  });
+
+  // Reject if any target cell is occupied by a room not in the drag set
   if (_mapLastLayout) {
-    const occupied = Object.entries(_mapLastLayout).some(([id, r]) =>
-      id !== rid && r._pos && r._pos[0] === newGx && r._pos[1] === newGy);
-    if (occupied) {
-      node.setAttribute('transform', `translate(${svgX},${svgY})`);
-      node.style.opacity = '';
-      setStatus('Grid cell occupied — try another position', 'err');
-      return;
+    for (const {newGx, newGy} of targets) {
+      const occupied = Object.entries(_mapLastLayout).some(([id, r]) =>
+        !draggedIds.has(id) && r._pos && r._pos[0] === newGx && r._pos[1] === newGy);
+      if (occupied) {
+        nodes.forEach(nd => { nd.node.setAttribute('transform', `translate(${nd.svgX},${nd.svgY})`); nd.node.style.opacity = ''; });
+        setStatus('Grid cell occupied — try another position', 'err');
+        return;
+      }
     }
   }
 
-  // Update in-memory room data
-  const zone = WORLD_DATA?.zones?.[zoneId];
-  const room = zone?.rooms?.find(r => r.id === rid);
-  if (!room) { node.style.opacity = ''; return; }
-
-  room.coord = [newGx, newGy];
-  if (room._file) {
-    _mapDirtyFiles.add(room._file);
-    const btn = document.getElementById('map-save-btn');
-    if (btn) { btn.textContent = 'Save Map \u25cf'; btn.classList.add('active'); }
+  // Apply to all nodes
+  const btn = document.getElementById('map-save-btn');
+  for (const {nd, newGx, newGy} of targets) {
+    const zone = WORLD_DATA?.zones?.[nd.zoneId];
+    const room = zone?.rooms?.find(r => r.id === nd.rid);
+    if (!room) { nd.node.style.opacity = ''; continue; }
+    room.coord = [newGx, newGy];
+    // Keep SELECTED.data in sync so saveSelected() doesn't overwrite the new coord
+    if (SELECTED?.type === 'room' && SELECTED.data?.id === nd.rid) SELECTED.data.coord = [newGx, newGy];
+    if (room._file) {
+      _mapDirtyFiles.add(room._file);
+      if (btn) { btn.textContent = 'Save Map \u25cf'; btn.classList.add('active'); }
+    }
   }
 
-  // Full re-render (restores opacity, redraws edges)
   renderMap();
 }
 
@@ -8074,15 +8217,20 @@ async function saveMapCoords() {
 }
 
 let _mapSelectedRoom = null;
+let _mapSelectedEdge = null;
 
 function showMapInfo(rid, zoneId) {
   if (!rid || !zoneId) return;
   _mapSelectedRoom = {id: rid, zone_id: zoneId};
+  _mapSelectedEdge = null;
+  document.querySelectorAll('.map-edge-sel').forEach(el => el.classList.remove('map-edge-sel'));
+  document.getElementById('map-info-edit-btn').textContent = 'Edit Room';
+  document.getElementById('map-info-edit-dest-btn').style.display = 'none';
 
-  // Highlight the selected node and its connected neighbors
+  // Clear all prior selection state
+  _mapMultiSel.clear();
   document.querySelectorAll('.map-room-node').forEach(n => {
-    n.classList.remove('map-selected');
-    n.classList.remove('map-connected');
+    n.classList.remove('map-selected', 'map-connected', 'map-edge-hl', 'map-multi-sel');
   });
   const node = document.querySelector(`.map-room-node[data-id="${CSS.escape(rid)}"]`);
   if (node) node.classList.add('map-selected');
@@ -8169,13 +8317,130 @@ function showMapInfo(rid, zoneId) {
   document.getElementById('map-info').classList.add('visible');
 }
 
-function mapInfoEditRoom() {
-  if (!_mapSelectedRoom) return;
-  navigateTo('room', _mapSelectedRoom.zone_id, _mapSelectedRoom.id);
-  // Switch back to editor
+function _closeMapToEditor() {
   document.querySelector('.workspace').style.display = 'flex';
   document.getElementById('map-view').style.display  = 'none';
   document.getElementById('btn-map').classList.remove('active');
+}
+
+function mapInfoEditRoom() {
+  if (_mapSelectedEdge) {
+    // Edge selected — edit source room
+    const rooms = _buildMapLayout();
+    const room = rooms[_mapSelectedEdge.rid];
+    if (room) { navigateTo('room', room.zone_id, _mapSelectedEdge.rid); _closeMapToEditor(); }
+    return;
+  }
+  if (!_mapSelectedRoom) return;
+  navigateTo('room', _mapSelectedRoom.zone_id, _mapSelectedRoom.id);
+  _closeMapToEditor();
+}
+
+function mapInfoEditDest() {
+  if (!_mapSelectedEdge) return;
+  const rooms = _buildMapLayout();
+  const exitVal = rooms[_mapSelectedEdge.rid]?.exits?.[_mapSelectedEdge.dir];
+  const destId = typeof exitVal === 'string' ? exitVal : exitVal?.to;
+  const dest = destId && rooms[destId];
+  if (dest) { navigateTo('room', dest.zone_id, destId); _closeMapToEditor(); }
+}
+
+function showMapEdgeInfo(rid, dir) {
+  if (!rid || !dir) return;
+  _mapSelectedRoom = null;
+  _mapSelectedEdge = {rid, dir};
+
+  // Clear node highlights; edge hit selection is applied during renderMap,
+  // but we also update live classes here without a full re-render.
+  document.querySelectorAll('.map-room-node').forEach(n =>
+    n.classList.remove('map-selected', 'map-connected', 'map-edge-hl'));
+  document.querySelectorAll('.map-edge-sel').forEach(el => el.classList.remove('map-edge-sel'));
+
+  // Highlight the matching hit line
+  document.querySelectorAll('.map-edge-hit').forEach(el => {
+    if (el.dataset.edgeRid === rid && el.dataset.edgeDir === dir) el.classList.add('map-edge-sel');
+  });
+
+  // Look up rooms from the layout
+  const rooms = _buildMapLayout();
+  const room = rooms[rid];
+  if (!room) return;
+  const exitVal = room.exits?.[dir];
+  if (exitVal == null) return;
+  const destId = typeof exitVal === 'string' ? exitVal : exitVal?.to;
+  const destRoom = destId && rooms[destId];
+
+  // Highlight both endpoint nodes
+  [rid, destId].filter(Boolean).forEach(id => {
+    const n = document.querySelector(`.map-room-node[data-id="${CSS.escape(id)}"]`);
+    if (n) n.classList.add('map-edge-hl');
+  });
+
+  // Build the info panel
+  document.getElementById('map-info-name').textContent = `${dir} exit`;
+  document.getElementById('map-info-zone').textContent =
+    `${room.name || rid} \u2192 ${destRoom?.name || destId || '?'}`;
+
+  const body = document.getElementById('map-info-body');
+  body.innerHTML = '';
+
+  const addSection = (title, exitV, fromId, fromName) => {
+    const wrap = document.createElement('div'); wrap.className = 'map-info-section';
+    const hdr = document.createElement('div'); hdr.className = 'map-info-section-title';
+    hdr.textContent = title; wrap.appendChild(hdr);
+
+    const row = (k, v) => {
+      const d = document.createElement('div'); d.className = 'map-edge-detail';
+      d.innerHTML = `<span class="map-edge-key">${escHtml(k)}</span><span class="map-edge-val">${escHtml(String(v))}</span>`;
+      wrap.appendChild(d);
+    };
+    const obj = typeof exitV === 'object' ? exitV : null;
+    if (obj?.locked)   row('locked',  'yes');
+    if (obj?.key)      row('key',     obj.key);
+    if (obj?.show_if)  row('show_if', `${obj.show_if.op || ''}: ${obj.show_if.flag || ''}`);
+    const ops = _flattenOps(obj?.on_enter || []).map(_dlgFmtOp).filter(Boolean);
+    if (ops.length) {
+      const d = document.createElement('div'); d.className = 'map-edge-detail';
+      const ksp = document.createElement('span'); ksp.className = 'map-edge-key'; ksp.textContent = 'on_enter';
+      const vsp = document.createElement('span'); vsp.className = 'map-edge-ops';
+      vsp.textContent = ops.map(o => `\u25b8 ${o}`).join('\n');
+      d.appendChild(ksp); d.appendChild(vsp); wrap.appendChild(d);
+    }
+    if (!obj?.locked && !obj?.key && !obj?.show_if && !ops.length) {
+      const d = document.createElement('div'); d.className = 'map-edge-detail';
+      d.innerHTML = `<span class="map-edge-key" style="color:var(--text-dim);font-style:italic">plain exit</span>`;
+      wrap.appendChild(d);
+    }
+    body.appendChild(wrap);
+  };
+
+  addSection(`\u2192 ${dir}  (${room.name || rid})`, exitVal, rid, room.name);
+
+  // Reverse direction
+  const revDir = MAP_REVERSE_DIR[dir];
+  if (revDir && destRoom) {
+    const revVal = destRoom.exits?.[revDir];
+    if (revVal != null) {
+      addSection(`\u2190 ${revDir}  (${destRoom.name || destId})`, revVal, destId, destRoom.name);
+    } else {
+      const wrap = document.createElement('div'); wrap.className = 'map-info-section';
+      const hdr = document.createElement('div'); hdr.className = 'map-info-section-title';
+      hdr.textContent = `\u2190 ${revDir || '?'}  (${destRoom.name || destId})`;
+      wrap.appendChild(hdr);
+      const d = document.createElement('div'); d.className = 'map-edge-detail';
+      d.innerHTML = `<span style="color:#c07820;font-size:12px">no reverse exit</span>`;
+      wrap.appendChild(d);
+      body.appendChild(wrap);
+    }
+  }
+
+  // Edit buttons
+  document.getElementById('map-info-edit-btn').textContent = `Edit ${room.name || rid}`;
+  const destBtn = document.getElementById('map-info-edit-dest-btn');
+  destBtn.textContent = `Edit ${destRoom?.name || destId || 'Dest'}`;
+  destBtn.style.display = 'block';
+
+  document.getElementById('map-info').classList.add('visible');
 }
 
 // ── Dialogue DOT export ───────────────────────────────────────────────────────
