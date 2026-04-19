@@ -6220,6 +6220,11 @@ function _applyReverseRenames() {
     if (!room || !room.exits) continue;
     const {key: oldKey, val: oldVal} = _findRevExitEntry(room.exits, oldRevDir);
     if (!oldKey) continue;
+    const {key: conflictKey} = _findRevExitEntry(room.exits, newRevDir);
+    if (conflictKey && conflictKey !== oldKey) {
+      setStatus(`Cannot rename reverse: ${newRevDir} already exists on ${targetId} — rename skipped`, 'err');
+      continue;
+    }
     room.exits[newRevDir] = oldVal;   // move to new direction key, all properties intact
     delete room.exits[oldKey];
     ALL_ROOMS[targetId] = {...room, zone_id: targetMeta.zone_id};
@@ -8395,9 +8400,10 @@ function showMapEdgeInfo(rid, dir) {
       wrap.appendChild(d);
     };
     const obj = typeof exitV === 'object' ? exitV : null;
-    if (obj?.locked)   row('locked',  'yes');
-    if (obj?.key)      row('key',     obj.key);
-    if (obj?.show_if)  row('show_if', `${obj.show_if.op || ''}: ${obj.show_if.flag || ''}`);
+    if (obj?.locked)    row('locked',   'yes');
+    if (obj?.lock_tag)  row('lock_tag', obj.lock_tag);
+    if (obj?.key)       row('key',      obj.key);
+    if (obj?.show_if)   row('show_if',  _fmtShowIf(obj.show_if));
     const ops = _flattenOps(obj?.on_enter || []).map(_dlgFmtOp).filter(Boolean);
     if (ops.length) {
       const d = document.createElement('div'); d.className = 'map-edge-detail';
@@ -8406,7 +8412,7 @@ function showMapEdgeInfo(rid, dir) {
       vsp.textContent = ops.map(o => `\u25b8 ${o}`).join('\n');
       d.appendChild(ksp); d.appendChild(vsp); wrap.appendChild(d);
     }
-    if (!obj?.locked && !obj?.key && !obj?.show_if && !ops.length) {
+    if (!obj?.locked && !obj?.lock_tag && !obj?.key && !obj?.show_if && !ops.length) {
       const d = document.createElement('div'); d.className = 'map-edge-detail';
       d.innerHTML = `<span class="map-edge-key" style="color:var(--text-dim);font-style:italic">plain exit</span>`;
       wrap.appendChild(d);
@@ -8417,15 +8423,15 @@ function showMapEdgeInfo(rid, dir) {
   addSection(`\u2192 ${dir}  (${room.name || rid})`, exitVal, rid, room.name);
 
   // Reverse direction
-  const revDir = MAP_REVERSE_DIR[dir];
+  const revDir = MAP_REVERSE_DIR[_canonDir(dir)];
   if (revDir && destRoom) {
-    const revVal = destRoom.exits?.[revDir];
-    if (revVal != null) {
-      addSection(`\u2190 ${revDir}  (${destRoom.name || destId})`, revVal, destId, destRoom.name);
+    const {key: revKey, val: revVal} = _findRevExitEntry(destRoom.exits || {}, revDir);
+    if (revKey != null) {
+      addSection(`\u2190 ${revKey}  (${destRoom.name || destId})`, revVal, destId, destRoom.name);
     } else {
       const wrap = document.createElement('div'); wrap.className = 'map-info-section';
       const hdr = document.createElement('div'); hdr.className = 'map-info-section-title';
-      hdr.textContent = `\u2190 ${revDir || '?'}  (${destRoom.name || destId})`;
+      hdr.textContent = `\u2190 ${revDir}  (${destRoom.name || destId})`;
       wrap.appendChild(hdr);
       const d = document.createElement('div'); d.className = 'map-edge-detail';
       d.innerHTML = `<span style="color:#c07820;font-size:12px">no reverse exit</span>`;
