@@ -4737,15 +4737,17 @@ Click any object in the sidebar to open its editor in the main panel. Each edito
 Fields: ID (read-only), Name, Description, Flags, Light level, Start room (toggle), Exits, Item spawns, NPC spawns, on_enter script, admin comment.
 
 - **Start room** — toggle button; exactly one room per zone must be active
-- **Exits** — click **Edit exits** to open the exit modal. Each exit has:
-  - **Direction** — text field + `[...]` direction picker
-  - **Destination** — text field + `[...]` room picker; supports drag-and-drop from the sidebar
+- **Exits** — click **Edit exits** to open the exit editor panel. Each exit row has:
+  - **Direction** — text field + `[...]` direction picker. If you type a direction that already exists on another row, the field turns red and a warning appears; the panel cannot be closed until the conflict is resolved.
+  - **Destination** — text field + `[...]` room picker. You can also drag a room from the sidebar directly onto this field to set the destination without a direction prompt (the direction you already typed is kept).
   - **Locked** — toggle button; reveals the `lock_tag` field when active
   - **desc** — flavor text shown when the player examines the exit
   - **show_if** — inline condition builder; see §4.5 for op details
   - **on_exit / on_enter / on_look** — script buttons; click to open the inline script editor panel
-  - **`[!]` mismatch indicator** — shown when the target room has no matching reverse exit; saving offers to create it automatically
+  - **`[!]` mismatch indicator** — shown when the target room has no matching reverse exit; offers a **Define reverse** button to create it inline without leaving the editor
   - **`[if: ...]` indicator** — shown in the exit preview when a `show_if` condition is set
+  - **× (delete)** — if the target room has a matching reverse exit, a prompt appears inline asking *"Also delete [reverse direction] from [target room]?"*; choose **Delete reverse** to remove both exits on save, or **Keep reverse** to remove only this exit
+  - You can also drag a room from the sidebar onto the exit editor panel background to add a new exit row; a direction prompt appears
 - **Hazard Exempt Flag** — text field + `[...]` flag picker; supports drag-drop from the References panel
 - **on_enter** — script button; opens the inline script editor panel
 
@@ -4842,6 +4844,10 @@ Click **Map** to open the full-screen world map (all zones stitched together by 
 - Click a room to select it and highlight its connections
 - Connected rooms are highlighted gold; start room has a ★ icon; town rooms have a ⌂ icon
 - Cross-zone connections are shown as dashed lines
+- **Amber lines with a single arrowhead** indicate one-way exits (no matching reverse exit in the target room). The arrow points toward the destination. This is usually a missing reverse and worth fixing, though intentional one-way doors also appear this way. Custom/non-cardinal directions are not flagged.
+- **Gray lines with double arrowheads** (↔) indicate normal bidirectional exits.
+- **Red dashed lines** indicate locked exits
+- The map updates automatically when you reload the world while it is open
 
 ---
 

@@ -131,7 +131,7 @@
     </select>
     <div id="map-legend"></div>
     <span class="map-hint">drag room = move &nbsp;|&nbsp; drag canvas = pan &nbsp;|&nbsp; wheel = zoom &nbsp;|&nbsp; click room = details</span>
-    <span class="map-hint">&#9476; border = auto-placed &nbsp; &#9548; line = locked exit</span>
+    <span class="map-hint">&#9476; border = auto-placed &nbsp; &#9548; line = locked exit &nbsp; <span style="color:#c07820">&#9472;</span> amber = one-way &nbsp; &#8596; = bidirectional &nbsp; &#8594; = one-way</span>
     <button class="hbtn tag-btn" id="map-show-counts" onclick="this.classList.toggle('active');renderMap()">counts</button>
     <button class="hbtn tag-btn" id="map-show-dirs" onclick="this.classList.toggle('active');renderMap()">exit labels</button>
     <button class="hbtn" onclick="fitMapAll()" title="Zoom to fit all rooms in view">Fit All</button>
@@ -684,6 +684,11 @@ async function loadWorld(worldId) {
   renderTodoPanel();
   setStatus(`${WORLD_CONFIG.world_name} loaded`, 'ok');
   _restoreUiState();
+  const _mv = document.getElementById('map-view');
+  if (_mv && _mv.style.display === 'flex') {
+    _mapSessionLayout = null;
+    renderMap(_mapZoneFilter);
+  }
 }
 
 function reloadWorld() {
@@ -1171,6 +1176,7 @@ function selectObject(type, zone_id, data) {
   SELECTED = { type, zone_id, data: structuredClone(data), _orig_id: data.id || data._id || data._npc_id || '' };
   DIRTY    = false; _setDirtyUI(false);
   _stagedReverseExits = [];
+  _pendingReverseDeletes = [];
 
   // Cross-reference panel
   const xrefId = data.id || data._id || data._npc_id || '';
@@ -5591,7 +5597,8 @@ function saveScript() {
 
 let _exitData = {};             // direction → {to, locked, lock_tag, desc, show_if, on_exit, on_enter, on_look}
 let _currentRoomId = '';        // room being edited in exit modal
-let _stagedReverseExits = [];   // [{file, room, targetId, writeKey, srcId}] — flushed by saveSelected() on success
+let _stagedReverseExits = [];    // [{file, room, targetId, writeKey, srcId}] — flushed by saveSelected() on success
+let _pendingReverseDeletes = []; // [{targetId, revDir}] — processed in saveExits() → _applyReverseDeletes()
 
 // Parse any show_if value (string shorthand or dict) into {op, val1, val2}
 function _parseShowIf(sif) {
@@ -5666,6 +5673,7 @@ function openExitModal(roomData, callback) {
   _exitCallback = callback;
   _currentRoomId = roomData.id || '';
   _stagedReverseExits = [];
+  _pendingReverseDeletes = [];
   // Convert exits to working copy
   _exitData = {};
   for (const [dir, v] of Object.entries(roomData.exits || {})) {
@@ -5722,13 +5730,36 @@ function buildExitRow(dir, v) {
   const top = document.createElement('div'); top.className = 'exit-row-top';
 
   // Direction input
+  const dirConflictWarn = document.createElement('div');
+  dirConflictWarn.className = 'exits-mismatch-warn';
+  dirConflictWarn.style.cssText = 'display:none;color:var(--red)';
+
+  // Delete-reverse prompt (shown inline when deleting an exit that has a reverse)
+  const delRevWarn = document.createElement('div');
+  delRevWarn.className = 'exits-mismatch-warn';
+  delRevWarn.style.cssText = 'display:none;flex-direction:row;align-items:center;gap:8px;';
+  const delRevText = document.createElement('span');
+  const delRevYes  = document.createElement('button'); delRevYes.className = 'hbtn danger'; delRevYes.textContent = 'Delete reverse'; delRevYes.style.cssText = 'font-size:11px;padding:1px 8px;flex-shrink:0;';
+  const delRevNo   = document.createElement('button'); delRevNo.className  = 'hbtn';        delRevNo.textContent  = 'Keep reverse';   delRevNo.style.cssText  = 'font-size:11px;padding:1px 8px;flex-shrink:0;';
+  delRevWarn.appendChild(delRevText); delRevWarn.appendChild(delRevYes); delRevWarn.appendChild(delRevNo);
   const dirInp = document.createElement('input'); dirInp.type='text'; dirInp.className='op-input';
   dirInp.style.width='90px'; dirInp.value = dir; dirInp.placeholder = 'direction';
   dirInp.addEventListener('change', () => {
     const norm = dirInp.value.trim().toLowerCase();
-    if (!norm) { dirInp.value = dir; return; }          // blank → revert to previous
-    if (norm === dir) { dirInp.value = norm; return; }  // no change (just casing fix)
-    if (norm in _exitData) { dirInp.value = dir; alert(`Direction "${norm}" already exists.`); return; }
+    if (!norm) { dirInp.value = dir; return; }
+    if (norm === dir) {
+      dirInp.value = norm; delete v._pendingDir;
+      dirInp.style.outline = ''; dirInp.style.color = ''; dirConflictWarn.style.display = 'none';
+      return;
+    }
+    if (norm in _exitData) {
+      v._pendingDir = norm;
+      dirInp.style.outline = '1px solid var(--red)'; dirInp.style.color = 'var(--red)';
+      dirConflictWarn.textContent = `Direction "${norm}" already exists — fix or delete one before saving`;
+      dirConflictWarn.style.display = '';
+      return;
+    }
+    delete v._pendingDir; dirInp.style.outline = ''; dirInp.style.color = ''; dirConflictWarn.style.display = 'none';
     dirInp.value = norm;
     _exitData[norm] = _exitData[dir];
     delete _exitData[dir];
@@ -5736,7 +5767,7 @@ function buildExitRow(dir, v) {
   });
   top.appendChild(dirInp);
   const dirPickBtn = document.createElement('button'); dirPickBtn.type='button';
-  dirPickBtn.className='ref-pick-btn'; dirPickBtn.textContent='[...]'; dirPickBtn.title='Pick direction';
+  dirPickBtn.className='ref-pick-btn'; dirPickBtn.textContent='[...]'; dirPickBtn.title='Pick direction. Duplicate directions turn red — fix before saving.';
   dirPickBtn.addEventListener('click', () => openPicker('direction', id => { dirInp.value = id; dirInp.dispatchEvent(new Event('change')); }));
   top.appendChild(dirPickBtn);
 
@@ -5749,13 +5780,13 @@ function buildExitRow(dir, v) {
   toInp.addEventListener('input', () => { v.to = toInp.value; });
   toInp.addEventListener('dragover', e => { e.preventDefault(); toInp.classList.add('ref-drop'); });
   toInp.addEventListener('dragleave', () => toInp.classList.remove('ref-drop'));
-  toInp.addEventListener('drop', e => { e.preventDefault(); toInp.classList.remove('ref-drop'); if(e.dataTransfer.getData('wct/type')==='room'){const id=e.dataTransfer.getData('wct/id');toInp.value=id;v.to=id;} });
+  toInp.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); toInp.classList.remove('ref-drop'); if(e.dataTransfer.getData('wct/type')==='room'){const id=e.dataTransfer.getData('wct/id');toInp.value=id;v.to=id;_updateMismatch();} });
   top.appendChild(toInp);
 
   // Pick room button
   const toPickBtn = document.createElement('button');
   toPickBtn.className = 'ref-pick-btn'; toPickBtn.textContent = '[...]';
-  toPickBtn.title = 'Pick room from list';
+  toPickBtn.title = 'Pick room from list, or drag a room from the sidebar onto this field';
   toPickBtn.addEventListener('click', () => openPicker('room', id => { toInp.value = id; v.to = id; _updateMismatch(); }));
   top.appendChild(toPickBtn);
 
@@ -5771,10 +5802,27 @@ function buildExitRow(dir, v) {
   top.appendChild(lockBtn);
 
   // Remove
-  const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='×';
-  rmBtn.addEventListener('click', () => { delete _exitData[dir]; renderExitRows(); });
+  const rmBtn = document.createElement('button'); rmBtn.className='hbtn danger'; rmBtn.textContent='×'; rmBtn.title='Delete this exit. If a matching reverse exit exists you will be asked whether to delete it too.';
+  rmBtn.addEventListener('click', () => {
+    const revDir = dir ? MAP_REVERSE_DIR[_canonDir(dir)] : null;
+    if (v.to && revDir && _exitHasReverse(dir, v.to, _currentRoomId)) {
+      delRevText.textContent = `Also delete ${revDir} \u2192 ${_currentRoomId} from "${v.to}"?`;
+      delRevWarn.style.display = 'flex';
+      rmBtn.disabled = true;
+      return;
+    }
+    delete _exitData[dir]; renderExitRows();
+  });
+  delRevYes.addEventListener('click', () => {
+    const revDir = MAP_REVERSE_DIR[_canonDir(dir)];
+    if (revDir && v.to) _pendingReverseDeletes.push({targetId: v.to, revDir});
+    delete _exitData[dir]; renderExitRows();
+  });
+  delRevNo.addEventListener('click', () => { delete _exitData[dir]; renderExitRows(); });
   top.appendChild(rmBtn);
   card.appendChild(top);
+  card.appendChild(dirConflictWarn);
+  card.appendChild(delRevWarn);
 
   // Mismatch warning + Define reverse button
   const mismatchWarn = document.createElement('div');
@@ -6026,9 +6074,18 @@ function addExitRow() {
 }
 
 function saveExits() {
-  // Convert back to engine format
+  // Block save if any direction conflict is unresolved
+  const _seenDirs = new Set();
+  for (const [oldDir, v] of Object.entries(_exitData)) {
+    const fd = v._pendingDir !== undefined ? v._pendingDir : oldDir;
+    if (!fd || fd === 'new') continue;
+    if (_seenDirs.has(fd)) { setStatus(`Duplicate direction "${fd}" — fix before saving exits`, 'err'); return; }
+    _seenDirs.add(fd);
+  }
+  // Convert back to engine format (apply any pending direction renames)
   const exits = {};
-  for (const [dir, v] of Object.entries(_exitData)) {
+  for (const [oldDir, v] of Object.entries(_exitData)) {
+    const dir = v._pendingDir !== undefined ? v._pendingDir : oldDir;
     if (!dir || dir === 'new') continue;
     if (!v.to) continue;
     const hasExtras = v.locked || v.lock_tag || v.desc || v.show_if
@@ -6051,6 +6108,7 @@ function saveExits() {
   }
   if (_exitCallback) _exitCallback(exits);
   _applyDefinedReverses();
+  _applyReverseDeletes();
   renderEditor();
 }
 
@@ -6097,6 +6155,28 @@ function _applyDefinedReverses() {
     if (file) _stagedReverseExits.push({file, room, targetId, writeKey, srcId: _currentRoomId});
     else setStatus(`No _file on ${targetId} — reverse exit staged in memory only`, 'err');
   }
+}
+
+// Delete reverse exits staged via the delete-reverse prompt in the exit editor.
+// Reuses _stagedReverseExits so saveSelected() flushes them to disk automatically.
+function _applyReverseDeletes() {
+  for (const {targetId, revDir} of _pendingReverseDeletes) {
+    if (!targetId || targetId === _currentRoomId) continue;
+    const targetMeta = ALL_ROOMS[targetId];
+    if (!targetMeta) continue;
+    const zone = WORLD_DATA?.zones?.[targetMeta.zone_id];
+    if (!zone) continue;
+    const room = (zone.rooms || []).find(r => r.id === targetId);
+    if (!room || !room.exits) continue;
+    const {key: revKey} = _findRevExitEntry(room.exits, revDir);
+    if (!revKey) continue;
+    delete room.exits[revKey];
+    ALL_ROOMS[targetId] = {...room, zone_id: targetMeta.zone_id};
+    const file = room._file;
+    if (file) _stagedReverseExits.push({file, room, targetId, writeKey: revKey, srcId: _currentRoomId});
+    else setStatus(`No _file on ${targetId} — reverse delete staged in memory only`, 'err');
+  }
+  _pendingReverseDeletes = [];
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -6456,9 +6536,14 @@ function getEditorDropAction(selectedType, dragType) {
   if (selectedType === 'room' && dragType === 'room') return (id, name) => {
     const dir = prompt(`Direction of exit to "${name || id}"?`);
     if (!dir?.trim()) return;
-    SELECTED.data.exits = SELECTED.data.exits || {};
-    SELECTED.data.exits[dir.trim()] = id;
-    markDirty(); renderEditor();
+    if (document.getElementById('exit-rows-list')) {
+      _exitData[dir.trim()] = {to: id, locked: false, lock_tag: '', desc: '', show_if: '', on_exit: [], on_enter: [], on_look: []};
+      renderExitRows();
+    } else {
+      SELECTED.data.exits = SELECTED.data.exits || {};
+      SELECTED.data.exits[dir.trim()] = id;
+      markDirty(); renderEditor();
+    }
   };
   if (selectedType === 'npc' && dragType === 'item') return (id) => {
     const d = SELECTED.data;
@@ -7656,57 +7741,83 @@ function renderMap(zoneFilter) {
   const showCounts = document.getElementById('map-show-counts')?.classList.contains('active') || false;
   const showDirs   = document.getElementById('map-show-dirs')?.classList.contains('active')   || false;
 
-  // Exit lines — drawn from each room's exit face to the destination's opposite face.
-  // This avoids center-to-center lines passing through room boxes.
-  const drawn = new Set();
+  // Arrowhead markers — one per edge color; orient="auto-start-reverse" lets marker-start
+  // point backward automatically, giving bidirectional edges double-headed arrows.
+  const defs = document.createElementNS(NS, 'defs');
+  [['map-arr-gray','#4a4a5a'],['map-arr-amber','#c07820'],['map-arr-red','#c05050']].forEach(([id,color]) => {
+    const m = document.createElementNS(NS, 'marker');
+    m.setAttribute('id', id); m.setAttribute('markerUnits', 'userSpaceOnUse');
+    m.setAttribute('markerWidth', '7'); m.setAttribute('markerHeight', '6');
+    m.setAttribute('refX', '7'); m.setAttribute('refY', '3');
+    m.setAttribute('orient', 'auto-start-reverse');
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', 'M0,0 L7,3 L0,6 Z'); p.setAttribute('fill', color);
+    m.appendChild(p); defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+
+  // Exit lines — two-pass: collect directed edges first, then draw with deduplication.
+  // One-way exits (no matching reverse) are drawn amber to flag potential bugs.
+  // Custom/unknown directions are not flagged (no expected reverse).
+  const edgeMap = new Map(); // "rid|dest" → {rid, dest, dir, ev, hasReverse}
   for (const [rid, room] of Object.entries(rooms)) {
     if (!room._pos) continue;
-    const [sx1, sy1] = toSvg(...room._pos);
-    const cx1 = sx1 + CW/2, cy1 = sy1 + CH/2;
-    for (const [dir, ev] of Object.entries(room.exits)) {
+    for (const [dir, ev] of Object.entries(room.exits || {})) {
       const dest = typeof ev === 'string' ? ev : (ev?.to || '');
       if (!dest || !rooms[dest]?._pos) continue;
-      const key = [rid, dest].sort().join('|');
-      if (drawn.has(key)) continue;
-      drawn.add(key);
+      edgeMap.set(`${rid}|${dest}`, {rid, dest, dir, ev, hasReverse: _exitHasReverse(dir, dest, rid)});
+    }
+  }
 
-      // Source face anchor
-      const fo1 = MAP_FACE_OFFSET[dir] || [0, 0];
-      const ax1 = cx1 + fo1[0] * CW/2;
-      const ay1 = cy1 + fo1[1] * CH/2;
+  const drawn = new Set();
+  for (const {rid, dest, dir, ev, hasReverse} of edgeMap.values()) {
+    const key = [rid, dest].sort().join('|');
+    if (drawn.has(key)) continue;
+    drawn.add(key);
 
-      // Destination face anchor (reverse direction)
-      const [sx2, sy2] = toSvg(...rooms[dest]._pos);
-      const cx2 = sx2 + CW/2, cy2 = sy2 + CH/2;
-      const revDir = MAP_REVERSE_DIR[dir] || '';
-      const fo2 = MAP_FACE_OFFSET[revDir] || [0, 0];
-      const ax2 = cx2 + fo2[0] * CW/2;
-      const ay2 = cy2 + fo2[1] * CH/2;
+    const [sx1, sy1] = toSvg(...rooms[rid]._pos);
+    const cx1 = sx1 + CW/2, cy1 = sy1 + CH/2;
 
-      const locked = typeof ev === 'object' && ev?.locked;
-      const ln = document.createElementNS(NS, 'line');
-      ln.setAttribute('x1', ax1); ln.setAttribute('y1', ay1);
-      ln.setAttribute('x2', ax2); ln.setAttribute('y2', ay2);
-      ln.setAttribute('stroke', locked ? '#c05050' : '#4a4a5a');
-      ln.setAttribute('stroke-width', '1.5');
-      if (locked) ln.setAttribute('stroke-dasharray', '5,4');
-      svg.appendChild(ln);
-      if (showDirs) {
-        // Place label at 15px from source face anchor (not a percentage), so it
-        // stays just outside the room box regardless of line length.
-        const dx = ax2 - ax1, dy = ay2 - ay1;
-        const len = Math.sqrt(dx*dx + dy*dy) || 1;
-        const off = Math.min(18, len * 0.18);  // 18px max, 18% of line for very short exits
-        const tx = ax1 + (dx/len) * off;
-        const ty = ay1 + (dy/len) * off;
-        const lt = document.createElementNS(NS, 'text');
-        lt.setAttribute('x', tx); lt.setAttribute('y', ty - 3);
-        lt.setAttribute('text-anchor', 'middle');
-        lt.setAttribute('font-size', '10'); lt.setAttribute('fill', locked ? '#c05050' : '#666');
-        lt.setAttribute('pointer-events', 'none');
-        lt.textContent = dir;
-        svg.appendChild(lt);
-      }
+    // Source face anchor
+    const fo1 = MAP_FACE_OFFSET[dir] || [0, 0];
+    const ax1 = cx1 + fo1[0] * CW/2;
+    const ay1 = cy1 + fo1[1] * CH/2;
+
+    // Destination face anchor (reverse direction)
+    const [sx2, sy2] = toSvg(...rooms[dest]._pos);
+    const cx2 = sx2 + CW/2, cy2 = sy2 + CH/2;
+    const revDir = MAP_REVERSE_DIR[dir] || '';
+    const fo2 = MAP_FACE_OFFSET[revDir] || [0, 0];
+    const ax2 = cx2 + fo2[0] * CW/2;
+    const ay2 = cy2 + fo2[1] * CH/2;
+
+    const locked = typeof ev === 'object' && ev?.locked;
+    const lineColor = locked ? '#c05050' : hasReverse ? '#4a4a5a' : '#c07820';
+    const markerName = locked ? 'red' : hasReverse ? 'gray' : 'amber';
+    const ln = document.createElementNS(NS, 'line');
+    ln.setAttribute('x1', ax1); ln.setAttribute('y1', ay1);
+    ln.setAttribute('x2', ax2); ln.setAttribute('y2', ay2);
+    ln.setAttribute('stroke', lineColor);
+    ln.setAttribute('stroke-width', !hasReverse ? '2' : '1.5');
+    if (locked) ln.setAttribute('stroke-dasharray', '5,4');
+    ln.setAttribute('marker-end', `url(#map-arr-${markerName})`);
+    if (hasReverse) ln.setAttribute('marker-start', `url(#map-arr-${markerName})`);
+    svg.appendChild(ln);
+    if (showDirs) {
+      // Place label at 15px from source face anchor (not a percentage), so it
+      // stays just outside the room box regardless of line length.
+      const dx = ax2 - ax1, dy = ay2 - ay1;
+      const len = Math.sqrt(dx*dx + dy*dy) || 1;
+      const off = Math.min(18, len * 0.18);  // 18px max, 18% of line for very short exits
+      const tx = ax1 + (dx/len) * off;
+      const ty = ay1 + (dy/len) * off;
+      const lt = document.createElementNS(NS, 'text');
+      lt.setAttribute('x', tx); lt.setAttribute('y', ty - 3);
+      lt.setAttribute('text-anchor', 'middle');
+      lt.setAttribute('font-size', '10'); lt.setAttribute('fill', locked ? '#c05050' : hasReverse ? '#666' : '#c07820');
+      lt.setAttribute('pointer-events', 'none');
+      lt.textContent = dir;
+      svg.appendChild(lt);
     }
   }
 
