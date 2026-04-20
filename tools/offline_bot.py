@@ -1007,6 +1007,10 @@ class BotRunner:
                 npc_id = self._model.quest_givers.get(qid, "")
             if npc_id:
                 self._push("talk_npc", npc_id=npc_id, quest_id=qid, target_step=1)
+            else:
+                # No NPC known to start this quest (triggered by room entry or item pickup).
+                # Mark stuck so _decide() skips it and the bot explores instead.
+                self._stuck_quests.add(qid)
             return
 
         # Find the next incomplete step
@@ -1028,7 +1032,9 @@ class BotRunner:
                 giver = self._model.quest_givers.get(qid, "")
                 if giver and qid not in self._stuck_quests:
                     self._push("talk_npc", npc_id=giver, quest_id=qid, target_step=idx)
-                # else: silently skip; _decide() will move to the next objective
+                else:
+                    # No NPC available and no dialogue mapping — mark stuck.
+                    self._stuck_quests.add(qid)
             break  # Only handle the next step; re-plan after it's done
 
     def _exec_check_advance(self, args: dict) -> str | None:

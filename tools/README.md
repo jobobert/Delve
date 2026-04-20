@@ -16,6 +16,7 @@ None require external packages except where marked.
 | `quest_graph.py` | Graphviz DOT graph of a quest's step flow (also built into WCT) | graphviz CLI |
 | `ai_player.py` | Autonomous AI playtester via Anthropic API | `ANTHROPIC_API_KEY` |
 | `offline_bot.py` | Deterministic offline playtester (no API key needed) | — |
+| `critical_path.py` | Static dependency analyser — traces the critical path and flags blocking issues | — |
 | `world2html.py` | Export a full world to a self-contained HTML review document | graphviz CLI (optional, for dialogue graphs) |
 | `run_script.py` | Run a world script file against a named player from the CLI | — |
 | `md2html.py` | Convert a Markdown file to a self-contained HTML page | — |
@@ -256,6 +257,86 @@ python tools/offline_bot.py --world first_world --zone ashwood --verbose
 
 Outputs an HTML session log to `tools/ai_sessions/ai_<world>_<timestamp>.html`
 and appends stats to `tools/ai_sessions/stats.jsonl`.
+
+---
+
+## critical_path.py
+
+Statically analyses a world's TOML data and reports whether the critical path
+to completion is achievable — assuming the player wins every fight, picks up
+every reachable item, and uses every scenery interactable.  No engine is
+started; no saves are created.
+
+The analyser detects:
+
+- Locked exits whose key item has no obtainable source (blocking)
+- Locked exits whose key is only reachable by crossing the lock itself
+  (circular — blocking)
+- Quest steps with no `advance_quest` or `complete_quest` trigger anywhere
+  in the world data (dialogue, `on_enter`, `on_get`, `on_use`, `kill_script`)
+- Flags consumed by conditions that are never produced by any script
+- Rooms unreachable from the start room given the item/flag/lock logic
+
+```
+python tools/critical_path.py --world first_world
+python tools/critical_path.py --world awoke --out report.txt
+python tools/critical_path.py --world awoke --quest awoke_weapons --verbose
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--world` | first found | World folder name |
+| `--quest` | — | Focus Section 1 on a single quest (all other sections still shown) |
+| `--out` | — | Write report to a file instead of stdout |
+| `--verbose` | off | Print per-iteration simulation details |
+
+### Report sections
+
+**Section 1 — Quest Critical Path**  
+For every quest (or the focused quest), lists each step, its trigger source
+(`room on_enter`, `item on_get/on_use`, `npc kill_script`, `dialogue node`),
+and any flag/item prerequisites for that trigger.  Steps with no trigger found
+are marked `[NO TRIGGER]`.
+
+**Section 2 — Lock / Key Chains**  
+Every locked exit and its analysis: key item ID, all sources for that item,
+and whether the source is reachable without crossing the lock.  Status is
+`[OK]`, `[NO KEY]`, or `[CIRCULAR]`.
+
+**Section 3 — Flag Analysis**  
+Flags that appear in `if_flag` / `show_if` conditions but are never set by
+any script op in the world data.  These are usually either orphaned design
+artefacts or expected to be set by engine code (logged as `[WARN]`).
+
+**Section 4 — Unreachable Rooms**  
+Rooms the forward simulation never reaches, with the reason (locked exit,
+unsatisfied `show_if`, or simply unconnected).
+
+**Section 5 — Issues**  
+Summary of all blocking problems and warnings.
+
+### How the simulation works
+
+The tool runs a monotonic fixed-point BFS: flags, items, and reachable rooms
+are only ever added, never removed.  Each iteration expands state by:
+
+1. Firing `on_enter` scripts for all reachable rooms
+2. Expanding exits whose `show_if` condition is now met and whose lock key is
+   now in inventory
+3. Collecting floor items and firing their `on_get` scripts
+4. Firing `on_use` scripts on scenery items in reachable rooms (optimistic —
+   assumes the player will interact with everything)
+5. Firing `on_use` scripts on all carried items (optimistic)
+6. Killing all hostile NPCs and firing `kill_script`
+7. Walking NPC dialogue trees whose conditions are satisfied
+8. Firing `give_accepts` when the required item is in inventory
+
+Iteration stops when no new rooms, flags, or items are added.
+
+> **Limitation:** The commission / crafting system (Replicator) is not
+> modelled.  Quests that require a commissioned item will show as incomplete
+> in simulation even when the data is correctly wired.  Verify those quests
+> manually against `la_replicator.toml` (or equivalent).
 
 ---
 
