@@ -16,6 +16,9 @@ python tools/validate.py --world first_world  # validate one world only
 python tools/clean.py --all              # wipe players, zone state, caches
 python tools/run_script.py <file> --player <name>  # run a standalone script file
 python tools/offline_bot.py --world first_world --turns 500
+python tools/critical_path.py --world first_world          # static quest/lock dependency analysis
+python tools/critical_path.py --world awoke --out report.txt
+python tools/world2html.py --world first_world             # export full world to HTML for review
 ```
 
 No build step, no test runner. Correctness is checked by `validate.py` (exit 0 = pass, 1 = errors).

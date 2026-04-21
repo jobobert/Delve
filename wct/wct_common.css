@@ -707,7 +707,57 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
 .map-edge-key { color: var(--text-dim); font-size: 12px; flex-shrink: 0; min-width: 58px; }
 .map-edge-val { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .map-edge-ops { color: var(--text-dim); font-size: 11px; font-family: Consolas, monospace; white-space: pre; }
-.map-hint { color: var(--text-dim); font-size: 13px; }
+.map-hint { color: var(--text-dim); font-size: 13px; order: 10; flex-basis: 100%; }
+
+/* ── Map exit editor table ───────────────────────────────────────────── */
+#map-exit-table {
+  border-top: 1px solid var(--border); background: var(--panel);
+  flex-shrink: 0; max-height: 260px; overflow-y: auto; font-size: 13px;
+}
+#map-exit-table-hdr {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-bottom: 1px solid var(--border);
+  background: var(--surface); position: sticky; top: 0; z-index: 1;
+}
+#map-exit-table-title { font-weight: 600; flex: 1; }
+.exit-tbl-row {
+  display: grid; grid-template-columns: 80px 1fr 52px 1fr 52px 46px;
+  gap: 4px; align-items: center; padding: 4px 10px;
+  border-bottom: 1px solid rgba(131,144,169,.2);
+}
+.exit-tbl-row:hover { background: rgba(255,255,255,.04); }
+.exit-tbl-row.exit-tbl-sel { background: rgba(155,127,212,.15); }
+.exit-tbl-form {
+  padding: 8px 10px 10px; display: grid;
+  grid-template-columns: 80px 1fr 80px 1fr; gap: 6px 10px;
+  align-items: center; border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.exit-tbl-form label { font-size: 12px; color: var(--text-dim); text-align: right; }
+.exit-tbl-form input[type=text], .exit-tbl-form select { width: 100%; }
+.exit-tbl-form-actions {
+  grid-column: 1 / -1; display: flex; gap: 6px;
+  justify-content: flex-end; align-items: center; margin-top: 4px;
+}
+.exit-tbl-form-actions a { font-size: 12px; color: var(--text-dim); }
+.exit-tbl-form-actions a:hover { color: var(--accent); }
+
+/* ── Map quest panel ─────────────────────────────────────────────────── */
+#map-quest-panel {
+  width: 340px; flex-shrink: 0; display: none; flex-direction: column;
+  border-left: 1px solid var(--border); background: var(--panel); overflow: hidden;
+}
+#map-quest-panel.visible { display: flex; }
+#map-quest-panel-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; border-bottom: 1px solid var(--border);
+  font-size: 13px; font-weight: bold; color: var(--quest-col); flex-shrink: 0;
+}
+#map-quest-panel-canvas { flex: 1; overflow: auto; padding: 12px 8px; }
+.map-room-node.map-quest-giver rect { stroke: var(--quest-col) !important; stroke-width: 2px !important; fill: rgba(155,127,212,0.18) !important; }
+.map-room-node.map-quest-step rect  { stroke: var(--quest-col) !important; stroke-width: 2px !important; fill: rgba(155,127,212,0.08) !important; }
+.map-room-node.map-quest-dim        { opacity: 0.25; }
+[data-qstep].qp-node-sel rect, [data-qstep].qp-node-sel ellipse { stroke: #fff !important; stroke-width: 2.5px !important; }
 
 /* ── Error panel ─────────────────────────────────────────────────────── */
 .error-panel {

@@ -129,6 +129,9 @@
     <select id="map-zone-select" class="field-select" style="width:150px" onchange="_mapScale=1;_mapPanX=0;_mapPanY=0;renderMap(this.value)">
       <option value="">All zones</option>
     </select>
+    <select id="map-quest-select" class="field-select" style="width:170px" onchange="_mapQuestFilter=this.value;_applyMapQuestFilter()">
+      <option value="">— Quest —</option>
+    </select>
     <div id="map-legend"></div>
     <span class="map-hint">drag room = move &nbsp;|&nbsp; drag canvas = pan &nbsp;|&nbsp; wheel = zoom &nbsp;|&nbsp; click room = details &nbsp;|&nbsp; click edge = exit details &nbsp;|&nbsp; shift/ctrl+click = multi-select &nbsp;|&nbsp; shift+drag canvas = lasso select</span>
     <span class="map-hint">&#9476; border = auto-placed &nbsp; &#9548; line = locked exit &nbsp; <span style="color:#c07820">&#9472;</span> amber = one-way &nbsp; &#8596; = bidirectional &nbsp; &#8594; = one-way</span>
@@ -140,6 +143,13 @@
   </div>
   <div id="map-body">
     <div id="map-canvas"></div>
+    <div id="map-quest-panel">
+      <div id="map-quest-panel-hdr">
+        <span id="map-quest-panel-title">Quest</span>
+        <button class="hbtn" onclick="_clearMapQuestFilter()" title="Clear quest filter" style="padding:2px 8px;font-size:14px">×</button>
+      </div>
+      <div id="map-quest-panel-canvas"></div>
+    </div>
     <div id="map-info">
       <div id="map-info-header">
         <div id="map-info-name"></div>
@@ -152,11 +162,25 @@
       </div>
     </div>
   </div>
+  <!-- Map exit editor — appears below map when room/edge is clicked -->
+  <div id="map-exit-table" style="display:none">
+    <div id="map-exit-table-hdr">
+      <span id="map-exit-table-title">Exits</span>
+      <button class="hbtn" onclick="_hideExitTable()" style="padding:2px 8px;font-size:14px" title="Close exit editor">×</button>
+      <button class="hbtn primary" id="map-exit-add-btn" onclick="_addExitRow()">+ Add Exit</button>
+    </div>
+    <div id="map-exit-table-body"></div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════ Modals ═══════════════════════════ -->
 
-
+<datalist id="exit-dir-list">
+  <option value="north"><option value="south"><option value="east"><option value="west">
+  <option value="up"><option value="down">
+  <option value="northeast"><option value="northwest">
+  <option value="southeast"><option value="southwest">
+</datalist>
 
 <!-- Ref picker -->
 <div class="modal-backdrop hidden" id="picker-modal">
@@ -657,6 +681,7 @@ async function loadWorld(worldId) {
 
   // Build lookup maps
   ALL_ROOMS = {}; ALL_NPCS = {}; ALL_ITEMS = {}; ALL_QUESTS = {};
+  _mapQuestRoomCache = {};
   for (const [zid, zone] of Object.entries(WORLD_DATA.zones || {})) {
     (zone.rooms  || []).forEach(r => { ALL_ROOMS[r.id]  = {...r, zone_id: zid}; });
     (zone.npcs   || []).forEach(n => { ALL_NPCS[n.id]   = {...n, zone_id: zid}; });
@@ -7516,6 +7541,347 @@ let _mapLayoutParams  = null;   // {minX, maxY, CW, CH, GX, GY, M} from last ren
 let _mapLastLayout    = null;   // full room→_pos map from last _buildMapLayout call
 let _mapSessionLayout = null;   // positions frozen on first open; prevents BFS re-shuffle on drag
 let _mapDirtyFiles    = new Set(); // rooms.toml paths with unsaved coord changes
+let _mapQuestFilter   = null;      // quest ID currently overlaid on map
+let _mapQuestRoomCache = {};       // questId → {byRoom, stepToRooms}
+let _mapQuestStepSel  = null;      // step key currently selected in quest panel
+let _exitTableRid     = null;      // room whose exits are shown in the exit editor
+let _exitEditDir      = null;      // direction row currently expanded for editing ('' = add-new)
+
+// Build quest→room index for a given quest ID.
+// Returns { byRoom: Map<room_id, {steps,roles}>, stepToRooms: Map<stepKey, Set<room_id>> }
+function _buildQuestRoomMap(questId) {
+  if (_mapQuestRoomCache[questId]) return _mapQuestRoomCache[questId];
+  const triggers   = _collectQuestTriggers(questId);
+  const byRoom     = new Map();
+  const stepToRooms = new Map();
+
+  const addRoom = (rid, stepKey, role) => {
+    if (!rid || !ALL_ROOMS[rid]) return;
+    if (!byRoom.has(rid)) byRoom.set(rid, {steps: new Set(), roles: new Set()});
+    byRoom.get(rid).steps.add(stepKey);
+    byRoom.get(rid).roles.add(role);
+    if (!stepToRooms.has(stepKey)) stepToRooms.set(stepKey, new Set());
+    stepToRooms.get(stepKey).add(rid);
+  };
+
+  // Quest giver room
+  const quest = ALL_QUESTS[questId];
+  const giver = quest?.giver;
+  if (giver && !giver.startsWith('_')) {
+    for (const r of Object.values(ALL_ROOMS)) {
+      if ((r.spawns || []).includes(giver)) addRoom(r.id, 'start', 'giver');
+    }
+  }
+
+  // Triggers from _collectQuestTriggers
+  for (const [stepKey, trList] of Object.entries(triggers)) {
+    const sk = stepKey === 'complete' ? 'complete' : Number(stepKey);
+    for (const t of trList) {
+      if (t.entity_type === 'room') {
+        addRoom(t.npc_id, sk, 'trigger');
+      } else if (t.entity_type === 'dialogue' || t.entity_type === 'npc' || t.entity_type === 'npc_give') {
+        for (const r of Object.values(ALL_ROOMS)) {
+          if ((r.spawns || []).includes(t.npc_id)) addRoom(r.id, sk, 'npc');
+        }
+      } else if (t.entity_type === 'item') {
+        for (const r of Object.values(ALL_ROOMS)) {
+          if ((r.items || []).includes(t.npc_id)) addRoom(r.id, sk, 'item');
+        }
+      }
+      // craft: no room context
+    }
+  }
+
+  _mapQuestRoomCache[questId] = {byRoom, stepToRooms};
+  return _mapQuestRoomCache[questId];
+}
+
+function _applyMapQuestFilter() {
+  _mapQuestStepSel = null;
+  const panel = document.getElementById('map-quest-panel');
+  if (!_mapQuestFilter) {
+    panel?.classList.remove('visible');
+    _highlightQuestRooms(null, null);
+    return;
+  }
+  const quest = ALL_QUESTS[_mapQuestFilter];
+  if (!quest) return;
+  document.getElementById('map-quest-panel-title').textContent = quest.title || _mapQuestFilter;
+  panel.classList.add('visible');
+  _renderQuestFlowPanel(_mapQuestFilter);
+  _highlightQuestRooms(_mapQuestFilter, null);
+}
+
+function _clearMapQuestFilter() {
+  const sel = document.getElementById('map-quest-select');
+  if (sel) sel.value = '';
+  _mapQuestFilter = null;
+  _applyMapQuestFilter();
+}
+
+function _highlightQuestRooms(questId, stepFilter) {
+  document.querySelectorAll('.map-room-node').forEach(el => {
+    el.classList.remove('map-quest-giver', 'map-quest-step', 'map-quest-dim');
+  });
+  if (!questId) return;
+  const {byRoom, stepToRooms} = _buildQuestRoomMap(questId);
+  const activeRooms = stepFilter != null
+    ? (stepToRooms.get(stepFilter) || new Set())
+    : new Set(byRoom.keys());
+  const selId = _mapSelectedRoom?.id;
+  document.querySelectorAll('.map-room-node').forEach(el => {
+    const rid = el.dataset.id;
+    if (rid === selId) return; // don't dim/tint the currently selected room
+    if (!byRoom.has(rid)) {
+      el.classList.add('map-quest-dim');
+    } else if (activeRooms.has(rid)) {
+      const info = byRoom.get(rid);
+      if (info.roles.has('giver')) el.classList.add('map-quest-giver');
+      else el.classList.add('map-quest-step');
+    } else {
+      el.classList.add('map-quest-dim');
+    }
+  });
+}
+
+function _selectQuestStep(stepKey) {
+  _mapQuestStepSel = stepKey;
+  document.querySelectorAll('#map-quest-panel-canvas [data-qstep]').forEach(g => {
+    g.classList.remove('qp-node-sel');
+  });
+  if (stepKey != null) {
+    const target = document.querySelector(`#map-quest-panel-canvas [data-qstep="${CSS.escape(String(stepKey))}"]`);
+    if (target) target.classList.add('qp-node-sel');
+  }
+  _highlightQuestRooms(_mapQuestFilter, stepKey);
+}
+
+function _selectQuestStepInPanel(steps) {
+  document.querySelectorAll('#map-quest-panel-canvas [data-qstep]').forEach(g => {
+    g.classList.remove('qp-node-sel');
+  });
+  for (const sk of steps) {
+    const target = document.querySelector(`#map-quest-panel-canvas [data-qstep="${CSS.escape(String(sk))}"]`);
+    if (target) target.classList.add('qp-node-sel');
+  }
+}
+
+function _renderQuestFlowPanel(questId) {
+  const container = document.getElementById('map-quest-panel-canvas');
+  if (!container) return;
+  const quest = ALL_QUESTS[questId];
+  if (!quest) {
+    container.innerHTML = '<div style="padding:12px;color:var(--text-dim)">Quest not found.</div>';
+    return;
+  }
+  const byStep = _collectQuestTriggers(questId);
+  const svg = _buildQuestFlowSVG(quest, byStep, true);
+
+  // Click handlers on step nodes
+  svg.querySelectorAll('[data-qstep]').forEach(g => {
+    g.addEventListener('click', e => {
+      e.stopPropagation();
+      const raw = g.dataset.qstep;
+      const stepKey = (raw === 'start' || raw === 'complete') ? raw : Number(raw);
+      _selectQuestStep(stepKey);
+    });
+  });
+  // Click on SVG background → show all rooms (clear step filter)
+  svg.addEventListener('click', () => _selectQuestStep(null));
+
+  container.innerHTML = '';
+  container.appendChild(svg);
+}
+
+// ── Map exit editor ──────────────────────────────────────────────────────────
+
+function _showExitTable(rid, highlightDir) {
+  _exitTableRid = rid;
+  _exitEditDir  = null;
+  const room = ALL_ROOMS[rid];
+  if (!room) return;
+  document.getElementById('map-exit-table-title').textContent =
+    'Exits — ' + (room.name || rid);
+  const body = document.getElementById('map-exit-table-body');
+  body.innerHTML = '';
+  const exits = room.exits || {};
+  if (!Object.keys(exits).length) {
+    body.innerHTML = '<div style="padding:8px 10px;color:var(--text-dim)">No exits. Click + Add Exit to create one.</div>';
+  }
+  for (const [dir, val] of Object.entries(exits)) {
+    body.appendChild(_buildExitRow(dir, val, rid, dir === highlightDir));
+  }
+  document.getElementById('map-exit-table').style.display = '';
+}
+
+function _hideExitTable() {
+  document.getElementById('map-exit-table').style.display = 'none';
+  _exitTableRid = null;
+  _exitEditDir  = null;
+}
+
+function _buildExitRow(dir, val, rid, selected) {
+  const obj      = typeof val === 'object' ? val : null;
+  const destId   = typeof val === 'string' ? val : (val?.to || '');
+  const destName = ALL_ROOMS[destId]?.name || destId || '?';
+  const locked   = obj?.locked ? 'yes' : '';
+  const showIf   = obj?.show_if ? _fmtShowIf(obj.show_if) : '';
+  const row = document.createElement('div');
+  row.className = 'exit-tbl-row' + (selected ? ' exit-tbl-sel' : '');
+  const safeDir = escHtml(dir);
+  row.innerHTML =
+    `<span>${safeDir}</span>` +
+    `<span>${escHtml(destName)}</span>` +
+    `<span style="color:${locked ? 'var(--yellow)' : 'var(--text-dim)'}">${escHtml(locked)}</span>` +
+    `<span style="color:var(--text-dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(showIf)}</span>` +
+    `<button class="hbtn" onclick="_expandExitEdit('${escHtml(dir)}')">Edit</button>` +
+    `<button class="hbtn danger" onclick="_deleteExit('${escHtml(dir)}')">Del</button>`;
+  return row;
+}
+
+function _expandExitEdit(dir) {
+  _exitEditDir = dir;
+  const rid  = _exitTableRid;
+  const room = ALL_ROOMS[rid];
+  const val  = (dir !== '') ? room?.exits?.[dir] : null;
+  const obj  = typeof val === 'object' ? val : null;
+
+  const body = document.getElementById('map-exit-table-body');
+  body.innerHTML = '';
+  // Render remaining exits as read-only
+  for (const [d, v] of Object.entries(room?.exits || {})) {
+    if (d === dir) continue;
+    body.appendChild(_buildExitRow(d, v, rid, false));
+  }
+
+  const destId  = typeof val === 'string' ? val : (val?.to || '');
+  const locked  = obj?.locked  || false;
+  const lockTag = obj?.lock_tag || '';
+  const desc    = obj?.desc    || '';
+  const showIf  = (typeof obj?.show_if === 'object' && obj.show_if !== null)
+    ? JSON.stringify(obj.show_if) : (obj?.show_if || '');
+
+  const roomOptions = Object.values(ALL_ROOMS)
+    .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id))
+    .map(r => `<option value="${escHtml(r.id)}"${r.id === destId ? ' selected' : ''}>${escHtml(r.name || r.id)} (${escHtml(r.id)})</option>`)
+    .join('');
+
+  const form = document.createElement('div');
+  form.className = 'exit-tbl-form';
+  form.id = 'exit-tbl-inline-form';
+  form.innerHTML =
+    `<label>Direction</label>` +
+    `<input type="text" id="ef-dir" list="exit-dir-list" value="${escHtml(dir)}" placeholder="north, south, …">` +
+    `<label>Destination</label>` +
+    `<select id="ef-dest"><option value="">&#8212; room &#8212;</option>${roomOptions}</select>` +
+    `<label>Locked</label>` +
+    `<input type="checkbox" id="ef-locked"${locked ? ' checked' : ''}>` +
+    `<label>Lock tag</label>` +
+    `<input type="text" id="ef-lock-tag" value="${escHtml(lockTag)}"${locked ? '' : ' style="opacity:.4"'}>` +
+    `<label>Description</label>` +
+    `<input type="text" id="ef-desc" value="${escHtml(desc)}" placeholder="optional door text">` +
+    `<label>Show if</label>` +
+    `<input type="text" id="ef-show-if" value="${escHtml(showIf)}" placeholder="has_flag flag_name">` +
+    `<div class="exit-tbl-form-actions">` +
+      `<a href="#" onclick="mapInfoEditRoom();return false">Full editor →</a>` +
+      `<button class="hbtn" onclick="_cancelExitEdit()">Cancel</button>` +
+      `<button class="hbtn primary" onclick="_saveExitEdit('${escHtml(dir)}')">Save</button>` +
+    `</div>`;
+  body.appendChild(form);
+
+  document.getElementById('ef-locked').addEventListener('change', e => {
+    document.getElementById('ef-lock-tag').style.opacity = e.target.checked ? '1' : '.4';
+  });
+}
+
+function _addExitRow() { _expandExitEdit(''); }
+
+function _cancelExitEdit() { _showExitTable(_exitTableRid, null); }
+
+async function _saveExitEdit(originalDir) {
+  const rid  = _exitTableRid;
+  const room = ALL_ROOMS[rid];
+  if (!room) return;
+
+  const newDir    = document.getElementById('ef-dir').value.trim();
+  const destId    = document.getElementById('ef-dest').value;
+  const locked    = document.getElementById('ef-locked').checked;
+  const lockTag   = document.getElementById('ef-lock-tag').value.trim();
+  const desc      = document.getElementById('ef-desc').value.trim();
+  const showIfRaw = document.getElementById('ef-show-if').value.trim();
+
+  if (!newDir)  { setStatus('Direction is required', 'err'); return; }
+  if (!destId)  { setStatus('Destination is required', 'err'); return; }
+
+  const isSimple = !locked && !lockTag && !desc && !showIfRaw;
+  let exitVal;
+  if (isSimple) {
+    exitVal = destId;
+  } else {
+    exitVal = {to: destId};
+    if (locked)    exitVal.locked   = true;
+    if (lockTag)   exitVal.lock_tag = lockTag;
+    if (desc)      exitVal.desc     = desc;
+    if (showIfRaw) {
+      try { exitVal.show_if = JSON.parse(showIfRaw); }
+      catch { exitVal.show_if = showIfRaw; }
+    }
+    // Preserve script fields from original exit
+    const orig = (originalDir && typeof room.exits?.[originalDir] === 'object') ? room.exits[originalDir] : null;
+    if (orig?.on_exit?.length)   exitVal.on_exit   = orig.on_exit;
+    if (orig?.on_enter?.length)  exitVal.on_enter  = orig.on_enter;
+    if (orig?.on_look?.length)   exitVal.on_look   = orig.on_look;
+    if (orig?.on_unlock?.length) exitVal.on_unlock = orig.on_unlock;
+    if (orig?.on_lock?.length)   exitVal.on_lock   = orig.on_lock;
+  }
+
+  const exits = {...(room.exits || {})};
+  if (originalDir && originalDir !== newDir) delete exits[originalDir];
+  exits[newDir] = exitVal;
+  await _persistExits(rid, exits);
+}
+
+async function _deleteExit(dir) {
+  if (!confirm(`Delete the "${dir}" exit?`)) return;
+  const rid   = _exitTableRid;
+  const room  = ALL_ROOMS[rid];
+  const exits = {...(room?.exits || {})};
+  delete exits[dir];
+  await _persistExits(rid, exits);
+}
+
+async function _persistExits(rid, newExits) {
+  const room = ALL_ROOMS[rid];
+  if (!room) return;
+
+  // Update in-memory caches
+  room.exits = newExits;
+  const zoneRoom = WORLD_DATA.zones?.[room.zone_id]?.rooms?.find(r => r.id === rid);
+  if (zoneRoom) zoneRoom.exits = newExits;
+
+  const file = room._file;
+  const fileRooms = [];
+  for (const zone of Object.values(WORLD_DATA.zones || {}))
+    fileRooms.push(...(zone.rooms || []).filter(r => r._file === file));
+
+  const data = { room: fileRooms.map(r => {
+    const rec = stripPrivate(r);
+    if (rec.spawns) rec.spawns = cleanSpawns(rec.spawns);
+    return rec;
+  })};
+
+  const res = await fetch('/api/write_file', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({file, data}),
+  });
+  const j = await res.json();
+  if (!j.ok) { setStatus('Error saving exits: ' + (j.error || file), 'err'); return; }
+
+  setStatus('Exit saved', 'ok');
+  _mapQuestRoomCache = {};
+  renderMap();
+  _showExitTable(rid, null);
+}
 
 function toggleMap() {
   const ws  = document.querySelector('.workspace');
@@ -7533,7 +7899,13 @@ function toggleMap() {
     _mapSelectedEdge = null;
     renderMap(_mapZoneFilter);
   } else {
-    _mapSessionLayout = null;  // release memory on close
+    _mapSessionLayout = null;   // release memory on close
+    _mapQuestFilter   = null;
+    _mapQuestRoomCache = {};
+    document.getElementById('map-quest-panel')?.classList.remove('visible');
+    const qsel = document.getElementById('map-quest-select');
+    if (qsel) qsel.value = '';
+    _hideExitTable();
   }
 }
 
@@ -7761,6 +8133,17 @@ function renderMap(zoneFilter) {
       zoneIds.map(z => `<option value="${z}"${z===_mapZoneFilter?' selected':''}>${z}</option>`).join('');
   }
 
+  // Populate quest dropdown (sorted by title)
+  const qsel = document.getElementById('map-quest-select');
+  if (qsel) {
+    const sortedQuests = Object.values(ALL_QUESTS).sort((a,b) => (a.title||a._id||'').localeCompare(b.title||b._id||''));
+    qsel.innerHTML = '<option value="">— Quest —</option>' +
+      sortedQuests.map(q => {
+        const qid = q._id || q.id || '';
+        return `<option value="${escHtml(qid)}"${qid===_mapQuestFilter?' selected':''}>${escHtml(q.title||qid)}</option>`;
+      }).join('');
+  }
+
   const leg = document.getElementById('map-legend');
   if (leg) {
     leg.innerHTML = zoneIds.map(z => {
@@ -7970,6 +8353,9 @@ function renderMap(zoneFilter) {
   canvas.appendChild(svg);
   _applyMapTransform();
   _initMapCanvas(canvas);
+
+  // Re-apply quest highlights after render (DOM was rebuilt)
+  if (_mapQuestFilter) _highlightQuestRooms(_mapQuestFilter, _mapQuestStepSel);
 }
 
 function _applyMapTransform() {
@@ -8319,7 +8705,44 @@ function showMapInfo(rid, zoneId) {
   }).filter(Boolean);
   section('Exits', exitRows);
 
+  // Quest overlay — show steps that fire in this room and sync the quest panel
+  if (_mapQuestFilter) {
+    const {byRoom} = _buildQuestRoomMap(_mapQuestFilter);
+    const roomInfo = byRoom.get(rid);
+    if (roomInfo) {
+      const quest = ALL_QUESTS[_mapQuestFilter];
+      const qdiv = document.createElement('div'); qdiv.className = 'map-info-section';
+      const qhdr = document.createElement('div'); qhdr.className = 'map-info-section-title';
+      qhdr.style.color = 'var(--quest-col)';
+      qhdr.textContent = 'Quest: ' + (quest?.title || _mapQuestFilter);
+      qdiv.appendChild(qhdr);
+      const stepLabels = {start: 'Giver', complete: 'Complete'};
+      const roleLabels = {giver: 'giver NPC', trigger: 'on_enter', npc: 'NPC dialogue', item: 'item trigger'};
+      for (const sk of [...roomInfo.steps].sort((a,b) => {
+        if (a === 'start') return -1; if (b === 'start') return 1;
+        if (a === 'complete') return 1; if (b === 'complete') return -1;
+        return a - b;
+      })) {
+        const row = document.createElement('div'); row.className = 'map-info-row';
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.style.cssText = 'background:var(--quest-col);color:#fff;flex-shrink:0';
+        badge.textContent = stepLabels[sk] ?? `Step ${sk}`;
+        const roles = [...roomInfo.roles].map(r => roleLabels[r] || r).join(', ');
+        const lbl = document.createElement('span'); lbl.textContent = roles;
+        row.appendChild(badge); row.appendChild(lbl);
+        qdiv.appendChild(row);
+      }
+      body.insertBefore(qdiv, body.firstChild);
+      // Highlight matching step nodes in the quest panel
+      _selectQuestStepInPanel([...roomInfo.steps]);
+      // Re-apply quest room highlights (showMapInfo clears them via class removal above)
+      _highlightQuestRooms(_mapQuestFilter, _mapQuestStepSel);
+    }
+  }
+
   document.getElementById('map-info').classList.add('visible');
+  _showExitTable(rid, null);
 }
 
 function _closeMapToEditor() {
@@ -8448,6 +8871,7 @@ function showMapEdgeInfo(rid, dir) {
   destBtn.style.display = 'block';
 
   document.getElementById('map-info').classList.add('visible');
+  _showExitTable(rid, dir);
 }
 
 // ── Dialogue DOT export ───────────────────────────────────────────────────────
@@ -9288,37 +9712,13 @@ function _showDlgGraph(main, d) {
 
 // ── Quest Graph ────────────────────────────────────────────────────────────
 
-function _showQuestGraph(main, quest, forceRefresh = false) {
-  const existing = main.querySelector('.dlg-graph-wrap');
-  if (existing) {
-    existing._cleanup?.();
-    existing.remove();
-    main.querySelectorAll('[data-dlg-hidden]').forEach(el => {
-      el.style.display = ''; el.removeAttribute('data-dlg-hidden');
-    });
-    main.querySelector('[data-role="quest-graph-btn"]')?.classList.remove('primary');
-    if (!forceRefresh) return;
-  }
-  const formEls = [...main.children].filter(el => !el.classList.contains('editor-header'));
-  formEls.forEach(el => { el.style.display = 'none'; el.setAttribute('data-dlg-hidden', '1'); });
-
-  const questId  = quest.id || quest._id || 'unknown';
+// Build the quest flow SVG. Used by both the editor's inline graph and the
+// map quest panel. Pass addDataAttrs=true to add data-qstep groups for
+// bidirectional linking with the map.
+function _buildQuestFlowSVG(quest, byStep, addDataAttrs) {
   const steps    = {};
   (quest.step || []).forEach((s, i) => { steps[s.index ?? (i + 1)] = s; });
   const stepNums = Object.keys(steps).map(Number).sort((a,b) => a - b);
-
-  const byStep = _collectQuestTriggers(questId);
-  // Merge staged (unsaved) triggers so graph reflects current editor state
-  const _nodeLabel = { room_enter:'on_enter', item_get:'on_get', item_use:'on_use',
-                       npc_kill:'kill_script', npc_dialogue:'dlg', npc_give:'give_accepts' };
-  for (const t of (quest._staged_triggers || [])) {
-    const k = t.step === null ? 'complete' : t.step;
-    (byStep[k] = byStep[k] || []).push({
-      npc_id: t.entity_id, node_id: t.trigger_type === 'npc_dialogue' ? (t.node_id || 'dlg') : (_nodeLabel[t.trigger_type] || t.trigger_type),
-      to_step: t.step, flags_required: [], flags_set: t.guard_flag ? [t.guard_flag] : [],
-      flags_cleared: [], other_ops: ['staged'], zone_id: t.zone_id, entity_type: t.trigger_type, _staged: true,
-    });
-  }
 
   const NS  = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
@@ -9350,16 +9750,25 @@ function _showQuestGraph(main, quest, forceRefresh = false) {
     t.textContent = txt; return t;
   };
 
+  const appendTo = (parent, ...els) => els.forEach(e => parent.appendChild(e));
+
   // START oval
   const startCY = OVAL_RY + 8;
   const startEll = document.createElementNS(NS, 'ellipse');
   startEll.setAttribute('cx', CX); startEll.setAttribute('cy', startCY);
   startEll.setAttribute('rx', OVAL_RX); startEll.setAttribute('ry', OVAL_RY);
   startEll.setAttribute('fill','#1b3a1e'); startEll.setAttribute('stroke','#2e7d32'); startEll.setAttribute('stroke-width','1.5');
-  nodeG.appendChild(startEll);
-  nodeG.appendChild(mkT('START', CX, startCY - 7, 15, '#4caf7d', true));
   const giver = (quest.giver && !quest.giver.startsWith('_')) ? quest.giver : '';
-  if (giver) nodeG.appendChild(mkT('('+giver+')', CX, startCY + 9, 12, '#388e3c', false));
+  if (addDataAttrs) {
+    const g = document.createElementNS(NS, 'g');
+    g.dataset.qstep = 'start'; g.style.cursor = 'pointer';
+    appendTo(g, startEll, mkT('START', CX, startCY - 7, 15, '#4caf7d', true));
+    if (giver) g.appendChild(mkT('('+giver+')', CX, startCY + 9, 12, '#388e3c', false));
+    nodeG.appendChild(g);
+  } else {
+    appendTo(nodeG, startEll, mkT('START', CX, startCY - 7, 15, '#4caf7d', true));
+    if (giver) nodeG.appendChild(mkT('('+giver+')', CX, startCY + 9, 12, '#388e3c', false));
+  }
 
   // Step boxes
   const stepY = {};
@@ -9380,11 +9789,20 @@ function _showQuestGraph(main, quest, forceRefresh = false) {
     const hd2 = document.createElementNS(NS, 'rect');
     hd2.setAttribute('x', 0); hd2.setAttribute('y', sy + QHDR/2);
     hd2.setAttribute('width', QNW); hd2.setAttribute('height', QHDR/2); hd2.setAttribute('fill','#1a2e3f');
-    nodeG.appendChild(r); nodeG.appendChild(hd); nodeG.appendChild(hd2);
-    nodeG.appendChild(mkT(`Step ${sn}`, CX, sy + 16, 13, '#5b8fb9', true));
     const obj = s.objective || '';
-    nodeG.appendChild(mkT(obj.length > 44 ? obj.slice(0,43)+'…' : (obj||'(no objective)'), CX, sy + 38, 12, '#cdd6e4', false));
-    if (s.completion_flag) nodeG.appendChild(mkT('sets: '+s.completion_flag, CX, sy + 58, 11, '#c8a96e', false));
+    const textEls = [
+      mkT(`Step ${sn}`, CX, sy + 16, 13, '#5b8fb9', true),
+      mkT(obj.length > 44 ? obj.slice(0,43)+'…' : (obj||'(no objective)'), CX, sy + 38, 12, '#cdd6e4', false),
+    ];
+    if (s.completion_flag) textEls.push(mkT('sets: '+s.completion_flag, CX, sy + 58, 11, '#c8a96e', false));
+    if (addDataAttrs) {
+      const g = document.createElementNS(NS, 'g');
+      g.dataset.qstep = String(sn); g.style.cursor = 'pointer';
+      appendTo(g, r, hd, hd2, ...textEls);
+      nodeG.appendChild(g);
+    } else {
+      appendTo(nodeG, r, hd, hd2, ...textEls);
+    }
   }
 
   // COMPLETE oval
@@ -9403,9 +9821,16 @@ function _showQuestGraph(main, quest, forceRefresh = false) {
   complEll.setAttribute('cx', CX); complEll.setAttribute('cy', complCY);
   complEll.setAttribute('rx', OVAL_RX); complEll.setAttribute('ry', OVAL_RY);
   complEll.setAttribute('fill','#1b3a1e'); complEll.setAttribute('stroke','#2e7d32'); complEll.setAttribute('stroke-width','1.5');
-  nodeG.appendChild(complEll);
-  nodeG.appendChild(mkT('COMPLETE', CX, complCY - 7, 15, '#4caf7d', true));
-  if (rwParts.length) nodeG.appendChild(mkT(rwParts.join('  '), CX, complCY + 9, 11, '#388e3c', false));
+  if (addDataAttrs) {
+    const g = document.createElementNS(NS, 'g');
+    g.dataset.qstep = 'complete'; g.style.cursor = 'pointer';
+    appendTo(g, complEll, mkT('COMPLETE', CX, complCY - 7, 15, '#4caf7d', true));
+    if (rwParts.length) g.appendChild(mkT(rwParts.join('  '), CX, complCY + 9, 11, '#388e3c', false));
+    nodeG.appendChild(g);
+  } else {
+    appendTo(nodeG, complEll, mkT('COMPLETE', CX, complCY - 7, 15, '#4caf7d', true));
+    if (rwParts.length) nodeG.appendChild(mkT(rwParts.join('  '), CX, complCY + 9, 11, '#388e3c', false));
+  }
 
   // Edges
   const drawEdge = (fy, ty, trans, isComplete) => {
@@ -9449,6 +9874,47 @@ function _showQuestGraph(main, quest, forceRefresh = false) {
   } else {
     drawEdge(startCY + OVAL_RY, complCY - OVAL_RY, byStep['complete'] || [], true);
   }
+
+  if (addDataAttrs) {
+    svg.setAttribute('width', QNW);
+    svg.setAttribute('height', complCY + OVAL_RY + 20);
+  }
+  return svg;
+}
+
+function _showQuestGraph(main, quest, forceRefresh = false) {
+  const existing = main.querySelector('.dlg-graph-wrap');
+  if (existing) {
+    existing._cleanup?.();
+    existing.remove();
+    main.querySelectorAll('[data-dlg-hidden]').forEach(el => {
+      el.style.display = ''; el.removeAttribute('data-dlg-hidden');
+    });
+    main.querySelector('[data-role="quest-graph-btn"]')?.classList.remove('primary');
+    if (!forceRefresh) return;
+  }
+  const formEls = [...main.children].filter(el => !el.classList.contains('editor-header'));
+  formEls.forEach(el => { el.style.display = 'none'; el.setAttribute('data-dlg-hidden', '1'); });
+
+  const questId  = quest.id || quest._id || 'unknown';
+  const steps    = {};
+  (quest.step || []).forEach((s, i) => { steps[s.index ?? (i + 1)] = s; });
+  const stepNums = Object.keys(steps).map(Number).sort((a,b) => a - b);
+
+  const byStep = _collectQuestTriggers(questId);
+  // Merge staged (unsaved) triggers so graph reflects current editor state
+  const _nodeLabel = { room_enter:'on_enter', item_get:'on_get', item_use:'on_use',
+                       npc_kill:'kill_script', npc_dialogue:'dlg', npc_give:'give_accepts' };
+  for (const t of (quest._staged_triggers || [])) {
+    const k = t.step === null ? 'complete' : t.step;
+    (byStep[k] = byStep[k] || []).push({
+      npc_id: t.entity_id, node_id: t.trigger_type === 'npc_dialogue' ? (t.node_id || 'dlg') : (_nodeLabel[t.trigger_type] || t.trigger_type),
+      to_step: t.step, flags_required: [], flags_set: t.guard_flag ? [t.guard_flag] : [],
+      flags_cleared: [], other_ops: ['staged'], zone_id: t.zone_id, entity_type: t.trigger_type, _staged: true,
+    });
+  }
+
+  const svg = _buildQuestFlowSVG(quest, byStep, false);
 
   // Build view
   const canvas = document.createElement('div');
