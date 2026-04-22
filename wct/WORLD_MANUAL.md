@@ -4852,13 +4852,13 @@ Click **Map** to open the full-screen world map (all zones stitched together by 
 
 **Selecting rooms**
 
-- **Click a room** — selects it; highlights connected rooms gold; shows room details (spawns, items, exits) in the right panel with an **Edit Room** button that opens the room editor
+- **Click a room** — selects it; highlights connected rooms gold; shows room details (spawns, items, exits) in the right panel with an **Edit Room** button that opens the room editor. The exit editor drawer also opens at the bottom of the map (see **Inline exit editor** below).
 - **Shift/Ctrl+click a room** — toggles it in/out of a multi-selection (blue highlight); does not clear other selections
 - **Shift+drag on empty canvas** — rubber-band lasso; all rooms whose centres fall within the rectangle are added to the multi-selection
 
 **Selecting exits**
 
-- **Click an exit line** — selects the edge; highlights both endpoint rooms teal; shows exit details in the right panel — direction, locked/key/show_if/on_enter for both the forward and reverse exits, with **Edit** buttons for each room. A "no reverse exit" warning appears if the reverse is missing.
+- **Click an exit line** — selects the edge; highlights both endpoint rooms teal; shows exit details in the right panel — direction, locked/key/show_if/on_enter for both the forward and reverse exits, with **Edit** buttons for each room. A "no reverse exit" warning appears if the reverse is missing. The exit editor drawer also opens with the clicked exit pre-highlighted.
 
 **Moving rooms**
 
@@ -4879,9 +4879,38 @@ Click **Map** to open the full-screen world map (all zones stitched together by 
 **Other controls**
 
 - **counts** toggle — overlays NPC and item counts on each room node
-- **exit labels** toggle — shows direction labels near each exit anchor
+- **exit labels** toggle — shows direction labels near each exit anchor. When an exit has a `show_if` condition, a second smaller line appears below the direction label (e.g. `has_flag: power_core_restored`), truncated to fit.
 - **Export DOT** — downloads a Graphviz `.dot` file of the current zone filter
 - The map updates automatically when you reload the world while it is open
+
+**Quest highlight overlay**
+
+Select a quest from the **Quest** dropdown in the toolbar. The map dims all rooms not involved in the quest and highlights quest-related rooms in purple:
+
+| Highlight | Meaning |
+|-----------|---------|
+| Purple border + light purple fill | Room where the quest giver NPC spawns |
+| Purple border | Room where a quest trigger fires (on_enter, NPC dialogue, item on_get/on_use, kill_script) |
+| Dimmed (30% opacity) | Room has no role in this quest |
+
+A **quest flow panel** opens on the right side showing the step graph (same as the quest editor's Graph view). The two panels are linked:
+
+- **Click a step node** in the quest panel → only the rooms where that step's trigger fires highlight on the map; other quest rooms dim
+- **Click the panel background** → all quest rooms re-highlight (reset to full overview)
+- **Click a highlighted map room** → the matching step node(s) in the quest panel get a selection outline
+- **Clear the Quest dropdown** → overlay removed, map returns to normal
+
+**Inline exit editor**
+
+When a room or exit is selected, an exit editor drawer opens at the bottom of the map. It lists all exits for the selected room in a table: direction, destination, locked status, and show_if condition.
+
+- **Edit** — expands the row into an inline form with fields for direction, destination (dropdown of all rooms), locked checkbox, lock_tag, description, and show_if condition (colon-separated syntax: `has_flag: flag_name`, `not_flag: flag_name`, `min_level: 5`, etc.). Typing a direction that already exists turns the field red and blocks saving. Click **Full editor →** to open the room in the main editor for advanced fields (on_exit, on_enter, on_look, on_lock, on_unlock scripts).
+- **Del** — prompts for confirmation, then removes the exit, writes the file, and refreshes the map.
+- **+ Add Exit** — opens a blank inline form to create a new exit.
+- **Save** in the inline form — writes the change directly to the `rooms.toml` file (same file-write as Save Map). The map refreshes and the table updates immediately.
+- **×** on the drawer header — closes the exit editor.
+
+> **Note:** The inline exit editor writes the room file immediately. If you have unsaved edits in the main room editor for a room in the same file, the editor will block the exit save with an error — save or discard your workspace changes first.
 
 ---
 

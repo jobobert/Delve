@@ -17,7 +17,7 @@ python tools/clean.py --all              # wipe players, zone state, caches
 python tools/run_script.py <file> --player <name>  # run a standalone script file
 python tools/offline_bot.py --world first_world --turns 500
 python tools/critical_path.py --world first_world          # static quest/lock dependency analysis
-python tools/critical_path.py --world awoke --out report.txt
+python tools/critical_path.py --world awoke --out report.txt   # save analysis to file
 python tools/world2html.py --world first_world             # export full world to HTML for review
 ```
 

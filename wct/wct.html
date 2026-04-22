@@ -7555,6 +7555,10 @@ function _buildQuestRoomMap(questId) {
   const byRoom     = new Map();
   const stepToRooms = new Map();
 
+  // Resolve both string and object-form entries ({id, count} etc.) to their ID.
+  const entryId = e => (typeof e === 'string' ? e : (e?.id || ''));
+  const listHas = (arr, id) => (arr || []).some(e => entryId(e) === id);
+
   const addRoom = (rid, stepKey, role) => {
     if (!rid || !ALL_ROOMS[rid]) return;
     if (!byRoom.has(rid)) byRoom.set(rid, {steps: new Set(), roles: new Set()});
@@ -7569,7 +7573,7 @@ function _buildQuestRoomMap(questId) {
   const giver = quest?.giver;
   if (giver && !giver.startsWith('_')) {
     for (const r of Object.values(ALL_ROOMS)) {
-      if ((r.spawns || []).includes(giver)) addRoom(r.id, 'start', 'giver');
+      if (listHas(r.spawns, giver)) addRoom(r.id, 'start', 'giver');
     }
   }
 
@@ -7581,11 +7585,11 @@ function _buildQuestRoomMap(questId) {
         addRoom(t.npc_id, sk, 'trigger');
       } else if (t.entity_type === 'dialogue' || t.entity_type === 'npc' || t.entity_type === 'npc_give') {
         for (const r of Object.values(ALL_ROOMS)) {
-          if ((r.spawns || []).includes(t.npc_id)) addRoom(r.id, sk, 'npc');
+          if (listHas(r.spawns, t.npc_id)) addRoom(r.id, sk, 'npc');
         }
       } else if (t.entity_type === 'item') {
         for (const r of Object.values(ALL_ROOMS)) {
-          if ((r.items || []).includes(t.npc_id)) addRoom(r.id, sk, 'item');
+          if (listHas(r.items, t.npc_id)) addRoom(r.id, sk, 'item');
         }
       }
       // craft: no room context
@@ -7726,16 +7730,34 @@ function _buildExitRow(dir, val, rid, selected) {
   const destName = ALL_ROOMS[destId]?.name || destId || '?';
   const locked   = obj?.locked ? 'yes' : '';
   const showIf   = obj?.show_if ? _fmtShowIf(obj.show_if) : '';
+
   const row = document.createElement('div');
   row.className = 'exit-tbl-row' + (selected ? ' exit-tbl-sel' : '');
-  const safeDir = escHtml(dir);
-  row.innerHTML =
-    `<span>${safeDir}</span>` +
-    `<span>${escHtml(destName)}</span>` +
-    `<span style="color:${locked ? 'var(--yellow)' : 'var(--text-dim)'}">${escHtml(locked)}</span>` +
-    `<span style="color:var(--text-dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(showIf)}</span>` +
-    `<button class="hbtn" onclick="_expandExitEdit('${escHtml(dir)}')">Edit</button>` +
-    `<button class="hbtn danger" onclick="_deleteExit('${escHtml(dir)}')">Del</button>`;
+
+  const cell = (text, style) => {
+    const s = document.createElement('span');
+    s.textContent = text;
+    if (style) s.style.cssText = style;
+    return s;
+  };
+
+  row.appendChild(cell(dir));
+  row.appendChild(cell(destName));
+  row.appendChild(cell(locked, locked ? 'color:var(--yellow)' : 'color:var(--text-dim)'));
+  row.appendChild(cell(showIf, 'color:var(--text-dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'));
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'hbtn';
+  editBtn.textContent = 'Edit';
+  editBtn.addEventListener('click', () => _expandExitEdit(dir));
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'hbtn danger';
+  delBtn.textContent = 'Del';
+  delBtn.addEventListener('click', () => _deleteExit(dir));
+
+  row.appendChild(editBtn);
+  row.appendChild(delBtn);
   return row;
 }
 
@@ -7758,8 +7780,7 @@ function _expandExitEdit(dir) {
   const locked  = obj?.locked  || false;
   const lockTag = obj?.lock_tag || '';
   const desc    = obj?.desc    || '';
-  const showIf  = (typeof obj?.show_if === 'object' && obj.show_if !== null)
-    ? JSON.stringify(obj.show_if) : (obj?.show_if || '');
+  const showIf  = _fmtShowIf(obj?.show_if);
 
   const roomOptions = Object.values(ALL_ROOMS)
     .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id))
@@ -7781,7 +7802,7 @@ function _expandExitEdit(dir) {
     `<label>Description</label>` +
     `<input type="text" id="ef-desc" value="${escHtml(desc)}" placeholder="optional door text">` +
     `<label>Show if</label>` +
-    `<input type="text" id="ef-show-if" value="${escHtml(showIf)}" placeholder="has_flag flag_name">` +
+    `<input type="text" id="ef-show-if" value="${escHtml(showIf)}" placeholder="has_flag: flag_name">` +
     `<div class="exit-tbl-form-actions">` +
       `<a href="#" onclick="mapInfoEditRoom();return false">Full editor →</a>` +
       `<button class="hbtn" onclick="_cancelExitEdit()">Cancel</button>` +
@@ -7791,6 +7812,17 @@ function _expandExitEdit(dir) {
 
   document.getElementById('ef-locked').addEventListener('change', e => {
     document.getElementById('ef-lock-tag').style.opacity = e.target.checked ? '1' : '.4';
+  });
+
+  // Flag duplicate directions live, the same way the full exit editor does.
+  const dirInp = document.getElementById('ef-dir');
+  const existingDirs = Object.keys(room?.exits || {});
+  dirInp.addEventListener('input', () => {
+    const v = dirInp.value.trim();
+    const isDup = v && v !== dir && existingDirs.includes(v);
+    dirInp.style.outline = isDup ? '1px solid var(--red)' : '';
+    dirInp.style.color   = isDup ? 'var(--red)' : '';
+    dirInp.title = isDup ? `Direction "${v}" already exists — fix before saving` : '';
   });
 }
 
@@ -7812,6 +7844,12 @@ async function _saveExitEdit(originalDir) {
 
   if (!newDir)  { setStatus('Direction is required', 'err'); return; }
   if (!destId)  { setStatus('Destination is required', 'err'); return; }
+  if (newDir !== originalDir && newDir in (room.exits || {})) {
+    setStatus(`Direction "${newDir}" already exists — fix or delete one before saving`, 'err');
+    const dirInp = document.getElementById('ef-dir');
+    if (dirInp) { dirInp.style.outline = '1px solid var(--red)'; dirInp.style.color = 'var(--red)'; }
+    return;
+  }
 
   const isSimple = !locked && !lockTag && !desc && !showIfRaw;
   let exitVal;
@@ -7823,8 +7861,8 @@ async function _saveExitEdit(originalDir) {
     if (lockTag)   exitVal.lock_tag = lockTag;
     if (desc)      exitVal.desc     = desc;
     if (showIfRaw) {
-      try { exitVal.show_if = JSON.parse(showIfRaw); }
-      catch { exitVal.show_if = showIfRaw; }
+      const {op, val1, val2} = _parseShowIf(showIfRaw);
+      _writeShowIf(exitVal, op, val1, val2);
     }
     // Preserve script fields from original exit
     const orig = (originalDir && typeof room.exits?.[originalDir] === 'object') ? room.exits[originalDir] : null;
@@ -7854,7 +7892,15 @@ async function _persistExits(rid, newExits) {
   const room = ALL_ROOMS[rid];
   if (!room) return;
 
-  // Update in-memory caches
+  // Guard: markDirty() syncs SELECTED.data into WORLD_DATA immediately, so
+  // writing from WORLD_DATA here would silently commit unsaved workspace edits
+  // to disk.  Block when the workspace has a dirty room in the same file.
+  if (DIRTY && SELECTED?.type === 'room' && ALL_ROOMS[SELECTED.data?.id]?._file === room._file) {
+    setStatus('Save or discard your workspace changes before editing map exits', 'err');
+    return;
+  }
+
+  // Update in-memory caches before writing so the file reflects the new exits.
   room.exits = newExits;
   const zoneRoom = WORLD_DATA.zones?.[room.zone_id]?.rooms?.find(r => r.id === rid);
   if (zoneRoom) zoneRoom.exits = newExits;
@@ -7876,6 +7922,12 @@ async function _persistExits(rid, newExits) {
   });
   const j = await res.json();
   if (!j.ok) { setStatus('Error saving exits: ' + (j.error || file), 'err'); return; }
+
+  // Sync SELECTED.data.exits so a subsequent explicit room-save doesn't
+  // overwrite the exits we just wrote with the stale clone.
+  if (SELECTED?.type === 'room' && SELECTED.data?.id === rid) {
+    SELECTED.data.exits = newExits;
+  }
 
   setStatus('Exit saved', 'ok');
   _mapQuestRoomCache = {};
@@ -8268,7 +8320,19 @@ function renderMap(zoneFilter) {
       lt.setAttribute('text-anchor', 'middle');
       lt.setAttribute('font-size', '10'); lt.setAttribute('fill', locked ? '#c05050' : hasReverse ? '#666' : '#c07820');
       lt.setAttribute('pointer-events', 'none');
-      lt.textContent = dir;
+      const showIfStr = (typeof ev === 'object') ? _fmtShowIf(ev?.show_if) : '';
+      if (showIfStr) {
+        const t1 = document.createElementNS(NS, 'tspan');
+        t1.setAttribute('x', tx); t1.setAttribute('dy', '0');
+        t1.textContent = dir;
+        const t2 = document.createElementNS(NS, 'tspan');
+        t2.setAttribute('x', tx); t2.setAttribute('dy', '10');
+        t2.setAttribute('font-size', '8'); t2.setAttribute('fill', '#7e90aa');
+        t2.textContent = showIfStr.length > 18 ? showIfStr.slice(0, 16) + '…' : showIfStr;
+        lt.appendChild(t1); lt.appendChild(t2);
+      } else {
+        lt.textContent = dir;
+      }
       svg.appendChild(lt);
     }
   }

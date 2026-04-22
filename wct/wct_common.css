@@ -3,6 +3,7 @@
   --surface:   #444547;
   --panel:     #181c23;
   --border:    #8390a9;
+  --border-rgb: 131,144,169;
   --accent:    #c8a96e;
   --accent2:   #5b8fb9;
   --dim:       #7f96be;
@@ -723,7 +724,7 @@ label { font-size: 13px; color: var(--text-dim); text-transform: uppercase; lett
 .exit-tbl-row {
   display: grid; grid-template-columns: 80px 1fr 52px 1fr 52px 46px;
   gap: 4px; align-items: center; padding: 4px 10px;
-  border-bottom: 1px solid rgba(131,144,169,.2);
+  border-bottom: 1px solid rgba(var(--border-rgb),.2);
 }
 .exit-tbl-row:hover { background: rgba(255,255,255,.04); }
 .exit-tbl-row.exit-tbl-sel { background: rgba(155,127,212,.15); }
