@@ -64,6 +64,13 @@
     <div id="tree-detail">
       <div class="tree-toolbar">
         <input class="tree-search" id="tree-search" placeholder="Search..." oninput="filterDetail(this.value)">
+        <button id="session-pin-btn" title="Pin search as a session group" onclick="pinCurrentSearch()">📌</button>
+      </div>
+      <div id="session-panel">
+        <div id="session-add-row">
+          <input id="session-add-input" placeholder="Pin term as session..." onkeydown="if(event.key==='Enter')addSessionSearch(this.value)">
+          <button id="session-add-btn" onclick="addSessionSearch(document.getElementById('session-add-input').value)">Pin</button>
+        </div>
       </div>
       <div id="detail-list"></div>
     </div>
@@ -632,6 +639,7 @@ const MANUAL_ANCHORS = {
 let SELECTED     = null;  // {type, zone_id, data}  — mutable working copy
 let DIRTY        = false;
 let XREF         = {};    // id → [{type, zone_id, id, name, context}]
+let SESSION_SEARCHES = []; // [{term, entities:[{type,zone_id,id,name}]}]
 let _newIdAuto   = true;
 let _newType     = 'room';
 let _dragging    = null;   // {type, id, name} while a tree item is being dragged
@@ -701,6 +709,9 @@ async function loadWorld(worldId) {
   TAG_CATEGORIES = _loadTagCategories();
   _applyEngineTagDefaults();
   rebuildTagPalette();
+  // Load and render session searches for this world
+  SESSION_SEARCHES = _loadSessionSearches();
+  refreshSessionSearches();
   SELECTED = null; DIRTY = false; _setDirtyUI(false);
   renderEditor();
   document.getElementById('xref-body').innerHTML = '<div class="xref-empty">Select an object to see where it is used.</div>';
@@ -895,6 +906,216 @@ function filterDetail(q) {
     const text  = (label ? label.textContent : '') + ' ' + (el.dataset.id || '');
     el.style.display = !q || text.toLowerCase().includes(q) ? '' : 'none';
   });
+}
+
+// ── Session Search ─────────────────────────────────────────────────────
+function _sessionStorageKey() {
+  return WORLD_ID ? 'wct_sessions_' + WORLD_ID : null;
+}
+
+function _saveSessionSearches() {
+  const key = _sessionStorageKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(SESSION_SEARCHES));
+}
+
+function _loadSessionSearches() {
+  const key = _sessionStorageKey();
+  if (!key) return [];
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { return []; }
+}
+
+function _sessionGroupKey() {
+  return WORLD_ID ? 'wct_session_groups_' + WORLD_ID : null;
+}
+
+function _saveSessionGroupState(term, isOpen) {
+  const key = _sessionGroupKey();
+  if (!key) return;
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(key) || '{}'); } catch (_) {}
+  state[term] = isOpen;
+  localStorage.setItem(key, JSON.stringify(state));
+}
+
+function _loadSessionGroupState() {
+  const key = _sessionGroupKey();
+  if (!key) return {};
+  try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (_) { return {}; }
+}
+
+/**
+ * Deep-search all entities in WORLD_DATA for the given term (case-insensitive).
+ * Returns [{type, zone_id, id, name}] sorted by type then name.
+ */
+function searchAllEntities(term) {
+  if (!WORLD_DATA || !term) return [];
+  const q = term.toLowerCase();
+  const results = [];
+  const seen = new Set();
+
+  function _tryAdd(type, zone_id, id, name, obj) {
+    const key = type + ':' + id;
+    if (seen.has(key)) return;
+    // Stringify the whole object for a broad match (covers all string fields)
+    const haystack = JSON.stringify(obj).toLowerCase();
+    if (haystack.includes(q)) {
+      seen.add(key);
+      results.push({ type, zone_id, id, name });
+    }
+  }
+
+  for (const [zid, zone] of Object.entries(WORLD_DATA.zones || {})) {
+    (zone.rooms     || []).forEach(r => _tryAdd('room',     zid, r.id,       r.name || r.id,     r));
+    (zone.npcs      || []).forEach(n => _tryAdd('npc',      zid, n.id,       n.name || n.id,     n));
+    (zone.items     || []).forEach(i => _tryAdd('item',     zid, i.id,       i.name || i.id,     i));
+    (zone.quests    || []).forEach(q => _tryAdd('quest',    zid, q._id||q.id,q.title||q._id||q.id,q));
+    (zone.dialogues || []).forEach(d => _tryAdd('dialogue', zid, d._npc_id,  d._npc_id,          d));
+    (zone.styles    || []).forEach(s => _tryAdd('style',    zid, s.id,       s.name || s.id,     s));
+    (zone.processes || []).forEach(p => _tryAdd('process',  zid, p.id,       p.name || p.id,     p));
+    (zone.crafting  || []).forEach(c => _tryAdd('crafting', zid, c._npc_id,  c._npc_id,          c));
+  }
+
+  const typeOrder = ['room','npc','item','quest','dialogue','style','process','crafting'];
+  results.sort((a, b) => {
+    const ta = typeOrder.indexOf(a.type), tb = typeOrder.indexOf(b.type);
+    if (ta !== tb) return ta - tb;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+  return results;
+}
+
+function addSessionSearch(term) {
+  term = (term || '').trim();
+  if (!term) return;
+  // Don't duplicate
+  if (SESSION_SEARCHES.some(s => s.term === term)) {
+    document.getElementById('session-add-input').value = '';
+    return;
+  }
+  const entities = searchAllEntities(term);
+  SESSION_SEARCHES.push({ term, entities });
+  _saveSessionSearches();
+  document.getElementById('session-add-input').value = '';
+  renderSessionPanel();
+}
+
+function removeSessionSearch(term) {
+  SESSION_SEARCHES = SESSION_SEARCHES.filter(s => s.term !== term);
+  _saveSessionSearches();
+  renderSessionPanel();
+}
+
+function refreshSessionSearches() {
+  if (!SESSION_SEARCHES.length) return;
+  SESSION_SEARCHES = SESSION_SEARCHES.map(s => ({
+    term: s.term,
+    entities: searchAllEntities(s.term),
+  }));
+  _saveSessionSearches();
+  renderSessionPanel();
+}
+
+function pinCurrentSearch() {
+  const val = (document.getElementById('tree-search')?.value || '').trim();
+  if (!val) return;
+  addSessionSearch(val);
+}
+
+/** Navigate to an entity from the session panel. */
+function _sessionSelectEntity(type, zone_id, id) {
+  if (!WORLD_DATA) return;
+  const zone = WORLD_DATA.zones[zone_id];
+  if (!zone) return;
+  const key = type === 'quest' ? 'quests' : type === 'dialogue' ? 'dialogues'
+            : type === 'crafting' ? 'crafting' : type === 'process' ? 'processes' : type + 's';
+  const arr = zone[key] || [];
+  const obj = arr.find(o => (o.id || o._id || o._npc_id) === id);
+  if (!obj) return;
+  // Switch to this type tab if not already there (clears the text search)
+  if (_ACTIVE_TYPE !== type) {
+    setActiveType(type);
+  }
+  selectObject(type, zone_id, obj);
+}
+
+function _updateSessionHighlight(type, id) {
+  document.querySelectorAll('.session-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.type === type && el.dataset.id === id);
+  });
+}
+
+function renderSessionPanel() {
+  const panel = document.getElementById('session-panel');
+  if (!panel) return;
+
+  // Clear everything except the add-row
+  const addRow = document.getElementById('session-add-row');
+  panel.innerHTML = '';
+  if (addRow) panel.appendChild(addRow);
+  else {
+    // Rebuild add row if somehow missing
+    const row = document.createElement('div');
+    row.id = 'session-add-row';
+    row.innerHTML = `<input id="session-add-input" placeholder="Pin term as session..." onkeydown="if(event.key==='Enter')addSessionSearch(this.value)">
+      <button id="session-add-btn" onclick="addSessionSearch(document.getElementById('session-add-input').value)">Pin</button>`;
+    panel.appendChild(row);
+  }
+
+  if (!SESSION_SEARCHES.length) return;
+
+  const groupState = _loadSessionGroupState();
+  const selId   = SELECTED ? (SELECTED.data.id || SELECTED.data._id || SELECTED.data._npc_id || '') : '';
+  const selType = SELECTED ? SELECTED.type : '';
+
+  for (const { term, entities } of SESSION_SEARCHES) {
+    const isOpen = groupState.hasOwnProperty(term) ? groupState[term] : true;
+
+    const group = document.createElement('div');
+    group.className = 'session-group';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'session-header' + (isOpen ? ' open' : '');
+    hdr.innerHTML = `<span class="caret">&#9658;</span><span class="session-term">&#128269; ${escHtml(term)}</span><span class="session-count">(${entities.length})</span>`;
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'session-clear';
+    clearBtn.title = 'Remove this session';
+    clearBtn.textContent = '×';
+    clearBtn.addEventListener('click', e => { e.stopPropagation(); removeSessionSearch(term); });
+    hdr.appendChild(clearBtn);
+
+    hdr.addEventListener('click', () => {
+      const open = hdr.classList.toggle('open');
+      _saveSessionGroupState(term, open);
+    });
+
+    group.appendChild(hdr);
+
+    const itemsEl = document.createElement('div');
+    itemsEl.className = 'session-items';
+
+    if (entities.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:4px 22px;font-size:12px;color:var(--text-dim);font-style:italic;';
+      empty.textContent = 'No matches';
+      itemsEl.appendChild(empty);
+    } else {
+      for (const ent of entities) {
+        const el = document.createElement('div');
+        el.className = 'session-item' + (ent.type === selType && ent.id === selId ? ' selected' : '');
+        el.dataset.type = ent.type;
+        el.dataset.id   = ent.id;
+        el.dataset.zone = ent.zone_id;
+        el.innerHTML = `<span class="badge ${BADGE_CLS[ent.type]}">${BADGE_LTR[ent.type]||'?'}</span><span class="session-item-name">${escHtml(ent.name || ent.id)}</span><span class="session-item-zone">${escHtml(ent.zone_id)}</span>`;
+        el.addEventListener('click', () => _sessionSelectEntity(ent.type, ent.zone_id, ent.id));
+        itemsEl.appendChild(el);
+      }
+    }
+
+    group.appendChild(itemsEl);
+    panel.appendChild(group);
+  }
 }
 
 // ── Sub-column resizer ────────────────────────────────────────────────
@@ -1214,6 +1435,9 @@ function selectObject(type, zone_id, data) {
   const id = data.id || data._id || data._npc_id || '';
   const el = document.querySelector(`.tree-item[data-id="${CSS.escape(id)}"][data-zone="${CSS.escape(zone_id)}"]`);
   if (el) el.classList.add('selected');
+
+  // Highlight in session panel
+  _updateSessionHighlight(type, id);
 
   renderEditor();
   renderTodoPanel();
