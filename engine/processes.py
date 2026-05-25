@@ -252,3 +252,5 @@ class ProcessManager:
                 {"op": "move_npc", "npc_id": npc_id, "to_room": next_room_id}
             ])
         st["route_index"] = next_idx
+
+

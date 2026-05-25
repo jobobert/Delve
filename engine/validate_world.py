@@ -347,3 +347,7 @@ def validate_world(world_path: Path) -> list[dict]:
         issues.extend(_check_dialogues(zid, zone_dialogues[zid]))
 
     return issues
+
+
+
+

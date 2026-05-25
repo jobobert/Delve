@@ -303,3 +303,6 @@ def peek_world_name(world_path: Path) -> str:
         return str(_get_t(toml_cfg, "world_name", world_path.name))
     py_cfg = _load_py_cfg(world_path / "config.py")
     return str(_get_p(py_cfg, "WORLD_NAME", world_path.name))
+
+
+

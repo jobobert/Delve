@@ -341,3 +341,5 @@ def build_map_data(
         }
 
     return grid
+
+

@@ -279,3 +279,5 @@ def render_dot(dot_path: Path, fmt: str) -> bool:
     except FileNotFoundError:
         print("    (dot not found on PATH — skipping render)", file=sys.stderr)
         return False
+
+
