@@ -5232,7 +5232,7 @@ async function save() {
       addBtn.addEventListener('click', () => {
         d.commission.push({
           id: '', npc_id: d._npc_id || '', label: '', desc: '',
-          slot: '', weapon_tags: [], armor_tags: [],
+          slot: '', weapon_tags: [], armor_tags: [], result_item: '',
           materials: [], turns_required: 30, gold_cost: 0,
           xp_reward: 0, weight: 0, on_complete: [], qualities: [],
         });
@@ -5290,6 +5290,13 @@ async function save() {
         null, 'Base item name (quality prefix is prepended at output time).'));
       body.appendChild(fieldRow('Desc', textareaInput(comm.desc, v => { comm.desc = v; markDirty(); }, 'Short description shown in commission menu.'),
         null, 'One-line description shown when the player browses commissions.'));
+
+      const resultInp = refInput(comm.result_item || '', 'dl-items',
+        v => { comm.result_item = v; markDirty(); }, 'item');
+      body.appendChild(fieldRow('Result item', resultInp, null,
+        'OPTIONAL. Leave blank for normal crafting: a quality tier is rolled and the item is built from Label/Slot/Tags.\n\n' +
+        'Set it to an item ID to hand back that authored item verbatim instead. Use this when the finished piece needs its own on_get/on_use scripts, tags or quest wiring — repair modules, quest components, unique gear.\n\n' +
+        'When set: no quality is rolled (tiers are ignored), and the item\'s on_get script runs on collection so quest advances fire.'));
 
       // ── Numeric / slot row ────────────────────────────────────────────────
       body.appendChild(sectionTitle('Properties'));
@@ -5489,6 +5496,7 @@ async function save() {
       give_xp: [{ key: 'amount', type: 'num', label: 'amount' }, { key: 'silent', type: 'bool', label: 'silent' }],
       heal: [{ key: 'amount', type: 'num', label: 'amount' }],
       set_hp: [{ key: 'amount', type: 'num', label: 'amount' }],
+      temp_stat: [{ key: 'stat', type: 'text', label: 'stat', placeholder: 'attack | defense | max_hp' }, { key: 'amount', type: 'num', label: 'amount' }, { key: 'duration', type: 'num', label: 'duration' }, { key: 'silent', type: 'bool', label: 'silent' }],
       damage: [{ key: 'amount', type: 'num', label: 'amount' }, { key: 'message', type: 'text', label: 'message' }, { key: 'silent', type: 'bool', label: 'silent' }],
       give_item: [{ key: 'item_id', type: 'item_ref', label: 'item' }],
       take_item: [{ key: 'item_id', type: 'item_ref', label: 'item' }],
@@ -5505,9 +5513,9 @@ async function save() {
       skill_check: [{ key: 'skill', type: 'skill_ref', label: 'skill' }, { key: 'dc', type: 'num', label: 'dc' }, { key: 'silent', type: 'bool', label: 'silent' }, { key: 'grow', type: 'bool', label: 'grow' }, { branch: 'on_pass' }, { branch: 'on_fail' }],
       if_skill: [{ key: 'skill', type: 'skill_ref', label: 'skill' }, { key: 'min', type: 'num', label: 'min' }, { branch: 'then' }, { branch: 'else' }],
       skill_grow: [{ key: 'skill', type: 'skill_ref', label: 'skill' }, { key: 'amount', type: 'num', label: 'amount' }],
-      apply_status: [{ key: 'effect', type: 'effect', label: 'effect' }, { key: 'duration', type: 'num', label: 'duration' }],
-      clear_status: [{ key: 'effect', type: 'effect', label: 'effect' }],
-      if_status: [{ key: 'effect', type: 'effect', label: 'effect' }, { branch: 'then' }, { branch: 'else' }],
+      apply_status: [{ key: 'effect', type: 'effect', label: 'effect' }, { key: 'duration', type: 'num', label: 'duration' }, { key: 'target', type: 'text', label: 'target', placeholder: 'blank = player; npc = the NPC being fought' }],
+      clear_status: [{ key: 'effect', type: 'effect', label: 'effect' }, { key: 'target', type: 'text', label: 'target', placeholder: 'blank = player; npc' }],
+      if_status: [{ key: 'effect', type: 'effect', label: 'effect' }, { key: 'target', type: 'text', label: 'target', placeholder: 'blank = player; npc' }, { branch: 'then' }, { branch: 'else' }],
       prestige: [{ key: 'amount', type: 'num', label: 'amount' }, { key: 'reason', type: 'text', label: 'reason' }],
       add_affinity: [{ key: 'tag', type: 'tag', label: 'tag' }],
       remove_affinity: [{ key: 'tag', type: 'tag', label: 'tag' }],
@@ -5540,6 +5548,7 @@ async function save() {
       set_item_stat: [{ key: 'slot', type: 'text', label: 'slot', placeholder: 'slot or item_id' }, { key: 'item_id', type: 'item_ref', label: 'item_id (alt)' }, { key: 'stat', type: 'text', label: 'stat' }, { key: 'value', type: 'num', label: 'value' }],
       pause: [{ key: 'seconds', type: 'num', label: 'seconds' }],
       block_damage: [],
+      bonus_damage: [{ key: 'amount', type: 'num', label: 'amount' }],
       multiply_damage: [{ key: 'multiplier', type: 'num', label: 'multiplier' }],
       counter_damage: [{ key: 'multiplier', type: 'num', label: 'multiplier' }],
       reduce_damage: [{ key: 'percent', type: 'num', label: 'percent' }],
@@ -5558,10 +5567,10 @@ async function save() {
     const OP_HELP = {
       add_affinity: 'Add a tag to the player\'s affinities.',
       advance_quest: 'Move a quest forward to the specified step number.',
-      apply_status: 'Apply a status effect to the player for N moves.',
+      apply_status: 'Apply a status effect for N moves. target = "npc" debuffs the NPC being fought instead of the player (combat only; combat_atk/combat_def apply, damage_per_move does not).',
       bank_expand: 'Expand the player\'s bank storage to the given tier.',
       clear_flag: 'Remove a named flag from the player\'s save file.',
-      clear_status: 'Remove a status effect from the player.',
+      clear_status: 'Remove a status effect. target = "npc" clears it from the NPC being fought.',
       complete_quest: 'Mark a quest as fully completed.',
       damage: 'Deal damage to the player; optional message is shown instead of the default.',
       dismiss_companion: 'Dismiss the player\'s active companion with an optional message.',
@@ -5584,7 +5593,7 @@ async function save() {
       if_quest_active: 'Branch then/else based on whether a quest has been started and is not yet complete (any step).',
       if_quest_complete: 'Branch then/else based on whether a quest is fully completed.',
       if_skill: 'Branch then/else based on whether a skill value is >= min.',
-      if_status: 'Branch then/else based on whether the player has a status effect.',
+      if_status: 'Branch then/else on whether a status effect is present. target = "npc" checks the NPC being fought.',
       journal_entry: 'Add a titled entry to the player\'s in-game journal.',
       lock_exit: 'Lock a directional exit in a room so it cannot be used.',
       message: 'Emit text with a custom tag for different styling (e.g. tag: "warning").',
@@ -5599,6 +5608,7 @@ async function save() {
       say: 'Print a line of text to the player (styled as NPC speech).',
       set_flag: 'Set a named flag on the player\'s save file.',
       set_hp: 'Set the player\'s HP to an exact value.',
+      temp_stat: 'Timed buff to attack, defense or max_hp. Folds into the player\'s effective stat until it ticks out; duration -1 lasts until rest or death. Ticks only on action turns.',
       skill_check: 'Roll a skill check vs dc. Branches on_pass / on_fail. grow=true increments the skill on pass.',
       skill_grow: 'Directly increase a skill value by the given amount.',
       spawn_item: 'Place an item on the floor of the current room.',
@@ -5616,6 +5626,7 @@ async function save() {
       set_item_stat: 'Set a stat_bonus on an equipped (or carried) item to an exact value. Use slot= for equipped items, item_id= for inventory items.',
       pause: 'Pause for N seconds (dramatic effect). The frontend sleeps; the engine stays decoupled.',
       block_damage: 'Set the current hit damage to 0 and mark it blocked. (combat passives only)',
+      bonus_damage: 'Add a flat amount to the current hit damage. (combat passives only)',
       multiply_damage: 'Scale the current hit damage by multiplier. (combat passives only)',
       counter_damage: 'Deal back-damage to the current attacker (fraction of their base attack stat). (combat passives only)',
       reduce_damage: 'Reduce the current hit damage by percent (0-100). (combat passives only)',

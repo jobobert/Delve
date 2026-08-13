@@ -23,6 +23,28 @@ materials   = ["iron_ore", "iron_ore", "coal_chunk"]  # item IDs required
 turns_required = 30                 # room-moves until ready (rest = 20 turns)
 gold_cost   = 0                     # upfront gold deposit (can be 0)
 xp_reward   = 50                    # XP awarded on collection
+result_item = ""                    # optional — see "Authored results" below
+
+Authored results (`result_item`)
+────────────────────────────────
+Set `result_item = "<item_id>"` to have the crafter hand back a copy of an
+authored item from the world's items.toml instead of a procedurally built one.
+Use this when the finished piece needs its own on_get/on_use scripts, tags, or
+quest wiring — repair modules, quest components, unique gear.
+
+[[commission]]
+id             = "rep_relay_assembly"
+npc_id         = "la_replicator"
+label          = "Power Relay Assembly"
+result_item    = "la_relay_assembly"    # ← handed back verbatim
+materials      = ["lf_metal_housing", "lf_metal_housing", "lf_circuit_board"]
+turns_required = 25
+
+When `result_item` is set:
+  • no quality tier is rolled — [[quality]] blocks are ignored, and the collect
+    message uses the "standard" tier line
+  • the item's `on_get` script runs on collection, so quest advances fire
+  • if the ID does not resolve, the engine falls back to the normal build path
 
 [[quality]]
 tier      = "poor"
@@ -319,14 +341,31 @@ def tick_commissions(player: "Player", turns: int = 1) -> list[str]:
     return just_ready
 
 
-def collect_commission(player: "Player", commission_rec: dict) -> dict:
+def collect_commission(player: "Player", commission_rec: dict,
+                       world=None) -> tuple[dict, dict]:
     """
-    Roll quality, build the finished item, remove the commission record,
-    and return the finished item dict (not yet added to inventory).
+    Build the finished item, remove the commission record, and return
+    (item, quality). The item is not yet added to inventory.
+
+    A commission that defines `result_item` hands back a copy of that authored
+    item template instead of a procedurally built one — use it when the finished
+    piece needs its own scripts, tags, or quest wiring. Quality is not rolled in
+    that case; the caller receives a "standard" placeholder tier.
+
+    Otherwise quality is rolled from the commission's [[quality]] tiers and the
+    item is assembled by build_item().
     """
     commission_def = commission_rec.get("commission_def", {})
-    quality        = roll_quality(commission_def)
-    item           = build_item(commission_def, quality)
+    result_id      = commission_def.get("result_item", "")
+
+    if result_id and world is not None:
+        template = world.items.get(result_id)
+        if template:
+            player.commissions.remove(commission_rec)
+            return copy.deepcopy(template), {"tier": "standard"}
+
+    quality = roll_quality(commission_def)
+    item    = build_item(commission_def, quality)
     player.commissions.remove(commission_rec)
     return item, quality
 

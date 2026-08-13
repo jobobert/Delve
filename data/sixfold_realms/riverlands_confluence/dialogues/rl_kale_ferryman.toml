@@ -74,7 +74,7 @@ next = ""
 node = "return_token"
 text = "I found what you were looking for."
 next = ""
-show_if = {op = "has_flag", flag = "rl_has_resonant_token"}
+condition = {flag = "rl_has_resonant_token"}
 
 [[response]]
 node = "dismiss"

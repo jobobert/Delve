@@ -180,7 +180,7 @@ respawn     = false
 effects     = []
 on_get      = [
   { op = "if_not_flag", flag = "dp_forge_aligned", then = [
-    { op = "if_has_item", item_id = "resonant_alloy_ingot", then = [
+    { op = "if_item", item_id = "resonant_alloy_ingot", then = [
       { op = "take_item", item_id = "resonant_alloy_ingot" },
       { op = "message", tag = "crafting", text = "You seat the ingot in the cradle. The panel hums and the gears begin to turn." },
       { op = "set_flag", flag = "dp_forge_aligned" },

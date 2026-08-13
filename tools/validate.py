@@ -14,6 +14,28 @@ Scans all zone folders (data/*/) for TOML data files and checks:
   - Every .toml file is valid TOML (via stdlib tomllib — strict parser)
   - Every dialogue file: nodes reachable, next= refs valid, no [[node.response]] usage
 
+Silent-failure checks
+─────────────────────
+The engine is deliberately permissive at runtime: ScriptRunner ignores ops it does
+not recognise, ignores attributes it does not read, and dialogue ignores unknown
+response keys. That is good for forward compatibility and terrible for authoring —
+a typo costs nothing at load time and simply never happens in play. Several of
+these have shipped in real worlds and gone unnoticed for months.
+
+So this validator treats "parses fine, does nothing" as an ERROR:
+  - unknown script ops, and unknown attributes on known ops
+    (validate_script_ops — the op table is derived from engine/script.py itself,
+     so it can never drift out of date)
+  - show_if on a [[response]] (responses are filtered on `condition`)
+  - item command verbs shadowed by built-in engine verbs
+  - style passives with an unreachable trigger, `script` instead of `on_activate`,
+    or a percentage `chance` value
+  - commission `materials` given as tables rather than item-id strings
+
+Where a check cannot run — because it introspects engine source that has since
+been restructured — that is reported as an error too, never skipped silently.
+A pass has to mean the checks actually ran.
+
 Run from the project root:
     python tools/validate.py                  # validate all worlds
     python tools/validate.py --world first_world  # validate one world only
@@ -412,10 +434,15 @@ def _collect_all_quest_ops() -> dict[str, set]:
                 _scan(npc.get("kill_script", []))
                 for entry in npc.get("give_accepts", []):
                     _scan(entry.get("script", []))
-            # Item on_get and on_use
+            # Item on_get / on_use / on_drop, plus custom [[item.commands]] verbs.
+            # Scenery drives a lot of quest logic through item commands, since the
+            # `use` verb only reaches inventory — see WORLD_MANUAL §6.4.
             for item in data.get("item", []):
                 _scan(item.get("on_get", []))
                 _scan(item.get("on_use", []))
+                _scan(item.get("on_drop", []))
+                for cmd in item.get("commands", []):
+                    _scan(cmd.get("ops", []))
             # Room scripts
             for room in data.get("room", []):
                 _scan(room.get("on_enter", []))
@@ -552,6 +579,270 @@ def validate_orphaned_tables() -> None:
                         f"Move them inline onto the [[commission]] as "
                         f"quality = [{{label = \"...\", ...}}]"
                     )
+
+
+ENGINE_DIR = Path(__file__).parent.parent / "engine"
+
+# Wrong-key mistakes that are common enough to deserve a pointed message rather
+# than the generic "unknown attribute" one. Keyed by (op, wrong_key).
+_CONFUSABLE_ATTRS = {
+    ("apply_status", "status"): "the engine reads 'effect'",
+    ("clear_status", "status"): "the engine reads 'effect'",
+    ("if_status",    "status"): "the engine reads 'effect'",
+    ("adjust_attr",  "attr"):   "the engine reads 'name'",
+    ("set_attr",     "attr"):   "the engine reads 'name'",
+    ("if_attr",      "attr"):   "the engine reads 'name'",
+    ("prestige",     "delta"):  "the engine reads 'amount'",
+}
+
+# Keys legal on any op: the discriminator, author notes, and branch arrays.
+_UNIVERSAL_OP_KEYS = {
+    "op", "admin_comment", "comment", "then", "else", "on_pass", "on_fail",
+}
+
+
+def engine_op_table() -> dict[str, set[str]]:
+    """Extract {op_name: {attribute names}} straight from engine/script.py.
+
+    Deriving this from the engine rather than hand-maintaining a list means the
+    check can never drift out of date — a new op is understood the moment it is
+    implemented. If extraction breaks (script.py restructured), that is reported
+    as an error rather than silently disabling the check, which would be exactly
+    the failure mode this function exists to prevent.
+    """
+    import re
+
+    path = ENGINE_DIR / "script.py"
+    try:
+        src = path.read_text(encoding="utf-8")
+        body = src.split("def _exec", 1)[1]
+    except Exception as e:
+        err(f"validate: cannot read the engine op table from {path} — {e}. "
+            f"Script-op validation was skipped; fix this before trusting a pass.")
+        return {}
+
+    table: dict[str, set[str]] = {}
+    for chunk in re.split(r"\n        (?:el)?if name (?:==|in) ", body)[1:]:
+        head, _, rest = chunk.partition(":")
+        seg = rest.split("elif name")[0]
+        attrs = set(re.findall(r'op\.get\(\s*"([a-z_]+)"', seg))
+        attrs |= set(re.findall(r'op\[\s*"([a-z_]+)"\s*\]', seg))
+        for name in re.findall(r'"([a-z_]+)"', head):
+            table.setdefault(name, set()).update(attrs)
+
+    # Sanity floor: the engine has ~75 ops. A tiny result means the parse broke.
+    if len(table) < 40:
+        err(f"validate: only {len(table)} script ops could be extracted from "
+            f"{path} — the extraction pattern no longer matches the source. "
+            f"Script-op validation is unreliable until this is fixed.")
+        return {}
+    return table
+
+
+def validate_script_ops() -> None:
+    """Check every script op against the engine's actual op table.
+
+    The interpreter silently ignores ops it does not recognise and silently
+    ignores attributes it does not read, so a typo here costs nothing at load
+    time and simply never happens at run time. This is the single highest-value
+    check in the file: it is how `temp_stat`, `bonus_damage`, `if_has_item`,
+    `prestige delta` and `apply_status status` all shipped as no-ops.
+    """
+    table = engine_op_table()
+    if not table:
+        return   # engine_op_table already raised an error
+
+    def scan(ops, where: str) -> None:
+        if not isinstance(ops, list):
+            return
+        for op in ops:
+            if not isinstance(op, dict):
+                continue
+            name = op.get("op", "")
+            if name and name not in table:
+                near = sorted(k for k in table
+                              if k.startswith(name[:4]) or name.startswith(k[:4]))
+                hint = f" Did you mean: {', '.join(near[:3])}?" if near else ""
+                err(f"{where}: unknown script op '{name}' — the engine ignores "
+                    f"unrecognised ops, so this line does nothing at all.{hint}")
+            elif name:
+                for key in op:
+                    if key in _UNIVERSAL_OP_KEYS or key in table[name]:
+                        continue
+                    why = _CONFUSABLE_ATTRS.get((name, key))
+                    detail = f" — {why}" if why else (
+                        f" — the engine never reads it. Valid: "
+                        f"{', '.join(sorted(table[name])) or '(none)'}")
+                    err(f"{where}: op '{name}' has attribute '{key}'{detail}.")
+            for branch in ("then", "else", "on_pass", "on_fail", "ops"):
+                scan(op.get(branch), where)
+
+    for zone_folder in zone_dirs():
+        paths = list(zone_folder.glob("*.toml"))
+        for sub in ("dialogues", "quests", "crafting", "styles", "companions"):
+            d = zone_folder / sub
+            if d.exists():
+                paths += list(d.glob("*.toml"))
+        for path in sorted(paths):
+            data = load_safe(path)
+            if not data:
+                continue
+            rel = path.relative_to(DATA_DIR.parent)
+            for room in data.get("room", []):
+                for k in ("on_enter", "on_exit", "on_sleep", "on_wake"):
+                    scan(room.get(k), f"{rel} room '{room.get('id', '?')}' {k}")
+            for item in data.get("item", []):
+                iid = item.get("id", "?")
+                for k in ("on_get", "on_use", "on_drop"):
+                    scan(item.get(k), f"{rel} item '{iid}' {k}")
+                for cmd in item.get("commands", []):
+                    scan(cmd.get("ops"),
+                         f"{rel} item '{iid}' command '{cmd.get('verb', '?')}'")
+            for npc in data.get("npc", []):
+                nid = npc.get("id", "?")
+                for k in ("kill_script", "round_script"):
+                    scan(npc.get(k), f"{rel} npc '{nid}' {k}")
+                for ga in npc.get("give_accepts", []):
+                    scan(ga.get("script"), f"{rel} npc '{nid}' give_accepts")
+            for node in data.get("node", []):
+                scan(node.get("script"), f"{rel} node '{node.get('id', '?')}'")
+            for resp in data.get("response", []):
+                scan(resp.get("script"),
+                     f"{rel} response -> '{resp.get('next', '?')}'")
+            for step in data.get("step", []):
+                scan(step.get("on_advance"), f"{rel} step {step.get('index', '?')}")
+            for proc in data.get("process", []):
+                scan(proc.get("script"), f"{rel} process '{proc.get('id', '?')}'")
+            for comm in data.get("commission", []):
+                scan(comm.get("on_complete"),
+                     f"{rel} commission '{comm.get('id', '?')}' on_complete")
+            for style in data.get("style", []):
+                if not isinstance(style, dict):
+                    continue
+                sid = style.get("id", "?")
+                for pas in style.get("passives", []):
+                    if not isinstance(pas, dict):
+                        continue
+                    pid = pas.get("ability", "?")
+                    scan(pas.get("on_activate"),
+                         f"{rel} style '{sid}' passive '{pid}' on_activate")
+
+
+def validate_silent_key_mistakes() -> None:
+    """Catch data that parses cleanly but is silently ignored at runtime.
+
+    Op names and op attributes are handled by validate_script_ops(), which derives
+    the truth from the engine. This function covers the mistakes that live outside
+    the op table:
+
+      show_if on a [[response]]  — responses are filtered on `condition`; show_if
+                                   is only honoured on `lines` entries, so a
+                                   "gated" response is in fact always visible.
+      item command verb          — shadowed by a built-in engine verb, so it can
+                                   never fire.
+      passive trigger = ...      — combat only matches attack/defend/always.
+      passive script = [...]     — the engine runs `on_activate`.
+      passive chance = 25        — chance is a 0.0-1.0 probability, not a percent.
+    """
+    import re
+
+    resp_hdr = re.compile(r"^\s*\[\[(?:node\.)?response\]\]")
+    show_if_ln = re.compile(r"^\s*show_if\s*=")
+    valid_triggers = {"attack", "defend", "always"}
+
+    # ── show_if on dialogue responses ─────────────────────────────────────────
+    for zone_folder in zone_dirs():
+        dlg = zone_folder / "dialogues"
+        if not dlg.exists():
+            continue
+        for path in sorted(dlg.glob("*.toml")):
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except Exception as e:
+                err(f"{path}: could not be read for response-gate checking — {e}")
+                continue
+            rel = path.relative_to(DATA_DIR.parent)
+            in_response = False
+            for lineno, raw in enumerate(lines, 1):
+                if raw.strip().startswith("[["):
+                    in_response = bool(resp_hdr.match(raw))
+                    continue
+                if in_response and show_if_ln.match(raw):
+                    err(f"{rel}:{lineno}: 'show_if' on a [[response]] is ignored — "
+                        f"responses are filtered on 'condition'. Use "
+                        f"condition = {{flag = \"...\"}} or {{not_flag = \"...\"}}, "
+                        f"otherwise this response is always visible.")
+
+    # ── item command verbs shadowed by built-in commands ──────────────────────
+    # "Built-in engine verbs always take priority over item commands", so an
+    # item command named after one can never fire.
+    try:
+        import re as _re
+        cmds_src = (ENGINE_DIR / "commands.py").read_text(encoding="utf-8")
+        blk = cmds_src.split("self._commands", 1)[1][:8000]
+        builtin_verbs = set(_re.findall(r'"([a-z_]+)":\s*self\._cmd', blk))
+    except Exception as e:
+        builtin_verbs = set()
+        err(f"validate: cannot read the built-in verb table from "
+            f"{ENGINE_DIR / 'commands.py'} — {e}. Item-command verb collision "
+            f"checking was skipped.")
+    # A tiny result means the extraction pattern stopped matching — say so rather
+    # than quietly passing every world.
+    if builtin_verbs and len(builtin_verbs) < 20:
+        err(f"validate: only {len(builtin_verbs)} built-in verbs extracted from "
+            f"commands.py — the pattern no longer matches. Item-command verb "
+            f"collision checking is unreliable until this is fixed.")
+
+    if builtin_verbs:
+        for zone_folder in zone_dirs():
+            for path in sorted(zone_folder.glob("*.toml")):
+                data = load_safe(path)
+                if not data:
+                    continue
+                rel = path.relative_to(DATA_DIR.parent)
+                for item in data.get("item", []):
+                    for cmd in item.get("commands", []):
+                        verb = str(cmd.get("verb", "")).lower()
+                        if verb in builtin_verbs:
+                            err(f"{rel}: item '{item.get('id', '?')}' defines the "
+                                f"command verb '{verb}', which is a built-in engine "
+                                f"command. Built-ins always win, so this verb can "
+                                f"never fire — rename it.")
+
+    # ── style passive schema ──────────────────────────────────────────────────
+    for zone_folder in zone_dirs():
+        styles_dir = zone_folder / "styles"
+        if not styles_dir.exists():
+            continue
+        for path in sorted(styles_dir.glob("*.toml")):
+            data = load_safe(path)
+            if not data:
+                continue
+            rel = path.relative_to(DATA_DIR.parent)
+            if "style.passive" in data:
+                err(f"{rel}: [[style.passive]] blocks do not attach to a style — "
+                    f"the engine reads a 'passives' list. Use [[style.passives]] "
+                    f"(plural) or an inline passives = [...] array.")
+            for style in data.get("style", []):
+                sid = style.get("id", "?")
+                for pas in style.get("passives", []):
+                    pid = pas.get("ability", pas.get("id", "?"))
+                    trig = pas.get("trigger", "attack")
+                    if trig not in valid_triggers:
+                        err(f"{rel}: style '{sid}' passive '{pid}' has "
+                            f"trigger '{trig}'. The engine only matches "
+                            f"{sorted(valid_triggers)} — it never fires.")
+                    if "script" in pas and "on_activate" not in pas:
+                        err(f"{rel}: style '{sid}' passive '{pid}' uses "
+                            f"'script = [...]' but the engine runs 'on_activate'.")
+                    if not pas.get("ability") and "defense_bonus_base" not in pas:
+                        warn(f"{rel}: style '{sid}' passive has no 'ability' id — "
+                             f"'requires' chaining and unlock messages need one.")
+                    ch = pas.get("chance")
+                    if isinstance(ch, (int, float)) and ch > 1:
+                        warn(f"{rel}: style '{sid}' passive '{pid}' has "
+                             f"chance = {ch}. Chance is a 0.0-1.0 probability, not "
+                             f"a percentage — as written it always fires.")
 
 
 def validate_duplicate_keys() -> None:
@@ -759,9 +1050,23 @@ def validate_commissions(commissions: list[dict], items: dict, npcs: dict) -> No
             if mat not in items:
                 err(f"Commission '{cid}': material '{mat}' is not a known item id")
 
-        # Must have at least one quality tier
-        if not c.get("qualities") and not c.get("quality"):
+        # result_item hands back an authored item instead of a rolled one.
+        result = c.get("result_item", "")
+        if result and result not in items:
+            err(f"Commission '{cid}': result_item '{result}' is not a known item id")
+
+        # Must have at least one quality tier — unless result_item is set, in
+        # which case no quality is rolled and tiers would be ignored.
+        if not result and not c.get("qualities") and not c.get("quality"):
             warn(f"Commission '{cid}': no [[quality]] tiers defined")
+
+        # Materials must be a flat list of item-id strings. The engine matches
+        # deposits by id; a list of tables is silently unmatchable.
+        mats_raw = c.get("materials", [])
+        if any(not isinstance(m, str) for m in mats_raw):
+            err(f"Commission '{cid}': 'materials' must be a flat list of item-id "
+                f"strings, e.g. materials = [\"iron_ingot\", \"iron_ingot\"]. "
+                f"Repeat an id to require more than one.")
 
         # Slot must be valid (uses the active world's EQUIPMENT_SLOTS)
         slot = c.get("slot", "")
@@ -1144,6 +1449,8 @@ def _validate_world(world_path: Path) -> None:
 
     validate_orphaned_tables()
     validate_duplicate_keys()
+    validate_script_ops()
+    validate_silent_key_mistakes()
     validate_quest_triggers(quests)
 
     # Collect zone ids that actually have rooms

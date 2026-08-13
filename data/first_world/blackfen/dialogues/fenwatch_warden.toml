@@ -39,7 +39,7 @@ script = [
   { op = "set_flag",       flag = "eitd_quest_complete" },
   { op = "give_gold",      amount = 200 },
   { op = "give_xp",        amount = 500 },
-  { op = "prestige",       delta = 5, reason = "recovered the Celestial Emerald from the Aldenmoor vault" },
+  { op = "prestige",       amount = 5, reason = "recovered the Celestial Emerald from the Aldenmoor vault" },
   { op = "message",        tag = "reward_gold", text = "Warden Holt pays you 200g as promised." },
 ]
 

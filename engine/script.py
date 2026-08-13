@@ -1,5 +1,5 @@
 """
-script.py — Lightweight script interpreter for Delve.  (48 ops)
+script.py — Lightweight script interpreter for Delve.  (75 ops)
 
 Scripts are arrays of operation tables in TOML data files.  They appear in:
   • NPC dialogue nodes and responses
@@ -20,7 +20,7 @@ GameContext
   ctx.bus     — EventBus (emit messages to the frontend)
   ctx.quests  — QuestTracker (start/advance/complete quests)
 
-Operation reference  (54 ops)
+Operation reference  (75 ops)
 ──────────────────────────────
 Output:
   { op = "say",     text = "..." }                  — DIALOGUE-tagged text
@@ -36,6 +36,8 @@ Player state:
   { op = "heal",              amount = N }          — caps at max_hp
   { op = "set_hp",            amount = N }
   { op = "damage",            amount = N }          — optional message = "...", silent = true
+  { op = "temp_stat", stat = "attack"|"defense"|"max_hp",
+    amount = N, duration = N }                      — timed buff; duration -1 = until rest/death
 
 Inventory:
   { op = "give_item",         item_id = "..." }     — deepcopy template → player
@@ -67,9 +69,14 @@ Skills:
 
 Status effects:
   { op = "apply_status",  effect = "poisoned"|"blinded"|"weakened"|"slowed"|"protected",
-    duration = N }                                  — N turns; -1 = permanent
-  { op = "clear_status",  effect = "..." }
-  { op = "if_status",     effect = "...", then = [...], else = [...] }
+    duration = N, target = "player"|"npc" }         — N turns; -1 = permanent
+  { op = "clear_status",  effect = "...", target = "player"|"npc" }
+  { op = "if_status",     effect = "...", target = "player"|"npc",
+    then = [...], else = [...] }
+  — target defaults to "player". target = "npc" acts on the NPC currently being
+    fought and is a no-op outside combat. NPC effects apply combat_atk/combat_def
+    only (damage_per_move is not applied — NPCs do not move) and are cleared when
+    the next fight with that NPC begins.
 
 Prestige:
   { op = "prestige",          amount = N, reason = "..." }
@@ -98,6 +105,16 @@ Teleport / world movement:
   { op = "teleport_player", room_id = "...", message = "optional" }
   { op = "move_npc",  npc_id = "...", to_room = "..." }
   { op = "move_item", item_id = "...", to_room = "...", from_room = "current_room_id" }
+
+Combat passives (style passives only — silently ignored elsewhere):
+  { op = "block_damage" }                           — zero the hit, mark it blocked
+  { op = "bonus_damage",    amount = N }            — add a flat amount to the hit
+  { op = "multiply_damage", multiplier = 2.0 }      — scale the hit
+  { op = "reduce_damage",   percent = 30 }
+  { op = "counter_damage",  multiplier = 0.6 }
+  { op = "skip_npc_attack" }
+  { op = "apply_combat_bleed" }
+  { op = "heal_self",       multiplier = 0.33 }
 
 Combat round (round_script on NPCs only):
   { op = "if_combat_round", min = N, then = [...], else = [...] }
@@ -325,6 +342,22 @@ class ScriptRunner:
             if not op.get("silent"):
                 emit(Tag.COMBAT_RECV, f"  You take {amount} damage. ({p.hp}/{p.max_hp} HP)")
 
+        elif name == "temp_stat":
+            # { op = "temp_stat", stat = "attack"|"defense"|"max_hp",
+            #   amount = N, duration = N }
+            # Timed buff folded into player.effective_* until it ticks out.
+            stat     = op.get("stat", "")
+            amount   = int(op.get("amount", 0))
+            duration = int(op.get("duration", 1))
+            if stat in ("attack", "defense", "max_hp") and amount and duration:
+                p.temp_stats.append(
+                    {"stat": stat, "amount": amount, "turns": duration})
+                if not op.get("silent"):
+                    sign = "+" if amount >= 0 else ""
+                    emit(Tag.SYSTEM,
+                         f"  {stat.replace('_', ' ').title()} {sign}{amount} "
+                         f"for {duration} turn{'s' if duration != 1 else ''}.")
+
         # ── Inventory ─────────────────────────────────────────────────────────
         elif name == "give_item":
             item_id = op.get("item_id", "")
@@ -487,9 +520,21 @@ class ScriptRunner:
 
         # ── Status effects ────────────────────────────────────────────────────
         elif name == "apply_status":
+            # { op = "apply_status", effect = "...", duration = N, target = "player"|"npc" }
+            # target defaults to "player". "npc" applies the effect to the NPC currently
+            # being fought (ctx.npc, set by CombatSession) and is a no-op outside combat.
             effect   = op.get("effect", "")
             duration = int(op.get("duration", 3))
-            if effect:
+            target   = op.get("target", "player")
+            if effect and target == "npc":
+                if ctx.npc is not None:
+                    ctx.npc.setdefault("status_effects", {})[effect] = duration
+                    import engine.world_config as _wc
+                    se_def = _wc.get_status_effect(effect)
+                    label  = se_def["label"] if se_def else effect
+                    emit(Tag.COMBAT_HIT,
+                         f"  {ctx.npc.get('name', 'The enemy')} is {label}.")
+            elif effect:
                 p.status_effects[effect] = duration
                 import engine.world_config as _wc
                 se_def = _wc.get_status_effect(effect)
@@ -498,12 +543,19 @@ class ScriptRunner:
 
         elif name == "clear_status":
             effect = op.get("effect", "")
-            p.status_effects.pop(effect, None)
+            if op.get("target", "player") == "npc":
+                if ctx.npc is not None:
+                    ctx.npc.get("status_effects", {}).pop(effect, None)
+            else:
+                p.status_effects.pop(effect, None)
 
         elif name == "if_status":
             effect = op.get("effect", "")
-            has_it = effect in p.status_effects
-            self._run_branch(has_it, op)
+            if op.get("target", "player") == "npc":
+                source = ctx.npc.get("status_effects", {}) if ctx.npc is not None else {}
+            else:
+                source = p.status_effects
+            self._run_branch(effect in source, op)
 
         # ── Prestige ──────────────────────────────────────────────────────────
         elif name == "prestige":
@@ -721,6 +773,13 @@ class ScriptRunner:
             if ctx.combat_ctx is not None:
                 mult = float(op.get("multiplier", 1.0))
                 ctx.combat_ctx["hit_damage"] = int(ctx.combat_ctx["hit_damage"] * mult)
+
+        elif name == "bonus_damage":
+            # Add a flat amount to the current hit damage.
+            # { op = "bonus_damage", amount = 4 }
+            if ctx.combat_ctx is not None:
+                bonus = int(op.get("amount", 0))
+                ctx.combat_ctx["hit_damage"] = max(0, ctx.combat_ctx["hit_damage"] + bonus)
 
         elif name == "counter_damage":
             # Deal back-damage to the current opponent (NPC or player depending on side).

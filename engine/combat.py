@@ -96,6 +96,8 @@ class CombatSession:
         self._player_bleed = False   # bleed applied to NPC by player
         self._npc_bleed    = False   # bleed applied to player by NPC
         self.round        = 0        # incremented at the start of each player_attack()
+        # NPC status effects (apply_status target = "npc") last for one fight only.
+        npc.pop("status_effects", None)
         log.debug("combat", "CombatSession created",
                   player=player.name,
                   npc=npc.get("name","?"),
@@ -188,6 +190,17 @@ class CombatSession:
             n_atk = max(1, n_atk // 2)
             n_def = max(0, n_def // 2)
 
+        # Status effect modifiers applied to the NPC (apply_status target = "npc").
+        # damage_per_move is deliberately not applied here — NPCs do not move.
+        npc_se = self.npc.get("status_effects", {})
+        for _se in wc.STATUS_EFFECTS:
+            if _se["id"] not in npc_se:
+                continue
+            if _se["combat_atk"]:
+                n_atk = max(1, n_atk + _se["combat_atk"])
+            if _se["combat_def"]:
+                n_def = max(0, n_def + _se["combat_def"])
+
         log.debug("combat", "npc_stats",
                   npc=self.npc.get("name","?"),
                   style=self.npc.get("style","none"), style_prof=round(prof,1),
@@ -255,6 +268,7 @@ class CombatSession:
             threshold = float(passive.get("threshold", 999))
             p_trigger = passive.get("trigger", "attack")
             requires  = passive.get("requires", "")
+            tgt_tags  = passive.get("target_tags", [])
 
             # Skip passives with wrong trigger, locked by proficiency, or
             # whose required ability did not fire this round.
@@ -264,6 +278,14 @@ class CombatSession:
                 continue
             if requires and requires not in fired:
                 continue
+            # target_tags: only fire against an opponent carrying one of these tags.
+            # For the player's passives the opponent is the NPC; for the NPC's
+            # passives the opponent is the player, who has no tags — so a tagged
+            # passive never fires NPC-side.
+            if tgt_tags:
+                opp_tags = self.npc.get("tags", []) if side == "player" else []
+                if not any(t in opp_tags for t in tgt_tags):
+                    continue
 
             # Roll the passive using chance/chance_scaling from the TOML passive dict.
             if not styles_mod.check_passive(passive, prof):
@@ -301,10 +323,33 @@ class CombatSession:
 
     # ── Main round ────────────────────────────────────────────────────────────
 
+    def _tick_npc_status(self) -> None:
+        """Decrement NPC status effect durations at the top of each round.
+
+        Effects are applied by `apply_status target = "npc"`; -1 means it lasts
+        for the remainder of the fight.
+        """
+        npc_se = self.npc.get("status_effects")
+        if not npc_se:
+            return
+        for effect, turns in list(npc_se.items()):
+            if turns == -1:
+                continue
+            turns -= 1
+            if turns <= 0:
+                del npc_se[effect]
+                se_def = wc.get_status_effect(effect)
+                label  = se_def["label"] if se_def else effect
+                self._out(Tag.COMBAT_RECV,
+                          f"  {self.npc.get('name', 'The enemy')} shakes off {label}.")
+            else:
+                npc_se[effect] = turns
+
     def player_attack(self) -> None:
         if self.done:
             return
         self.round += 1
+        self._tick_npc_status()
 
         p_style = styles_mod.get(self.player.active_style)
         p_prof  = self.player.style_proficiency()

@@ -161,8 +161,7 @@ desc_long = "Distilled from Dragon Peaks thermal vents by Orun's forge apprentic
 weight = 0
 tags = ["consumable", "healing", "trader_exclusive"]
 respawn = false
-effects = [{type = "on_use", heal = 40}]
-commands = [{verb = "drink", ops = [{op = "heal", amount = 40}, {op = "clear_status", effect = "poisoned"}, {op = "message", tag = "system", text = "Heat rushes through you. The poison burns away."}, {op = "take_item", item_id = "dp_peak_forge_vial"}]}]
+on_use = [{op = "heal", amount = 40}, {op = "clear_status", effect = "poisoned"}, {op = "message", tag = "system", text = "Heat rushes through you. The poison burns away."}]
 
 [[item]]
 id = "gr_twilight_ink"
@@ -172,7 +171,7 @@ desc_long = "Gathered from the deepest passages of Gloamreach, where twilight be
 weight = 0
 tags = ["consumable", "gloam", "trader_exclusive"]
 respawn = false
-commands = [{verb = "drink", ops = [{op = "apply_status", effect = "protected", duration = 5}, {op = "message", tag = "system", text = "The ink is cold and faintly sweet. A pale shimmer settles over you."}, {op = "take_item", item_id = "gr_twilight_ink"}]}]
+on_use = [{op = "apply_status", effect = "protected", duration = 5}, {op = "message", tag = "system", text = "The ink is cold and faintly sweet. A pale shimmer settles over you."}]
 
 [[item]]
 id = "mf_bog_lens"

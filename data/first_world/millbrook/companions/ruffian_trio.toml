@@ -26,7 +26,7 @@ on_quest_complete = [
   { op = "set_flag",   flag = "ruffian_mentored" },
   { op = "set_flag",   flag = "ruffians_resolved" },
   { op = "advance_quest", quest_id = "village_ruffians", step = 3 },
-  { op = "prestige",   delta = 3, reason = "mentored village youth through real danger" },
+  { op = "prestige",   amount = 3, reason = "mentored village youth through real danger" },
   { op = "give_xp",    amount = 60 },
   { op = "message",    tag = "system",
     text = "As you leave the mine, Bram stops. 'We did that,' he says quietly, to no one in particular. Fen nods. Dal is inspecting a Thorngrub chitin plate with the focus of someone who has just discovered they have opinions about armour." },

@@ -140,7 +140,7 @@ ScriptRunner(ctx).run(ops)
 | `prestige.py` | Score −999…+999, 10 tiers. `apply_delta`, `tier_name`, `shop_modifier`, `hostile_on_sight`. |
 | `quests.py` | `QuestTracker` — load quest TOML files, track step progress, emit journal updates. |
 | `room_flags.py` | Room flag constants: `safe_combat`, `no_combat`, `healing`, `town`, `reduced_stats`. |
-| `script.py` | `ScriptRunner(ctx).run(ops)`. 63 ops. `fail` aborts cleanly. `require_tag` gates on item tag. Combat-only ops require `GameContext.combat_ctx`. |
+| `script.py` | `ScriptRunner(ctx).run(ops)`. 75 ops. `fail` aborts cleanly. `require_tag` gates on item tag. Combat-only ops require `GameContext.combat_ctx`. |
 | `world_config.py` | `init(world_path)` loads world `config.toml` (or legacy `config.py`) and exposes `WORLD_NAME`, `SKILLS`, `NEW_CHAR_HP`, `CURRENCY_NAME`, `DEFAULT_STYLE`, `VISION_THRESHOLD`, `EQUIPMENT_SLOTS`, `PLAYER_ATTRS`, `STATUS_EFFECTS`. `get_status_effect(id)` returns the named effect dict. Must be called before `World()`. |
 | `skills.py` | Seven adventuring skills (0–100). `grow(skill, amount)`, `check(skill, dc)` → d20 + bonus vs DC. |
 | `styles.py` | 7 fighting styles with matchup tables, gear affinity, and passive abilities unlocking at proficiency thresholds. |
@@ -287,7 +287,7 @@ negative → guards hostile at −50, surcharges below −25, criminal factions 
 
 ### Script engine (script.py)
 
-63 ops used in NPC dialogue, kill scripts, round scripts, `give_accepts` handlers,
+75 ops used in NPC dialogue, kill scripts, round scripts, `give_accepts` handlers,
 item `on_get`/`on_drop` arrays, room `on_enter`/`on_sleep`/`on_wake` arrays, and
 door event arrays. Scripts abort cleanly when `fail` fires.
 

@@ -20,13 +20,13 @@ next = "flowcurrent_lore"
 node    = "root"
 text    = "I'd like to learn the Flowcurrent style."
 next    = "teach_offer"
-show_if = { not_flag = "rl_fenne_taught" }
+condition = { not_flag = "rl_fenne_taught" }
 
 [[response]]
 node    = "root"
 text    = "I already know Flowcurrent. Can I practice against something?"
 next    = "sparring"
-show_if = { flag = "rl_fenne_taught" }
+condition = { flag = "rl_fenne_taught" }
 
 [[response]]
 node = "root"
@@ -50,7 +50,7 @@ line = "'Flowcurrent isn't about striking first. It's about reading where the op
 node    = "flowcurrent_lore"
 text    = "Can you teach it to me?"
 next    = "teach_offer"
-show_if = { not_flag = "rl_fenne_taught" }
+condition = { not_flag = "rl_fenne_taught" }
 
 [[response]]
 node = "flowcurrent_lore"
@@ -74,7 +74,7 @@ line = "'Heavy armour. Slow, deliberate fighters. If someone refuses to commit, 
 node    = "flowcurrent_weakness"
 text    = "I'd still like to learn it."
 next    = "teach_offer"
-show_if = { not_flag = "rl_fenne_taught" }
+condition = { not_flag = "rl_fenne_taught" }
 
 [[response]]
 node = "flowcurrent_weakness"

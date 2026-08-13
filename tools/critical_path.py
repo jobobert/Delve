@@ -150,6 +150,7 @@ class CriticalPathAnalyzer:
         self.npc_rooms:     dict[str, str]  = {}   # npc_id  → room_id
         self.quests_raw:    dict[str, dict] = {}   # quest_id → full dict
         self.dialogues_raw: dict[str, dict] = {}   # npc_id  → {node_id: node_dict}
+        self.commissions:   list[dict]      = []   # crafting/*.toml [[commission]] blocks
 
         # Dependency indexes
         self.flag_sources:  dict[str, list[FlagSource]]  = {}
@@ -182,6 +183,45 @@ class CriticalPathAnalyzer:
                 self.dialogues_raw[npc_id] = load_dialogue_tree(path)
             except Exception:
                 pass
+
+        # NPCs placed by script rather than by a room `spawns` list — quest-rescued
+        # crew, crafters that switch on, NPCs that relocate mid-quest. Without this
+        # their dialogue has no room and the walker never reaches it.
+        self._register_scripted_npc_rooms()
+
+        # NPCs that point at a dialogue file by path (dialogue_file = "...") are
+        # not keyed by their own id in dialogues_raw — shared trees like
+        # shared/ship_computer.toml are keyed by filename. Register the tree under
+        # each referencing NPC so the walker can find it in that NPC's room.
+        for nid, npc in self.npcs_raw.items():
+            dpath = npc.get("dialogue_file", "")
+            if not dpath or nid in self.dialogues_raw:
+                continue
+            stem = Path(dpath).stem
+            if stem in self.dialogues_raw:
+                self.dialogues_raw[nid] = self.dialogues_raw[stem]
+            else:
+                full = self.world_path / dpath
+                if full.is_file():
+                    try:
+                        self.dialogues_raw[nid] = load_dialogue_tree(full)
+                    except Exception:
+                        pass
+
+        # Load crafting commissions so the simulation can model fabricated items.
+        # A commission whose materials are all obtainable makes its output
+        # obtainable too — without this, every quest gated on a crafted part
+        # looks unreachable.
+        for zone_dir in self._zone_dirs():
+            craft_dir = zone_dir / "crafting"
+            if not craft_dir.is_dir():
+                continue
+            for path in sorted(craft_dir.glob("*.toml")):
+                try:
+                    data = toml_load(path)
+                except Exception:
+                    continue
+                self.commissions.extend(data.get("commission", []))
 
         # Load quests
         for quest_id, path in find_quest_files(self.world_path).items():
@@ -245,6 +285,54 @@ class CriticalPathAnalyzer:
                 if nid and nid not in self.npc_rooms:
                     self.npc_rooms[nid] = rid
 
+    def _register_scripted_npc_rooms(self) -> None:
+        """Record NPC placements made by spawn_npc / move_npc ops.
+
+        A later move_npc wins over an earlier spawn_npc, matching play order:
+        Chen is freed in the crew quarters, then relocates to the comms bay.
+        spawn_npc with room_id = "current" is skipped — the room depends on where
+        the player was standing, which cannot be resolved statically.
+        """
+        def walk(ops, sink):
+            for op in ops:
+                if not isinstance(op, dict):
+                    continue
+                name = op.get("op", "")
+                if name == "spawn_npc":
+                    nid, rid = op.get("npc_id", ""), op.get("room_id", "current")
+                    if nid and rid and rid != "current":
+                        sink.setdefault(nid, rid)
+                elif name == "move_npc":
+                    nid, rid = op.get("npc_id", ""), op.get("to_room", "")
+                    if nid and rid:
+                        sink[nid] = rid
+                for key in ("then", "else", "on_pass", "on_fail", "ops"):
+                    branch = op.get(key)
+                    if isinstance(branch, list):
+                        walk(branch, sink)
+
+        placements: dict[str, str] = {}
+        for room in self.rooms_raw.values():
+            for key in ("on_enter", "on_exit", "on_sleep", "on_wake"):
+                walk(room.get(key, []), placements)
+        for item in self.items_raw.values():
+            for key in ("on_get", "on_use", "on_drop"):
+                walk(item.get(key, []), placements)
+            for cmd in item.get("commands", []):
+                walk(cmd.get("ops", []), placements)
+        for npc in self.npcs_raw.values():
+            walk(npc.get("kill_script", []), placements)
+            for ga in npc.get("give_accepts", []):
+                walk(ga.get("script", []), placements)
+        for nodes in self.dialogues_raw.values():
+            for node in nodes.values():
+                walk(node.get("script", []), placements)
+                for resp in node.get("response", []):
+                    walk(resp.get("script", []), placements)
+
+        for nid, rid in placements.items():
+            self.npc_rooms.setdefault(nid, rid) if nid in self.npc_rooms else self.npc_rooms.update({nid: rid})
+
     # ─────────────────────────────────────────────────────────────────────────
     # Phase 2 — Build dependency graph
     # ─────────────────────────────────────────────────────────────────────────
@@ -257,11 +345,18 @@ class CriticalPathAnalyzer:
             ):
                 self.flag_sources.setdefault(src.flag, []).append(src)
 
-        # Flag + item sources from items (both on_get and on_use)
+        # Flag + item sources from items (on_get, on_use, and custom verbs)
         for iid, item in self.items_raw.items():
-            for script_key in ("on_get", "on_use"):
+            for script_key in ("on_get", "on_use", "on_drop"):
                 for src in self._effects_from_script(
                     item.get(script_key, []), "item_get", iid, []
+                ):
+                    self.flag_sources.setdefault(src.flag, []).append(src)
+            # [[item.commands]] verbs — how room scenery is interacted with, since
+            # `use` only reaches inventory (WORLD_MANUAL §6.4).
+            for cmd in item.get("commands", []):
+                for src in self._effects_from_script(
+                    cmd.get("ops", []), "item_get", iid, []
                 ):
                     self.flag_sources.setdefault(src.flag, []).append(src)
 
@@ -351,6 +446,17 @@ class CriticalPathAnalyzer:
                 results.extend(self._effects_from_script(
                     op.get("else", []), kind, location_id, conditions, node_id
                 ))
+            elif name in ("if_item", "if_quest", "if_quest_active",
+                          "if_quest_complete", "if_skill", "if_attr",
+                          "if_status", "if_prestige", "if_affinity",
+                          "if_light", "if_combat_round", "if_npc_hp"):
+                # Non-flag conditionals: recurse both branches so flags set inside
+                # them are still discovered. The gating condition itself is not a
+                # flag, so it is not added to the condition trail.
+                for branch_key in ("then", "else"):
+                    results.extend(self._effects_from_script(
+                        op.get(branch_key, []), kind, location_id, conditions, node_id
+                    ))
             elif name == "skill_check":
                 results.extend(self._effects_from_script(
                     op.get("on_pass", []), kind, location_id,
@@ -373,6 +479,9 @@ class CriticalPathAnalyzer:
         for iid, item in self.items_raw.items():
             self._scan_give_items(item.get("on_get", []), "item_get", iid)
             self._scan_give_items(item.get("on_use", []), "item_use", iid)
+            for cmd in item.get("commands", []):
+                self._scan_give_items(cmd.get("ops", []),
+                                      f"item_cmd_{cmd.get('verb', '?')}", iid)
         for nid, npc in self.npcs_raw.items():
             self._scan_give_items(npc.get("kill_script", []), "npc_kill", nid)
             for ga in npc.get("give_accepts", []):
@@ -442,6 +551,11 @@ class CriticalPathAnalyzer:
         for iid, item in self.items_raw.items():
             _scan(item.get("on_get", []),  f"item_get:{iid}")
             _scan(item.get("on_use", []),  f"item_use:{iid}")
+            # Custom [[item.commands]] verbs — the only way to interact with room
+            # scenery, since `use` reaches inventory only (WORLD_MANUAL §6.4).
+            for cmd in item.get("commands", []):
+                verb = cmd.get("verb", "?")
+                _scan(cmd.get("ops", []), f"item_cmd:{iid}/{verb}")
         for nid, npc in self.npcs_raw.items():
             _scan(npc.get("kill_script", []), f"npc_kill:{nid}")
             for ga in npc.get("give_accepts", []):
@@ -513,6 +627,10 @@ class CriticalPathAnalyzer:
                     if item.get("scenery") and item.get("on_use"):
                         if self._apply_script(item.get("on_use", []), state, iid):
                             changed = True
+                    # Item command verbs on room scenery (search / sever / install …)
+                    for cmd in item.get("commands", []):
+                        if self._apply_script(cmd.get("ops", []), state, iid):
+                            changed = True
 
             # 3c. Apply on_use for carried items (player eventually uses all items)
             for iid in list(state.items):
@@ -520,6 +638,24 @@ class CriticalPathAnalyzer:
                 if not item.get("scenery") and item.get("on_use"):
                     if self._apply_script(item.get("on_use", []), state, iid):
                         changed = True
+                for cmd in item.get("commands", []):
+                    if self._apply_script(cmd.get("ops", []), state, iid):
+                        changed = True
+
+            # 3d. Fabricate commissioned items whose materials are all obtainable.
+            # Materials are consumed in play, but the simulation only tracks
+            # obtainability, so a commission stays available once unlocked.
+            for comm in self.commissions:
+                result = comm.get("result_item", "")
+                if not result or result in state.items:
+                    continue
+                mats = comm.get("materials", [])
+                if mats and all(m in state.items for m in mats):
+                    if state.add_item(result):
+                        changed = True
+                        item = self.items_raw.get(result, {})
+                        if self._apply_script(item.get("on_get", []), state, result):
+                            changed = True
 
             # 4. Kill hostile NPCs
             for nid, npc in self.npcs_raw.items():
@@ -619,6 +755,22 @@ class CriticalPathAnalyzer:
                 flag = op.get("flag", "")
                 branch = op.get("then", []) if (not flag or flag not in state.flags) else op.get("else", [])
                 if self._apply_script(branch, state, ctx):
+                    changed = True
+            elif name == "if_item":
+                # Gate on the player actually holding the item. Install verbs on
+                # scenery are guarded this way, so without it the whole repair
+                # chain is invisible to the simulation.
+                iid = op.get("item_id", "")
+                branch = op.get("then", []) if iid in state.items else op.get("else", [])
+                if self._apply_script(branch, state, ctx):
+                    changed = True
+            elif name in ("if_quest", "if_quest_active", "if_quest_complete"):
+                # Optimistic: assume the quest reaches the required state.
+                if self._apply_script(op.get("then", []), state, ctx):
+                    changed = True
+            elif name in ("if_skill", "if_attr"):
+                # Optimistic: skills and world attrs both grow over a playthrough.
+                if self._apply_script(op.get("then", []), state, ctx):
                     changed = True
             elif name == "skill_check":
                 # Optimistic: always take on_pass branch

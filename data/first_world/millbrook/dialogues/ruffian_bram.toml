@@ -240,9 +240,11 @@ line = "Dal's going to say yes before I finish saying we'll do it. Fen's going t
 script = [
   { op = "advance_quest", quest_id = "village_ruffians", step = 2 },
   { op = "set_flag",      flag = "ruffians_companion_path" },
-  { op = "give_companion",
-    companion_id = "ruffian_trio",
-    message      = "Bram, Dal, and Fen fall in behind you. They're trying not to look eager." },
+  # give_companion only reads companion_id — the message key was silently dropped,
+  # so this beat played with no text. Emitted as its own message op instead.
+  { op = "give_companion", companion_id = "ruffian_trio" },
+  { op = "message", tag = "system",
+    text = "Bram, Dal, and Fen fall in behind you. They're trying not to look eager." },
 ]
 
 [[response]]

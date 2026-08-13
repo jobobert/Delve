@@ -50,7 +50,7 @@ processor = CommandProcessor(world, player, bus)
 | `engine/commands.py` | ~2500 lines; `CommandProcessor.process(raw)` is the main game loop entry. Holds `GameContext`, dispatches all verbs. |
 | `engine/world_config.py` | Loads `config.toml`; exposes `WORLD_NAME`, `SKILLS`, `CURRENCY_NAME`, `DEFAULT_STYLE`, `VISION_THRESHOLD`, `EQUIPMENT_SLOTS`, `PLAYER_ATTRS`, `STATUS_EFFECTS`. |
 | `engine/world.py` | Zone-streaming: loads zones on demand, evicts non-adjacent ones. `prepare_room(room_id, player)` is the main entry point. |
-| `engine/script.py` | `ScriptRunner(ctx).run(ops)` — 63 ops. Combat-only ops require `GameContext.combat_ctx`. `fail` aborts cleanly. |
+| `engine/script.py` | `ScriptRunner(ctx).run(ops)` — 75 ops. Combat-only ops require `GameContext.combat_ctx`. `fail` aborts cleanly. |
 | `engine/combat.py` | `CombatSession(player, npc, bus, room, ctx)`. Call `player_attack()` once per round. `_run_passives()` executes TOML-driven passive abilities. |
 | `engine/player.py` | `Player` dataclass; `player.inventory` contains ALL items including equipped ones (filter by `id(item)` to separate). `effective_light(player, room)` and `is_blind(player, room)` are module-level helpers. |
 | `engine/dialogue.py` | `run_inline(npc, player, quests, ctx, bus, input_fn)`. Loads `dialogues/<npc_id>.toml`, evaluates conditions, runs scripts on response. |

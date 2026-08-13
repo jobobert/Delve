@@ -790,6 +790,17 @@ ops     = [
 | `visible` | bool | No | `true` = shown in room and examine output; `false` (default) = hidden |
 | `ops` | array | No | Script ops to run (empty ops = no-op but verb is still consumed) |
 
+**Why this matters for scenery:** the `use` verb only searches the player's
+inventory. A scenery item sitting in a room can never be `use`d, so an `on_use`
+script on scenery is dead code. Anything that must happen *in a specific room* —
+installing a part, severing a cable, searching a workbench, boarding a pod —
+belongs in an `[[item.commands]]` verb on a scenery item placed in that room.
+Give it `visible = true` so the player can discover it.
+
+The alternative for simple cases is `on_get` on the scenery, which the engine runs
+before refusing the pickup — fine for an ore vein, but a named verb reads far
+better than "get workbench" for anything else.
+
 **Scope rules:**
 - Inventory items: command available anywhere (player carries the item)
 - Room items (including scenery): command available only in that room
@@ -877,7 +888,7 @@ Both are caught cleanly — no exception reaches the player.
 { op = "require_tag", tag = "pickaxe", fail_message = "You need a pickaxe to mine here." }
 ```
 
-### 7.5 All Script Operations (~63 ops)
+### 7.5 All Script Operations (~75 ops)
 
 > **Quick tip:** For a condensed reference of every op and its attributes, see
 > [Appendix C](#appendix-c--all-script-ops-quick-reference) at the end of this document.
@@ -993,6 +1004,31 @@ control spawn sequences, and enable conditional exits.
 ```toml
 { op = "heal", amount = 30 }
 ```
+
+---
+
+**`temp_stat`** — Grant a timed stat buff
+
+```toml
+{ op = "temp_stat", stat = "attack", amount = 3, duration = 5 }
+{ op = "temp_stat", stat = "defense", amount = 2, duration = 1, silent = true }
+```
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `stat` | string | Yes | `"attack"`, `"defense"` or `"max_hp"` |
+| `amount` | int | Yes | Added to the effective stat while active; may be negative |
+| `duration` | int | — | Action turns before it expires. `-1` lasts until rest or death |
+| `silent` | bool | — | Suppress the "+3 attack for 5 turns" line (use when a passive's own message already covers it) |
+
+The buff folds into `effective_attack` / `effective_defense` / `effective_max_hp`,
+so it affects combat, the `stats` display and carry checks alike. Duration ticks
+down on action turns only — read-only commands like `look` do not burn it. Buffs
+are cleared by a full rest, and losing a `max_hp` buff never leaves the player
+above their new maximum.
+
+Useful for consumables (a stim patch) and for `defend`-trigger style passives that
+should reward surviving a round rather than dealing damage.
 
 ---
 
@@ -1260,12 +1296,28 @@ Displays "Mining 5 → 7" when the integer part increases.
 ```toml
 { op = "apply_status", effect = "poisoned", duration = 5 }
 { op = "apply_status", effect = "blinded",  duration = -1 }
+{ op = "apply_status", effect = "disoriented", duration = 2, target = "npc" }
 ```
 
 | Attribute | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `effect` | string | Yes | A status effect `id` defined in the world's `config.toml` `[[status_effect]]` blocks |
 | `duration` | int | — | Turns remaining; `-1` = permanent until cleared |
+| `target` | string | — | `"player"` (default) or `"npc"` |
+
+> ⚠️ The key is **`effect`**, not `status`. `{ op = "apply_status", status = "..." }`
+> parses fine and is then silently ignored — the effect never applies. `validate.py`
+> now flags this.
+
+**`target = "npc"`** applies the effect to the NPC currently being fought, which
+makes debuff passives and debuff round_scripts possible:
+
+- Only meaningful inside combat (style `on_activate` scripts and NPC `round_script`).
+  Outside combat there is no NPC and the op is a no-op.
+- NPC effects apply `combat_atk` / `combat_def` only. `damage_per_move` is **not**
+  applied to NPCs, because NPCs do not move between rooms.
+- They last for that fight only — starting a new fight with the NPC clears them.
+- `clear_status` and `if_status` accept the same `target` key.
 
 See [Section 11](#11-status-effects) for what each effect does.
 
@@ -2573,8 +2625,16 @@ Each entry in the `passives` array defines one passive ability:
 | `threshold` | Proficiency (0–100) required to unlock this passive |
 | `trigger` | `"attack"` — fires when this entity attacks; `"defend"` — fires when defending; `"always"` — always-on stat bonus (handled directly, not via script ops) |
 | `requires` | Another ability that must have fired this hit for this to trigger (used for chained passives like riposte→parry) |
+| `target_tags` | Array of NPC tags; the passive only fires against an opponent carrying one of them (e.g. `["large"]` for a passive that targets weak points on big creatures). Omit to fire against anything. Never fires NPC-side, since the player has no tags. |
 | `message` | Text emitted when the passive fires. Use `{npc}` as a placeholder for the NPC's name. Messages are written from the player's perspective and automatically adapted when an NPC uses the style. |
 | `on_activate` | Array of combat-only script ops to execute when the passive fires (see §13.3) |
+
+> ⚠️ Three passive mistakes parse cleanly and then never fire. `validate.py` flags
+> all three: a `trigger` other than `attack`/`defend`/`always`; using `script = [...]`
+> where the engine reads `on_activate`; and writing `chance` as a percentage
+> (`chance = 25`) when it is a 0.0–1.0 probability. Also note that passive blocks
+> must attach to the style — use `[[style.passives]]` (plural) or an inline
+> `passives = [...]` array, never `[[style.passive]]`.
 
 ### 13.3 Combat-Only Script Ops
 
@@ -2584,6 +2644,7 @@ ignored if used outside of combat.
 | Op | Attributes | Effect |
 |----|-----------|--------|
 | `block_damage` | — | Sets the current hit damage to 0 and marks the hit as blocked |
+| `bonus_damage` | `amount` | Adds a flat amount to the current hit damage |
 | `multiply_damage` | `multiplier` | Multiplies current hit damage (e.g. `2.0` for vital strike) |
 | `reduce_damage` | `percent` | Reduces current hit damage by N% (e.g. `percent = 30`) |
 | `counter_damage` | `multiplier` | Deals `attacker_atk * multiplier` back to the opponent |
@@ -2743,6 +2804,7 @@ passives = [
 | `defense_bonus_base` | Flat defense added when `trigger = "always"`. Default: `0` |
 | `defense_bonus_scale` | Defense added per 100 proficiency when `trigger = "always"`. Default: `0` |
 | `requires` | Another ability that must have fired this round for this one to trigger |
+| `target_tags` | Only fire against an opponent carrying one of these NPC tags, e.g. `["large"]`. Omit for any opponent. |
 | `message` | Text emitted when passive fires. Use `{npc}` as a placeholder for NPC name. |
 | `on_activate` | Array of combat-only script ops (see section 13.3 for full op list) |
 
@@ -2984,9 +3046,50 @@ name_prefix  = "Masterwork "
 | `slot` | string | Equipment slot for finished item |
 | `weapon_tags` / `armor_tags` | list | Tags on finished item |
 | `materials` | list | Item IDs the player must provide (may repeat) |
+| `result_item` | string | **Optional.** Hand back this authored item instead of building one — see §14.3.1 |
 | `turns_required` | int | Player moves before commission is ready |
 | `gold_cost` | int | Upfront gold deposit |
 | `xp_reward` | int | XP awarded on collection |
+| `on_complete` | array | **Optional.** Script ops run when the player collects the finished item — quest advances, flags, prestige, flavour |
+
+> ⚠️ `materials` is a **flat list of item-id strings**, and an id is repeated to
+> require more than one. A list of tables (`[{item_id = "x", qty = 2}]`) parses
+> but can never be matched against what the player hands over, so the commission
+> can never start. `validate.py` flags this.
+
+#### 14.3.1 Authored Results (`result_item`)
+
+By default a commission *builds* an item: it rolls a quality tier and assembles a
+generic piece named from `label`. That is right for gear, but wrong when the
+finished piece needs its own behaviour — a repair module that runs a script when
+installed, a quest component, a unique item with hand-written text.
+
+Set `result_item` to an item id from the world's `items.toml` and the crafter
+hands back a copy of that item verbatim:
+
+```toml
+[[commission]]
+id             = "rep_relay_assembly"
+npc_id         = "la_replicator"
+label          = "Power Relay Assembly"
+desc           = "A heavy-duty relay assembly for the power core."
+result_item    = "la_relay_assembly"     # ← authored item, handed back as-is
+materials      = ["lf_metal_housing", "lf_metal_housing",
+                  "lf_circuit_board", "lf_circuit_board"]
+turns_required = 25
+xp_reward      = 50
+```
+
+When `result_item` is set:
+
+- **No quality is rolled.** `[[quality]]` tiers are ignored, and the collection
+  message uses the "standard" line. `validate.py` will not warn about missing tiers.
+- **The item's `on_get` script runs on collection**, so quest advances and flags on
+  the finished item fire exactly as if it had been picked up off the floor.
+- `slot`, `weapon_tags`, `armor_tags` and `weight` come from the authored item, so
+  they can be omitted from the commission block.
+- If the id does not resolve, the engine falls back to the normal build path —
+  `validate.py` errors on an unknown `result_item`.
 
 ### 14.4 Quality Fields
 
@@ -3907,6 +4010,20 @@ Attributes appear at the bottom of the `stats` command output.
 The `if_attr` condition is true when the attribute's current value falls
 within `[min, max]` inclusive.
 
+> ⚠️ **The key is `name`, not `attr`.** All three ops read `name = "..."`. Writing
+> `{op = "adjust_attr", attr = "ship_power", amount = 10}` parses fine and then
+> does nothing at all — the attribute never moves, and every `if_attr` gate built
+> on it stays shut forever. `validate.py` now flags this.
+
+> ⚠️ **Attributes are not skills.** `if_attr` only sees `[[player_attrs]]` defined
+> in `config.toml`. To branch on a skill, use `if_skill`:
+> ```toml
+> {op = "if_attr",  name  = "ship_power",   min = 20, then = [...]}   # world attr
+> {op = "if_skill", skill = "alienbiology", min = 20, then = [...]}   # skill
+> ```
+> `if_attr` pointed at a skill id silently finds no such attribute and takes the
+> `else` branch every time.
+
 ---
 
 ## 18.4 Item Stat Modification Ops
@@ -4389,6 +4506,7 @@ Unknown op names are **silently ignored** — forward-compatible with new engine
 | `take_gold` | `amount`, `silent` | Deduct gold (fails if short) |
 | `give_xp` | `amount`, `silent` | Award XP |
 | `heal` | `amount` | Restore HP (capped at max) |
+| `temp_stat` | `stat`, `amount`, `duration`, `silent` | Timed buff to attack/defense/max_hp |
 | `set_hp` | `amount` | Set HP exactly |
 | `damage` | `amount`, `message`, `silent` | Deal direct damage |
 
@@ -4444,9 +4562,10 @@ Unknown op names are **silently ignored** — forward-compatible with new engine
 
 | Op | Key attributes | Description |
 |----|---------------|-------------|
-| `apply_status` | `effect`, `duration` | Apply a world-defined status effect by id (see §11) |
-| `clear_status` | `effect` | Remove status effect |
-| `if_status` | `effect`, `then`, `else` | Branch on effect presence |
+| `apply_status` | `effect`, `duration`, `target` | Apply a world-defined status effect by id (see §11). `target = "npc"` debuffs the NPC being fought |
+| `clear_status` | `effect`, `target` | Remove status effect |
+| `if_status` | `effect`, `target`, `then`, `else` | Branch on effect presence |
+| `temp_stat` | `stat`, `amount`, `duration` | Timed buff to `attack`/`defense`/`max_hp`; ticks down on action turns |
 
 **Prestige**
 
@@ -4514,6 +4633,7 @@ Unknown op names are **silently ignored** — forward-compatible with new engine
 | Op | Key attributes | Description |
 |----|---------------|-------------|
 | `block_damage` | — | Set current hit damage to 0 (parry, dodge) |
+| `bonus_damage` | `amount` | Add a flat amount to the current hit damage |
 | `multiply_damage` | `multiplier` | Scale current hit damage |
 | `reduce_damage` | `percent` | Reduce hit damage by N% |
 | `counter_damage` | `multiplier` | Deal `attacker_atk * multiplier` back to opponent |

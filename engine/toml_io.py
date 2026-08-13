@@ -307,12 +307,32 @@ def load(path: Path) -> dict:
         logical_lines.append(pending)
 
     for line in logical_lines:
-        # Array of tables:  [[key]]
+        # Array of tables:  [[key]]  or nested  [[key.subkey]]
         m = re.fullmatch(r'\[\[([^\]]+)\]\]', line)
         if m:
-            key = m.group(1).strip()
+            parts = [p.strip() for p in m.group(1).strip().split(".")]
             new_obj: dict = {}
-            result.setdefault(key, []).append(new_obj)
+            if len(parts) == 1:
+                result.setdefault(parts[0], []).append(new_obj)
+            else:
+                # [[parent.child]] appends to the `child` list belonging to the
+                # most recent [[parent]] record — standard TOML nesting. This is
+                # what makes [[item.commands]] and [[style.passives]] attach to
+                # the block above them instead of becoming a stray top-level key.
+                target = result
+                for part in parts[:-1]:
+                    existing = target.get(part)
+                    if isinstance(existing, list) and existing and isinstance(existing[-1], dict):
+                        target = existing[-1]          # last [[parent]] record
+                    elif isinstance(existing, dict):
+                        target = existing              # [parent] sub-table
+                    else:
+                        target[part] = {}
+                        target = target[part]
+                child = parts[-1]
+                if not isinstance(target.get(child), list):
+                    target[child] = []
+                target[child].append(new_obj)
             current_obj = new_obj
             continue
 

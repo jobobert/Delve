@@ -85,7 +85,7 @@ next = ""
 id   = "give_proof"
 line = "Selka examines your offering carefully."
 script = [
-  { op = "if_has_item", item_id = "drakebone_fragment", then = [
+  { op = "if_item", item_id = "drakebone_fragment", then = [
     { op = "take_item", item_id = "drakebone_fragment" },
     { op = "message", tag = "dialogue", text = "'This will do. You have my attention.'" },
     { op = "prestige", amount = 8, reason = "presented drakebone to Selka" },

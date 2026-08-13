@@ -250,6 +250,7 @@ class CommandProcessor:
         # deal damage_per_move — only movement and active commands count.
         if verb not in _NO_TICK_COMMANDS:
             self._tick_status_effects()
+            self._tick_temp_stats()
             self._apply_status_damage()
             self._tick_npc_combat()
             self._processes.tick(self._ctx)
@@ -842,6 +843,35 @@ class CommandProcessor:
             se_def = _wc.get_status_effect(eff)
             msg = se_def["expiry_msg"] if se_def else f"The {eff} condition ends."
             self._out(Tag.SYSTEM, msg)
+
+    def _tick_temp_stats(self) -> None:
+        """Decrement timed stat buffs from the temp_stat op; drop expired ones.
+
+        Duration -1 is a sentinel for a buff that lasts until something else clears
+        it (death, rest) rather than ticking out on its own.
+        """
+        if not self.player.temp_stats:
+            return
+        remaining = []
+        expired   = []
+        for buff in self.player.temp_stats:
+            turns = int(buff.get("turns", 0))
+            if turns == -1:
+                remaining.append(buff)
+                continue
+            turns -= 1
+            if turns <= 0:
+                expired.append(buff)
+            else:
+                buff["turns"] = turns
+                remaining.append(buff)
+        self.player.temp_stats = remaining
+        for buff in expired:
+            stat = str(buff.get("stat", "")).replace("_", " ")
+            self._out(Tag.SYSTEM, f"Your {stat} boost fades.")
+        # Losing a max_hp buff must not leave the player above their new maximum.
+        if expired and self.player.hp > self.player.effective_max_hp:
+            self.player.hp = self.player.effective_max_hp
 
     def _apply_status_damage(self) -> None:
         """Apply per-move damage from active status effects (damage_per_move > 0)."""
@@ -1985,8 +2015,11 @@ class CommandProcessor:
             self._out(Tag.SYSTEM,
                       "You make camp and rest through the night.")
 
-        # A full night's rest clears all status effects
+        # A full night's rest clears all status effects and any timed stat buffs
         self.player.status_effects.clear()
+        self.player.temp_stats.clear()
+        if self.player.hp > self.player.effective_max_hp:
+            self.player.hp = self.player.effective_max_hp
 
         # Run on_wake room script after resting (morning flavor, random events)
         on_wake = room.get("on_wake", [])
@@ -2889,7 +2922,8 @@ class CommandProcessor:
                       f"('commissions' to check progress)")
             return
 
-        item, quality = crafting_mod.collect_commission(self.player, rec)
+        item, quality = crafting_mod.collect_commission(self.player, rec,
+                                                        world=self.world)
         tier = quality.get("tier", "standard")
 
         # Custom craft message for special tiers
@@ -2923,6 +2957,21 @@ class CommandProcessor:
                           f"  You reached level {self.player.level}!")
 
         self._out(Tag.ITEM, f"  You receive: {item['name']} [{tier}]")
+
+        # Authored `result_item` pieces carry their own on_get script (quest
+        # advances, flags). Procedurally built items have none, so this is a
+        # no-op for ordinary commissions.
+        on_get = item.get("on_get", [])
+        if on_get:
+            from engine.script import ScriptRunner
+            ScriptRunner(self._ctx).run(on_get)
+
+        # Commission-level on_complete: quest integration, prestige, flavour.
+        on_complete = rec.get("commission_def", {}).get("on_complete", [])
+        if on_complete:
+            from engine.script import ScriptRunner
+            ScriptRunner(self._ctx).run(on_complete)
+
         self._out(Tag.SYSTEM, "")
 
     def _tick_commissions(self, turns: int) -> None:

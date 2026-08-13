@@ -37,8 +37,33 @@ Scans every zone folder and checks:
 - Every `.toml` is valid TOML
 - Dialogue trees: all nodes reachable from root, all `next=` references valid
 
+### Silent-failure checks
+
+The engine is permissive at runtime — `ScriptRunner` ignores ops it does not
+recognise and attributes it does not read, and dialogue ignores unknown response
+keys. Good for forward compatibility, bad for authoring: a typo costs nothing at
+load time and simply never happens in play. So the validator treats **"parses
+fine, does nothing"** as an error:
+
+| Check | Catches |
+|-------|---------|
+| Unknown script op | `temp_stat_boost`, `if_has_item`, `if_light_at_least` — lines that do nothing |
+| Unknown attribute on a known op | `apply_status status=` (reads `effect`), `adjust_attr attr=` (reads `name`), `prestige delta=` (reads `amount`) |
+| `show_if` on a `[[response]]` | Responses are filtered on `condition`; a "gated" response is always visible |
+| Item command verb collision | A verb that shadows a built-in can never fire (built-ins always win) |
+| Style passive schema | Unreachable `trigger`, `script` instead of `on_activate`, percentage `chance` |
+| Commission `materials` shape | Tables instead of item-id strings — the commission can never start |
+
+The op table is **derived from `engine/script.py` at run time**, so it cannot drift
+out of date: implement a new op and the validator understands it immediately.
+
+If a check cannot run — because it introspects engine source that has since been
+restructured — that is reported as an **error**, never skipped. A pass has to mean
+the checks actually ran.
+
 ```
 python tools/validate.py
+python tools/validate.py --world awoke     # one world only
 ```
 
 Exit code `0` = passed (warnings are OK).

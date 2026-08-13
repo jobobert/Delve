@@ -34,7 +34,10 @@ next = "state_help"
 id   = "state_help"
 line = "'Dim your light. It hurts to be seen too brightly.'"
 script = [
-  { op = "if_light_at_least", amount = 3, then = [
+  # `if_light` is true when effective light is <= max, so "too bright" is the
+  # ELSE branch of "is it dim enough". (Was `if_light_at_least`, which is not an
+  # engine op — the hermit never reacted to light at all.)
+  { op = "if_light", max = 2, else = [
     { op = "message", tag = "error", text = "Your light is too bright. The hermit recoils." }
   ] }
 ]

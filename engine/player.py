@@ -199,6 +199,12 @@ class Player:
         # Effects: poisoned, blinded, weakened, slowed, protected
         self.status_effects: dict[str, int] = {}
 
+        # Temporary stat buffs from the temp_stat script op.
+        # Each entry: {"stat": "attack"|"defense"|"max_hp", "amount": N, "turns": N}
+        # Ticked down by CommandProcessor._tick_temp_stats(); folded into the
+        # effective_* properties below while active.
+        self.temp_stats: list[dict] = []
+
         # Active commissions: list of commission state dicts (see engine/crafting.py)
         self.commissions: list[dict] = []
 
@@ -313,6 +319,7 @@ class Player:
             "aliases":             self.aliases,
             "skills":              {k: round(v, 2) for k, v in self.skills.items()},
             "status_effects":      self.status_effects,
+            "temp_stats":          self.temp_stats,
             "commissions":         self._serialise_commissions(),
             "companion":           self._serialise_companion(),
             "journal":             self.journal,
@@ -380,6 +387,7 @@ class Player:
             if k in p.skills:
                 p.skills[k] = float(v)
         p.status_effects = dict(data.get("status_effects", {}))
+        p.temp_stats     = [dict(t) for t in data.get("temp_stats", [])]
         p.commissions       = p._deserialise_commissions(data.get("commissions", []))
         p.companion         = p._deserialise_companion(data.get("companion", {}))
         p.journal           = data.get("journal", [])
@@ -531,23 +539,28 @@ class Player:
 
     # ── Combat helpers ────────────────────────────────────────────────────────
 
+    def temp_stat_bonus(self, stat: str) -> int:
+        """Sum of active temp_stat buffs for one stat (see the temp_stat script op)."""
+        return sum(int(t.get("amount", 0)) for t in self.temp_stats
+                   if t.get("stat") == stat)
+
     @property
     def effective_attack(self) -> int:
         return self.attack + sum(
             item_stat_bonus(i, "attack") for i in self.equipped.values() if i
-        )
+        ) + self.temp_stat_bonus("attack")
 
     @property
     def effective_defense(self) -> int:
         return self.defense + sum(
             item_stat_bonus(i, "defense") for i in self.equipped.values() if i
-        )
+        ) + self.temp_stat_bonus("defense")
 
     @property
     def effective_max_hp(self) -> int:
         return self.max_hp + sum(
             item_stat_bonus(i, "max_hp") for i in self.equipped.values() if i
-        )
+        ) + self.temp_stat_bonus("max_hp")
 
     @property
     def is_alive(self) -> bool:
