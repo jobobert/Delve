@@ -283,7 +283,8 @@ slot = "weapon"
 weight = 2
 respawn = false
 weapon_tags = ["blade", "resonant"]
-effects = [{type = "stat_bonus", stat = "attack", amount = 12}, {type = "on_equip", message = "The blade hums at a frequency you recognize. The Echoing Chamber, distilled into steel."}]
+effects = [{type = "stat_bonus", stat = "attack", amount = 8}, {type = "stat_bonus", stat = "defense", amount = 2}, {type = "on_equip", message = "The blade hums at a frequency you recognize. The Echoing Chamber, distilled into steel."}]
+admin_comment = "Act I secret reward, at the bottom of the two-stage hidden descent. Deliberately +8/+2 rather than a raw +12: at +12 it was the best weapon in the game, obtainable before leaving the starting region, which left all five realm capstone weapons (+9 to +12) as sidegrades. +8 keeps it a genuine prize over the Riverlands' own +5/+7 gear while leaving the realms somewhere to go."
 
 [[item]]
 id = "rl_guest_room_key"

@@ -10,7 +10,7 @@
 id          = "vh_edge"
 name        = "Heartwood Threshold"
 description = "The Riverlands path ends at a wall of living roots. They shift aside as if recognizing you."
-exits       = { east = "vh_canopy1" }
+exits       = { east = "vh_canopy1", north = { to = "rl_clearing", desc = "the deer track back north toward the river", on_exit = [{ op = "say", text = "The canopy thins and ordinary daylight returns" }] } }
 on_enter    = [
   { op = "if_item", item_id = "mf_quartz_heart", then = [
     { op = "message", tag = "system", text = "The Bog-Quartz Heart vibrates softly. The roots respond." },
@@ -26,11 +26,6 @@ description = "Sunlight filters through thick leaves. Vines sway even without wi
 exits       = { west = "vh_edge", east = "vh_canopy2", south = "vh_vine_bridge" }
 flags       = ["town"]
 spawns        = ["vh_root_tender_lyren", "vh_root_tender_syl"]
-shop        = [
-  { item_id = "vh_pollen_mask",  price = 30 },
-  { item_id = "vh_vine_charm",   price = 25 },
-  { item_id = "vh_resin_sachet", price = 10 },
-]
 
 [[room]]
 id          = "vh_canopy2"

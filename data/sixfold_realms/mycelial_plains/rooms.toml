@@ -19,13 +19,7 @@ name        = "Loomroot Gate"
 description = "A wooden gate half-claimed by pale fungus. The air smells faintly sweet. Sporehaven lies ahead."
 flags       = ["town"]
 spawns        = ["mp_mayor_dellen", "mp_healer_rissa", "mp_banker"]
-shop        = [
-  { item_id = "mp_clarity_brew",        price = 12 },
-  { item_id = "mp_fungal_mask",         price = 20 },
-  { item_id = "mp_memory_tuning_fork",  price = 18 },
-  { item_id = "mp_spore_lens",          price = 14 },
-]
-exits       = { east = "mp_approach1" }
+exits       = { east = "mp_approach1", northeast = { to = "rl_ferry_berth_plains", desc = "the still channel back toward the Riverlands berth", on_exit = [{ op = "say", text = "The spores thin over open water and the air sharpens again" }] } }
 on_enter    = [
   { op = "message", tag = "system", text = "A faint haze of spores drifts across your vision." },
 ]
@@ -305,7 +299,8 @@ on_enter    = [
 id          = "mp_garden_entrance"
 name        = "Memory Garden — Gate"
 description = "A massive fungal archway grown around ancient stone. The air vibrates with stored thoughts."
-exits       = { west = "mp_fields7", east = "mp_garden1" }
+exits       = { west = "mp_fields7", east = { to = "mp_garden1", desc = "the archway deeper into the Memory Garden", show_if = { op = "has_flag", flag = "mp_garden_fed" } } }
+items       = ["mp_feeding_bed"]
 on_enter    = [
   { op = "if_attr", name = "spore_exposure", min = 30, then = [
     { op = "message", tag = "error", text = "Your mind is too clouded to enter the Garden. Find clarity first." },

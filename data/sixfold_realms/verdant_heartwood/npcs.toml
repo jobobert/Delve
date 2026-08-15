@@ -21,6 +21,13 @@ dialogue    = "vh_root_tender_lyren"
 
 [[npc]]
 id          = "vh_root_tender_syl"
+# Stock relocated from the vh_canopy1 room block: a `shop` on a [[room]]
+# is never read by the engine, so these items were unbuyable.
+shop        = [
+  { item_id = "vh_pollen_mask",  price = 30 },
+  { item_id = "vh_vine_charm",   price = 25 },
+  { item_id = "vh_resin_sachet", price = 10 },
+]
 name        = "Root-Tender Syl"
 desc_short  = "A soft-spoken caretaker of the Heartwood's upper canopy."
 desc_long   = "Syl's hands glow faintly with restorative sap. They move with the rhythm of the trees."
@@ -74,7 +81,7 @@ style_prof  = 20
 hp          = 55
 max_hp      = 55
 attack      = 12
-defense     = 6
+defense     = 3
 xp_reward   = 45
 gold_reward = 0
 hostile     = true
@@ -98,7 +105,7 @@ style_prof  = 30
 hp          = 80
 max_hp      = 80
 attack      = 14
-defense     = 10
+defense     = 6
 xp_reward   = 60
 gold_reward = 0
 hostile     = true
@@ -122,7 +129,7 @@ style_prof  = 18
 hp          = 40
 max_hp      = 40
 attack      = 11
-defense     = 5
+defense     = 3
 xp_reward   = 35
 gold_reward = 0
 hostile     = true
@@ -149,7 +156,7 @@ style_prof  = 22
 hp          = 28
 max_hp      = 28
 attack      = 13
-defense     = 4
+defense     = 2
 xp_reward   = 30
 gold_reward = 0
 hostile     = true
@@ -173,7 +180,7 @@ style_prof  = 35
 hp          = 95
 max_hp      = 95
 attack      = 17
-defense     = 15
+defense     = 8
 xp_reward   = 80
 gold_reward = 0
 hostile     = true
@@ -205,7 +212,7 @@ style_prof  = 60
 hp          = 160
 max_hp      = 160
 attack      = 20
-defense     = 18
+defense     = 10
 xp_reward   = 200
 gold_reward = 0
 hostile     = true

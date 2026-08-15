@@ -20,7 +20,39 @@ next = "how_withdraw"
 
 [[response]]
 node = "root"
+text = "What's behind the locked door?"
+next = "storeroom"
+condition = {not_flag = "barracks_storeroom_key_given"}
+
+[[response]]
+node = "root"
 text = "Nothing. Carry on."
+next = ""
+
+# ── Storeroom key ─────────────────────────────────────────────────────────────
+# The key used to sit on the floor INSIDE barracks_storeroom, the only room it
+# unlocks — so the room could never be entered. The Quartermaster runs the
+# storehouse, so he is the obvious person to hold it.
+
+[[node]]
+id   = "storeroom"
+line = "The storeroom. Spare kit, mostly — and a medical pack I keep out of the way of anyone who'd drink it for fun. You look like you can be trusted with a key. Don't make me wrong about that."
+script = [
+  {op = "if_not_flag", flag = "barracks_storeroom_key_given", then = [
+    {op = "set_flag", flag = "barracks_storeroom_key_given"},
+    {op = "give_item", item_id = "barracks_key"},
+    {op = "message", tag = "system", text = "The Quartermaster works a key off a crowded ring and hands it over without ceremony."}
+  ]}
+]
+
+[[response]]
+node = "storeroom"
+text = "I'll bring it back."
+next = ""
+
+[[response]]
+node = "storeroom"
+text = "Understood."
 next = ""
 
 [[node]]

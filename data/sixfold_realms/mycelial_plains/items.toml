@@ -242,3 +242,33 @@ effects     = [
   { type = "on_equip",   message = "The whip coils loosely in your hand. It smells faintly of mycelium and spores." },
   { type = "on_hit",     ability = "stun", chance = 0.12, magnitude = 1 },
 ]
+
+# ── Cross-region dependency (world.md trade routes) ───────────────────────────
+[[item]]
+id          = "mp_feeding_bed"
+name        = "Sunken Feeding Bed"
+desc_short  = "A shallow trough of pale, exhausted mycelium ringed with old bone meal."
+desc_long   = "The Sporewardens feed the Memory Garden here. The bed is spent — the mycelium in it has gone thin and papery, and the ring of ground bone around the rim has long since been taken up. Whatever the network is still holding onto in there, it is holding on badly. The old feed was bone, and coarse: something dense, something that was load-bearing in life."
+slot        = ""
+weight      = 0
+scenery     = true
+respawn     = true
+admin_comment = "Cross-region gate in mp_garden_entrance. Requires drakebone_fragment from Dragon Peaks — world.md lists dragonbone fertiliser as prized by Mycelial farmers. Sets mp_garden_fed, which reveals the east exit into the garden and so gates cognitive_regulator_fragment. Safe as a hard requirement because the ferry route order guarantees the Peaks are visited first."
+
+[[item.commands]]
+verb    = "feed"
+visible = true
+ops     = [
+  { op = "if_not_flag", flag = "mp_garden_fed", then = [
+    { op = "if_item", item_id = "drakebone_fragment", then = [
+      { op = "take_item", item_id = "drakebone_fragment" },
+      { op = "set_flag",  flag = "mp_garden_fed" },
+      { op = "message", tag = "quest", text = "You break the drakebone down against the trough rim and work the meal into the bed. The response is not slow. Pale threads climb the fragments while you watch, and the whole bed flushes a deep, fed colour — and then, further in, something that has been quiet for a long time starts whispering again." },
+      { op = "skill_grow", skill = "lore", amount = 2 },
+    ], else = [
+      { op = "message", tag = "error", text = "You have nothing the bed will take. It wants bone, and dense bone at that — the drakes of the Peaks grow the kind that would do it." },
+    ] },
+  ], else = [
+    { op = "message", tag = "system", text = "The bed is fed. The threads are thick and busy and want nothing from you." },
+  ] },
+]

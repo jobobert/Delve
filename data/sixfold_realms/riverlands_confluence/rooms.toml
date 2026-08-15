@@ -104,6 +104,31 @@ description = "A wooden landing platform where the Riverlands ferry moors before
 desc_long = "In the berth is a ferry that looks as old as the world, but still surprisingly sound. Barrels and bundles line the berth, cargo long forgotten by its owner. Maybe one of them has something of use?"
 exits = {north = {to = "dp_approach_1", on_exit = [{op = "say", text = "The ferry rocks steadily as it crosses the river"}]}, south = "rl_ferryman_shack"}
 items = ["rl_barrel_filled", "rl_barrel"]
+admin_comment = "Gateway to Dragon Peaks (Region 1) and the template every other berth follows: a landing room whose outbound exit carries an on_exit line describing the crossing, so travel between realms reads as a journey rather than a doorway."
+
+[[room]]
+id = "rl_ferry_berth_mistfen"
+name = "Mistfen Ferry Berth"
+description = "A low landing west of the shack, half-swallowed by reeds. The water here is flat and brown and smells of stagnant growth."
+desc_long = "The berth has sunk a little into the mud, so the planks tilt toward the water. Ropes hang slack from their cleats. Whatever the ferry carries out this way, it does not come back heavy — the mooring is worn on one side only."
+exits = {east = {to = "mf_swamp_edge", on_exit = [{op = "say", text = "The ferry noses into the reeds, and the far bank dissolves into standing mist"}]}, north = "rl_ferryman_shack"}
+admin_comment = "Gateway to Mistfen Expanse (Region 2). Reached from rl_ferryman_shack west, behind the rl_has_resonant_token gate like every berth."
+
+[[room]]
+id = "rl_ferry_berth_gloam"
+name = "Gloam Ferry Berth"
+description = "A northwest berth where the water runs black and unusually still. A shuttered lantern hangs from the mooring post, its glass smoked dark."
+desc_long = "The lantern is shuttered rather than unlit — someone dimmed it on purpose. Out past the mooring the light simply stops, as if the far bank were holding it back. The ferry rope disappears into that dark a few metres out."
+exits = {northwest = {to = "gr_entrance", on_exit = [{op = "say", text = "The lantern gutters as the ferry crosses, and the daylight thins to a grey seam behind you"}]}, southeast = "rl_ferryman_shack"}
+admin_comment = "Gateway to Gloamreach (Region 4). The shuttered lantern is a warning: the realm punishes bright light (see gr_echo_hermit, who recoils from it)."
+
+[[room]]
+id = "rl_ferry_berth_plains"
+name = "Plains Ferry Berth"
+description = "A wide, low landing southwest of the shack, where the river slows and spreads toward open grass. Spores drift over the water in slow spirals."
+desc_long = "The current barely moves here. Pale spores settle on the planks and on the water, and the far bank is a haze of grass and something softer behind it. The berth is swept clean — recently, and by someone who knew to."
+exits = {southwest = {to = "mp_entrance", on_exit = [{op = "say", text = "The ferry glides across still water, and the air turns sweet and thick with drifting spores"}]}, northeast = "rl_ferryman_shack"}
+admin_comment = "Gateway to Mycelial Plains (Region 5). The drifting spores foreshadow the spore_exposure attribute the realm runs on."
 
 [[room]]
 id = "rl_ferryman_shack"
@@ -111,7 +136,8 @@ name = "Ferryman's Shack"
 description = "A weathered wooden shack filled with ropes, charts, and ferry logs. The ferryman often rests here between crossings."
 desc_long = "Light peeks through holes in water-logged walls, a significant smell of must and age lingers in the air. The shack is not exactly comfortable, but you see why the Ferryman spends his time here."
 spawns = ["rl_kale_ferryman"]
-exits = {east = "rl_ferrydock_square", north = {to = "rl_ferry_berth_peaks", desc = "Beyond the shack you can see the ferry, berthed and waiting for its passengers.", show_if = {op = "has_flag", flag = "rl_has_resonant_token"}}}
+exits = {east = "rl_ferrydock_square", north = {to = "rl_ferry_berth_peaks", desc = "Beyond the shack you can see the ferry, berthed and waiting for its passengers.", show_if = {op = "has_flag", flag = "rl_has_resonant_token"}}, west = {to = "rl_ferry_berth_mistfen", desc = "A slack rope walkway leads west, out to a berth half-swallowed by reeds.", show_if = {op = "has_flag", flag = "rl_route_mistfen"}}, northwest = {to = "rl_ferry_berth_gloam", desc = "A shuttered lantern marks the northwest berth, where the water runs black and still.", show_if = {op = "has_flag", flag = "rl_route_gloam"}}, southwest = {to = "rl_ferry_berth_plains", desc = "Southwest, a low landing sits where the river slows and widens toward open grass.", show_if = {op = "has_flag", flag = "rl_route_plains"}}}
+admin_comment = "The ferry hub. Kale spawns here, and every berth hangs off this room behind the same rl_has_resonant_token gate — earning the ferryman's trust in Act I is what opens travel to all four river realms at once. Verdant Heartwood is deliberately NOT here: it is reached overland from rl_clearing, so there is one realm you can walk to."
 
 [[room]]
 id = "rl_hovel"
@@ -180,7 +206,9 @@ name = "Clearing"
 description = "A circle of flat stones surrounds a low fire, with old roots gripping the earth at the edges."
 desc_long = "Braided bundles of herbs hang from low branches, still green against the grey-brown bark. A figure in grey-green robes crouches near the flames, tending a small iron pot with unhurried attention."
 spawns = ["rl_druid_fenne"]
-exits = {north = "rl_city_edge", east = "rl_river_bank_1"}
+exits = {north = "rl_city_edge", east = "rl_river_bank_1", south = {to = "vh_edge", desc = "a deer track running south, where the scrub thickens into old forest", show_if = {op = "has_flag", flag = "rl_route_heartwood"}, on_exit = [{op = "say", text = "The scrub closes overhead within a hundred paces, and the light goes green"}]}}
+on_enter = [{op = "if_not_flag", flag = "rl_route_heartwood", then = [{op = "if_not_flag", flag = "rl_clearing_track_noted", then = [{op = "message", tag = "system", text = "A deer track runs south from the clearing, or used to. A hundred paces along it the forest has simply closed — trunk against trunk, roots over the path, growing faster than anything should. There is no way through that until it eases."}, {op = "set_flag", flag = "rl_clearing_track_noted"}]}]}]
+admin_comment = "Gateway to Verdant Heartwood (Region 3) — reached on foot rather than by ferry, but gated like the berths: the Heartwood is overgrowing and the track is choked until the regulator steadies (rl_route_heartwood, set by Kale on seeing the Mycelial fragment). The on_enter beat explains the closure so the missing exit never reads as a dead end. The old roots gripping the earth at the clearing's edge are the first hint of what is growing south of here."
 
 [[room]]
 id = "rl_echoing_antichamber"
@@ -188,7 +216,33 @@ name = "Echoing Antechamber"
 description = "A narrow passage that broadens into a low alcove, its walls carved with the same concentric rings as the chamber beyond."
 desc_long = "The resonant hum is softer here, filtered through layers of stone. In a recess along the far wall, a cloth-wrapped bundle rests on a natural shelf \\u2014 placed deliberately, long before you arrived."
 items = ["rl_resonant_blade"]
-exits = {east = "rl_echoing_chamber"}
+exits = {east = "rl_echoing_chamber", down = {to = "cc_entrance", desc = "a shaft in the floor, ringed with the architects' concentric carvings, that was not open before", show_if = {op = "has_flag", flag = "cc_descent_open"}}}
+# ACT III GATE. The five recovered device pieces are what open the descent —
+# carrying all of them makes the floor of this alcove resolve into a shaft.
+# Nested if_item because the engine has no "has all of" op; the guard flag keeps
+# the reveal to a single moment.
+on_enter = [
+  {op = "if_not_flag", flag = "cc_descent_open", then = [
+    {op = "if_item", item_id = "thermal_conductor_piece", then = [
+      {op = "if_item", item_id = "pressure_regulator_fragment", then = [
+        {op = "if_item", item_id = "growth_regulator_fragment", then = [
+          {op = "if_item", item_id = "shadow_regulator_fragment", then = [
+            {op = "if_item", item_id = "cognitive_regulator_fragment", then = [
+              {op = "message", tag = "system", text = "The five pieces go cold in your pack, all at once."},
+              {op = "pause", seconds = 0.6},
+              {op = "message", tag = "system", text = "The concentric rings on the walls begin to turn — not the stone, but the carving itself, sliding through rock like weight through water. The rings on the floor open last."},
+              {op = "pause", seconds = 0.5},
+              {op = "message", tag = "system", text = "A shaft drops away beneath the alcove, ringed all the way down. The hum you have been hearing since the hidden stair is coming from the bottom of it."},
+              {op = "set_flag", flag = "cc_descent_open"},
+              {op = "advance_quest", quest_id = "cc_finale", step = 1}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]}
+  ]}
+]
+admin_comment = "The Act III door. Carrying all five device pieces sets cc_descent_open, which reveals the `down` exit to cc_entrance and starts cc_finale at step 1. Reaching this alcove at all is already a two-stage secret (rl_stair_noticed reveals the hidden stair, rl_echo_lore_seen opens the passage west), so the finale sits behind exploration AND the five realms."
 
 [[room]]
 id = "rl_river_bank_1"

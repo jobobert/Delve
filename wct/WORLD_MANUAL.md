@@ -1632,6 +1632,34 @@ These ops are only meaningful inside an NPC's `round_script`.
 |-----------|------|-------------|
 | `min` | int | Passes when `round >= min` |
 
+> ⚠️ **`min` means "from this round onwards", not "on this round".** A
+> `round_script` fires every round, so `{if_combat_round, min = 2}` runs its
+> branch on round 2 **and every round after**. Two such blocks in one script
+> stack: an NPC with a 20-damage breath at `min = 2` and an 18-damage slam at
+> `min = 5` deals 38 extra damage *per round* from round 5 on, on top of its
+> normal attack. That is almost never what the author meant, and it is invisible
+> until someone fights it.
+>
+> For escalating boss behaviour, branch on **HP phases** instead, so exactly one
+> attack fires per round and the fight ramps rather than snowballs:
+>
+> ```toml
+> round_script = [
+>   { op = "if_npc_hp", max = 80, then = [        # phase 3: badly wounded
+>       { op = "message", tag = "combat", text = "It slams the ground!" },
+>       { op = "damage", amount = 9 },
+>     ], else = [
+>       { op = "if_npc_hp", max = 150, then = [   # phase 2: bloodied
+>         { op = "message", tag = "combat", text = "It breathes fire!" },
+>         { op = "damage", amount = 6 },
+>       ]},
+>     ]},
+> ]
+> ```
+>
+> Note also that `damage` bypasses defense entirely, so scripted damage — not the
+> NPC's `attack` — usually decides whether a boss fight is survivable.
+
 ---
 
 **`if_npc_hp`** — Branch on the NPC's current HP

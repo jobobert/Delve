@@ -20,7 +20,7 @@ name        = "Chamber Threshold"
 description = "A circular platform suspended over darkness. Resonance hums beneath your feet, calibrating to your presence."
 flags       = ["town"]
 spawns      = ["cc_banker"]
-exits       = { down = "cc_descent1" }
+exits       = { down = "cc_descent1", up = { to = "rl_echoing_antichamber", desc = "the ringed shaft back up to the antechamber" } }
 on_enter    = [
   { op = "set_attr",      name = "resonance", value = 100 },
   { op = "advance_quest", quest_id = "cc_finale", step = 2 },

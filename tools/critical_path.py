@@ -93,6 +93,8 @@ class SimState:
         self.items: set[str]           = set()
         self.killed_npcs: set[str]     = set()
         self.quest_steps: dict[str, int] = {}   # quest_id → current step
+        self.crafted: set[str]           = set() # commission ids already fulfilled
+        self.harvested: set[str]         = set() # scenery nodes whose on_get has fired
         self.completed_quests: set[str]  = set()
 
     def add_flag(self, flag: str) -> bool:
@@ -162,6 +164,9 @@ class CriticalPathAnalyzer:
         self.quest_triggers: dict[tuple, list[dict]] = {}
 
         self.start_room: str = ""
+        # (room_id, direction) pairs opened by an unlock_exit op somewhere.
+        # Populated in _build_deps once all scripts are loaded.
+        self._unlock_scripted: set[tuple[str, str]] = set()
 
     # ─────────────────────────────────────────────────────────────────────────
     # Phase 1 — Load data
@@ -223,12 +228,17 @@ class CriticalPathAnalyzer:
                     continue
                 self.commissions.extend(data.get("commission", []))
 
-        # Load quests
-        for quest_id, path in find_quest_files(self.world_path).items():
+        # Load quests. Key by the quest's own `id` field, which is what the engine
+        # uses (engine/quests.py::load_all) and what advance_quest/complete_quest
+        # reference — NOT the filename. Where the two differ, keying by filename
+        # silently detaches every trigger from its quest and reports the whole
+        # chain as missing.
+        for fname, path in find_quest_files(self.world_path).items():
             try:
-                self.quests_raw[quest_id] = load_quest(path)
+                quest = load_quest(path)
             except Exception:
-                pass
+                continue
+            self.quests_raw[quest.get("id") or fname] = quest
 
         # Supplement npc_rooms from zone_state JSON (e.g. garrison_ghost)
         zone_state_dir = self.world_path / "zone_state"
@@ -338,12 +348,17 @@ class CriticalPathAnalyzer:
     # ─────────────────────────────────────────────────────────────────────────
 
     def _build_deps(self) -> None:
+        self._unlock_scripted = self._scripted_unlocks()
         # Flag sources from rooms
         for rid, room in self.rooms_raw.items():
-            for src in self._effects_from_script(
-                room.get("on_enter", []), "room_enter", rid, []
-            ):
-                self.flag_sources.setdefault(src.flag, []).append(src)
+            for key in ("on_enter", "on_exit", "on_sleep", "on_wake"):
+                for src in self._effects_from_script(
+                    room.get(key, []), "room_enter", rid, []
+                ):
+                    self.flag_sources.setdefault(src.flag, []).append(src)
+            for _dir, ops in self._exit_scripts(room):
+                for src in self._effects_from_script(ops, "room_enter", rid, []):
+                    self.flag_sources.setdefault(src.flag, []).append(src)
 
         # Flag + item sources from items (on_get, on_use, and custom verbs)
         for iid, item in self.items_raw.items():
@@ -359,6 +374,14 @@ class CriticalPathAnalyzer:
                     cmd.get("ops", []), "item_get", iid, []
                 ):
                     self.flag_sources.setdefault(src.flag, []).append(src)
+
+        # Flag + item sources from crafting commissions (on_complete)
+        for comm in self.commissions:
+            for src in self._effects_from_script(
+                comm.get("on_complete", []), "give_accepts",
+                comm.get("npc_id", comm.get("id", "?")), []
+            ):
+                self.flag_sources.setdefault(src.flag, []).append(src)
 
         # Flag + item sources from NPCs (kill_script, give_accepts)
         for nid, npc in self.npcs_raw.items():
@@ -458,10 +481,14 @@ class CriticalPathAnalyzer:
                         op.get(branch_key, []), kind, location_id, conditions, node_id
                     ))
             elif name == "skill_check":
-                results.extend(self._effects_from_script(
-                    op.get("on_pass", []), kind, location_id,
-                    conditions + ["skill_check"], node_id
-                ))
+                # Both branches matter: failing a check is a legitimate way to
+                # set a flag (getting lost, alerting a guard, breaking something),
+                # and scanning only on_pass reports those flags as orphaned.
+                for branch in ("on_pass", "on_fail"):
+                    results.extend(self._effects_from_script(
+                        op.get(branch, []), kind, location_id,
+                        conditions + ["skill_check"], node_id
+                    ))
         return results
 
     def _build_item_sources(self) -> None:
@@ -476,13 +503,25 @@ class CriticalPathAnalyzer:
         # give_item ops in all scripts
         for rid, room in self.rooms_raw.items():
             self._scan_give_items(room.get("on_enter", []), "room_enter", rid)
+            for _dir, ops in self._exit_scripts(room):
+                self._scan_give_items(ops, "room_enter", rid)
         for iid, item in self.items_raw.items():
             self._scan_give_items(item.get("on_get", []), "item_get", iid)
             self._scan_give_items(item.get("on_use", []), "item_use", iid)
             for cmd in item.get("commands", []):
                 self._scan_give_items(cmd.get("ops", []),
                                       f"item_cmd_{cmd.get('verb', '?')}", iid)
+        for comm in self.commissions:
+            self._scan_give_items(comm.get("on_complete", []), "give_accepts",
+                                  comm.get("npc_id", comm.get("id", "?")))
         for nid, npc in self.npcs_raw.items():
+            # Shop stock is obtainable — gold is not modelled, so treat it as
+            # available. Without this, keys sold by vendors look like dead ends.
+            for entry in npc.get("shop", []):
+                iid = entry.get("item_id", "") if isinstance(entry, dict) else entry
+                if iid:
+                    self.item_sources.setdefault(iid, []).append(
+                        ItemSource(item_id=iid, kind="dialogue_give", location_id=nid))
             self._scan_give_items(npc.get("kill_script", []), "npc_kill", nid)
             for ga in npc.get("give_accepts", []):
                 self._scan_give_items(ga.get("script", []), "give_accepts", nid)
@@ -547,7 +586,10 @@ class CriticalPathAnalyzer:
                     _scan(op.get(branch, []), ctx)
 
         for rid, room in self.rooms_raw.items():
-            _scan(room.get("on_enter", []), f"room:{rid}")
+            for key in ("on_enter", "on_exit", "on_sleep", "on_wake"):
+                _scan(room.get(key, []), f"room:{rid}")
+            for _dir, ops in self._exit_scripts(room):
+                _scan(ops, f"room_exit:{rid}/{_dir}")
         for iid, item in self.items_raw.items():
             _scan(item.get("on_get", []),  f"item_get:{iid}")
             _scan(item.get("on_use", []),  f"item_use:{iid}")
@@ -556,6 +598,10 @@ class CriticalPathAnalyzer:
             for cmd in item.get("commands", []):
                 verb = cmd.get("verb", "?")
                 _scan(cmd.get("ops", []), f"item_cmd:{iid}/{verb}")
+        for comm in self.commissions:
+            # A commission's on_complete runs when the player collects the finished
+            # item — several worlds complete quests this way rather than via on_get.
+            _scan(comm.get("on_complete", []), f"commission:{comm.get('id', '?')}")
         for nid, npc in self.npcs_raw.items():
             _scan(npc.get("kill_script", []), f"npc_kill:{nid}")
             for ga in npc.get("give_accepts", []):
@@ -597,7 +643,7 @@ class CriticalPathAnalyzer:
                     dest = exit_dest(ev)
                     if not dest or dest in state.reachable_rooms:
                         continue
-                    if self._exit_traversable(ev, state):
+                    if self._exit_traversable(ev, state, room_id, direction):
                         if state.add_room(dest):
                             changed = True
 
@@ -606,10 +652,21 @@ class CriticalPathAnalyzer:
                 room = self.rooms_raw.get(room_id, {})
                 for entry in room.get("items", []):
                     iid = entry if isinstance(entry, str) else entry.get("id", "")
-                    if not iid or iid in state.items:
+                    if not iid:
                         continue
                     item = self.items_raw.get(iid, {})
                     if item.get("scenery"):
+                        # Scenery cannot be carried, but `get` still runs its
+                        # on_get — that is the documented pattern for ore veins
+                        # and other harvest nodes, and it is how several worlds
+                        # hand out crafting materials. Fire it once.
+                        if iid not in state.harvested:
+                            state.harvested.add(iid)
+                            changed = True
+                            if self._apply_script(item.get("on_get", []), state, iid):
+                                changed = True
+                        continue
+                    if iid in state.items:
                         continue
                     if state.add_item(iid):
                         changed = True
@@ -646,15 +703,39 @@ class CriticalPathAnalyzer:
             # Materials are consumed in play, but the simulation only tracks
             # obtainability, so a commission stays available once unlocked.
             for comm in self.commissions:
-                result = comm.get("result_item", "")
-                if not result or result in state.items:
-                    continue
                 mats = comm.get("materials", [])
-                if mats and all(m in state.items for m in mats):
-                    if state.add_item(result):
+                if not mats or not all(m in state.items for m in mats):
+                    continue
+                cid = comm.get("id", "")
+                result = comm.get("result_item", "")
+                # An authored result_item is handed back directly; a commission
+                # without one either builds a generic item (not modelled, it has
+                # no world id) or hands something over in on_complete. Run
+                # on_complete either way — that is where quest state and
+                # give_item live.
+                if result and state.add_item(result):
+                    changed = True
+                    item = self.items_raw.get(result, {})
+                    if self._apply_script(item.get("on_get", []), state, result):
                         changed = True
-                        item = self.items_raw.get(result, {})
-                        if self._apply_script(item.get("on_get", []), state, result):
+                if cid not in state.crafted:
+                    state.crafted.add(cid)
+                    changed = True
+                    if self._apply_script(comm.get("on_complete", []), state, cid):
+                        changed = True
+
+            # 3e. Buy from vendors whose room is reachable. Gold is not modelled,
+            # so treat stock as available — otherwise vendor-only materials and
+            # keys read as unobtainable.
+            for nid, npc in self.npcs_raw.items():
+                if self.npc_rooms.get(nid, "") not in state.reachable_rooms:
+                    continue
+                for entry in npc.get("shop", []):
+                    iid = entry.get("item_id", "") if isinstance(entry, dict) else entry
+                    if iid and state.add_item(iid):
+                        changed = True
+                        shop_item = self.items_raw.get(iid, {})
+                        if self._apply_script(shop_item.get("on_get", []), state, iid):
                             changed = True
 
             # 4. Kill hostile NPCs
@@ -768,8 +849,11 @@ class CriticalPathAnalyzer:
                 # Optimistic: assume the quest reaches the required state.
                 if self._apply_script(op.get("then", []), state, ctx):
                     changed = True
-            elif name in ("if_skill", "if_attr"):
-                # Optimistic: skills and world attrs both grow over a playthrough.
+            elif name in ("if_skill", "if_attr", "if_prestige", "if_affinity",
+                          "if_status", "if_light"):
+                # Optimistic: skills, world attrs, prestige, affinity, status and
+                # light all change over a playthrough, and this tool answers
+                # "can the player get here", not "can they get here right now".
                 if self._apply_script(op.get("then", []), state, ctx):
                     changed = True
             elif name == "skill_check":
@@ -782,7 +866,8 @@ class CriticalPathAnalyzer:
                     changed = True
         return changed
 
-    def _exit_traversable(self, ev, state: SimState) -> bool:
+    def _exit_traversable(self, ev, state: SimState,
+                          room_id: str = "", direction: str = "") -> bool:
         """Return True if this exit can be traversed given current state."""
         if isinstance(ev, str):
             return True
@@ -797,6 +882,12 @@ class CriticalPathAnalyzer:
 
         # locked door
         if ev.get("locked"):
+            # A door may be opened by an unlock_exit script instead of a key item
+            # (a lever, an aligned mechanism, a quest step). Those doors have no
+            # key with a matching tag, so without this they read as permanently
+            # shut and everything past them looks unreachable.
+            if (room_id, direction) in self._unlock_scripted:
+                return True
             lock_tag = ev.get("lock_tag", "")
             if lock_tag and not state.has_item_with_tag(lock_tag, self.items_raw):
                 return False
@@ -862,12 +953,73 @@ class CriticalPathAnalyzer:
     # Phase 4 — Issue detection
     # ─────────────────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _exit_scripts(room: dict):
+        """Yield (direction, ops) for scripts attached to individual exits.
+
+        A dict-form exit may carry on_exit / on_look ops. They are real engine
+        hooks, and worlds use them for navigation puzzles — so flags they set
+        must be visible to the analyser or they read as orphaned.
+        """
+        for direction, val in room.get("exits", {}).items():
+            if not isinstance(val, dict):
+                continue
+            for key in ("on_exit", "on_look", "on_enter"):
+                ops = val.get(key)
+                if isinstance(ops, list):
+                    yield direction, ops
+
+    def _scripted_unlocks(self) -> set[tuple[str, str]]:
+        """(room_id, direction) pairs that some script opens with unlock_exit.
+
+        A door can be opened by a script instead of a key item — aligning a
+        mechanism, completing a quest, a lever. Those are not missing-key bugs.
+        """
+        found: set[tuple[str, str]] = set()
+
+        def walk(ops):
+            if not isinstance(ops, list):
+                return
+            for op in ops:
+                if not isinstance(op, dict):
+                    continue
+                if op.get("op") == "unlock_exit":
+                    rid, d = op.get("room_id", ""), op.get("direction", "")
+                    if rid and d:
+                        found.add((rid, d))
+                for key in ("then", "else", "on_pass", "on_fail", "ops"):
+                    walk(op.get(key))
+
+        for room in self.rooms_raw.values():
+            for k in ("on_enter", "on_exit", "on_sleep", "on_wake"):
+                walk(room.get(k))
+        for item in self.items_raw.values():
+            for k in ("on_get", "on_use", "on_drop"):
+                walk(item.get(k))
+            for cmd in item.get("commands", []):
+                walk(cmd.get("ops"))
+        for npc in self.npcs_raw.values():
+            walk(npc.get("kill_script"))
+            for ga in npc.get("give_accepts", []):
+                walk(ga.get("script"))
+        for nodes in self.dialogues_raw.values():
+            for node in nodes.values():
+                walk(node.get("script"))
+                for resp in node.get("response", []):
+                    walk(resp.get("script"))
+        for comm in self.commissions:
+            walk(comm.get("on_complete"))
+        return found
+
     def _detect_issues(self, state: SimState) -> list[Issue]:
         issues: list[Issue] = []
+        unlocked_by_script = self._unlock_scripted
 
         # 1. Locked exits with no key or circular dependency
         for chain in self.lock_chains:
             dest = chain.dest_room
+            if (chain.room_id, chain.direction) in unlocked_by_script:
+                continue   # opened by an unlock_exit script, not a key item
             if not chain.key_items:
                 issues.append(Issue(
                     severity="BLOCKING", category="locked_door",
@@ -885,12 +1037,17 @@ class CriticalPathAnalyzer:
                 # Dest is reachable but key isn't — door must have been bypassed
                 pass
             elif not key_obtainable and dest not in state.reachable_rooms:
-                # Check if key sources exist outside the locked door's destination
+                # A lock is only circular if its key cannot be got WITHOUT going
+                # through the door. Asking instead "what lies beyond the door"
+                # is wrong: unless the door opens onto a true dead end, that walk
+                # loops back out and swallows the whole map, so every ordinary
+                # locked door looks circular.
+                reachable_without = self._reachable_avoiding(
+                    chain.room_id, chain.direction)
                 has_external_source = False
-                dest_zone_rooms = self._rooms_beyond(chain.room_id, chain.direction)
                 for src in chain.key_sources:
                     src_room = self._source_room(src)
-                    if src_room and src_room not in dest_zone_rooms:
+                    if src_room and src_room in reachable_without:
                         has_external_source = True
                         break
                 if not has_external_source:
@@ -1007,13 +1164,35 @@ class CriticalPathAnalyzer:
         """Return the room_id where an item source is located."""
         if src.kind == "room_floor":
             return src.location_id
-        if src.kind == "npc_kill":
-            return self.npc_rooms.get(src.location_id, "")
-        if src.kind == "dialogue":
-            return self.npc_rooms.get(src.location_id, "")
-        if src.kind == "give_accepts":
+        # Everything else is located at an NPC — killed, talked to, traded with,
+        # or handed something. dialogue_give covers shop stock and give_item
+        # scripts; omitting it made vendor-sold keys look like dead ends.
+        if src.kind in ("npc_kill", "dialogue", "dialogue_give",
+                        "give_accepts", "give_item_script"):
             return self.npc_rooms.get(src.location_id, "")
         return ""
+
+    def _reachable_avoiding(self, block_room: str, block_dir: str) -> set[str]:
+        """Rooms reachable from the start WITHOUT traversing one specific exit.
+
+        Other locks are ignored (optimistic) — this answers only "could the player
+        get here if that one door stayed shut", which is what decides whether a
+        key is genuinely trapped behind its own door.
+        """
+        seen: set[str] = set()
+        queue = deque([self.start_room] if self.start_room else [])
+        while queue:
+            rid = queue.popleft()
+            if rid in seen or rid not in self.rooms_raw:
+                continue
+            seen.add(rid)
+            for direction, val in self.rooms_raw[rid].get("exits", {}).items():
+                if rid == block_room and direction == block_dir:
+                    continue
+                nxt = exit_dest(val)
+                if nxt and nxt not in seen:
+                    queue.append(nxt)
+        return seen
 
     def _rooms_beyond(self, start_room: str, direction: str) -> set[str]:
         """BFS to find all rooms reachable through a specific door (ignoring locks)."""

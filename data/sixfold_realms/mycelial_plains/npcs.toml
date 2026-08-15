@@ -26,6 +26,14 @@ round_script = [
 
 [[npc]]
 id          = "mp_healer_rissa"
+# Stock relocated from the mp_entrance room block: a `shop` on a [[room]]
+# is never read by the engine, so these items were unbuyable.
+shop        = [
+  { item_id = "mp_clarity_brew",        price = 12 },
+  { item_id = "mp_fungal_mask",         price = 20 },
+  { item_id = "mp_memory_tuning_fork",  price = 18 },
+  { item_id = "mp_spore_lens",          price = 14 },
+]
 name        = "Healer Rissa Vale"
 desc_short  = "A brewmaster who studies the fungus and its effects."
 desc_long   = "Rissa's clarity brews keep the town functioning. She speaks softly, as if afraid her thoughts might slip away."
@@ -96,7 +104,7 @@ style_prof  = 15
 hp          = 40
 max_hp      = 40
 attack      = 8
-defense     = 3
+defense     = 2
 xp_reward   = 25
 gold_reward = 0
 hostile     = true
@@ -123,7 +131,7 @@ style_prof  = 22
 hp          = 60
 max_hp      = 60
 attack      = 15
-defense     = 8
+defense     = 4
 xp_reward   = 55
 gold_reward = 0
 hostile     = true
@@ -150,7 +158,7 @@ style_prof  = 18
 hp          = 30
 max_hp      = 30
 attack      = 11
-defense     = 3
+defense     = 2
 xp_reward   = 30
 gold_reward = 0
 hostile     = true
@@ -177,7 +185,7 @@ style_prof  = 35
 hp          = 90
 max_hp      = 90
 attack      = 14
-defense     = 10
+defense     = 6
 xp_reward   = 80
 gold_reward = 0
 hostile     = true
@@ -206,7 +214,7 @@ style_prof  = 60
 hp          = 180
 max_hp      = 180
 attack      = 20
-defense     = 14
+defense     = 8
 xp_reward   = 250
 gold_reward = 0
 hostile     = true

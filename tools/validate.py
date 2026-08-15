@@ -398,6 +398,33 @@ def validate_quests(quests, npcs):
             warn(f"Quest '{qid}' giver NPC '{giver}' not found")
 
 
+def validate_quest_filenames() -> None:
+    """Warn when a quest file's name does not match the quest's `id`.
+
+    The engine keys quests by the `id` field, so a mismatch is harmless at run
+    time — but tooling that indexes by filename (graph_common.find_quest_files,
+    and anything built on it) then attaches every trigger to the wrong key and
+    reports a perfectly good quest chain as entirely missing. Keeping the two in
+    step costs nothing and removes a whole class of phantom bug report.
+    """
+    for zone_folder in zone_dirs():
+        quests_dir = zone_folder / "quests"
+        if not quests_dir.exists():
+            continue
+        for path in sorted(quests_dir.glob("*.toml")):
+            data = load_safe(path)
+            if not data:
+                continue
+            qid = data.get("id", "")
+            if not qid:
+                err(f"{path.relative_to(DATA_DIR.parent)}: quest file has no 'id'")
+            elif qid != path.stem:
+                warn(f"{path.relative_to(DATA_DIR.parent)}: filename does not match "
+                     f"quest id '{qid}'. The engine keys on 'id', but filename-based "
+                     f"tooling will mis-attribute this quest — rename the file to "
+                     f"'{qid}.toml'.")
+
+
 def _collect_all_quest_ops() -> dict[str, set]:
     """
     Scan every script source in the world for advance_quest / complete_quest ops.
@@ -772,6 +799,23 @@ def validate_silent_key_mistakes() -> None:
                         f"responses are filtered on 'condition'. Use "
                         f"condition = {{flag = \"...\"}} or {{not_flag = \"...\"}}, "
                         f"otherwise this response is always visible.")
+
+    # ── shop stock on a [[room]] ──────────────────────────────────────────────
+    # `buy` resolves stock through _shop_npc() — an NPC carrying a `shop` list.
+    # A `shop` on a room parses fine and is never read, so the goods simply
+    # cannot be bought. Put the stock on a vendor NPC that spawns in the room.
+    for zone_folder in zone_dirs():
+        for path in sorted(zone_folder.glob("*.toml")):
+            data = load_safe(path)
+            if not data:
+                continue
+            rel = path.relative_to(DATA_DIR.parent)
+            for room in data.get("room", []):
+                if room.get("shop"):
+                    err(f"{rel}: room '{room.get('id', '?')}' defines a 'shop' list. "
+                        f"Shops are resolved through an NPC — a room-level shop is "
+                        f"never read, so its {len(room['shop'])} item(s) cannot be "
+                        f"bought. Move the list onto a vendor NPC that spawns here.")
 
     # ── item command verbs shadowed by built-in commands ──────────────────────
     # "Built-in engine verbs always take priority over item commands", so an
@@ -1451,6 +1495,8 @@ def _validate_world(world_path: Path) -> None:
     validate_duplicate_keys()
     validate_script_ops()
     validate_silent_key_mistakes()
+    validate_quests(quests, npcs)
+    validate_quest_filenames()
     validate_quest_triggers(quests)
 
     # Collect zone ids that actually have rooms

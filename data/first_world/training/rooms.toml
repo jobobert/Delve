@@ -2,7 +2,10 @@
 # Zone id: training
 #
 # Demonstrates:
-#   locked door  — barracks east door requires barracks_key (lock_tag = "barracks_lock")
+#   locked door  — barracks east door requires barracks_key (lock_tag = "barracks_lock").
+#                  The key is held by barracks_quartermaster, who spawns in the
+#                  barracks. It must NOT be placed in barracks_storeroom: that is
+#                  the only room the key opens, so the room would be unreachable.
 #   room flags   — no_combat (barracks), safe_combat (training_yard)
 
 [[room]]
@@ -29,5 +32,5 @@ name        = "Barracks Storeroom"
 description = "Shelves of equipment line the walls — spare weapons, rations, a small chest. Dusty but well-organized. A locked iron door leads back to the barracks."
 exits       = { west = { to = "barracks", locked = false, lock_tag = "barracks_lock", desc = "the iron door back to the barracks" } }
 flags       = ["no_combat"]
-items       = ["barracks_key", "health_potion"]
+items       = ["health_potion"]
 spawns      = []

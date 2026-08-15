@@ -5,7 +5,7 @@ id          = "mf_swamp_edge"
 name        = "Swamp's Edge"
 description = "The ground softens as the Riverlands gives way to the Mistfen. The air hums with pressure."
 spawns      = ["mf_mire_wolf", "mf_banker"]
-exits       = { east = "mf_mist_loop1", south = "mf_path_reader_camp" }
+exits       = { east = "mf_mist_loop1", south = "mf_path_reader_camp", west = { to = "rl_ferry_berth_mistfen", desc = "the reed channel back toward the Riverlands berth", on_exit = [{ op = "say", text = "The ferry backs out of the reeds and the mist releases you" }] } }
 on_enter    = [
   { op = "if_not_flag", flag = "mf_pressure_chain_heard", then = [
     { op = "advance_quest", quest_id = "mf_pressure_chain", step = 1 },

@@ -39,15 +39,28 @@ slot        = ""
 weight      = 0
 scenery     = true
 respawn     = true
+# CROSS-REGION (world.md trade routes): resonant alloys from the Peaks repair
+# swamp machinery. This pillar IS Path-Reader machinery, and the damp has split
+# its resonator — it cannot tune anything until an alloy is seated in it.
 on_get      = [
-  { op = "if_item", item_id = "echo_compass", then = [
-    { op = "take_item", item_id = "echo_compass" },
-    { op = "give_item", item_id = "echo_compass_tuned" },
-    { op = "set_flag",  flag = "mf_echo_gate_unlocked" },
-    { op = "message", tag = "quest", text = "The Echo Compass locks onto the pillar's rhythm. The Echo Gate should now respond." },
-    { op = "advance_quest", quest_id = "mf_pressure_below", step = 2 },
+  { op = "if_not_flag", flag = "mf_pillar_repaired", then = [
+    { op = "if_item", item_id = "resonant_alloy_ingot", then = [
+      { op = "take_item", item_id = "resonant_alloy_ingot" },
+      { op = "set_flag",  flag = "mf_pillar_repaired" },
+      { op = "message", tag = "quest", text = "The resonator housing is split clean through — the swamp has been working at it for years. You seat the Peaks alloy into the gap and the crack closes around it. The pillar finds its note and holds it." },
+    ], else = [
+      { op = "message", tag = "error", text = "The pillar shudders and will not hold a note. Its resonator is split and the damp has eaten the old metal out of it. It needs an alloy that keeps its shape under load — the kind the Peaks smiths pour." },
+    ] },
   ], else = [
-    { op = "message", tag = "system", text = "The pillar hums, but you have nothing to tune here." },
+    { op = "if_item", item_id = "echo_compass", then = [
+      { op = "take_item", item_id = "echo_compass" },
+      { op = "give_item", item_id = "echo_compass_tuned" },
+      { op = "set_flag",  flag = "mf_echo_gate_unlocked" },
+      { op = "message", tag = "quest", text = "The Echo Compass locks onto the pillar's rhythm. The Echo Gate should now respond." },
+      { op = "advance_quest", quest_id = "mf_pressure_below", step = 2 },
+    ], else = [
+      { op = "message", tag = "system", text = "The pillar holds its note steadily now, waiting for something to tune against it." },
+    ] },
   ] },
 ]
 

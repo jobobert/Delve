@@ -50,12 +50,21 @@ slot        = ""
 weight      = 0
 scenery     = true
 respawn     = true
+# CROSS-REGION (world.md trade routes): heat-forged crystals from the Peaks cut
+# the Heartwood vines. volcanic_glass_shard is the canonical answer; the locally
+# sold Vine-Calming Charm still works, since it calms rather than cuts.
 on_get      = [
-  { op = "if_item", item_id = "vh_vine_charm", then = [
-    { op = "message", tag = "system", text = "The vines relax and pull away from the path." },
+  { op = "if_item", item_id = "volcanic_glass_shard", then = [
+    { op = "message", tag = "system", text = "You set the volcanic glass against the nearest cord and draw it down. The edge is still faintly warm from the Peaks, and the vine parts like wet rope, weeping sap that hisses where it lands. The wall unknits itself rather than be cut twice." },
     { op = "set_flag", flag = "vh_vines_cleared" },
+    { op = "set_flag", flag = "vh_cut_with_peaks_glass" },
   ], else = [
-    { op = "message", tag = "error", text = "The vines tighten, refusing to move." },
+    { op = "if_item", item_id = "vh_vine_charm", then = [
+      { op = "message", tag = "system", text = "The vines relax and pull away from the path." },
+      { op = "set_flag", flag = "vh_vines_cleared" },
+    ], else = [
+      { op = "message", tag = "error", text = "The vines tighten, refusing to move. Steel slides off them. You would need an edge that holds its heat — the Peaks smiths work volcanic glass that might do it — or something the forest is willing to listen to." },
+    ] },
   ] },
 ]
 

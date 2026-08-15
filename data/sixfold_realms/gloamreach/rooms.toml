@@ -15,15 +15,7 @@ name        = "Twilight Mouth"
 description = "A cavern mouth where daylight dims unnaturally. Your light feels strangely heavy."
 flags       = ["town"]
 spawns        = ["gr_lightbearer_alen", "gr_lightbearer_sira", "gr_banker"]
-shop        = [
-  { item_id = "gr_dim_lantern",      price = 20 },
-  { item_id = "gr_bright_lantern",   price = 40 },
-  { item_id = "gr_shadow_crystal",   price = 30 },
-  { item_id = "gr_echo_tuning_fork",   price = 15 },
-  { item_id = "gr_afterimage_trap",    price = 10 },
-  { item_id = "gr_shadecloth_scrap",   price = 12 },
-]
-exits       = { east = "gr_approach1" }
+exits       = { east = "gr_approach1", southeast = { to = "rl_ferry_berth_gloam", desc = "the black channel back toward the Riverlands berth", on_exit = [{ op = "say", text = "The ferry slips back toward the light, and the grey seam widens into day" }] } }
 on_enter    = [
   { op = "message", tag = "system", text = "Your light flickers as you cross the threshold." },
 ]

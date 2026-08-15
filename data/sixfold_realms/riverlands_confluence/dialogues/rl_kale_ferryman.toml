@@ -23,6 +23,66 @@ line = "Kale shrugs. 'Then mind your footing. The river doesn't care if you beli
 id = "ask_passage"
 line = "'Passage used to be simple. Now the currents twist. Until the echoes calm, I won't risk a full crossing.'"
 
+# ── Route progression ─────────────────────────────────────────────────────────
+# The Riverlands sits downstream of every failing realm and absorbs their chaos
+# (world.md), so the water itself is the gate: Kale can only sail as far as the
+# currents let him. Each recovered device piece steadies them one realm further.
+# He never TAKES a piece — all five are needed for the Core Chamber — he only
+# needs to see one. That also means the route flags cannot be lost by dropping
+# an item, so the progression can never soft-lock.
+#
+#   route order follows both measured difficulty and world.md's trade routes:
+#     Peaks (15.4) -> Mistfen (17.9) -> Plains (21.8) -> Heartwood (22.1) -> Gloam (24.7)
+#   Dragon Peaks is first because it supplies the resonant alloy, volcanic glass
+#   and drakebone that the next three realms each need.
+
+[[node]]
+id = "show_piece"
+lines = [
+  "'Show me, then.' He turns it over, feeling the weight rather than looking at it.",
+  { text = "'Another one.' He does not smile, but something in his shoulders drops. 'The water's been quieter since you started bringing these back.'", show_if = {flag = "rl_route_mistfen"} },
+]
+script = [
+  # Each check opens exactly one further route, in order.
+  { op = "if_item", item_id = "thermal_conductor_piece", then = [
+    { op = "if_not_flag", flag = "rl_route_mistfen", then = [
+      { op = "set_flag", flag = "rl_route_mistfen" },
+      { op = "message", tag = "quest", text = "Kale weighs the conductor. 'Heat off the Peaks. That's the northern draw settling.' He looks west, toward the reeds. 'The mist channel will hold now. I can put you into the Mistfen.'" },
+    ] },
+  ] },
+  { op = "if_item", item_id = "pressure_regulator_fragment", then = [
+    { op = "if_not_flag", flag = "rl_route_plains", then = [
+      { op = "set_flag", flag = "rl_route_plains" },
+      { op = "message", tag = "quest", text = "'Pressure. That's the one that had the river folding back on itself.' He rolls his shoulders. 'Southwest run's open. The Plains, if you want them.'" },
+    ] },
+  ] },
+  { op = "if_item", item_id = "cognitive_regulator_fragment", then = [
+    { op = "if_not_flag", flag = "rl_route_heartwood", then = [
+      { op = "set_flag", flag = "rl_route_heartwood" },
+      { op = "message", tag = "quest", text = "'That one's from the Plains. Thought so.' He nods south, inland. 'The Heartwood's been strangling the deer track for a year. It'll be loosening about now — you can walk it from the clearing.'" },
+    ] },
+  ] },
+  { op = "if_item", item_id = "growth_regulator_fragment", then = [
+    { op = "if_not_flag", flag = "rl_route_gloam", then = [
+      { op = "set_flag", flag = "rl_route_gloam" },
+      { op = "message", tag = "quest", text = "'Growth.' He is quiet a moment. 'Then there's one left, and it's the one I've been dreading.' He nods northwest, at the black water. 'I'll take you to the Gloam. I won't wait there.'" },
+    ] },
+  ] },
+  { op = "if_not_flag", flag = "rl_route_mistfen", then = [
+    { op = "message", tag = "system", text = "'Nothing yet that the river recognises. Bring me a piece of the thing that broke, and I'll see how far the water lets me go.'" },
+  ] },
+]
+
+[[response]]
+node = "show_piece"
+text = "Understood."
+next = ""
+
+[[response]]
+node = "show_piece"
+text = "Which way, then?"
+next = "ask_passage"
+
 [[node]]
 id = "return_token"
 lines = [
@@ -48,6 +108,12 @@ next = "ask_remember"
 node = "root"
 text = "I just need passage."
 next = "ask_passage"
+
+[[response]]
+node = "root"
+text = "I brought something back."
+next = "show_piece"
+condition = {flag = "rivers_remember_done"}
 
 [[response]]
 node = "ask_remember"

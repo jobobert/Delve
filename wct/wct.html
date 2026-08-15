@@ -2486,9 +2486,29 @@
           hdr.appendChild(rmBtn);
           card.appendChild(hdr);
 
-          card.appendChild(fieldRow('Verb',
-            textInput(cmd.verb || '', v => { cmd.verb = v.trim().toLowerCase(); hdrSpan.textContent = cmd.verb ? `"${cmd.verb}"` : `Command ${i + 1}`; markDirty(); }),
-            null, 'The command word the player types (e.g. "open", "push", "read").'));
+          // Built-in verbs always win over item commands, so a command named
+          // after one can never fire. Warn inline rather than let it ship silent.
+          const verbWarn = document.createElement('div');
+          verbWarn.style.cssText = 'font-size:11px;color:var(--danger,#e06c6c);margin:2px 0 6px 0;display:none';
+          const checkVerb = v => {
+            const clash = BUILTIN_VERBS.has(v);
+            verbWarn.style.display = clash ? 'block' : 'none';
+            verbWarn.textContent = clash
+              ? `"${v}" is a built-in engine command. Built-ins always take priority, `
+                + `so this item command can never fire — pick another word.`
+              : '';
+          };
+          const verbInput = textInput(cmd.verb || '', v => {
+            cmd.verb = v.trim().toLowerCase();
+            hdrSpan.textContent = cmd.verb ? `"${cmd.verb}"` : `Command ${i + 1}`;
+            checkVerb(cmd.verb);
+            markDirty();
+          });
+          card.appendChild(fieldRow('Verb', verbInput,
+            null, 'The command word the player types (e.g. "search", "sever", "install").\n'
+                + 'Must not be a built-in engine verb — built-ins always win.'));
+          card.appendChild(verbWarn);
+          checkVerb(cmd.verb || '');
 
           const visRow = document.createElement('div'); visRow.className = 'field-row inline';
           visRow.appendChild(checkboxInput(!!cmd.visible, v => { cmd.visible = v || undefined; markDirty(); }, 'Visible'));
@@ -4297,6 +4317,19 @@ async function save() {
           reqInp.addEventListener('input', () => { d.passives[i].requires = reqInp.value || undefined; markDirty(); });
           topRow.appendChild(passiveField('Requires (ability)', reqInp));
 
+          // target_tags — only fire against an opponent carrying one of these NPC tags.
+          const tgtInp = document.createElement('input'); tgtInp.type = 'text'; tgtInp.className = 'field-input'; tgtInp.style.width = '150px';
+          tgtInp.value = (p.target_tags || []).join(', '); tgtInp.placeholder = '(any target)';
+          tgtInp.title = 'Comma-separated NPC tags. The passive only fires against an opponent '
+                       + 'carrying one of them, e.g. "large" for a passive that targets weak '
+                       + 'points on big creatures. Leave blank to fire against anything.';
+          tgtInp.addEventListener('input', () => {
+            const tags = tgtInp.value.split(',').map(s => s.trim()).filter(Boolean);
+            d.passives[i].target_tags = tags.length ? tags : undefined;
+            markDirty();
+          });
+          topRow.appendChild(passiveField('Target tags', tgtInp));
+
           card.appendChild(topRow);
 
           // Trigger-conditional fields
@@ -5486,6 +5519,21 @@ async function save() {
     // op schema: op → [{key, type, label, options?}]
     // types: text, num, bool, item_ref, npc_ref, room_ref, quest_ref, skill_ref, style_ref,
     //        flag, effect, tag, num_or_star, branch (special: renders then/else sub-lists)
+    // Built-in engine verbs (engine/commands.py `self._commands`). An
+    // [[item.commands]] verb that matches one of these can never fire, because
+    // built-ins are dispatched first. Keep in step if commands.py gains a verb;
+    // tools/validate.py checks the same thing against the live source.
+    const BUILTIN_VERBS = new Set([
+      'alias', 'aliases', 'attack', 'attempt', 'balance', 'bank', 'buy', 'chop',
+      'collect', 'commission', 'commissions', 'companion', 'deposit', 'dismiss',
+      'drink', 'drop', 'equip', 'examine', 'exit', 'expand', 'get', 'give', 'go',
+      'help', 'i', 'inventory', 'j', 'journal', 'kill', 'l', 'learn', 'list',
+      'lock', 'look', 'loot', 'map', 'mine', 'order', 'quests', 'quit', 'recall',
+      'rest', 'save', 'score', 'sell', 'shop', 'skill', 'skills', 'sleep',
+      'stats', 'status', 'style', 'take', 'talk', 'try', 'unalias', 'unequip',
+      'unlock', 'upgrade', 'use', 'wares', 'withdraw',
+    ]);
+
     const OP_SCHEMA = {
       say: [{ key: 'text', type: 'text', label: 'text' }],
       message: [{ key: 'text', type: 'text', label: 'text' }, { key: 'tag', type: 'text', label: 'tag' }],

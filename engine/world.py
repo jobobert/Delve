@@ -335,7 +335,7 @@ class World:
         return self._zone_state_dir / f"{zone_id}.json"
 
     def _save_zone_state(self, zone_id: str) -> None:
-        """Persist live NPC HP and room item lists to a JSON sidecar."""
+        """Persist live NPC HP, room item lists and exit lock state to a sidecar."""
         zone_rooms = self._loaded_zones.get(zone_id, {})
         state: dict = {}
         for rid, room in zone_rooms.items():
@@ -349,13 +349,24 @@ class World:
             items = room.get("items")
             if items is not None:
                 entry["item_ids"] = [i.get("id","") for i in items]
+            # Exit locks changed by unlock_exit / lock_exit. Without this the zone
+            # reloads from disk with the original `locked` value, silently
+            # re-locking doors the player already opened — and if the script that
+            # opened them was one-time-guarded, that is an unrecoverable soft-lock.
+            locks = {
+                d: bool(v.get("locked", False))
+                for d, v in room.get("exits", {}).items()
+                if isinstance(v, dict) and "locked" in v
+            }
+            if locks:
+                entry["exit_locks"] = locks
             if entry:
                 state[rid] = entry
         if state:
             self._state_path(zone_id).write_text(json.dumps(state, indent=2))
 
     def _restore_zone_state(self, zone_id: str, zone_rooms: dict) -> None:
-        """Reapply saved live state (NPC HP, item list) after a zone reload."""
+        """Reapply saved live state (NPC HP, item list, exit locks) after a reload."""
         path = self._state_path(zone_id)
         if not path.exists():
             return
@@ -377,6 +388,11 @@ class World:
                 room["_item_templates"] = [
                     self.items[iid] for iid in saved_ids if iid in self.items
                 ]
+            # Restore doors the player opened (or that a script re-locked)
+            for direction, locked in entry.get("exit_locks", {}).items():
+                exit_val = room.get("exits", {}).get(direction)
+                if isinstance(exit_val, dict):
+                    exit_val["locked"] = locked
 
     def save_all_zone_state(self) -> None:
         """Call on game exit — persist state for all currently-loaded zones."""
