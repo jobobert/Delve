@@ -41,6 +41,22 @@ from graph_common import (
 DATA_DIR  = ROOT / "data"
 SKIP_DIRS = {"zone_state", "players", "__pycache__"}
 
+# Every key under which a script op can nest a further list of ops: the two
+# conditional branches, the two skill_check outcomes, and an [[item.commands]]
+# body. Scanners must recurse through ALL of these for ops they do not otherwise
+# model — otherwise an effect nested inside an unmodelled op (say a set_flag
+# inside `if_combat_round`) is silently invisible, and the analysis is wrong in a
+# way nothing reports.
+BRANCH_KEYS = ("then", "else", "on_pass", "on_fail", "ops")
+
+
+def op_branches(op: dict):
+    """Yield every nested op-list hanging off a single script op."""
+    for key in BRANCH_KEYS:
+        branch = op.get(key)
+        if isinstance(branch, list):
+            yield branch
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Data classes
@@ -96,6 +112,10 @@ class SimState:
         self.crafted: set[str]           = set() # commission ids already fulfilled
         self.harvested: set[str]         = set() # scenery nodes whose on_get has fired
         self.completed_quests: set[str]  = set()
+        # (room_id, direction) pairs a REACHED script has actually opened with
+        # unlock_exit. Distinct from the analyser's static index of exits that some
+        # script merely mentions — see CriticalPathAnalyzer._unlock_scripted.
+        self.unlocked_exits: set[tuple[str, str]] = set()
 
     def add_flag(self, flag: str) -> bool:
         if flag and flag not in self.flags:
@@ -112,6 +132,13 @@ class SimState:
     def add_room(self, room_id: str) -> bool:
         if room_id and room_id not in self.reachable_rooms:
             self.reachable_rooms.add(room_id)
+            return True
+        return False
+
+    def unlock_exit(self, room_id: str, direction: str) -> bool:
+        pair = (room_id, direction)
+        if room_id and direction and pair not in self.unlocked_exits:
+            self.unlocked_exits.add(pair)
             return True
         return False
 
@@ -316,10 +343,8 @@ class CriticalPathAnalyzer:
                     nid, rid = op.get("npc_id", ""), op.get("to_room", "")
                     if nid and rid:
                         sink[nid] = rid
-                for key in ("then", "else", "on_pass", "on_fail", "ops"):
-                    branch = op.get(key)
-                    if isinstance(branch, list):
-                        walk(branch, sink)
+                for branch in op_branches(op):
+                    walk(branch, sink)
 
         placements: dict[str, str] = {}
         for room in self.rooms_raw.values():
@@ -489,6 +514,15 @@ class CriticalPathAnalyzer:
                         op.get(branch, []), kind, location_id,
                         conditions + ["skill_check"], node_id
                     ))
+            else:
+                # Anything not named above, including ops added to the engine
+                # later. A set_flag nested inside one would otherwise look like it
+                # has no source, and every gate reading that flag would be
+                # reported as an orphan.
+                for branch in op_branches(op):
+                    results.extend(self._effects_from_script(
+                        branch, kind, location_id, conditions, node_id
+                    ))
         return results
 
     def _build_item_sources(self) -> None:
@@ -541,9 +575,11 @@ class CriticalPathAnalyzer:
                 if iid:
                     src = ItemSource(item_id=iid, kind="give_item_script", location_id=location_id)
                     self.item_sources.setdefault(iid, []).append(src)
-            elif name in ("if_flag", "if", "if_not_flag", "skill_check"):
-                for branch in ("then", "else", "on_pass", "on_fail"):
-                    self._scan_give_items(op.get(branch, []), kind, location_id)
+            # Recurse through every op, not just a hand-listed few: a give_item
+            # nested inside if_item, if_quest, an item command body or any op added
+            # later would otherwise never be indexed.
+            for branch in op_branches(op):
+                self._scan_give_items(branch, kind, location_id)
 
     def _build_lock_chains(self) -> None:
         for rid, room in self.rooms_raw.items():
@@ -582,8 +618,8 @@ class CriticalPathAnalyzer:
                 elif name == "complete_quest" and qid:
                     key = (qid, 999)
                     self.quest_triggers.setdefault(key, []).append({"ctx": ctx})
-                for branch in ("then", "else", "on_pass", "on_fail"):
-                    _scan(op.get(branch, []), ctx)
+                for branch in op_branches(op):
+                    _scan(branch, ctx)
 
         for rid, room in self.rooms_raw.items():
             for key in ("on_enter", "on_exit", "on_sleep", "on_wake"):
@@ -860,10 +896,31 @@ class CriticalPathAnalyzer:
                 # Optimistic: always take on_pass branch
                 if self._apply_script(op.get("on_pass", []), state, ctx):
                     changed = True
+            elif name == "unlock_exit":
+                # Only a script the simulation actually reached counts. Recording
+                # this in state (rather than trusting a static index of every
+                # unlock_exit in the world) is what stops an unreachable unlock
+                # script from silently making its door passable.
+                if state.unlock_exit(op.get("room_id", ""), op.get("direction", "")):
+                    changed = True
+            # lock_exit is deliberately NOT modelled. This simulation is monotonic —
+            # it answers "can the player ever get here", and a door re-locked later
+            # does not retract the fact that they could pass through it earlier.
+            # Removing state would also break the `changed` fixed point and risk
+            # non-termination.
             elif name == "teleport_player":
                 dest = op.get("room_id", "")
                 if dest and state.add_room(dest):
                     changed = True
+            else:
+                # Any op this simulation does not model explicitly — including ops
+                # added to the engine after this tool was written. Recurse into its
+                # branches so effects nested inside are still applied. Both sides
+                # are taken, because without modelling the op we cannot know which
+                # way it goes, and a reachability analysis should not under-report.
+                for branch in op_branches(op):
+                    if self._apply_script(branch, state, ctx):
+                        changed = True
         return changed
 
     def _exit_traversable(self, ev, state: SimState,
@@ -883,10 +940,12 @@ class CriticalPathAnalyzer:
         # locked door
         if ev.get("locked"):
             # A door may be opened by an unlock_exit script instead of a key item
-            # (a lever, an aligned mechanism, a quest step). Those doors have no
-            # key with a matching tag, so without this they read as permanently
-            # shut and everything past them looks unreachable.
-            if (room_id, direction) in self._unlock_scripted:
+            # (a lever, an aligned mechanism, a solved riddle). Those doors have no
+            # key with a matching tag, so without this they read as permanently shut.
+            # Note this checks what the simulation has ACTUALLY unlocked, not merely
+            # what some script mentions — otherwise an unreachable unlock script
+            # would make its door passable from the first iteration.
+            if (room_id, direction) in state.unlocked_exits:
                 return True
             lock_tag = ev.get("lock_tag", "")
             if lock_tag and not state.has_item_with_tag(lock_tag, self.items_raw):
@@ -987,8 +1046,8 @@ class CriticalPathAnalyzer:
                     rid, d = op.get("room_id", ""), op.get("direction", "")
                     if rid and d:
                         found.add((rid, d))
-                for key in ("then", "else", "on_pass", "on_fail", "ops"):
-                    walk(op.get(key))
+                for branch in op_branches(op):
+                    walk(branch)
 
         for room in self.rooms_raw.values():
             for k in ("on_enter", "on_exit", "on_sleep", "on_wake"):
@@ -1018,8 +1077,30 @@ class CriticalPathAnalyzer:
         # 1. Locked exits with no key or circular dependency
         for chain in self.lock_chains:
             dest = chain.dest_room
-            if (chain.room_id, chain.direction) in unlocked_by_script:
-                continue   # opened by an unlock_exit script, not a key item
+            pair = (chain.room_id, chain.direction)
+
+            if pair in state.unlocked_exits:
+                continue   # a reached script actually opened it — nothing to report
+
+            if pair in unlocked_by_script:
+                # A script targets this door, but the simulation never ran it. That
+                # is the interesting case: the intended opener is unreachable, or
+                # gated behind a condition that cannot be satisfied.
+                fallback = (f"Key items: {', '.join(chain.key_items)} — obtainable? "
+                            f"{'yes' if any(k in state.items for k in chain.key_items) else 'no'}."
+                            if chain.key_items else
+                            "There is no key item for this lock_tag, so the script is "
+                            "the only way through.")
+                issues.append(Issue(
+                    severity="BLOCKING", category="locked_door",
+                    description=f"Locked exit {chain.room_id} → {chain.direction} "
+                                f"(lock_tag: {chain.lock_tag}) — an unlock_exit script "
+                                f"targets it, but that script was never reached.",
+                    detail=f"Destination: {dest or '?'}. {fallback} Check that the "
+                           f"script's room/NPC is reachable and its conditions can be met."
+                ))
+                continue
+
             if not chain.key_items:
                 issues.append(Issue(
                     severity="BLOCKING", category="locked_door",
@@ -1302,7 +1383,11 @@ class CriticalPathAnalyzer:
         else:
             for chain in sorted(self.lock_chains, key=lambda c: (c.room_id, c.direction)):
                 key_obtainable = any(k in state.items for k in chain.key_items)
-                if not chain.key_items:
+                if (chain.room_id, chain.direction) in state.unlocked_exits:
+                    # Opened by a script rather than a key — a door with no key item
+                    # is correct here, not a missing-key bug.
+                    status = "[SCRIPT]"
+                elif not chain.key_items:
                     status = "[NO KEY]"
                 elif key_obtainable:
                     status = "[OK]"
