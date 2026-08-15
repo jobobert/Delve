@@ -1,0 +1,32 @@
+id      = "hoard_of_the_apex_drake"
+title   = "The Hoard of the Apex Drake"
+giver   = "warden_selka"
+summary = "Recover the Thermal Conductor from the Apex Drake's hoard."
+
+[[step]]
+index     = 1
+objective = "Scout the Peaks: speak with Warden Selka and learn how the Apex reacts to outsiders."
+hint      = "Selka is stationed at the watch post above Highspire."
+
+[[step]]
+index     = 2
+objective = "Gather proof of skill: bring a drakebone fragment to Selka."
+hint      = "Hunting drakes or mining the vents yields the materials."
+
+[[step]]
+index     = 3
+objective = "Unlock the Thermal Conduit Gate and reach the Hearth of the Apex."
+hint      = "Align the resonance forge or defeat the apex guard to open the gate."
+
+[[step]]
+index     = 4
+objective = "Retrieve the Thermal Conductor from the Hearth of the Apex."
+hint      = "Be prepared: the Apex will not give it up easily."
+
+[[reward]]
+type   = "xp"
+amount = 800
+
+[[reward]]
+type   = "gold"
+amount = 200
